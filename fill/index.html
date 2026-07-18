@@ -1,1 +1,706 @@
-__FILL_HTML__
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Your brain — HireKraft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2430; --ink-2:#3a4655; --muted:#66727f; --muted-2:#95a0ac;
+    --paper:#ffffff; --canvas:#f4f6f8; --line:#e4e8ec; --line-2:#eef1f4;
+    --rail:#f7f5f1; --rail-line:#e9e3d9;
+    --held:#2f7d6b; --held-bg:#e9f4f0; --held-line:#cfe6dd;
+    --amber:#b0752a; --amber-bg:#fbf3e6; --amber-line:#eeddc0;
+    --sky:#356f97; --violet:#6a5bb0;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(20,24,29,.04), 0 12px 30px -20px rgba(20,24,29,.22);
+    --serif:'Fraunces',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--canvas);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.5}
+  a{color:inherit}
+  button{font-family:inherit}
+
+  /* ---------- shell: two columns ---------- */
+  .shell{display:grid;grid-template-columns:340px 1fr;min-height:100vh}
+  .rail{background:var(--rail);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+  .canvas{padding:30px 34px 120px;max-width:1000px}
+
+  /* ---------- consultant (left) ---------- */
+  .rail-head{padding:24px 24px 6px}
+  .consultant-badge{display:flex;align-items:center;gap:11px}
+  .orb{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 42% 38%,#4a9a84,var(--held));box-shadow:0 0 0 0 rgba(47,125,107,.36);animation:breathe 3.4s ease-in-out infinite;flex:none}
+  @keyframes breathe{0%,100%{box-shadow:0 0 0 0 rgba(47,125,107,.30)}50%{box-shadow:0 0 0 7px rgba(47,125,107,0)}}
+  .consultant-badge .who{font-family:var(--serif);font-weight:600;font-size:16px;letter-spacing:.01em}
+  .consultant-badge .role{font-size:11px;color:var(--muted-2);font-family:var(--mono);letter-spacing:.03em}
+  .speech{padding:8px 24px 0;flex:1;overflow-y:auto}
+  .say{font-family:var(--serif);font-size:17.5px;line-height:1.5;color:var(--ink);margin:16px 0;opacity:0;transform:translateY(6px);animation:rise .5s ease forwards}
+  .say.small{font-family:var(--sans);font-size:14px;color:var(--ink-2);line-height:1.55}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .say b{font-weight:600;color:var(--held)}
+  .ask{padding:16px 20px 20px;border-top:1px solid var(--line)}
+  .ask label{font-size:11px;color:var(--muted-2);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase}
+  .ask .box{margin-top:8px;display:flex;gap:8px;align-items:flex-end;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:8px 8px 8px 12px}
+  .ask textarea{border:0;resize:none;outline:none;flex:1;font-family:inherit;font-size:14px;color:var(--ink);background:transparent;line-height:1.45;max-height:120px}
+  .ask .send{flex:none;width:34px;height:34px;border-radius:9px;border:0;background:var(--held);color:#fff;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:background .15s}
+  .ask .send:hover{background:#276754}
+  .ask .hint{font-size:11px;color:var(--muted-2);margin-top:8px;line-height:1.5}
+
+  /* ---------- canvas header ---------- */
+  .canvas-head{display:flex;align-items:baseline;justify-content:space-between;gap:18px;flex-wrap:wrap}
+  .canvas-head h1{font-family:var(--serif);font-weight:600;font-size:27px;letter-spacing:-.01em;margin:0}
+  .canvas-head h1 .co{color:var(--held)}
+  .stamp{font-family:var(--mono);font-size:11px;color:var(--muted-2)}
+  .sovereign{margin-top:10px;display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--held);background:var(--held-bg);border:1px solid var(--held-line);border-radius:20px;padding:5px 13px}
+  .sovereign svg{width:13px;height:13px}
+
+  /* ---------- status band ---------- */
+  .band{margin-top:20px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+  .band .nums{display:flex;gap:26px;flex-wrap:wrap;align-items:baseline}
+  .num b{font-family:var(--serif);font-weight:600;font-size:24px}
+  .num span{font-size:12.5px;color:var(--muted);margin-left:7px}
+  .num.more b{color:var(--amber)}
+  .cap{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);font-size:13.5px;color:var(--ink-2)}
+  .cap .can{color:var(--held);font-weight:600}
+  .cap .cant{color:var(--muted-2);font-weight:600}
+
+  /* ---------- section eyebrow ---------- */
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted-2);margin:32px 2px 12px;display:flex;align-items:center;gap:11px}
+  .eyebrow::after{content:"";height:1px;flex:1;background:var(--line)}
+
+  /* ---------- inventory tree ---------- */
+  .tree{display:flex;flex-direction:column;gap:9px}
+  .grp{background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:box-shadow .15s}
+  .grp:hover{box-shadow:var(--shadow)}
+  .grp.landed{animation:landpulse 1.1s ease}
+  @keyframes landpulse{0%{box-shadow:0 0 0 2px var(--held)}100%{box-shadow:0 0 0 1px transparent}}
+  .grp-head{display:flex;align-items:center;gap:13px;padding:14px 16px;cursor:pointer;user-select:none}
+  .grp-ico{width:30px;height:30px;border-radius:8px;background:var(--canvas);display:flex;align-items:center;justify-content:center;flex:none}
+  .grp-ico svg{width:16px;height:16px;color:var(--ink-2)}
+  .grp-title{font-weight:600;font-size:15px}
+  .grp-count{font-family:var(--mono);font-size:11px;color:var(--muted-2);background:var(--canvas);border-radius:20px;padding:2px 9px}
+  .grp-hint{font-size:12px;color:var(--muted-2);margin-left:auto;margin-right:8px}
+  .caret{color:var(--muted-2);transition:transform .18s;flex:none}
+  .grp.open .caret{transform:rotate(90deg)}
+  .grp-body{display:none;border-top:1px solid var(--line-2);padding:6px 16px 14px}
+  .grp.open .grp-body{display:block}
+
+  .item{display:flex;align-items:baseline;gap:12px;padding:9px 4px;border-bottom:1px solid var(--line-2)}
+  .item:last-child{border-bottom:0}
+  .item .nm{font-weight:500;font-size:14px}
+  .item .win{font-family:var(--mono);font-size:12px;color:var(--held);margin-left:auto;white-space:nowrap}
+  .item .win .to{color:var(--muted-2)}
+  .item .sub{font-size:12px;color:var(--muted-2)}
+  .item .pill{font-size:10px;font-family:var(--mono);border:1px solid var(--line);border-radius:20px;padding:2px 7px;color:var(--muted)}
+  .item .pill.you{color:var(--violet);border-color:#ddd8ef}
+  .item .pill.co{color:var(--sky);border-color:#cfe0ea}
+  .item .pill.off{color:var(--amber);border-color:var(--amber-line);background:var(--amber-bg)}
+  .drive-files{margin-top:6px;display:none;flex-wrap:wrap;gap:5px}
+  .drive-row.open .drive-files{display:flex}
+  .drive-row{display:block;padding:9px 4px;border-bottom:1px solid var(--line-2)}
+  .drive-row:last-child{border-bottom:0}
+  .drive-top{display:flex;align-items:baseline;gap:12px;cursor:pointer}
+  .drive-top .nm{font-weight:500;font-size:14px}
+  .drive-top .fc{font-family:var(--mono);font-size:12px;color:var(--muted-2);margin-left:auto}
+  .file-chip{font-size:11px;color:var(--ink-2);background:var(--canvas);border:1px solid var(--line-2);border-radius:6px;padding:3px 8px;max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .file-more{font-size:11px;color:var(--muted-2);padding:3px 4px}
+  .legible-note{font-size:11.5px;color:var(--muted-2);margin:2px 0 6px;font-style:italic}
+
+  /* ---------- add source ---------- */
+  .addstrip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .add{border:1px dashed var(--line);border-radius:12px;background:var(--paper);color:var(--ink);padding:15px 14px;text-align:left;cursor:pointer;transition:border-color .14s,background .14s}
+  .add:hover{border-color:var(--held);background:var(--held-bg)}
+  .add .t{font-weight:600;font-size:14px}
+  .add .d{font-size:12px;color:var(--muted-2);margin-top:3px}
+
+  /* ---------- where we could do more ---------- */
+  .more-list{display:flex;flex-direction:column;gap:9px}
+  .more{display:flex;gap:13px;align-items:flex-start;background:var(--paper);border:1px solid var(--amber-line);border-left:4px solid var(--amber);border-radius:12px;padding:13px 15px}
+  .more .txt{flex:1}
+  .more .prob{font-size:14px;color:var(--ink);font-weight:500}
+  .more .sol{font-size:13px;color:#8a6a33;margin-top:2px}
+  .more .do{flex:none;font-size:12.5px;color:#fff;background:var(--amber);border:0;border-radius:8px;padding:7px 13px;cursor:pointer;white-space:nowrap}
+  .more .do:hover{background:#976225}
+  .more.empty{border:1px dashed var(--line);border-left:1px dashed var(--line);background:var(--paper);color:var(--muted);font-size:13.5px;padding:15px;text-align:center}
+  .noise{margin-top:11px;font-size:12px;color:var(--muted-2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .noise .tag{font-family:var(--mono);font-size:11px;background:var(--canvas);border:1px solid var(--line-2);border-radius:20px;padding:2px 9px;color:var(--muted-2)}
+
+  .known{margin-top:26px;font-size:12px;color:var(--muted-2);border-top:1px dashed var(--line);padding-top:12px;line-height:1.6}
+  .known b{color:var(--muted);font-weight:600}
+
+  /* ---------- loading / error ---------- */
+  .loading{padding:80px 0;display:flex;flex-direction:column;align-items:center;gap:14px;color:var(--muted)}
+  .loading .orb{width:44px;height:44px}
+  .err{background:#fbf1f1;border:1px solid #e7c6c6;color:#8f3a3a;border-radius:12px;padding:16px;font-size:14px;margin-top:20px}
+
+  /* ---------- modal ---------- */
+  .mbg{position:fixed;inset:0;background:rgba(20,24,29,.4);display:none;align-items:flex-start;justify-content:center;padding:44px 16px;z-index:60;overflow:auto}
+  .mbg.show{display:flex}
+  .modal{background:var(--paper);border-radius:16px;max-width:560px;width:100%;box-shadow:0 30px 70px -24px rgba(0,0,0,.45);overflow:hidden}
+  .m-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line-2)}
+  .m-head h3{font-family:var(--serif);font-size:18px;margin:0}
+  .m-head .x{cursor:pointer;color:var(--muted-2);font-size:22px;line-height:1}
+  .m-body{padding:18px 22px 22px}
+  .m-body p{font-size:14px;color:var(--ink-2);margin:0 0 14px}
+  .logos{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px;margin:6px 0 4px}
+  .logo{border:1px solid var(--line);border-radius:12px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:var(--paper);transition:border-color .14s,box-shadow .14s}
+  .logo:hover{border-color:var(--held);box-shadow:var(--shadow)}
+  .logo svg,.logo img{width:30px;height:30px}
+  .logo .ln{font-size:12px;font-weight:500;color:var(--ink-2)}
+  .field{display:flex;flex-direction:column;gap:6px;margin:14px 0}
+  .field label{font-size:12px;color:var(--muted);font-weight:600}
+  .field input,.field select{border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:14px;font-family:inherit;color:var(--ink);background:var(--paper)}
+  .primary{background:var(--held);color:#fff;border:0;border-radius:10px;padding:11px 17px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+  .primary:hover{background:#276754}
+  .choice{display:flex;flex-direction:column;gap:10px;margin:6px 0}
+  .opt{border:1px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;transition:border-color .14s,background .14s}
+  .opt:hover{border-color:var(--held);background:var(--held-bg)}
+  .opt .ot{font-weight:600;font-size:14px}
+  .opt .od{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .verdict{font-size:12.5px;border-radius:10px;padding:11px 13px;margin-top:6px;line-height:1.55}
+  .verdict.airtight{background:var(--held-bg);border:1px solid var(--held-line);color:#245c4e}
+  .verdict.account{background:var(--amber-bg);border:1px solid var(--amber-line);color:#7d5a22}
+  .m-note{font-size:12px;color:var(--muted-2);margin-top:12px;line-height:1.55}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 17px;border-radius:11px;font-size:13.5px;box-shadow:0 16px 36px -14px rgba(0,0,0,.5);z-index:80;max-width:540px;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+  .toast a{color:#8fd3bf;text-decoration:underline}
+
+  @media (max-width:860px){
+    .shell{grid-template-columns:1fr}
+    .rail{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+    .speech{max-height:220px}
+    .canvas{padding:22px 18px 120px}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- ============ CONSULTANT (left rail) ============ -->
+  <aside class="rail">
+    <div class="rail-head">
+      <div class="consultant-badge">
+        <div class="orb"></div>
+        <div>
+          <div class="who">Your brain</div>
+          <div class="role">always here · we build it together</div>
+        </div>
+      </div>
+    </div>
+    <div class="speech" id="speech"></div>
+    <div class="ask">
+      <label>Ask me anything</label>
+      <div class="box">
+        <textarea id="askInput" rows="1" placeholder="What's already in here? What should we connect next?"></textarea>
+        <button class="send" id="askSend" title="Ask">↑</button>
+      </div>
+      <div class="hint">I answer from what we've gathered so far — and I'll tell you honestly when something isn't in yet.</div>
+    </div>
+  </aside>
+
+  <!-- ============ CANVAS (right) ============ -->
+  <main class="canvas">
+    <div class="canvas-head">
+      <h1>Your brain — <span class="co">HireKraft</span></h1>
+      <div class="stamp" id="stamp">reading, live…</div>
+    </div>
+    <div class="sovereign">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <span id="sovLine">This brain is yours alone. Nothing reaches Sense — it lives in your own database.</span>
+    </div>
+
+    <div id="root">
+      <div class="loading">
+        <div class="orb"></div>
+        <div>Reading your brain, live…</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- modal + toast -->
+<div class="mbg" id="mbg"><div class="modal"><div class="m-head"><h3 id="mTitle"></h3><span class="x" id="mClose">×</span></div><div class="m-body" id="mBody"></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= config ================= */
+const BRAIN = "https://uvdoompnnypmneyrvtas.supabase.co";
+const RPC = BRAIN + "/rest/v1/rpc/";
+const OAUTH_START = BRAIN + "/functions/v1/oauth-start";
+const KEY = "sb_publishable_joP87JJiePfN3k1uPoxxVA_DLGT1zv5";
+
+/* identities (for creating mailbox sources) — read live at connect time */
+let INV = null;
+
+/* ================= helpers ================= */
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+async function rpc(fn, args){
+  const r = await fetch(RPC+fn,{method:"POST",headers:{"Content-Type":"application/json","apikey":KEY,"Authorization":"Bearer "+KEY},body:JSON.stringify(args||{})});
+  if(!r.ok) throw new Error(fn+" → "+r.status);
+  return r.json();
+}
+function fmtWindow(iso){
+  if(!iso) return null;
+  const d = new Date(iso);
+  return d.toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"});
+}
+function ago(iso){
+  if(!iso) return "not yet";
+  const s=(Date.now()-new Date(iso).getTime())/1000;
+  if(s<90) return "just now";
+  if(s<3600) return Math.round(s/60)+"m ago";
+  if(s<86400) return Math.round(s/3600)+"h ago";
+  return Math.round(s/86400)+"d ago";
+}
+let toastT;
+function toast(html,ms){const el=document.getElementById("toast");el.innerHTML=html;el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),ms||4600);}
+
+/* consultant voice */
+function say(text, cls){
+  const s=document.getElementById("speech");
+  const d=document.createElement("div");
+  d.className="say"+(cls?" "+cls:"");
+  d.innerHTML=text;
+  s.appendChild(d);
+  s.scrollTop=s.scrollHeight;
+  return d;
+}
+function clearSpeech(){document.getElementById("speech").innerHTML="";}
+
+/* ================= modal ================= */
+function openModal(title, body){
+  document.getElementById("mTitle").textContent=title;
+  document.getElementById("mBody").innerHTML=body;
+  document.getElementById("mbg").classList.add("show");
+}
+function closeModal(){document.getElementById("mbg").classList.remove("show");}
+document.getElementById("mClose").onclick=closeModal;
+document.getElementById("mbg").addEventListener("click",e=>{if(e.target.id==="mbg")closeModal();});
+
+/* provider logos (inline SVG so no external asset dependency) */
+const LOGOS = {
+  google:'<svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/></svg>',
+  microsoft:'<svg viewBox="0 0 24 24"><path fill="#F25022" d="M2 2h9.5v9.5H2z"/><path fill="#7FBA00" d="M12.5 2H22v9.5h-9.5z"/><path fill="#00A4EF" d="M2 12.5h9.5V22H2z"/><path fill="#FFB900" d="M12.5 12.5H22V22h-9.5z"/></svg>',
+  yahoo:'<svg viewBox="0 0 24 24"><path fill="#6001D2" d="M3 5h3.6l2.9 5.4L12.5 5H16l-5 9v5H8v-5L3 5z"/></svg>',
+  dropbox:'<svg viewBox="0 0 24 24"><path fill="#0061FF" d="M6 2l6 3.8L6 9.6 0 5.8 6 2zm12 0l6 3.8-6 3.8-6-3.8L18 2zM0 13.4l6-3.8 6 3.8-6 3.8-6-3.8zm18-3.8l6 3.8-6 3.8-6-3.8 6-3.8zM6 18.6l6-3.8 6 3.8-6 3.8-6-3.8z"/></svg>',
+  box:'<svg viewBox="0 0 24 24"><rect width="24" height="24" rx="4" fill="#0061D5"/><text x="12" y="16" font-size="9" fill="#fff" text-anchor="middle" font-family="Inter">box</text></svg>',
+  onedrive:'<svg viewBox="0 0 24 24"><path fill="#0364B8" d="M13 7a5 5 0 0 0-9.6 1.4A4 4 0 0 0 4 16h13a3.5 3.5 0 0 0 .5-7A5 5 0 0 0 13 7z"/></svg>',
+  gdrive:'<svg viewBox="0 0 24 24"><path fill="#0066DA" d="M8 3l-6 10.5L5 19l6-10.5z"/><path fill="#00AC47" d="M16 3H8l6 10.5h8z"/><path fill="#EA4335" d="M2 13.5L5 19h9l-3-5.5z"/><path fill="#FFBA00" d="M22 13.5L19 19h-9l3-5.5z"/></svg>',
+  quickbooks:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#2CA01C"/><text x="12" y="16" font-size="10" fill="#fff" text-anchor="middle" font-family="Inter" font-weight="600">qb</text></svg>',
+  wise:'<svg viewBox="0 0 24 24"><rect width="24" height="24" rx="4" fill="#9FE870"/><path d="M6 8l7 4-7 4h5l7-8h-5z" fill="#163300"/></svg>'
+};
+
+/* ================= connect flow ================= */
+/* Step A: pick provider by logo */
+function showAdd(kind){
+  if(kind==="email"){
+    openModal("Add email — pick where it lives",
+      '<p>Same as linking a bank: pick your provider and sign in on their own secure screen. I only ever reach what your account already can.</p>'+
+      '<div class="logos">'+
+        logoBtn("google","Google","email")+
+        logoBtn("microsoft","Microsoft","email")+
+        logoBtn("yahoo","Yahoo","email")+
+      '</div>'+
+      '<div class="field"><label>…or enter the address and I\'ll route it</label><input id="anyEmail" placeholder="name@company.com"></div>'+
+      '<button class="primary" onclick="routeEmail()">Continue</button>');
+  } else if(kind==="drive"){
+    openModal("Add drives & folders — pick the service",
+      '<p>Point me at where your documents live. You sign in on the provider\'s own screen; I read only what that sign-in already reaches.</p>'+
+      '<div class="logos">'+
+        logoBtn("gdrive","Google Drive","drive")+
+        logoBtn("onedrive","OneDrive","drive-soon")+
+        logoBtn("dropbox","Dropbox","drive-soon")+
+        logoBtn("box","Box","drive-soon")+
+      '</div>');
+  } else if(kind==="contacts"){
+    openModal("Add contacts",
+      '<p>Your people come from the sources you\'ve already connected — a Google directory, phone, or your ATS. Connect one of those and contacts fill in from it.</p>'+
+      '<div class="logos">'+
+        logoBtn("google","Google directory","contacts-soon")+
+      '</div>'+
+      '<div class="m-note">A per-person contact picture assembles as we connect more sources. Nothing from a personal source ever writes back to a shared record.</div>');
+  } else if(kind==="system"){
+    openModal("Add a system",
+      '<p>Connect a business system. This opens the provider\'s own authorize screen. Systems like these are account-shaped — worth a moment on who should see them.</p>'+
+      '<div class="logos">'+
+        logoBtn("quickbooks","QuickBooks","system-qbo")+
+        logoBtn("wise","Wise","system-wise")+
+      '</div>');
+  }
+}
+function logoBtn(logo,name,route){
+  return '<div class="logo" onclick="pick(\''+route+'\',\''+esc(name)+'\')">'+(LOGOS[logo]||"")+'<div class="ln">'+esc(name)+'</div></div>';
+}
+function routeEmail(){
+  const v=(document.getElementById("anyEmail").value||"").trim();
+  if(!v){toast("Enter an address, or pick a provider above.");return;}
+  // route by domain
+  if(/@gmail\.|@googlemail\./i.test(v)||/hirekraft/i.test(v)) pick("email","Google",v);
+  else if(/@outlook\.|@hotmail\.|@live\.|@microsoft/i.test(v)) pick("email","Microsoft",v);
+  else if(/@yahoo\./i.test(v)) pick("email","Yahoo",v);
+  else pick("email-request","that provider",v);
+}
+
+/* Step B: admin vs individual + honest verdict, then create + consent */
+function pick(route, name, hint){
+  if(route==="drive-soon"||route==="contacts-soon"){
+    closeModal();
+    say("We'll wire up <b>"+esc(name)+"</b> when you need it — the moment it's the source that matters, I build the connector. For now, Google Drive is ready to go.","small");
+    toast(esc(name)+" isn't wired yet — noted for the build queue. Google is ready now.");
+    return;
+  }
+  if(route==="email-request"){
+    closeModal();
+    toast("I'll add a path for "+esc(hint)+". For now Google, Microsoft and Yahoo connect directly.");
+    return;
+  }
+  if(route==="email"||route==="Google"||name==="Google"||route==="drive"){
+    // company vs individual choice (honest framing)
+    const isDrive = route==="drive";
+    openModal(isDrive?"Whose Drive — and how":"Whose mailbox — and how",
+      '<div class="choice">'+
+        '<div class="opt" onclick="adminGrant(\''+(isDrive?"drive":"email")+'\',\''+esc(hint||"")+'\')">'+
+          '<div class="ot">Connect as admin — for the whole company</div>'+
+          '<div class="od">I\'ll reach every company '+(isDrive?"drive":"mailbox")+' you choose to include. Each teammate still sees only their own when they sign in — access follows who they already are.</div>'+
+        '</div>'+
+        '<div class="opt" onclick="individualGrant(\''+(isDrive?"drive":"email")+'\',\''+esc(hint||"")+'\')">'+
+          '<div class="ot">Just my account</div>'+
+          '<div class="od">Only what I can reach signed in as myself.</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="verdict airtight">Airtight by design: I hold your own sign-in, not a master key. When anyone asks me something, I check with '+(isDrive?"Drive":"Gmail")+' using their credentials, live — so people only ever see what they already could.</div>');
+    return;
+  }
+  if(route==="system-qbo"){
+    // account-shaped: CEO-gated, binary who-sees framing
+    openModal("QuickBooks — who should see the books?",
+      '<p>QuickBooks is account-shaped: it hands me the whole company\'s books as one, with no per-person split inside. So this is a decision only you can make.</p>'+
+      '<div class="verdict account">Anyone I let read QuickBooks would see <b>all</b> of it — every number. There\'s no half-open. So I keep it locked to you as owner unless you tell me otherwise.</div>'+
+      '<div class="field" style="margin-top:14px"><label>Who should be able to see QuickBooks?</label>'+
+      '<select id="qbWho"><option value="owner">Just me (owner) — recommended</option><option value="finance">Me and whoever I name for finance</option></select></div>'+
+      '<button class="primary" onclick="systemGrant(\'qbo\')">Open QuickBooks sign-in</button>'+
+      '<div class="m-note">You connect and reason over it; everyone else keeps working in QuickBooks directly, protected by QuickBooks\' own logins.</div>');
+    return;
+  }
+  if(route==="system-wise"){
+    openModal("Wise — account-shaped",
+      '<p>Like QuickBooks, Wise is account-shaped — one set of credentials for the whole account.</p>'+
+      '<div class="verdict account">Whoever can read Wise sees the whole account. I keep it owner-only unless you decide to widen it.</div>'+
+      '<button class="primary" onclick="systemGrant(\'wise\')">Open Wise sign-in</button>'+
+      '<div class="m-note">Wise\'s per-person enforcement is still being verified — until it is, owner-only is the honest default.</div>');
+    return;
+  }
+}
+
+/* create a source row via RPC, then hand off to the real oauth-start */
+async function createAndConsent(payload, human){
+  try{
+    const res = await rpc("fill_add_source", payload);
+    if(!res || !res.ok){ throw new Error((res&&res.error)||"couldn't create source"); }
+    closeModal();
+    // recognition beat: the consultant speaks to the pending source
+    say(human, null);
+    // open the provider's OWN consent screen (real OAuth)
+    const url = OAUTH_START + "?source_id=" + encodeURIComponent(res.source_id);
+    window.open(url, "_blank");
+    toast('Opening the secure sign-in in a new tab. Finish it and I\'ll start gathering.');
+    // poll for it to land
+    setTimeout(load, 2500);
+  }catch(err){
+    toast("Couldn't start that connection: "+esc(err.message));
+  }
+}
+function adminGrant(kind, hint){
+  if(kind==="email"){
+    // admin mailbox: ask which mailbox to include first (company source)
+    openModal("Which mailbox should I bring in?",
+      '<p>As admin you choose what goes in. Name a company mailbox to start; you can add more the same way.</p>'+
+      '<div class="field"><label>Mailbox</label><input id="mbx" placeholder="name@hirekraft.ai" value="'+esc(hint&&hint.includes("@")?hint:"")+'"></div>'+
+      '<button class="primary" onclick="doMailbox(1)">Create & open Google sign-in</button>'+
+      '<div class="m-note">Personal-mixed content is held back conservatively by default.</div>');
+  } else {
+    openModal("Which drive should I bring in?",
+      '<p>Paste the shared-drive link or its ID (from the address bar in Drive). I\'ll mirror it here — cleaner than Google shows it — without touching your actual Drive.</p>'+
+      '<div class="field"><label>Shared drive link or ID</label><input id="drv" placeholder="drive.google.com/drive/folders/0A…  or  0A…"></div>'+
+      '<button class="primary" onclick="doDrive()">Create & open Google sign-in</button>');
+  }
+}
+function individualGrant(kind, hint){
+  if(kind==="email"){
+    openModal("Connect your mailbox",
+      '<p>Sign in as yourself; I read only your own mail.</p>'+
+      '<div class="field"><label>Your address</label><input id="mbx" placeholder="you@company.com" value="'+esc(hint&&hint.includes("@")?hint:"")+'"></div>'+
+      '<button class="primary" onclick="doMailbox(2)">Create & open Google sign-in</button>');
+  } else {
+    adminGrant("drive",hint);
+  }
+}
+function doMailbox(cat){
+  const mailbox=(document.getElementById("mbx").value||"").trim();
+  if(!mailbox||!mailbox.includes("@")){toast("Enter a full email address.");return;}
+  createAndConsent(
+    {p_kind:"gmail", p_mailbox:mailbox, p_category:cat},
+    "Reaching for <b>"+esc(mailbox)+"</b>… the moment you finish signing in, I start reading it in, newest first."
+  );
+}
+function doDrive(){
+  let v=(document.getElementById("drv").value||"").trim();
+  const m=v.match(/[-\w]{20,}/); const id=m?m[0]:v;
+  if(!id){toast("Paste a drive link or ID.");return;}
+  createAndConsent(
+    {p_kind:"drive", p_drive_id:id},
+    "Pointing at that drive… once you sign in, I mirror it here — readable and in order, your Drive finally legible."
+  );
+}
+function systemGrant(system){
+  const who = system==="qbo" ? (document.getElementById("qbWho")||{}).value : "owner";
+  createAndConsent(
+    {p_kind:system, p_who:who||"owner"},
+    system==="qbo"
+      ? "Opening QuickBooks… once you authorize, I\'ll read the books — kept to you as owner."
+      : "Opening Wise… once you authorize, I\'ll read the account, owner-only."
+  );
+}
+
+/* ================= where we could do more (translate honestly) ================= */
+function moreItem(h){
+  // translate engineering bucket -> honest problem+solution, us-voice
+  const nameOf = k => {
+    const inv=INV||{};
+    const all=[].concat(inv.email||[],inv.drives||[],inv.systems||[],inv.other||[]);
+    const hit=all.find(x=>x.source_key===k);
+    return hit ? (hit.name||hit.address||k) : k.replace(/^drive:shared:/,"drive ").replace(/^gmail:/,"");
+  };
+  const where = nameOf(h.source);
+  if(h.bucket==="blocked_external"){
+    return {
+      prob:"A few files in "+esc(where)+" won\'t open — they came in damaged or in a format I can\'t read yet ("+h.count+").",
+      sol:"Re-save or re-share them and I\'ll pull them straight in.",
+      cta:"Show me which"
+    };
+  }
+  if(h.bucket==="blocked_our_bug"){
+    return {
+      prob:"I hit a snag on "+h.count+" item"+(h.count>1?"s":"")+" in "+esc(where)+" — that one\'s on my side, not yours.",
+      sol:"I\'ve logged it; it\'ll clear on the next pass. Nothing for you to do.",
+      cta:null
+    };
+  }
+  return {prob:esc(where)+": "+h.count+" items need a look.", sol:"Let\'s sort it together.", cta:"Look"};
+}
+
+/* ================= render ================= */
+function catPill(c){
+  if(c===2||c===3) return '<span class="pill you">personal · your data</span>';
+  return '<span class="pill co">company</span>';
+}
+function ico(name){
+  const s={
+    email:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+    drive:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+    contacts:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>',
+    systems:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>',
+    loose:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 7 6 4h5l2 3"/></svg>'
+  };
+  return s[name]||s.loose;
+}
+
+function render(inv, att){
+  INV=inv;
+  document.getElementById("stamp").textContent="live · read just now";
+  document.getElementById("sovLine").textContent = inv.sovereignty;
+
+  const nEmail=(inv.email||[]).length, nDrive=(inv.drives||[]).length,
+        nSys=(inv.systems||[]).length, nOther=(inv.other||[]).length;
+  const humanItems = (att.human||[]);
+
+  // capability line (customer terms)
+  const can=[]; const cant=[];
+  if(nEmail) can.push("read across email");
+  if(nDrive) can.push("read your documents");
+  if(nSys) cant.push("read QuickBooks yet") ; // qbo present but not walked (last_refresh null)
+  const capLine = '<div class="cap">'+
+    (can.length?'<span class="can">Can</span> '+esc(can.join(", "))+' and answer across them.':'')+
+    (cant.length?' <span class="cant">Not yet</span> '+esc(cant.join(", "))+'.':'')+'</div>';
+
+  const band='<div class="band"><div class="nums">'+
+    '<div class="num"><b>'+inv.connected+'</b><span>sources connected</span></div>'+
+    '<div class="num more"><b>'+humanItems.length+'</b><span>where we could do more</span></div>'+
+    '<div class="num"><b style="font-size:15px;color:var(--muted);font-family:var(--sans)">'+esc(ago(inv.last_activity))+'</b><span>last gathered</span></div>'+
+    '</div>'+capLine+'</div>';
+
+  // inventory groups
+  let groups="";
+
+  // EMAIL
+  if(nEmail){
+    const rows=inv.email.map(e=>{
+      const win = e.window_from ? '<span class="win">from '+esc(fmtWindow(e.window_from))+' <span class="to">→ now</span></span>'
+                                : (e.is_active?'<span class="win"><span class="to">gathering…</span></span>':'<span class="pill off">not reading yet</span>');
+      return '<div class="item"><span class="nm">'+esc(e.address)+'</span>'+catPill(e.category)+win+'</div>';
+    }).join("");
+    groups+=grp("email","Email",nEmail,"reading windows — from when, to now",rows);
+  }
+  // DRIVES
+  if(nDrive){
+    const rows='<div class="legible-note">Mirrored clean from your Drive — your files, finally legible. Your actual Drive stays untouched.</div>'+
+      inv.drives.map(d=>{
+        return '<div class="drive-row" data-key="'+esc(d.source_key)+'">'+
+          '<div class="drive-top" onclick="expandDrive(this,\''+esc(d.source_key)+'\')">'+
+            '<span class="nm">'+esc(d.name)+'</span>'+catPill(d.category)+
+            '<span class="fc">'+d.files+' file'+(d.files===1?"":"s")+'</span>'+
+          '</div><div class="drive-files"></div></div>';
+      }).join("");
+    groups+=grp("drive","Drives &amp; folders",nDrive,"tap a drive to see inside",rows);
+  }
+  // CONTACTS (honest: not separately modeled yet)
+  groups+=grp("contacts","Contacts",0,"assembled from your connected sources",
+    '<div class="item"><span class="sub">Contacts fill in from the sources you connect — a directory, phone, or ATS. None connected as a contacts source yet.</span></div>');
+  // SYSTEMS
+  if(nSys){
+    const rows=inv.systems.map(s=>{
+      const readState = s.last_refresh_at ? '<span class="win">read '+esc(ago(s.last_refresh_at))+'</span>' : '<span class="pill off">connected, not read yet</span>';
+      return '<div class="item"><span class="nm">'+esc(s.name)+'</span><span class="pill co">account-shaped</span>'+readState+'</div>';
+    }).join("");
+    groups+=grp("systems","Systems",nSys,"account-shaped — owner-gated",rows);
+  }
+  // LOOSE / historical
+  if(nOther){
+    const rows=inv.other.map(o=>'<div class="item"><span class="nm">'+esc(o.name)+'</span><span class="sub">'+esc(o.source_type)+'</span></div>').join("");
+    groups+=grp("loose","Loose &amp; historical",nOther,"one-off imports and legacy data",rows);
+  }
+
+  // add strip
+  const addStrip='<div class="addstrip">'+
+    add("email","Add email","Google, Microsoft, Yahoo")+
+    add("drive","Add drives & folders","Drive, OneDrive, Dropbox, Box")+
+    add("contacts","Add contacts","from a directory, phone or ATS")+
+    add("system","Add a system","QuickBooks, Wise")+
+    '</div>';
+
+  // where we could do more
+  let more;
+  if(humanItems.length){
+    more='<div class="more-list">'+humanItems.map(h=>{
+      const t=moreItem(h);
+      return '<div class="more"><div class="txt"><div class="prob">'+t.prob+'</div><div class="sol">'+t.sol+'</div></div>'+
+        (t.cta?'<button class="do" onclick="toast(\'Opening the list — you\\\'ll see exactly which items.\')">'+esc(t.cta)+'</button>':'')+'</div>';
+    }).join("")+'</div>';
+  } else {
+    more='<div class="more empty">Nothing needs a decision from us right now — everything connected is current.</div>';
+  }
+  // self-healing noise: shown, never flagged
+  let noise="";
+  if(att.noise&&att.noise.length){
+    const total=att.noise.reduce((a,n)=>a+n.count,0);
+    noise='<div class="noise"><span>Handled quietly, no action needed:</span>'+
+      att.noise.map(n=>'<span class="tag">'+n.count+' '+esc(n.bucket.replace(/_/g," "))+'</span>').join("")+'</div>';
+  }
+
+  const known='<div class="known"><b>What I\'m honest about not tracking yet:</b> folder structure inside a drive (I mirror the files, not the nesting); a per-person contact picture (it assembles as more sources connect); and QuickBooks per-person limits (it\'s account-shaped, so I keep it owner-only).</div>';
+
+  document.getElementById("root").innerHTML =
+    band +
+    '<div class="eyebrow">What\'s in here</div>'+'<div class="tree">'+groups+'</div>'+
+    '<div class="eyebrow">Fill it further</div>'+addStrip+
+    '<div class="eyebrow">Where we could do more</div>'+more+noise+
+    known;
+
+  wire();
+  speakOpening(inv, humanItems.length);
+}
+
+function grp(icon,title,count,hint,body){
+  return '<div class="grp" data-grp="'+icon+'">'+
+    '<div class="grp-head" onclick="toggleGrp(this)">'+
+      '<div class="grp-ico">'+ico(icon)+'</div>'+
+      '<div class="grp-title">'+title+'</div>'+
+      '<div class="grp-count">'+count+'</div>'+
+      '<div class="grp-hint">'+hint+'</div>'+
+      '<svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>'+
+    '</div>'+
+    '<div class="grp-body">'+body+'</div>'+
+  '</div>';
+}
+function add(kind,t,d){return '<button class="add" onclick="showAdd(\''+kind+'\')"><div class="t">'+t+'</div><div class="d">'+d+'</div></button>';}
+
+function toggleGrp(el){el.parentElement.classList.toggle("open");}
+async function expandDrive(topEl,key){
+  const row=topEl.parentElement;
+  row.classList.toggle("open");
+  const box=row.querySelector(".drive-files");
+  if(row.classList.contains("open") && !box.dataset.loaded){
+    box.innerHTML='<span class="file-more">reading the file list…</span>';
+    try{
+      const r=await rpc("fill_drive_files",{p_source_key:key,p_limit:60});
+      const files=(r.files||[]);
+      if(!files.length){box.innerHTML='<span class="file-more">No individual files recorded for this drive yet.</span>';}
+      else{
+        const show=files.slice(0,24);
+        box.innerHTML=show.map(f=>'<span class="file-chip" title="'+esc(f.name)+'">'+esc(f.name)+'</span>').join("")+
+          (files.length>24?'<span class="file-more">+'+(files.length-24)+' more</span>':'');
+      }
+      box.dataset.loaded="1";
+    }catch(e){box.innerHTML='<span class="file-more">Couldn\'t read the file list just now.</span>';}
+  }
+}
+
+/* consultant opening — trust moment #1 (present/human) */
+function speakOpening(inv, moreCount){
+  clearSpeech();
+  const nSrc=inv.connected;
+  if(nSrc===0){
+    say("This is your brain — empty for now. Let\'s fill it together.");
+    say("Start with your email or a drive on the right. You sign in on the provider\'s own screen; I never see a password, and I only ever reach what your account already can.","small");
+    return;
+  }
+  say("Here\'s what we\'ve gathered so far — <b>"+nSrc+" sources</b>, all in your own database, yours alone.");
+  const e=(inv.email||[]).find(x=>x.window_from);
+  if(e){
+    say("Your <b>"+esc(e.address)+"</b> is read from "+esc(fmtWindow(e.window_from).replace(/,[^,]*$/,''))+" through now — I keep a year live and reach further back the moment a job needs it.","small");
+  }
+  if(moreCount>0){
+    say("There are <b>"+moreCount+"</b> spots where we could do more — I\'ve laid each one out with what it\'d take. None of it is urgent.","small");
+  } else {
+    say("Everything connected is current. When you\'re ready, add another source on the right and watch it land.","small");
+  }
+}
+
+function wire(){
+  // opening groups: leave collapsed by default per spec
+}
+
+/* ask box */
+function handleAsk(){
+  const t=(document.getElementById("askInput").value||"").trim();
+  if(!t)return;
+  document.getElementById("askInput").value="";
+  say('<span style="color:var(--muted);font-size:13px">You asked: '+esc(t)+'</span>',"small");
+  // honest: the working (answering) lens is a later build
+  say("I can see everything we\'ve connected — but answering across it in depth is the next lens we\'re building. For now, this is the map: what\'s in, from when, and where we could do more. Point me at a new source and I\'ll fill it in live.","small");
+}
+document.getElementById("askSend").onclick=handleAsk;
+document.getElementById("askInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();handleAsk();}});
+
+/* ================= load ================= */
+async function load(){
+  try{
+    const [inv, att] = await Promise.all([rpc("fill_inventory",{}), rpc("fill_attention",{})]);
+    if(!inv||!inv.ok) throw new Error(inv&&inv.error||"brain error");
+    render(inv, att||{human:[],noise:[]});
+  }catch(err){
+    document.getElementById("stamp").textContent="couldn\'t reach the brain";
+    document.getElementById("root").innerHTML='<div class="err">I couldn\'t read your brain live just now: '+esc(err.message)+'. I only ever show real state — never a guess. Try again in a moment.</div>';
+    clearSpeech();
+    say("I\'m having trouble reaching your brain this second. I won\'t make anything up — let\'s try again in a moment.","small");
+  }
+}
+load();
+</script>
+</body>
+</html>
