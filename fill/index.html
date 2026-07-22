@@ -81,31 +81,51 @@
   .grp-head{display:flex;align-items:center;gap:13px;padding:14px 16px;cursor:pointer;user-select:none}
   .grp-ico{width:30px;height:30px;border-radius:8px;background:var(--canvas);display:flex;align-items:center;justify-content:center;flex:none}
   .grp-ico svg{width:16px;height:16px;color:var(--ink-2)}
+  .grp-main{flex:1;min-width:0}
   .grp-title{font-weight:600;font-size:15px}
-  .grp-count{font-family:var(--mono);font-size:11px;color:var(--muted-2);background:var(--canvas);border-radius:20px;padding:2px 9px}
-  .grp-hint{font-size:12px;color:var(--muted-2);margin-left:auto;margin-right:8px}
+  /* overview meta line — health · span · completeness (change 1) */
+  .grp-meta{font-size:12px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .grp-count{font-family:var(--mono);font-size:11px;color:var(--muted-2)}
+  .grp-sep{color:var(--muted-2)}
+  .grp-meta .mHealth{color:var(--held);font-weight:600}
   .caret{color:var(--muted-2);transition:transform .18s;flex:none}
   .grp.open .caret{transform:rotate(90deg)}
   .grp-body{display:none;border-top:1px solid var(--line-2);padding:6px 16px 14px}
   .grp.open .grp-body{display:block}
 
-  .item{display:flex;align-items:baseline;gap:12px;padding:9px 4px;border-bottom:1px solid var(--line-2)}
-  .item:last-child{border-bottom:0}
-  .item .nm{font-weight:500;font-size:14px}
-  .item .win{font-family:var(--mono);font-size:12px;color:var(--held);margin-left:auto;white-space:nowrap}
-  .item .win .to{color:var(--muted-2)}
-  .item .sub{font-size:12px;color:var(--muted-2)}
-  .item .pill{font-size:10px;font-family:var(--mono);border:1px solid var(--line);border-radius:20px;padding:2px 7px;color:var(--muted)}
-  .item .pill.you{color:var(--violet);border-color:#ddd8ef}
-  .item .pill.co{color:var(--sky);border-color:#cfe0ea}
-  .item .pill.off{color:var(--amber);border-color:var(--amber-line);background:var(--amber-bg)}
-  .drive-files{margin-top:6px;display:none;flex-wrap:wrap;gap:5px}
+  /* member rows (expand-in-place; individual tap -> work lens) */
+  .member{display:flex;align-items:baseline;gap:10px;padding:10px 6px;border-bottom:1px solid var(--line-2);cursor:pointer;border-radius:8px;transition:background .12s}
+  .member:last-child{border-bottom:0}
+  .member:hover{background:var(--canvas)}
+  .member.flat{cursor:default}
+  .member.flat:hover{background:transparent}
+  .member .nm{font-weight:500;font-size:14px;cursor:pointer}
+  .member .navlbl{font-size:12px;color:var(--muted-2);font-style:italic}
+  .member .win{font-family:var(--mono);font-size:12px;color:var(--held);margin-left:auto;white-space:nowrap}
+  .member .win .to{color:var(--muted-2)}
+  .member .fc{font-family:var(--mono);font-size:12px;color:var(--muted-2);margin-left:auto}
+  .member .sub{font-size:12px;color:var(--muted-2)}
+  .member .goarrow{color:var(--muted-2);font-size:14px;opacity:0;transition:opacity .12s}
+  .member:hover .goarrow{opacity:.7}
+  .member .pill{font-size:10px;font-family:var(--mono);border:1px solid var(--line);border-radius:20px;padding:2px 7px;color:var(--muted)}
+  .member .pill.you{color:var(--violet);border-color:#ddd8ef}
+  .member .pill.co{color:var(--sky);border-color:#cfe0ea}
+  .drive-files{margin-top:8px;display:none;flex-wrap:wrap;gap:5px;padding-left:22px}
   .drive-row.open .drive-files{display:flex}
-  .drive-row{display:block;padding:9px 4px;border-bottom:1px solid var(--line-2)}
+  .drive-row{display:block;padding:4px 6px;border-bottom:1px solid var(--line-2);border-radius:8px}
   .drive-row:last-child{border-bottom:0}
-  .drive-top{display:flex;align-items:baseline;gap:12px;cursor:pointer}
-  .drive-top .nm{font-weight:500;font-size:14px}
+  .drive-row:hover{background:var(--canvas)}
+  .drive-top{display:flex;align-items:baseline;gap:10px;padding:6px 0}
+  .drive-top .expander{flex:none;color:var(--muted-2);cursor:pointer;font-size:11px;width:14px;transition:transform .18s;display:inline-block}
+  .drive-row.open .drive-top .expander{transform:rotate(90deg)}
+  .drive-top .nm{font-weight:500;font-size:14px;cursor:pointer}
+  .drive-top .navlbl{font-size:12px;color:var(--muted-2);font-style:italic}
   .drive-top .fc{font-family:var(--mono);font-size:12px;color:var(--muted-2);margin-left:auto}
+  .drive-top .win{font-family:var(--mono);font-size:12px;margin-left:auto}
+  .drive-top .win .to{color:var(--muted-2)}
+  .drive-top .pill{font-size:10px;font-family:var(--mono);border:1px solid var(--line);border-radius:20px;padding:2px 7px;color:var(--muted)}
+  .drive-top .pill.co{color:var(--sky);border-color:#cfe0ea}
+  .drive-top .pill.you{color:var(--violet);border-color:#ddd8ef}
   .file-chip{font-size:11px;color:var(--ink-2);background:var(--canvas);border:1px solid var(--line-2);border-radius:6px;padding:3px 8px;max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .file-more{font-size:11px;color:var(--muted-2);padding:3px 4px}
   .legible-note{font-size:11.5px;color:var(--muted-2);margin:2px 0 6px;font-style:italic}
@@ -126,8 +146,15 @@
   .more .do{flex:none;font-size:12.5px;color:#fff;background:var(--amber);border:0;border-radius:8px;padding:7px 13px;cursor:pointer;white-space:nowrap}
   .more .do:hover{background:#976225}
   .more.empty{border:1px dashed var(--line);border-left:1px dashed var(--line);background:var(--paper);color:var(--muted);font-size:13.5px;padding:15px;text-align:center}
+  /* self-side snags: calm, no amber, not a to-do (change 2) */
+  .selfside{margin-top:11px;font-size:13px;color:var(--muted);background:var(--canvas);border:1px solid var(--line-2);border-radius:12px;padding:12px 15px;line-height:1.55}
+  .selfside .ss-lead{color:var(--ink-2);font-weight:600}
   .noise{margin-top:11px;font-size:12px;color:var(--muted-2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .noise .tag{font-family:var(--mono);font-size:11px;background:var(--canvas);border:1px solid var(--line-2);border-radius:20px;padding:2px 9px;color:var(--muted-2)}
+  /* placeholder — individual member -> deferred work lens (change 6) */
+  .coming{text-align:center;padding:6px 4px 4px}
+  .coming-orb{width:40px;height:40px;border-radius:50%;margin:0 auto;background:radial-gradient(circle at 42% 38%,#4a9a84,var(--held));box-shadow:0 0 0 0 rgba(47,125,107,.34);animation:breathe 3.4s ease-in-out infinite}
+  .coming p{text-align:center}
 
   .known{margin-top:26px;font-size:12px;color:var(--muted-2);border-top:1px dashed var(--line);padding-top:12px;line-height:1.6}
   .known b{color:var(--muted);font-weight:600}
@@ -317,6 +344,14 @@ function showAdd(kind){
         logoBtn("dropbox","Dropbox","drive-soon")+
         logoBtn("box","Box","drive-soon")+
       '</div>');
+  } else if(kind==="calendar"){
+    openModal("Add calendar — pick where it lives",
+      '<p>Connect a calendar so I can see schedules and deadlines alongside your email and files. You sign in on the provider\'s own screen.</p>'+
+      '<div class="logos">'+
+        logoBtn("google","Google","calendar-soon")+
+        logoBtn("microsoft","Microsoft","calendar-soon")+
+      '</div>'+
+      '<div class="m-note">Calendar reading connects the same per-person way as email — you\'ll only ever see what your own sign-in reaches.</div>');
   } else if(kind==="contacts"){
     openModal("Add contacts",
       '<p>Your people come from the sources you\'ve already connected — a Google directory, phone, or your ATS. Connect one of those and contacts fill in from it.</p>'+
@@ -352,6 +387,12 @@ function pick(route, name, hint){
     closeModal();
     say("We'll wire up <b>"+esc(name)+"</b> when you need it — the moment it's the source that matters, I build the connector. For now, Google Drive is ready to go.","small");
     toast(esc(name)+" isn't wired yet — noted for the build queue. Google is ready now.");
+    return;
+  }
+  if(route==="calendar-soon"){
+    closeModal();
+    say("Calendar via <b>"+esc(name)+"</b> connects the same per-person way email does — I\'ll wire it in as we build the calendar lens. Noted for the queue.","small");
+    toast("Calendar connect is queued — it lands with the calendar lens.");
     return;
   }
   if(route==="email-request"){
@@ -469,29 +510,32 @@ function systemGrant(system){
 
 /* ================= where we could do more (translate honestly) ================= */
 function moreItem(h){
-  // translate engineering bucket -> honest problem+solution, us-voice
+  // translate engineering bucket -> honest problem+solution, us-voice.
+  // resolve a raw source_key to a friendly name, incl. deduped drives.
   const nameOf = k => {
     const inv=INV||{};
-    const all=[].concat(inv.email||[],inv.drives||[],inv.systems||[],inv.other||[]);
+    const all=[].concat(inv.email||[],inv.systems||[],inv.other||[]);
     const hit=all.find(x=>x.source_key===k);
-    return hit ? (hit.name||hit.address||k) : k.replace(/^drive:shared:/,"drive ").replace(/^gmail:/,"");
+    if(hit) return hit.name||hit.address||k;
+    // drives were deduped by drive id; match a raw key back to its drive by name hint
+    if(k.startsWith("drive")){
+      // pull the drive that shares the same underlying id if we can, else humanize
+      const guess=(inv.drives||[]).find(d=>k.indexOf(d.name.toLowerCase().replace(/\s+/g,""))>-1);
+      if(guess) return guess.name;
+      const m=k.match(/:([a-z]+)$/i); // e.g. :aitool, :proclib
+      const alias={aitool:"AI Tool",proclib:"Process Library"};
+      if(m&&alias[m[1].toLowerCase()]) return alias[m[1].toLowerCase()];
+      return "one of your drives";
+    }
+    return k.replace(/^gmail:/,"");
   };
   const where = nameOf(h.source);
-  if(h.bucket==="blocked_external"){
-    return {
-      prob:"A few files in "+esc(where)+" won\'t open — they came in damaged or in a format I can\'t read yet ("+h.count+").",
-      sol:"Re-save or re-share them and I\'ll pull them straight in.",
-      cta:"Show me which"
-    };
-  }
-  if(h.bucket==="blocked_our_bug"){
-    return {
-      prob:"I hit a snag on "+h.count+" item"+(h.count>1?"s":"")+" in "+esc(where)+" — that one\'s on my side, not yours.",
-      sol:"I\'ve logged it; it\'ll clear on the next pass. Nothing for you to do.",
-      cta:null
-    };
-  }
-  return {prob:esc(where)+": "+h.count+" items need a look.", sol:"Let\'s sort it together.", cta:"Look"};
+  // actionable == blocked_external: files that won't open (customer can fix)
+  return {
+    prob:"A few files in "+esc(where)+" won\'t open — they came in damaged or in a format I can\'t read yet ("+h.count+").",
+    sol:"Re-save or re-share them and I\'ll pull them straight in.",
+    cta:"Show me which"
+  };
 }
 
 /* ================= render ================= */
@@ -510,6 +554,31 @@ function ico(name){
   return s[name]||s.loose;
 }
 
+/* month-year for spans, e.g. "Mar 2024"; year-only when older than ~5y reads cleaner */
+function monthYear(iso){
+  if(!iso) return null;
+  const d=new Date(iso);
+  return d.toLocaleString("en-US",{month:"short",year:"numeric"});
+}
+function yearOnly(iso){ return iso ? String(new Date(iso).getFullYear()) : null; }
+
+/* group overview meta line — health · span · completeness (change 1) */
+function metaLine(g){
+  if(!g) return "";
+  const parts=[];
+  if(g.health) parts.push('<span class="mHealth">'+esc(g.health)+'</span>');
+  if(g.span_from){
+    // older than ~5y -> year-only; recent -> month year
+    const yrs=(Date.now()-new Date(g.span_from).getTime())/(365*864e5);
+    parts.push('back to '+esc(yrs>5?yearOnly(g.span_from):monthYear(g.span_from)));
+  }
+  if(g.completeness) parts.push(esc(g.completeness));
+  return parts.join(' · ');
+}
+
+/* member navigation label (change 7) — silent when not genuinely specific */
+function navLabel(lbl){ return lbl ? '<span class="navlbl">'+esc(lbl)+'</span>' : ''; }
+
 function render(inv, att){
   INV=inv;
   document.getElementById("stamp").textContent="live · read just now";
@@ -517,76 +586,89 @@ function render(inv, att){
 
   const nEmail=(inv.email||[]).length, nDrive=(inv.drives||[]).length,
         nSys=(inv.systems||[]).length, nOther=(inv.other||[]).length;
-  const humanItems = (att.human||[]);
+  const actionable = (att.actionable||[]);
+  const selfside = (att.selfside||[]);
+  const actionableCt = (typeof att.actionable_count==="number") ? att.actionable_count : actionable.length;
 
   // capability line (customer terms)
   const can=[]; const cant=[];
   if(nEmail) can.push("read across email");
   if(nDrive) can.push("read your documents");
-  if(nSys) cant.push("read QuickBooks yet") ; // qbo present but not walked (last_refresh null)
+  if(nSys) cant.push("read QuickBooks yet");
   const capLine = '<div class="cap">'+
     (can.length?'<span class="can">Can</span> '+esc(can.join(", "))+' and answer across them.':'')+
     (cant.length?' <span class="cant">Not yet</span> '+esc(cant.join(", "))+'.':'')+'</div>';
 
   const band='<div class="band"><div class="nums">'+
     '<div class="num"><b>'+inv.connected+'</b><span>sources connected</span></div>'+
-    '<div class="num more"><b>'+humanItems.length+'</b><span>where we could do more</span></div>'+
+    '<div class="num more"><b>'+actionableCt+'</b><span>where we could do more</span></div>'+
     '<div class="num"><b style="font-size:15px;color:var(--muted);font-family:var(--sans)">'+esc(ago(inv.last_activity))+'</b><span>last gathered</span></div>'+
     '</div>'+capLine+'</div>';
 
   // inventory groups
   let groups="";
 
-  // EMAIL
+  // EMAIL — members expand in place; each mailbox taps through to its (deferred) work lens
   if(nEmail){
+    const g=inv.email_group||{count:nEmail,unit:"mailboxes"};
     const rows=inv.email.map(e=>{
       const win = e.window_from ? '<span class="win">from '+esc(fmtWindow(e.window_from))+' <span class="to">→ now</span></span>'
-                                : (e.is_active?'<span class="win"><span class="to">gathering…</span></span>':'<span class="pill off">not reading yet</span>');
-      return '<div class="item"><span class="nm">'+esc(e.address)+'</span>'+catPill(e.category)+win+'</div>';
+                                : (e.is_active?'<span class="win"><span class="to">gathering…</span></span>':'<span class="win"><span class="to">not reading yet</span></span>');
+      return '<div class="member" onclick="openMember(\'email\',\''+esc(e.address)+'\')">'+
+        '<span class="nm">'+esc(e.address)+'</span>'+navLabel(e.label)+catPill(e.category)+win+
+        '<span class="goarrow">→</span></div>';
     }).join("");
-    groups+=grp("email","Email",nEmail,"reading windows — from when, to now",rows);
+    groups+=grp("email","Email",g,rows);
   }
-  // DRIVES
+  // DRIVES — deduped clean-mirror; drives expand to files; drive taps through to (deferred) folder lens
   if(nDrive){
+    const g=inv.drives_group||{count:nDrive,unit:"drives"};
     const rows='<div class="legible-note">Mirrored clean from your Drive — your files, finally legible. Your actual Drive stays untouched.</div>'+
       inv.drives.map(d=>{
+        const state = d.state==="connecting"
+          ? '<span class="win"><span class="to">connecting…</span></span>'
+          : '<span class="fc">'+d.files+' file'+(d.files===1?"":"s")+'</span>';
         return '<div class="drive-row" data-key="'+esc(d.source_key)+'">'+
-          '<div class="drive-top" onclick="expandDrive(this,\''+esc(d.source_key)+'\')">'+
-            '<span class="nm">'+esc(d.name)+'</span>'+catPill(d.category)+
-            '<span class="fc">'+d.files+' file'+(d.files===1?"":"s")+'</span>'+
+          '<div class="drive-top">'+
+            '<span class="expander" onclick="expandDrive(this,\''+esc(d.source_key)+'\')" title="see inside">▸</span>'+
+            '<span class="nm" onclick="openMember(\'drive\',\''+esc(d.name)+'\')">'+esc(d.name)+'</span>'+navLabel(d.label)+catPill(d.category)+state+
           '</div><div class="drive-files"></div></div>';
       }).join("");
-    groups+=grp("drive","Drives &amp; folders",nDrive,"tap a drive to see inside",rows);
+    groups+=grp("drive","Drives &amp; folders",g,rows);
   }
-  // CONTACTS (honest: not separately modeled yet)
-  groups+=grp("contacts","Contacts",0,"assembled from your connected sources",
-    '<div class="item"><span class="sub">Contacts fill in from the sources you connect — a directory, phone, or ATS. None connected as a contacts source yet.</span></div>');
+  // CONTACTS (honest: assembled from connected sources; none as a contacts source yet)
+  groups+=grp("contacts","Contacts",{count:0,unit:"sources",health:"assembled from your sources"},
+    '<div class="member flat"><span class="sub">Contacts fill in from the sources you connect — a directory, phone, or ATS. None connected as a contacts source yet.</span></div>');
   // SYSTEMS
   if(nSys){
+    const g=inv.systems_group||{count:nSys};
     const rows=inv.systems.map(s=>{
-      const readState = s.last_refresh_at ? '<span class="win">read '+esc(ago(s.last_refresh_at))+'</span>' : '<span class="pill off">connected, not read yet</span>';
-      return '<div class="item"><span class="nm">'+esc(s.name)+'</span><span class="pill co">account-shaped</span>'+readState+'</div>';
+      const readState = s.state==="read" ? '<span class="win">read '+esc(ago(s.last_refresh_at))+'</span>' : '<span class="win"><span class="to">connected, not read yet</span></span>';
+      return '<div class="member" onclick="openMember(\'system\',\''+esc(s.name)+'\')">'+
+        '<span class="nm">'+esc(s.name)+'</span>'+navLabel(s.label)+'<span class="pill co">account-shaped</span>'+readState+
+        '<span class="goarrow">→</span></div>';
     }).join("");
-    groups+=grp("systems","Systems",nSys,"account-shaped — owner-gated",rows);
+    groups+=grp("systems","Systems",{count:g.count||nSys,unit:(g.count||nSys)===1?"system":"systems",health:"account-shaped · owner-gated"},rows);
   }
   // LOOSE / historical
   if(nOther){
-    const rows=inv.other.map(o=>'<div class="item"><span class="nm">'+esc(o.name)+'</span><span class="sub">'+esc(o.source_type)+'</span></div>').join("");
-    groups+=grp("loose","Loose &amp; historical",nOther,"one-off imports and legacy data",rows);
+    const rows=inv.other.map(o=>'<div class="member flat"><span class="nm">'+esc(o.name)+'</span><span class="sub">'+esc(o.source_type)+'</span></div>').join("");
+    groups+=grp("loose","Loose &amp; historical",{count:nOther,unit:nOther===1?"import":"imports",health:"one-off and legacy"},rows);
   }
 
-  // add strip
+  // add strip — Calendar added (change 3)
   const addStrip='<div class="addstrip">'+
     add("email","Add email","Google, Microsoft, Yahoo")+
     add("drive","Add drives & folders","Drive, OneDrive, Dropbox, Box")+
+    add("calendar","Add calendar","Google, Microsoft, Apple")+
     add("contacts","Add contacts","from a directory, phone or ATS")+
     add("system","Add a system","QuickBooks, Wise")+
     '</div>';
 
-  // where we could do more
+  // where we could do more — actionable items only count; self-side listed uncounted
   let more;
-  if(humanItems.length){
-    more='<div class="more-list">'+humanItems.map(h=>{
+  if(actionable.length){
+    more='<div class="more-list">'+actionable.map(h=>{
       const t=moreItem(h);
       return '<div class="more"><div class="txt"><div class="prob">'+t.prob+'</div><div class="sol">'+t.sol+'</div></div>'+
         (t.cta?'<button class="do" onclick="toast(\'Opening the list — you\\\'ll see exactly which items.\')">'+esc(t.cta)+'</button>':'')+'</div>';
@@ -594,10 +676,15 @@ function render(inv, att){
   } else {
     more='<div class="more empty">Nothing needs a decision from us right now — everything connected is current.</div>';
   }
-  // self-healing noise: shown, never flagged
+  // self-side snags: listed honestly, NOT counted, calm styling (no amber)
+  let selfsideHtml="";
+  if(selfside.length){
+    const n=selfside.reduce((a,s)=>a+(s.count||0),0);
+    selfsideHtml='<div class="selfside"><span class="ss-lead">On my side, nothing for you to do:</span> I hit a snag on '+n+' item'+(n===1?"":"s")+' across a couple of sources — logged, and they clear on the next pass.</div>';
+  }
+  // self-healing noise: reassurance strip
   let noise="";
   if(att.noise&&att.noise.length){
-    const total=att.noise.reduce((a,n)=>a+n.count,0);
     noise='<div class="noise"><span>Handled quietly, no action needed:</span>'+
       att.noise.map(n=>'<span class="tag">'+n.count+' '+esc(n.bucket.replace(/_/g," "))+'</span>').join("")+'</div>';
   }
@@ -608,20 +695,25 @@ function render(inv, att){
     band +
     '<div class="eyebrow">What\'s in here</div>'+'<div class="tree">'+groups+'</div>'+
     '<div class="eyebrow">Fill it further</div>'+addStrip+
-    '<div class="eyebrow">Where we could do more</div>'+more+noise+
+    '<div class="eyebrow">Where we could do more</div>'+more+selfsideHtml+noise+
     known;
 
   wire();
-  speakOpening(inv, humanItems.length);
+  speakOpening(inv, actionableCt);
 }
 
-function grp(icon,title,count,hint,body){
+/* group card — overview line carries health/span/completeness (change 1) */
+function grp(icon,title,g,body){
+  const count=(g&&typeof g.count==="number")?g.count:0;
+  const unit=(g&&g.unit)?g.unit:"";
+  const meta=metaLine(g);
   return '<div class="grp" data-grp="'+icon+'">'+
     '<div class="grp-head" onclick="toggleGrp(this)">'+
       '<div class="grp-ico">'+ico(icon)+'</div>'+
-      '<div class="grp-title">'+title+'</div>'+
-      '<div class="grp-count">'+count+'</div>'+
-      '<div class="grp-hint">'+hint+'</div>'+
+      '<div class="grp-main">'+
+        '<div class="grp-title">'+title+'</div>'+
+        '<div class="grp-meta"><span class="grp-count">'+count+' '+esc(unit)+'</span>'+(meta?'<span class="grp-sep">·</span>'+meta:'')+'</div>'+
+      '</div>'+
       '<svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>'+
     '</div>'+
     '<div class="grp-body">'+body+'</div>'+
@@ -630,8 +722,20 @@ function grp(icon,title,count,hint,body){
 function add(kind,t,d){return '<button class="add" onclick="showAdd(\''+kind+'\')"><div class="t">'+t+'</div><div class="d">'+d+'</div></button>';}
 
 function toggleGrp(el){el.parentElement.classList.toggle("open");}
-async function expandDrive(topEl,key){
-  const row=topEl.parentElement;
+
+/* individual member tap -> the working lens (deferred build) -> placeholder (change 6) */
+function openMember(kind, name){
+  const lensName = {email:"email lens",drive:"folder lens",system:"systems lens",calendar:"calendar lens",contacts:"contacts lens"}[kind] || "work lens";
+  openModal(esc(name),
+    '<div class="coming">'+
+      '<div class="coming-orb"></div>'+
+      '<p style="font-size:15px;color:var(--ink);font-family:var(--serif);margin:14px 0 6px">This is where we\'ll open <b>'+esc(name)+'</b>.</p>'+
+      '<p>The '+esc(lensName)+' — where you actually read, search and act in here — is the next thing we\'re building. For now this is the map: you can see it\'s connected, live, and what\'s in it.</p>'+
+      '<div class="m-note">Nothing\'s missing — the room just isn\'t built yet. The doorway is real; it opens soon.</div>'+
+    '</div>');
+}
+async function expandDrive(expEl,key){
+  const row=expEl.closest(".drive-row");
   row.classList.toggle("open");
   const box=row.querySelector(".drive-files");
   if(row.classList.contains("open") && !box.dataset.loaded){
@@ -660,14 +764,14 @@ function speakOpening(inv, moreCount){
     return;
   }
   say("Here\'s what we\'ve gathered so far — <b>"+nSrc+" sources</b>, all in your own database, yours alone.");
-  const e=(inv.email||[]).find(x=>x.window_from);
-  if(e){
-    say("Your <b>"+esc(e.address)+"</b> is read from "+esc(fmtWindow(e.window_from).replace(/,[^,]*$/,''))+" through now — I keep a year live and reach further back the moment a job needs it.","small");
+  const eg=inv.email_group, dg=inv.drives_group;
+  if(eg&&eg.span_from){
+    say("Your email is <b>reading live</b> across "+eg.count+" "+eg.unit+", back to "+esc(monthYear(eg.span_from))+" — and your drives back to "+esc(dg&&dg.span_from?yearOnly(dg.span_from):"the start")+". I keep it current and reach further the moment a job needs it.","small");
   }
   if(moreCount>0){
-    say("There are <b>"+moreCount+"</b> spots where we could do more — I\'ve laid each one out with what it\'d take. None of it is urgent.","small");
+    say("There"+(moreCount===1?"\'s":"\'re")+" <b>"+moreCount+"</b> spot"+(moreCount===1?"":"s")+" where you could help me do more — I\'ve laid "+(moreCount===1?"it":"each")+" out with what it\'d take. Nothing urgent.","small");
   } else {
-    say("Everything connected is current. When you\'re ready, add another source on the right and watch it land.","small");
+    say("Nothing needs you right now — everything connected is current. When you\'re ready, add another source on the right and watch it land.","small");
   }
 }
 
