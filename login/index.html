@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tool — Sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:Inter,-apple-system,"Segoe UI",sans-serif;
+    background:#faf9f7;color:#1a1b1d;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:24px;line-height:1.5;
+  }
+  .card{width:100%;max-width:420px}
+  .mark{font-family:Fraunces,Georgia,serif;font-size:30px;font-weight:500;letter-spacing:-.01em}
+  .mark small{display:block;font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.14em;
+    text-transform:uppercase;color:#a9aab0;margin-top:6px;font-weight:400}
+  .lede{margin:26px 0 30px;color:#56585e;font-size:14.5px}
+  label{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:#8a8d93;margin-bottom:8px;font-weight:500}
+  input{width:100%;padding:13px 15px;font:inherit;font-size:15px;
+    border:1px solid #e2ded6;border-radius:9px;background:#fff;color:#1a1b1d;outline:none}
+  input:focus{border-color:#1a1b1d}
+  button{width:100%;margin-top:14px;padding:13px 15px;font:inherit;font-size:15px;font-weight:500;
+    border:0;border-radius:9px;background:#1a1b1d;color:#fff;cursor:pointer}
+  button:disabled{opacity:.45;cursor:default}
+  .note{margin-top:22px;font-size:12.5px;color:#8a8d93}
+  .msg{margin-top:18px;padding:13px 15px;border-radius:9px;font-size:13.5px;display:none}
+  .msg.on{display:block}
+  .msg.ok{background:#eaf3ec;color:#2f6b45;border:1px solid #cfe3d6}
+  .msg.err{background:#f9ecea;color:#96342d;border:1px solid #eed4d0}
+  .msg.info{background:#eef2f8;color:#2c5a92;border:1px solid #dbe5f2}
+  .who{display:none;margin-top:8px}
+  .who.on{display:block}
+  .row{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #f0ece5;font-size:13.5px}
+  .row:last-child{border-bottom:0}
+  .k{color:#8a8d93}
+  .v{font-family:ui-monospace,monospace;font-size:12px;text-align:right;word-break:break-all}
+  .v.good{color:#2f6b45}
+  .v.bad{color:#96342d}
+  .sub{margin-top:18px;font-size:12px;color:#a9aab0;border-top:1px solid #f0ece5;padding-top:16px}
+  .linkish{background:none;border:0;color:#8a8d93;font-size:12.5px;text-decoration:underline;
+    cursor:pointer;padding:0;width:auto;margin-top:16px;font-weight:400}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="mark">Tool<small>hirekraft</small></div>
+
+  <p class="lede" id="lede">
+    Sign in to your brain. We&rsquo;ll email you a link &mdash; no password to remember,
+    and nothing to hand around.
+  </p>
+
+  <div id="signin">
+    <label for="email">Work email</label>
+    <input id="email" type="email" autocomplete="email" placeholder="you@hirekraft.ai" spellcheck="false">
+    <button id="send">Email me a sign-in link</button>
+    <p class="note">
+      The link signs in only the address it was sent to. What you can see afterwards is
+      whatever your own accounts already let you see &mdash; nothing more.
+    </p>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="who" id="who"></div>
+  <button class="linkish" id="out" style="display:none">Sign out</button>
+</div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// THE LOGIN FRONT DOOR (Act 1, 2026-07-23).
+//
+// Why this page exists: until now NOTHING in the system ever sent a real user JWT. Every
+// surface authenticated with the service-role or publishable key and then ASSERTED who was
+// asking by putting identity_id in the request body. Even workspace-chat, the one function
+// running at verify_jwt:true, read identity from the body — the platform only proved that
+// *some* valid key was presented, never *who* was calling.
+//
+// So the JWT->identity contract could not be migrated onto anything, because no caller
+// existed that could satisfy it. This page is that caller.
+//
+// Magic link (OTP) rather than password: the operator's auth.users row carries no password
+// (provider=email, empty providers). More importantly, a password is a credential someone has
+// to set, transmit and store — for the second user that is a thing to leak. A link sent to the
+// address itself proves control of the address and leaves nothing to hand around.
+//
+// The publishable key below is PUBLIC by design — it identifies the project, it does not grant
+// anything. All authority comes from the signed JWT minted after sign-in. (The legacy anon JWT
+// key is disabled on this project; this is the sb_publishable_ form.)
+
+const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
+const PUBLISHABLE_KEY = "sb_publishable_joP87JJiePfN3k1uPoxxVA_DLGT1zv5";
+
+const sb = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
+  auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true, flowType: "pkce" },
+});
+
+const $ = (id) => document.getElementById(id);
+const msg = $("msg"), who = $("who"), signin = $("signin"), out = $("out"), lede = $("lede");
+
+function say(kind, html) {
+  msg.className = "msg on " + kind;
+  msg.innerHTML = html;
+}
+
+function row(k, v, cls) {
+  return `<div class="row"><span class="k">${k}</span><span class="v ${cls || ""}">${v}</span></div>`;
+}
+
+// THE PROOF. Calls identity_for_jwt() with the signed-in session. The function takes NO
+// parameter — it reads auth.uid() from the JWT the gateway already verified. There is nothing
+// here for the browser to claim: the page cannot ask "who is 99599452?", only "who am I?",
+// and the database answers from the token.
+async function resolveIdentity() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return null;
+
+  const { data: identityId, error } = await sb.rpc("identity_for_jwt");
+  if (error) return { session, error: error.message };
+
+  let profile = null;
+  if (identityId) {
+    const { data } = await sb.rpc("identity_profile", { p_identity_id: identityId });
+    profile = data ?? null;
+  }
+  return { session, identityId, profile };
+}
+
+async function render() {
+  const r = await resolveIdentity();
+
+  if (!r) {
+    signin.style.display = "";
+    who.className = "who";
+    out.style.display = "none";
+    return;
+  }
+
+  signin.style.display = "none";
+  out.style.display = "";
+  lede.textContent = "You're signed in. This is what the brain resolves you to — from your token, not from anything this page told it.";
+
+  const bound = !!r.identityId;
+  let html = "";
+  html += row("Signed in as", r.session.user.email);
+  html += row("Auth user (JWT sub)", r.session.user.id);
+  html += row("Resolves to identity", bound ? r.identityId : "no bound identity", bound ? "good" : "bad");
+  if (r.profile) {
+    html += row("Name", r.profile.name);
+    html += row("Role", r.profile.role ?? "—");
+    html += row("All access", r.profile.is_all_access ? "yes" : "no");
+  }
+  who.innerHTML = html +
+    `<p class="sub">${bound
+      ? "Identity here is <strong>proven</strong>, not asserted: resolved from the signed token by identity_for_jwt(), which takes no parameter and so cannot be asked about anyone else."
+      : "This login has no brain identity bound to it. That is a refusal, not an error — an unbound login resolves to nothing and can read nothing."}</p>`;
+  who.className = "who on";
+
+  if (r.error) say("err", "Identity lookup failed: " + r.error);
+  else if (!bound) say("err", "Signed in, but this account is not bound to a brain identity. Nothing is readable.");
+  else say("ok", "Signed in and bound. The token now proves who you are.");
+}
+
+$("send").addEventListener("click", async () => {
+  const email = $("email").value.trim();
+  if (!email) { say("err", "Enter your work email."); return; }
+  $("send").disabled = true;
+  say("info", "Sending&hellip;");
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.href.split("#")[0].split("?")[0] },
+  });
+  $("send").disabled = false;
+  if (error) { say("err", error.message); return; }
+  say("ok", "Check <strong>" + email + "</strong> for the sign-in link. Open it in this browser.");
+});
+
+$("email").addEventListener("keydown", (e) => { if (e.key === "Enter") $("send").click(); });
+
+out.addEventListener("click", async () => {
+  await sb.auth.signOut();
+  location.reload();
+});
+
+sb.auth.onAuthStateChange(() => { render(); });
+render();
+</script>
+</body>
+</html>
