@@ -59,11 +59,21 @@
   <div id="signin">
     <label for="email">Work email</label>
     <input id="email" type="email" autocomplete="email" placeholder="you@hirekraft.ai" spellcheck="false">
-    <button id="send">Email me a sign-in link</button>
+    <button id="send">Email me a sign-in code</button>
     <p class="note">
-      The link signs in only the address it was sent to. What you can see afterwards is
+      The code signs in only the address it was sent to. What you can see afterwards is
       whatever your own accounts already let you see &mdash; nothing more.
     </p>
+  </div>
+
+  <!-- The email leads with a 6-digit code (see the magic-link template), so the code is the
+       primary affordance and must have somewhere to go. It also survives a misconfigured
+       redirect, which a link does not. -->
+  <div id="codebox" style="display:none">
+    <label for="code">Six-digit code from the email</label>
+    <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" spellcheck="false">
+    <button id="verify">Sign in</button>
+    <button class="linkish" id="back">Use a different email</button>
   </div>
 
   <div class="msg" id="msg"></div>
@@ -137,13 +147,14 @@ async function render() {
   const r = await resolveIdentity();
 
   if (!r) {
-    signin.style.display = "";
+    if ($("codebox").style.display === "none") signin.style.display = "";
     who.className = "who";
     out.style.display = "none";
     return;
   }
 
   signin.style.display = "none";
+  $("codebox").style.display = "none";
   out.style.display = "";
   lede.textContent = "You're signed in. This is what the brain resolves you to — from your token, not from anything this page told it.";
 
@@ -168,6 +179,8 @@ async function render() {
   else say("ok", "Signed in and bound. The token now proves who you are.");
 }
 
+let pendingEmail = null;
+
 $("send").addEventListener("click", async () => {
   const email = $("email").value.trim();
   if (!email) { say("err", "Enter your work email."); return; }
@@ -179,10 +192,36 @@ $("send").addEventListener("click", async () => {
   });
   $("send").disabled = false;
   if (error) { say("err", error.message); return; }
-  say("ok", "Check <strong>" + email + "</strong> for the sign-in link. Open it in this browser.");
+  pendingEmail = email;
+  signin.style.display = "none";
+  $("codebox").style.display = "";
+  $("code").focus();
+  say("ok", "Sent to <strong>" + email + "</strong>. Enter the six-digit code, or click the link in the email.");
+});
+
+// Verifying the OTP directly is the path that does not depend on redirect configuration at
+// all: the code is exchanged for a session in this tab. Same proof either way — the session
+// carries a signed JWT and identity_for_jwt() reads auth.uid() from it.
+$("verify").addEventListener("click", async () => {
+  const token = $("code").value.trim();
+  if (!token) { say("err", "Enter the six-digit code."); return; }
+  $("verify").disabled = true;
+  say("info", "Verifying&hellip;");
+  const { error } = await sb.auth.verifyOtp({ email: pendingEmail, token, type: "email" });
+  $("verify").disabled = false;
+  if (error) { say("err", error.message); return; }
+  $("codebox").style.display = "none";
+  render();
+});
+
+$("back").addEventListener("click", () => {
+  $("codebox").style.display = "none";
+  signin.style.display = "";
+  msg.className = "msg";
 });
 
 $("email").addEventListener("keydown", (e) => { if (e.key === "Enter") $("send").click(); });
+$("code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("verify").click(); });
 
 out.addEventListener("click", async () => {
   await sb.auth.signOut();
