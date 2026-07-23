@@ -264,6 +264,12 @@ const KEY = "sb_publishable_joP87JJiePfN3k1uPoxxVA_DLGT1zv5";
 /* identities (for creating mailbox sources) — read live at connect time */
 let INV = null;
 
+/* Who is looking. Asserted, exactly as worklens-live and retrieve v2 assert it —
+   Act 1 (JWT->identity binding) is Alex's to make, and until it lands this is a
+   claim, not proof. Overridable for testing the other-person refusal path. */
+const VIEWER = new URLSearchParams(location.search).get("identity")
+  || "99599452-7087-4049-b38b-d6dfa1f185c9";
+
 /* ================= helpers ================= */
 function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 async function rpc(fn, args){
@@ -731,16 +737,32 @@ function toggleGrp(el){el.parentElement.classList.toggle("open");}
 function openMember(kind, name){
   if(kind==="email"){
     const addr=String(name||"").trim();
-    const m=(INV&&INV.email_group&&INV.email_group.members)||[];
-    const row=m.find(x=>String(x.address||"").toLowerCase()===addr.toLowerCase());
-    const reachable = row ? (row.posture==="oauth"||row.posture==="personal-mixed-default-conservative") : false;
-    if(reachable){ location.href="../mail/?mailbox="+encodeURIComponent("gmail:"+addr); return; }
-    openModal(esc(addr),
+    // Members live in INV.email (a flat array) — NOT under email_group, which is a
+    // rollup only. Reading the wrong place marks every mailbox unreachable and the
+    // door never opens.
+    const row=(INV&&INV.email||[]).find(x=>String(x.address||"").toLowerCase()===addr.toLowerCase());
+    // REACHABILITY MIRRORS THE LENS'S OWN RULE, all three parts:
+    //   active + per-identity posture + bound to the identity doing the asking.
+    // erin@ is the case that proves posture alone is not enough: it carries a
+    // per-identity posture but is inactive AND bound to Erin, so routing Alex there
+    // would fail closed inside the lens.
+    const perIdentity = row && (row.posture==="oauth"||row.posture==="personal-mixed-default-conservative");
+    const reachable = !!(row && perIdentity && row.is_active && row.identity_id===VIEWER);
+    if(reachable){ location.href="../mail/?mailbox="+encodeURIComponent("gmail:"+addr)+"&identity="+encodeURIComponent(VIEWER); return; }
+    // Two honest refusals, because they are genuinely different problems.
+    const body = (row && perIdentity && row.identity_id!==VIEWER)
+      ? '<p>This mailbox belongs to someone else, and it stays that way. It\'s connected under their own sign-in, not yours — so we read it as them, never as you. That\'s the whole point: we hold each person\'s own credential rather than a master key.</p>'+
+        '<div class="m-note"><b>Nothing to fix here.</b> When they sign in, it opens for them exactly as yours does for you.</div>'
+      : (row && perIdentity && !row.is_active)
+      ? '<p>This mailbox is connected under a personal sign-in, but it isn\'t reading right now — the connection has lapsed or was never finished.</p>'+
+        '<div class="m-note"><b>The way out:</b> sign into it once more and it starts reading again from where it left off. Nothing gathered so far is lost.</div>'
+      : '<p>Your own mailbox reads live because it\'s connected under your personal sign-in. This one is connected under an older shared-key shape — one key for the whole company. We refuse to read mail that way, because it can\'t tell you apart from anyone else holding the key, so it would be guessing about what you\'re allowed to see.</p>'+
+        '<div class="m-note"><b>The way out:</b> reconnect this mailbox by signing into it once as a real person. Then it opens here exactly like yours does, and everything in it joins the case files automatically.</div>';
+    openModal(addr,
       '<div class="coming">'+
         '<div class="coming-orb"></div>'+
-        '<p style="font-size:15px;color:var(--ink);font-family:var(--serif);margin:14px 0 6px">We can\'t open <b>'+esc(addr)+'</b> as you yet.</p>'+
-        '<p>Your own mailbox reads live because it\'s connected under your personal sign-in. This one is connected under an older shared-key shape — one key for the whole company. We refuse to read mail that way, because it can\'t tell you apart from anyone else holding the key.</p>'+
-        '<div class="m-note"><b>The way out:</b> reconnect this mailbox by signing into it once as a real person. Then it opens here exactly like yours does, and everything in it joins the case files automatically.</div>'+
+        '<p style="font-size:15px;color:var(--ink);font-family:var(--serif);margin:14px 0 6px">We can\'t open <b>'+esc(addr)+'</b> as you.</p>'+
+        body+
       '</div>');
     return;
   }
