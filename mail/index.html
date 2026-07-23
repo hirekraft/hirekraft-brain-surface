@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Your mail — HireKraft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2430; --ink-2:#3a4655; --muted:#66727f; --muted-2:#95a0ac;
+    --paper:#ffffff; --canvas:#f4f6f8; --line:#e4e8ec; --line-2:#eef1f4;
+    --rail:#f7f5f1; --rail-line:#e9e3d9;
+    --held:#2f7d6b; --held-bg:#e9f4f0; --held-line:#cfe6dd;
+    --amber:#b0752a; --amber-bg:#fbf3e6; --amber-line:#eeddc0;
+    --sky:#356f97; --sky-bg:#eaf1f6; --sky-line:#cfe0ec;
+    --violet:#6a5bb0; --violet-bg:#efedf8; --violet-line:#d9d3ee;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(20,24,29,.04), 0 12px 30px -20px rgba(20,24,29,.22);
+    --serif:'Fraunces',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--canvas);-webkit-font-smoothing:antialiased}
+  .wrap{display:grid;grid-template-columns:340px 1fr;min-height:100vh}
+  a{color:inherit}
+
+  /* ---------- consultant rail (carried from the filling lens) ---------- */
+  .rail{background:var(--rail);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+  .rail-head{padding:24px 24px 6px}
+  .consultant-badge{display:flex;align-items:center;gap:11px}
+  .orb{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 42% 38%,#4a9a84,var(--held));box-shadow:0 0 0 0 rgba(47,125,107,.36);animation:breathe 3.4s ease-in-out infinite;flex:none}
+  @keyframes breathe{0%,100%{box-shadow:0 0 0 0 rgba(47,125,107,.30)}50%{box-shadow:0 0 0 7px rgba(47,125,107,0)}}
+  .consultant-badge .who{font-family:var(--serif);font-weight:600;font-size:16px;letter-spacing:.01em}
+  .consultant-badge .role{font-size:11px;color:var(--muted-2);font-family:var(--mono);letter-spacing:.03em}
+  .speech{padding:8px 24px 0;flex:1;overflow-y:auto}
+  .say{font-family:var(--serif);font-size:17.5px;line-height:1.5;color:var(--ink);margin:16px 0;opacity:0;transform:translateY(6px);animation:rise .5s ease forwards}
+  .say.small{font-family:var(--sans);font-size:14px;color:var(--ink-2);line-height:1.55}
+  .say b{font-weight:600;color:var(--held)}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .backlink{display:inline-flex;align-items:center;gap:6px;margin:14px 24px 0;font-size:12.5px;color:var(--muted);text-decoration:none;font-family:var(--mono)}
+  .backlink:hover{color:var(--held)}
+  .ask{padding:16px 20px 20px;border-top:1px solid var(--line)}
+  .ask label{font-size:11px;color:var(--muted-2);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase}
+  .ask .box{margin-top:8px;display:flex;gap:8px;align-items:flex-end;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:8px 8px 8px 12px}
+  .ask textarea{border:0;resize:none;outline:none;flex:1;font-family:inherit;font-size:14px;color:var(--ink);background:transparent;line-height:1.45;max-height:120px}
+  .ask .send{flex:none;width:34px;height:34px;border-radius:9px;border:0;background:var(--held);color:#fff;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center}
+  .sovereign{margin:0 24px 16px;display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--held);background:var(--held-bg);border:1px solid var(--held-line);border-radius:20px;padding:5px 13px}
+
+  /* ---------- canvas ---------- */
+  .canvas{padding:26px 30px 120px;max-width:1180px}
+  .head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:4px}
+  h1{font-family:var(--serif);font-weight:600;font-size:27px;margin:0;letter-spacing:-.01em}
+  .sub{font-size:13px;color:var(--muted);margin-top:5px}
+  .mono{font-family:var(--mono)}
+
+  .panes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:20px;align-items:start}
+  .panes.solo{grid-template-columns:minmax(0,1fr)}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card-head{padding:14px 16px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .card-head h2{font-family:var(--serif);font-size:16px;font-weight:600;margin:0}
+  .card-head .meta{font-size:11.5px;color:var(--muted-2);font-family:var(--mono)}
+
+  /* inbox list */
+  .msg{padding:12px 16px;border-bottom:1px solid var(--line-2);cursor:pointer;transition:background .12s}
+  .msg:last-child{border-bottom:0}
+  .msg:hover{background:var(--canvas)}
+  .msg.active{background:var(--held-bg);box-shadow:inset 3px 0 0 var(--held)}
+  .msg .r1{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+  .msg .who{font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .msg .when{font-size:11px;color:var(--muted-2);white-space:nowrap;font-family:var(--mono)}
+  .msg .subj{font-size:13.5px;margin-top:2px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .msg .snip{font-size:12px;color:var(--muted-2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .msg.unread .who::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--held);margin-right:7px;vertical-align:middle}
+
+  /* thread */
+  .m-body{padding:14px 16px}
+  .mail{border-bottom:1px solid var(--line-2);padding:12px 0}
+  .mail:last-child{border-bottom:0}
+  .mail .mh{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .mail .mfrom{font-weight:600;font-size:13.5px}
+  .mail .mdate{font-size:11px;color:var(--muted-2);font-family:var(--mono)}
+  .mail .mto{font-size:11.5px;color:var(--muted-2);margin-top:2px}
+  .mail .mtext{font-size:13.5px;line-height:1.6;color:var(--ink-2);margin-top:9px;white-space:pre-wrap;word-break:break-word;max-height:280px;overflow:auto}
+
+  /* case file */
+  .assembling{padding:22px 16px;text-align:center;color:var(--muted);font-family:var(--serif);font-size:16px}
+  .dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--held);margin:0 2px;animation:bounce 1.2s infinite}
+  .dots span:nth-child(2){animation-delay:.15s}.dots span:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+  .grp{padding:11px 16px 4px;font-size:11px;font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2)}
+  .item{display:block;padding:11px 16px;border-bottom:1px solid var(--line-2);text-decoration:none;color:inherit;transition:background .12s}
+  .item:hover{background:var(--canvas)}
+  .item .r1{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .item .t{font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .d{font-size:11px;color:var(--muted-2);font-family:var(--mono);white-space:nowrap}
+  .item .s{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .tags{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .pill{font-size:10.5px;font-family:var(--mono);padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--muted);background:var(--canvas)}
+  .pill.why{background:var(--sky-bg);border-color:var(--sky-line);color:var(--sky)}
+  .pill.tier{background:var(--violet-bg);border-color:var(--violet-line);color:var(--violet)}
+  .pill.open{color:var(--held);border-color:var(--held-line);background:var(--held-bg)}
+  /* provenance: quiet by default, one tap away */
+  .prov{margin-top:6px;font-size:11px;color:var(--muted-2);font-family:var(--mono);cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:0}
+  .prov:hover{color:var(--held)}
+  .prov .dot{width:6px;height:6px;border-radius:50%;flex:none}
+  .prov .dot.physics{background:var(--held)}
+  .prov .dot.chokepoint{background:var(--violet)}
+  .prov-detail{display:none;margin-top:7px;font-size:11.5px;line-height:1.5;color:var(--ink-2);background:var(--canvas);border:1px solid var(--line);border-left:2px solid var(--held);border-radius:8px;padding:8px 10px}
+  .prov-detail.chokepoint{border-left-color:var(--violet)}
+  .prov-detail.show{display:block}
+
+  .note{margin:14px 0 0;background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+  .note h3{font-family:var(--serif);font-size:14.5px;margin:0 0 5px;font-weight:600}
+  .note p{margin:0;font-size:13px;line-height:1.55;color:var(--ink-2)}
+  .note .keys{margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--muted-2);line-height:1.7;word-break:break-all}
+  .empty{padding:30px 16px;text-align:center;color:var(--muted-2);font-size:13.5px}
+  .err{margin:14px 0 0;border-left-color:#b0452a}
+  .btn{border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:6px 12px;font-family:inherit;font-size:12.5px;color:var(--ink-2);cursor:pointer}
+  .btn:hover{border-color:var(--held-line);color:var(--held)}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  .btn[disabled]:hover{border-color:var(--line);color:var(--ink-2)}
+  @media (max-width:1080px){.wrap{grid-template-columns:1fr}.rail{position:static;height:auto}.panes{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside class="rail">
+    <div class="rail-head">
+      <div class="consultant-badge">
+        <div class="orb"></div>
+        <div>
+          <div class="who">Your consultant</div>
+          <div class="role">MAIL LENS</div>
+        </div>
+      </div>
+    </div>
+    <a class="backlink" href="../fill/">← back to your brain</a>
+    <div class="speech" id="speech"></div>
+    <div class="sovereign" id="sov">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span id="sovLine">We read this as you — nothing is copied</span>
+    </div>
+    <div class="ask">
+      <label>Ask us anything</label>
+      <div class="box">
+        <textarea id="askBox" rows="1" placeholder="What's the story with Diconium?"></textarea>
+        <button class="send" id="askSend">↑</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="canvas">
+    <div class="head">
+      <div>
+        <h1 id="title">Your mail</h1>
+        <div class="sub" id="sub">Opening the mailbox…</div>
+      </div>
+      <button class="btn" id="composeBtn" disabled title="Replying needs your permission to write — we don't have it yet, and we won't take it quietly.">Draft a reply</button>
+    </div>
+
+    <div id="stage"></div>
+  </main>
+</div>
+
+<script>
+/* ================= config ================= */
+const BRAIN = "https://uvdoompnnypmneyrvtas.supabase.co";
+const KEY = "sb_publishable_joP87JJiePfN3k1uPoxxVA_DLGT1zv5";
+const LENS = BRAIN + "/functions/v1/worklens-live";
+
+/* Identity is asserted here, exactly as the lens itself asserts it (Act 1 — JWT
+   binding — is deliberately Alex's, not ours). Do not read this as proof of login. */
+const params = new URLSearchParams(location.search);
+const IDENTITY = params.get("identity") || "99599452-7087-4049-b38b-d6dfa1f185c9";
+const MAILBOX = params.get("mailbox") || "gmail:alex@hirekraft.ai";
+
+let STATE = { messages: [], openThread: null, related: null, sources: null };
+
+/* ================= helpers ================= */
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+async function lens(action, extra){
+  const r = await fetch(LENS,{
+    method:"POST",
+    headers:{"Content-Type":"application/json","apikey":KEY,"Authorization":"Bearer "+KEY},
+    body:JSON.stringify(Object.assign({action, identity_id:IDENTITY}, extra||{}))
+  });
+  const j = await r.json().catch(()=>null);
+  if(!r.ok || !j || j.ok === false) throw new Error((j && j.error) ? j.error : (action+" → HTTP "+r.status));
+  return j;
+}
+function when(iso){
+  if(!iso) return "";
+  const d=new Date(iso), now=new Date();
+  const sameDay = d.toDateString()===now.toDateString();
+  if(sameDay) return d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+  if(d.getFullYear()===now.getFullYear()) return d.toLocaleDateString("en-US",{month:"short",day:"numeric"});
+  return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+}
+function say(text, cls){
+  const s=document.getElementById("speech");
+  const d=document.createElement("div");
+  d.className="say"+(cls?" "+cls:"");
+  d.innerHTML=text; s.appendChild(d); s.scrollTop=s.scrollHeight; return d;
+}
+function clearSpeech(){document.getElementById("speech").innerHTML="";}
+
+/* Provenance is quiet but always one tap away. Two shapes, never conflated. */
+function provBlock(enforcedBy, id){
+  const isPhysics = /physics/i.test(enforcedBy||"");
+  const kind = isPhysics ? "physics" : "chokepoint";
+  const label = isPhysics ? "read as you" : "released by the gate";
+  const detail = isPhysics
+    ? "<b>Physics.</b> We read this live from Google with your own sign-in. Google itself decides what you can see — if you couldn't open it, neither could we. Nothing was copied to get here."
+    : "<b>The gate.</b> This came from your brain, through the one checkpoint everything must pass: sensitivity is filtered in the database before anything is ranked, then Google is asked — as you — whether you may open the file. Anything unsettled is dropped, not shown.";
+  return '<button class="prov" onclick="toggleProv(event,\''+id+'\')"><span class="dot '+kind+'"></span>'+esc(label)+' · why?</button>'+
+         '<div class="prov-detail '+kind+'" id="'+id+'">'+detail+'<div style="margin-top:6px;color:var(--muted-2);font-family:var(--mono);font-size:10.5px">'+esc(enforcedBy||"")+'</div></div>';
+}
+function toggleProv(e,id){ e.preventDefault(); e.stopPropagation(); document.getElementById(id).classList.toggle("show"); }
+
+/* ================= render ================= */
+function renderStage(){
+  const stage=document.getElementById("stage");
+  const solo = !STATE.openThread;
+  stage.innerHTML =
+    '<div class="panes'+(solo?" solo":"")+'">'+
+      '<div>'+inboxCard()+'</div>'+
+      (solo?"":'<div>'+threadCard()+caseCard()+'</div>')+
+    '</div>'+ unreachableNote();
+}
+
+function inboxCard(){
+  const m=STATE.messages;
+  if(!m.length) return '<div class="card"><div class="card-head"><h2>Inbox</h2></div><div class="empty">Nothing in the business inbox right now.</div></div>';
+  const rows=m.map(x=>{
+    const active = STATE.openThread && STATE.openThread.thread_id===x.thread_id;
+    return '<div class="msg'+(x.unread?" unread":"")+(active?" active":"")+'" onclick="openThread(\''+esc(x.thread_id)+'\')">'+
+      '<div class="r1"><div class="who">'+esc(x.from_name||x.from_email)+'</div><div class="when">'+esc(when(x.date))+'</div></div>'+
+      '<div class="subj">'+esc(x.subject)+'</div>'+
+      '<div class="snip">'+esc((x.snippet||"").slice(0,140))+'</div>'+
+    '</div>';
+  }).join("");
+  return '<div class="card"><div class="card-head"><h2>Inbox</h2><span class="meta">'+m.length+' threads · live</span></div>'+rows+'</div>';
+}
+
+function threadCard(){
+  const t=STATE.openThread; if(!t) return "";
+  const msgs=(t.messages||[]).map(m=>
+    '<div class="mail">'+
+      '<div class="mh"><div class="mfrom">'+esc(m.from_name||m.from_email)+'</div><div class="mdate">'+esc(when(m.date))+'</div></div>'+
+      (m.to?'<div class="mto">to '+esc(m.to)+'</div>':"")+
+      '<div class="mtext">'+esc(m.body||"(no text)")+'</div>'+
+    '</div>').join("");
+  return '<div class="card">'+
+    '<div class="card-head"><h2>'+esc(t.subject||"(no subject)")+'</h2>'+
+      '<a class="pill open" href="'+esc(t.gmail_url)+'" target="_blank" rel="noopener">open in Gmail ↗</a></div>'+
+    '<div class="m-body">'+msgs+'</div>'+
+    '<div style="padding:0 16px 14px">'+provBlock("physics: read with the asker's own Google token","prov-thread")+'</div>'+
+  '</div>';
+}
+
+function caseCard(){
+  const r=STATE.related;
+  if(r==="loading") return '<div class="card" style="margin-top:18px"><div class="card-head"><h2>The case file</h2></div>'+
+    '<div class="assembling">Pulling the whole story together<div class="dots"><span></span><span></span><span></span></div></div></div>';
+  if(!r) return "";
+  if(r.error) return '<div class="note err" style="margin-top:18px"><h3>We couldn\'t assemble the case file</h3><p>'+esc(r.error)+'</p><p style="margin-top:6px">Nothing partial is shown — a half-built story is worse than none. Reopen the email to try again.</p></div>';
+
+  const mail=(r.mail&&r.mail.threads)||[], docs=(r.documents&&r.documents.docs)||[];
+  if(!mail.length && !docs.length)
+    return '<div class="card" style="margin-top:18px"><div class="card-head"><h2>The case file</h2></div><div class="empty">This one stands alone — nothing else in your mail or documents connects to it.</div></div>';
+
+  let html='<div class="card" style="margin-top:18px"><div class="card-head"><h2>The case file</h2>'+
+    '<span class="meta">'+mail.length+' threads · '+docs.length+' document'+(docs.length===1?"":"s")+'</span></div>';
+
+  if(mail.length){
+    html+='<div class="grp">Connected conversations</div>';
+    html+=mail.map((t,i)=>
+      '<a class="item" href="'+esc(t.gmail_url)+'" target="_blank" rel="noopener">'+
+        '<div class="r1"><div class="t">'+esc(t.subject||"(no subject)")+'</div><div class="d">'+esc(when(t.date))+'</div></div>'+
+        '<div class="s">'+esc(t.from_name||t.from_email)+' — '+esc((t.snippet||"").slice(0,150))+'</div>'+
+        '<div class="tags">'+(t.why?'<span class="pill why">'+esc(t.why)+'</span>':"")+'</div>'+
+        provBlock(t.enforced_by,"pv-m-"+i)+
+      '</a>').join("");
+  }
+  if(docs.length){
+    html+='<div class="grp">Documents we found for you</div>';
+    html+=docs.map((d,i)=>
+      '<a class="item" href="'+esc(d.drive_url||"#")+'" target="_blank" rel="noopener">'+
+        '<div class="r1"><div class="t">'+esc(d.name||"(untitled)")+'</div><div class="d">'+esc(when(d.content_date))+'</div></div>'+
+        '<div class="s">'+esc((d.snippet||"").replace(/\s+/g," ").slice(0,170))+'</div>'+
+        '<div class="tags">'+(d.sensitivity_tier?'<span class="pill tier">'+esc(d.sensitivity_tier)+'</span>':"")+'</div>'+
+        provBlock(d.enforced_by,"pv-d-"+i)+
+      '</a>').join("");
+  }
+  return html+'</div>';
+}
+
+/* Standing law: never a bare gap. Name what's withheld AND the way out. */
+function unreachableNote(){
+  const s=STATE.sources; if(!s||!s.unreachable||!s.unreachable.count) return "";
+  const keys=s.unreachable.source_keys||[];
+  const mail=keys.filter(k=>k.startsWith("gmail:"));
+  const named = mail.length ? mail.map(k=>k.replace("gmail:","")).join(", ") : (keys.length+" sources");
+  return '<div class="note">'+
+    '<h3>There\'s more of this story we can\'t reach from here</h3>'+
+    '<p>We can\'t open '+esc(named)+' as you. '+
+    (mail.length?'Those mailboxes are connected under an older access shape — one shared key for the whole company rather than your own sign-in. This lens refuses that shape on purpose: it can\'t tell <em>you</em> apart from anyone else holding the key, so it would be guessing about what you\'re allowed to see.':'')+
+    '</p>'+
+    '<p style="margin-top:7px"><b>What this means in practice:</b> invoices, timesheets and payment threads live in there, so the money side of this story is missing from the case file above — not hidden, just out of reach.</p>'+
+    '<p style="margin-top:7px"><b>The way out:</b> each of those mailboxes gets connected the same way yours is — signed in as a real person, once. Then they come into the case file automatically and this note disappears. We can walk through that whenever you want to.</p>'+
+    '<div class="keys">'+esc(keys.slice(0,16).join("  ·  "))+'</div>'+
+  '</div>';
+}
+
+/* ================= actions ================= */
+async function openThread(threadId){
+  const hit=STATE.messages.find(m=>m.thread_id===threadId);
+  clearSpeech();
+  say("Opening <b>"+esc(hit?(hit.from_name||hit.from_email):"this thread")+"</b>.");
+  STATE.related="loading";
+  try{
+    const t=await lens("thread",{source_key:MAILBOX,thread_id:threadId});
+    STATE.openThread=t; renderStage();
+    say("Now let us find everything else that belongs with it — mail and documents both.","small");
+    const r=await lens("related",{source_key:MAILBOX,thread_id:threadId});
+    STATE.related=r; renderStage();
+    const m=(r.mail&&r.mail.count)||0, d=(r.documents&&r.documents.count)||0;
+    clearSpeech();
+    say("Here's the whole story: <b>"+m+" connected conversations</b>"+(d?" and <b>"+d+" document"+(d===1?"":"s")+"</b>":"")+".");
+    if(d) say("The documents came out of your brain through the gate — filtered on sensitivity first, then checked with Google as you. Tap <em>why?</em> on anything to see which of the two ways it reached you.","small");
+    else say("Nothing in your documents matched this one — so we're showing you mail only, rather than padding it out.","small");
+  }catch(e){
+    STATE.related={error:String(e.message||e)};
+    renderStage();
+    say("That didn't come back cleanly. The reason is on the card — we'd rather show you the failure than a half-built story.","small");
+  }
+}
+
+async function boot(){
+  try{
+    say("Reading your mailbox live — as you, with your own sign-in.");
+    const [src,inbox]=await Promise.all([
+      lens("sources",{}),
+      lens("inbox",{source_key:MAILBOX})
+    ]);
+    STATE.sources=src; STATE.messages=inbox.messages||[];
+    const addr=MAILBOX.replace("gmail:","");
+    document.getElementById("title").textContent=addr;
+    document.getElementById("sub").innerHTML='<span class="mono">'+esc(STATE.messages.length)+' threads · read live, nothing copied</span>';
+    document.getElementById("sovLine").textContent="Read as you — "+(src.asker&&src.asker.name?src.asker.name:"you");
+    renderStage();
+    clearSpeech();
+    say("This is <b>"+esc(addr)+"</b>, read live just now.");
+    say("Open any email and we'll assemble the case file beside it — every related thread, and the documents that belong with it, wherever they've ended up.","small");
+  }catch(e){
+    document.getElementById("sub").textContent="";
+    document.getElementById("stage").innerHTML='<div class="note err"><h3>We couldn\'t open the mailbox</h3><p>'+esc(String(e.message||e))+'</p>'+
+      '<p style="margin-top:7px"><b>The way out:</b> this usually means the mailbox isn\'t connected under your own sign-in, or the connection has lapsed. Reconnecting it from your brain page fixes it — nothing here is lost in the meantime.</p></div>';
+    say("We couldn't get in. The reason is on the page — no guessing from us.","small");
+  }
+}
+
+/* ask box — honest placeholder; the loop is a later build */
+document.getElementById("askSend").onclick=()=>{
+  const t=document.getElementById("askBox");
+  const q=(t.value||"").trim(); if(!q) return;
+  t.value="";
+  say("You asked: <em>"+esc(q)+"</em>","small");
+  say("We're not wired to answer here yet — this lens reads and assembles today. Your question isn't lost; ask it on the brain page and we'll take it from there.","small");
+};
+document.getElementById("askBox").addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();document.getElementById("askSend").click();}
+});
+document.getElementById("composeBtn").onclick=()=>{
+  say("Replying means writing into your mailbox, and we only hold permission to read it. We're not going to quietly ask for more — when you want that, you grant it deliberately, once, and you'll see exactly what changed.","small");
+};
+
+boot();
+</script>
+</body>
+</html>
