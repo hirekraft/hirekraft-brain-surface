@@ -723,8 +723,27 @@ function add(kind,t,d){return '<button class="add" onclick="showAdd(\''+kind+'\'
 
 function toggleGrp(el){el.parentElement.classList.toggle("open");}
 
-/* individual member tap -> the working lens (deferred build) -> placeholder (change 6) */
+/* individual member tap -> the working lens (deferred build) -> placeholder (change 6)
+   MAIL IS NO LONGER DEFERRED: the mail lens is built and live. Route mailboxes there.
+   DISCIPLINE: only route mailboxes we can actually READ AS THIS PERSON. A mailbox on
+   the retired shared-key shape will fail closed inside the lens, so sending the operator
+   there would be a door that opens onto a wall. Those keep the honest placeholder. */
 function openMember(kind, name){
+  if(kind==="email"){
+    const addr=String(name||"").trim();
+    const m=(INV&&INV.email_group&&INV.email_group.members)||[];
+    const row=m.find(x=>String(x.address||"").toLowerCase()===addr.toLowerCase());
+    const reachable = row ? (row.posture==="oauth"||row.posture==="personal-mixed-default-conservative") : false;
+    if(reachable){ location.href="../mail/?mailbox="+encodeURIComponent("gmail:"+addr); return; }
+    openModal(esc(addr),
+      '<div class="coming">'+
+        '<div class="coming-orb"></div>'+
+        '<p style="font-size:15px;color:var(--ink);font-family:var(--serif);margin:14px 0 6px">We can\'t open <b>'+esc(addr)+'</b> as you yet.</p>'+
+        '<p>Your own mailbox reads live because it\'s connected under your personal sign-in. This one is connected under an older shared-key shape — one key for the whole company. We refuse to read mail that way, because it can\'t tell you apart from anyone else holding the key.</p>'+
+        '<div class="m-note"><b>The way out:</b> reconnect this mailbox by signing into it once as a real person. Then it opens here exactly like yours does, and everything in it joins the case files automatically.</div>'+
+      '</div>');
+    return;
+  }
   const lensName = {email:"email lens",drive:"folder lens",system:"systems lens",calendar:"calendar lens",contacts:"contacts lens"}[kind] || "work lens";
   openModal(esc(name),
     '<div class="coming">'+
