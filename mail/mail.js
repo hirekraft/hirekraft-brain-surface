@@ -10,16 +10,17 @@ const params = new URLSearchParams(location.search);
 const MAILBOX = params.get("mailbox") || "gmail:alex@hirekraft.ai";
 /* Asserted fallback identity — used ONLY when there is no signed-in session.
    The lens reports identity_route so a fallback can never masquerade as a session. */
-const ASSERTED_IDENTITY = params.get("identity") || "99599452-7087-4049-b38b-d6dfa1f185c9";
+/* Stage D (2026-07-31): the asserted identity is gone. It was a hardcoded firm-admin
+   UUID, overridable by a URL parameter, used whenever no session existed. Identity now
+   comes from the session token or the surface refuses. There is nothing to fall into. */
 
 /* Supabase client purely to pick up the session the login page persisted. */
 const sb = createClient(BRAIN, KEY, {
   auth: { detectSessionInUrl: false, persistSession: true, autoRefreshToken: true, flowType: "pkce" },
 });
 
-let SESSION_JWT = null;          // set if a real login session exists
-let IDENTITY = ASSERTED_IDENTITY; // the id we pass to the lens + case RPCs
-let ROUTE = "asserted";           // reported by the lens on every response
+let SESSION_JWT = null;          // set only by a real login session bound to an identity
+let ROUTE = "unbound";           // reported by the lens on every response
 
 let STATE = {
   view: "inbox",                 // inbox | loops | resolved
@@ -40,12 +41,12 @@ let STATE = {
 function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 
 async function lens(action, extra){
+  if(!SESSION_JWT) throw new Error("not signed in");
   const headers = {"Content-Type":"application/json","apikey":KEY};
-  /* PREFER THE PROVEN ROUTE: forward the user JWT when we have a session. Otherwise
-     the publishable key + asserted identity_id (the pre-migration contract). */
-  headers["Authorization"] = "Bearer " + (SESSION_JWT || KEY);
+  /* THE ONLY ROUTE: the caller's own JWT. No identity_id is ever put in the body, so a
+     lapsed session refuses instead of quietly reading as somebody else. */
+  headers["Authorization"] = "Bearer " + SESSION_JWT;
   const body = Object.assign({action}, extra||{});
-  if(!SESSION_JWT) body.identity_id = IDENTITY;   // asserted only when no session
   const r = await fetch(LENS,{method:"POST",headers,body:JSON.stringify(body)});
   const j = await r.json().catch(()=>null);
   if(!r.ok || !j || j.ok === false) throw new Error((j && j.error) ? j.error : (action+" → HTTP "+r.status));
@@ -55,9 +56,10 @@ async function lens(action, extra){
 
 /* Case RPCs — PostgREST, scoped to IDENTITY (resolved from session when present). */
 async function rpc(name, args){
+  if(!SESSION_JWT) throw new Error("not signed in");
   const r = await fetch(REST+name,{
     method:"POST",
-    headers:{"Content-Type":"application/json","apikey":KEY,"Authorization":"Bearer "+(SESSION_JWT||KEY)},
+    headers:{"Content-Type":"application/json","apikey":KEY,"Authorization":"Bearer "+SESSION_JWT},
     body:JSON.stringify(args||{})
   });
   const j = await r.json().catch(()=>null);
@@ -539,14 +541,15 @@ async function doRegister(){
   const label = (t.subject||"thread")+" — "+((t.messages&&t.messages[0]&&(t.messages[0].from_name||t.messages[0].from_email))||"");
   try{
     if(existingId){
-      const c=await rpc("sol_case_register",{p_identity_id:IDENTITY,p_case_id:existingId,p_ref_type:"thread",p_ref_id:t.thread_id,p_ref_label:label});
+      const c=await rpc("sol_case_register",{p_case_id:existingId,p_ref_type:"thread",p_ref_id:t.thread_id,p_ref_label:label});
       closeModal(); await refreshCases();
       say("Registered into <b>“"+esc(c.title)+"”</b>. It's an open loop now — on the record, no reply sent.","small");
     }else{
       const title=(document.getElementById("caseTitle").value||"").trim();
       const sit=(document.getElementById("caseSit").value||"").trim();
       if(!title){ document.getElementById("caseTitle").focus(); return; }
-      const c=await rpc("sol_case_create",{p_identity_id:IDENTITY,p_title:title,p_situation:sit||null,p_first_ref_type:"thread",p_first_ref_id:t.thread_id,p_first_ref_label:label});
+      /* the twin has no argument defaults, so every parameter is named explicitly */
+      const c=await rpc("sol_case_create",{p_title:title,p_situation:sit||null,p_parent_case_id:null,p_first_ref_type:"thread",p_first_ref_id:t.thread_id,p_first_ref_label:label});
       closeModal(); await refreshCases();
       say("Started the case <b>“"+esc(c.title)+"”</b> and registered this into it.","small");
     }
@@ -558,7 +561,7 @@ async function doNewCase(){
   const sit=(document.getElementById("caseSit").value||"").trim();
   if(!title){ document.getElementById("caseTitle").focus(); return; }
   try{
-    const c=await rpc("sol_case_create",{p_identity_id:IDENTITY,p_title:title,p_situation:sit||null});
+    const c=await rpc("sol_case_create",{p_title:title,p_situation:sit||null,p_parent_case_id:null,p_first_ref_type:null,p_first_ref_id:null,p_first_ref_label:null});
     closeModal(); await refreshCases();
     STATE.openCase=STATE.cases.find(x=>x.id===c.id)||c; renderCasesView();
     say("Case <b>“"+esc(c.title)+"”</b> is open. Register threads into it as you work them.","small");
@@ -567,7 +570,7 @@ async function doNewCase(){
 
 async function openCase(id){
   try{
-    const c=await rpc("sol_case_get",{p_identity_id:IDENTITY,p_case_id:id});
+    const c=await rpc("sol_case_get",{p_case_id:id});
     STATE.openCase=c; renderCasesView();
   }catch(e){ say("Couldn't open that case: "+esc(String(e.message||e)),"small"); }
 }
@@ -576,15 +579,15 @@ async function setCaseStatus(status){
   let waiting=null;
   if(status==="waiting"){ waiting=prompt("Waiting on what, or whom?")||null; }
   try{
-    const updated=await rpc("sol_case_set_status",{p_identity_id:IDENTITY,p_case_id:c.id,p_status:status,p_waiting_on:waiting});
+    const updated=await rpc("sol_case_set_status",{p_case_id:c.id,p_status:status,p_waiting_on:waiting});
     STATE.openCase=updated; await refreshCases(); renderCasesView();
   }catch(e){ say("Couldn't update status: "+esc(String(e.message||e)),"small"); }
 }
 
 async function refreshCases(){
   try{
-    STATE.cases = await rpc("sol_cases_list",{p_identity_id:IDENTITY}) || [];
-    STATE.engagement = await rpc("sol_engagement_map",{p_identity_id:IDENTITY}) || {};
+    STATE.cases = await rpc("sol_cases_list",{}) || [];
+    STATE.engagement = await rpc("sol_engagement_map",{}) || {};
   }catch(e){ /* cases are additive; never block the inbox on them */ }
   paintCounts();
 }
@@ -657,7 +660,7 @@ async function pickUpSession(){
     if(session && session.access_token){
       SESSION_JWT = session.access_token;
       const id = await sb.rpc("identity_for_jwt");
-      if(id && id.data){ IDENTITY = id.data; ROUTE="jwt"; }
+      if(id && id.data){ ROUTE="jwt"; }
       else { SESSION_JWT=null; } // session not bound to an identity → fall back, honestly reported by lens
     }
   }catch{ SESSION_JWT=null; }
@@ -665,13 +668,25 @@ async function pickUpSession(){
 
 async function boot(){
   await pickUpSession();
+  if(!SESSION_JWT){
+    document.getElementById("sub").textContent="";
+    document.getElementById("stage").innerHTML='<div class="note err" style="margin:16px 0 0">'+
+      '<h3>Sign in to read this mailbox</h3>'+
+      '<p>This lens reads as <b>you</b>, with your own sign-in. There is no shared key and no '+
+      'assumed identity behind it, so without a session there is nothing it can honestly show. '+
+      'That is a refusal, not a failure.</p>'+
+      '<p style="margin-top:7px"><b>The way out:</b> <a href="../login/">sign in</a>, and this fills '+
+      'in with whatever your own accounts already reach.</p></div>';
+    say("Not signed in. This refuses rather than assuming who you are.","small");
+    return;
+  }
   try{
     say("Reading your mailbox live — as you, with your own sign-in.");
     const [src,inbox,cases,engagement]=await Promise.all([
       lens("sources",{}),
       lens("inbox",{source_key:MAILBOX}),
-      rpc("sol_cases_list",{p_identity_id:IDENTITY}).catch(()=>[]),
-      rpc("sol_engagement_map",{p_identity_id:IDENTITY}).catch(()=>({})),
+      rpc("sol_cases_list",{}).catch(()=>[]),
+      rpc("sol_engagement_map",{}).catch(()=>({})),
     ]);
     STATE.sources=src;
     STATE.pages=inbox.messages||[];
