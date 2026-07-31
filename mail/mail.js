@@ -54,7 +54,7 @@ async function lens(action, extra){
   return j;
 }
 
-/* Case RPCs — PostgREST, scoped to IDENTITY (resolved from session when present). */
+/* Case RPCs — PostgREST. Each twin derives the identity from the JWT itself; no id is passed. */
 async function rpc(name, args){
   if(!SESSION_JWT) throw new Error("not signed in");
   const r = await fetch(REST+name,{
@@ -661,7 +661,7 @@ async function pickUpSession(){
       SESSION_JWT = session.access_token;
       const id = await sb.rpc("identity_for_jwt");
       if(id && id.data){ ROUTE="jwt"; }
-      else { SESSION_JWT=null; } // session not bound to an identity → fall back, honestly reported by lens
+      else { SESSION_JWT=null; } // unbound session is discarded and boot() refuses. Previously: → fall back, honestly reported by lens
     }
   }catch{ SESSION_JWT=null; }
 }
