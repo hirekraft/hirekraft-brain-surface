@@ -124,23 +124,24 @@ function row(k, v, cls) {
   return `<div class="row"><span class="k">${k}</span><span class="v ${cls || ""}">${v}</span></div>`;
 }
 
-// THE PROOF. Calls identity_for_jwt() with the signed-in session. The function takes NO
-// parameter — it reads auth.uid() from the JWT the gateway already verified. There is nothing
-// here for the browser to claim: the page cannot ask "who is 99599452?", only "who am I?",
-// and the database answers from the token.
+// THE PROOF. One call, no parameter. my_profile() reads auth.uid() from the JWT the gateway
+// already verified, resolves the identity itself, and RAISES 28000 when the token is bound to
+// nothing. There is nothing here for the browser to claim: the page cannot ask "who is
+// 99599452?", only "who am I?", and the database answers from the token.
+//
+// Stage D cutover (2026-07-31): this previously resolved the id and then called
+// identity_profile(p_identity_id) — an asserted-parameter read. No identity_id is in flight
+// now, and the unbound refusal is the database's rather than a null check in this page.
 async function resolveIdentity() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return null;
 
-  const { data: identityId, error } = await sb.rpc("identity_for_jwt");
-  if (error) return { session, error: error.message };
-
-  let profile = null;
-  if (identityId) {
-    const { data } = await sb.rpc("identity_profile", { p_identity_id: identityId });
-    profile = data ?? null;
+  const { data: profile, error } = await sb.rpc("my_profile");
+  if (error) {
+    const denied = error.code === "28000" || /denied/i.test(error.message || "");
+    return { session, profile: null, denied, error: denied ? null : error.message };
   }
-  return { session, identityId, profile };
+  return { session, profile: profile ?? null, denied: !profile };
 }
 
 async function render() {
@@ -158,11 +159,11 @@ async function render() {
   out.style.display = "";
   lede.textContent = "You're signed in. This is what the brain resolves you to — from your token, not from anything this page told it.";
 
-  const bound = !!r.identityId;
+  const bound = !!r.profile;
   let html = "";
   html += row("Signed in as", r.session.user.email);
   html += row("Auth user (JWT sub)", r.session.user.id);
-  html += row("Resolves to identity", bound ? r.identityId : "no bound identity", bound ? "good" : "bad");
+  html += row("Resolves to identity", bound ? r.profile.id : "no bound identity", bound ? "good" : "bad");
   if (r.profile) {
     html += row("Name", r.profile.name);
     html += row("Role", r.profile.role ?? "—");
