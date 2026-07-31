@@ -154,9 +154,29 @@
 <div class="toast" id="toast"></div>
 <div class="modal-bg" id="modalBg"><div class="modal"><div class="mhead"><h3 id="modalTitle"></h3><span class="x" id="modalClose">×</span></div><div class="mbody" id="modalBody"></div></div></div>
 
-<script>
-const FN = "https://uvdoompnnypmneyrvtas.supabase.co/functions/v1/brain-command-center";
-const ANON = "sb_publishable_joP87JJiePfN3k1uPoxxVA_DLGT1zv5";
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// STAGE D-FINAL (2026-07-31). This page previously called the edge function with the
+// publishable key in the Authorization header and no identity at all. The function has
+// required body.identity_id since v4, so every call returned 403 -- a locked door, which is
+// why this cutover carried no regression risk.
+//
+// Now it sends the signed-in user's real JWT. The page no longer names an identity anywhere;
+// the function resolves the caller from the token via my_profile(), which takes no argument.
+// There is nothing here for this page to claim.
+//
+// The publishable key is PUBLIC by design -- it identifies the project and grants nothing.
+// All authority comes from the session token.
+
+const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
+const PUBLISHABLE_KEY = "sb_publishable_joP87JJiePfN3k1uPoxxVA_DLGT1zv5";
+const FN = SUPABASE_URL + "/functions/v1/brain-command-center";
+
+const sb = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
+  auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true, flowType: "pkce" },
+});
+
 let LAST = null;
 
 function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
@@ -169,8 +189,14 @@ function ago(iso){
   return Math.round(s/86400)+"d ago";
 }
 async function call(body){
-  const r = await fetch(FN,{method:"POST",headers:{"Content-Type":"application/json","apikey":ANON,"Authorization":"Bearer "+ANON},body:JSON.stringify(body)});
-  if(!r.ok) throw new Error("brain returned "+r.status);
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) throw new Error("not signed in");
+  const r = await fetch(FN,{method:"POST",headers:{"Content-Type":"application/json","apikey":PUBLISHABLE_KEY,"Authorization":"Bearer "+session.access_token},body:JSON.stringify(body)});
+  if(!r.ok){
+    let m = "brain returned "+r.status;
+    try{ const j = await r.json(); if(j && j.error) m = j.error; }catch(_e){}
+    throw new Error(m);
+  }
   return r.json();
 }
 let toastT;
@@ -446,12 +472,24 @@ function wire(){
 document.getElementById("modalClose").onclick=closeModal;
 document.getElementById("modalBg").addEventListener("click",function(e){ if(e.target.id==="modalBg") closeModal(); });
 
+function showSignIn(reason){
+  document.getElementById("stamp").textContent = "not signed in";
+  document.getElementById("root").innerHTML =
+    '<div class="band">'+
+      '<div style="font-family:Space Grotesk,sans-serif;font-weight:600;font-size:17px">Sign in to reach your brain</div>'+
+      '<div style="font-size:14px;color:var(--muted);margin-top:8px">'+esc(reason)+' The command center reads as you: what it shows is whatever your own accounts already let you see, and it will not answer without knowing who is asking.</div>'+
+      '<div style="margin-top:16px"><a class="mprimary" style="display:inline-block;text-decoration:none" href="login/">Go to sign-in</a></div>'+
+    '</div>';
+}
 async function load(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ showSignIn("No active session."); return; }
   try{
     const d = await call({action:"summary"});
     if(!d.ok) throw new Error(d.error||"brain error");
     render(d);
   }catch(err){
+    if(/not signed in|not bound|no longer accepted/i.test(err.message||"")){ showSignIn(esc(err.message)+"."); return; }
     document.getElementById("stamp").textContent="couldn't reach the brain";
     document.getElementById("root").innerHTML =
       '<div class="err">Couldn\'t read the brain live: '+esc(err.message)+'.<br>The command center only ever shows real state — it won\'t guess. Try again in a moment.</div>';
