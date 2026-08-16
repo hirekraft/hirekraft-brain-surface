@@ -45,6 +45,20 @@
   .sub{margin-top:18px;font-size:12px;color:#a9aab0;border-top:1px solid #f0ece5;padding-top:16px}
   .linkish{background:none;border:0;color:#8a8d93;font-size:12.5px;text-decoration:underline;
     cursor:pointer;padding:0;width:auto;margin-top:16px;font-weight:400}
+  /* THE FRONT DOOR. Until now this page confirmed who you were and offered one action:
+     sign out. /fill/ was live the whole time and nothing linked to it, so the only way to
+     reach it was to retype a URL from memory — and a mistyped URL is indistinguishable
+     from a dead page. That is how a sixteen-day freeze stayed invisible. Navigation is not
+     decoration here; it is what makes a surface capable of failing loudly. */
+  .nav{display:none;margin-top:26px}
+  .nav.on{display:block}
+  .nav h2{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8a8d93;
+    margin-bottom:10px;font-weight:500}
+  .nav a{display:block;padding:13px 15px;margin-bottom:8px;border:1px solid #e2ded6;
+    border-radius:9px;background:#fff;text-decoration:none;color:#1a1b1d}
+  .nav a:hover{border-color:#1a1b1d}
+  .nav .t{font-size:14.5px;font-weight:500}
+  .nav .d{font-size:12.5px;color:#8a8d93;margin-top:3px}
 </style>
 </head>
 <body>
@@ -77,6 +91,13 @@
   </div>
 
   <div class="msg" id="msg"></div>
+
+  <div class="nav" id="nav">
+    <h2>Where to go</h2>
+    <a href="../fill/"><div class="t">Your brain</div><div class="d">What we&rsquo;ve read, and where we could do more.</div></a>
+    <a href="../"><div class="t">Command center</div><div class="d">The live state of everything connected.</div></a>
+    <a href="../mail/"><div class="t">Mail</div><div class="d">The mail lens.</div></a>
+  </div>
 
   <div class="who" id="who"></div>
   <button class="linkish" id="out" style="display:none">Sign out</button>
@@ -114,6 +135,7 @@ const sb = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
 
 const $ = (id) => document.getElementById(id);
 const msg = $("msg"), who = $("who"), signin = $("signin"), out = $("out"), lede = $("lede");
+const nav = $("nav");
 
 function say(kind, html) {
   msg.className = "msg on " + kind;
@@ -150,6 +172,7 @@ async function render() {
   if (!r) {
     if ($("codebox").style.display === "none") signin.style.display = "";
     who.className = "who";
+    nav.className = "nav";
     out.style.display = "none";
     return;
   }
@@ -157,9 +180,11 @@ async function render() {
   signin.style.display = "none";
   $("codebox").style.display = "none";
   out.style.display = "";
-  lede.textContent = "You're signed in. This is what the brain resolves you to — from your token, not from anything this page told it.";
+  lede.textContent = "You're signed in. Here is where to go — and under it, who the brain resolves you to.";
 
   const bound = !!r.profile;
+  // An unbound login reaches nothing, so offering it doors would be a lie in link form.
+  nav.className = bound ? "nav on" : "nav";
   let html = "";
   html += row("Signed in as", r.session.user.email);
   html += row("Auth user (JWT sub)", r.session.user.id);
