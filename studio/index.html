@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The studio — IP &amp; Docs</title>
+<!--
+  The studio surface client. Data comes from studio-july on studio-core; this file
+  is only markup and script and carries no studio values of its own.
+
+  WHY IT LIVES HERE AND NOT IN THE FUNCTION. studio-july v2 served this page itself,
+  which would have made the deploy path a single function. The platform forecloses it:
+  an edge function on *.supabase.co/functions/v1 cannot send content-type text/html.
+  Four constructions were tested in one probe — object literal, Headers.set with and
+  without the space after the semicolon, and bare text/html — and all four came back
+  text/plain, which renders a surface as raw source. Three controls make that a
+  platform constraint rather than a construction bug: cache-control:no-store passed
+  through untouched, application/json from the SAME function passed through untouched,
+  and the same pg_net path reports text/html correctly for example.com.
+
+  WHY NOT NETLIFY. calm-kringle tracks no branch of hirekraft/studio-surface, so
+  nothing committed reached the screen Alex reads — which is how a placeholder
+  survived on it for six weeks. This repo is writable through Studio MCP, so the
+  surface is deployable without Alex in the loop, which was the actual requirement.
+-->
+<style>
+:root{--ink:#1a1a18;--dim:#6b6b63;--line:#e2e0d8;--bg:#faf9f5;--acc:#7a5c3e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 ui-serif,Georgia,serif}
+main{max-width:900px;margin:0 auto;padding:28px 20px 80px}
+h1{font-size:22px;margin:0 0 2px}
+.sub{color:var(--dim);font-size:14px;margin:0 0 22px}
+.eyebrow{font:600 11px/1 ui-sans-serif,system-ui;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin:26px 0 10px}
+button{font:inherit;cursor:pointer}
+input{font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:#fff;width:100%}
+.btn{background:var(--ink);color:#fff;border:0;border-radius:7px;padding:9px 15px}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.note{font:13px/1.5 ui-sans-serif,system-ui;color:var(--dim);margin:8px 0 0}
+.note.bad{color:#a3341f}
+#gate{max-width:380px;margin:12vh auto;display:grid;gap:9px}
+.doc{border:1px solid var(--line);border-radius:9px;background:#fff;padding:13px 15px;margin-bottom:9px;cursor:pointer}
+.doc:hover{border-color:var(--acc)}
+.doc h3{margin:0;font-size:16px}
+.doc .meta{font:12px/1.5 ui-sans-serif,system-ui;color:var(--dim);margin-top:3px}
+.body{white-space:pre-wrap;font:14px/1.62 ui-monospace,SFMono-Regular,Menlo,monospace;background:#fff;border:1px solid var(--line);border-radius:9px;padding:16px;max-height:64vh;overflow:auto;margin-top:10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.unwired{border:1px dashed var(--line);border-radius:9px;padding:13px 15px;color:var(--dim);font:13px/1.55 ui-sans-serif,system-ui}
+.ans{border-left:3px solid var(--acc);padding:2px 0 2px 13px;margin-top:12px;white-space:pre-wrap}
+</style></head><body>
+<div id="gate">
+  <h1>The studio</h1>
+  <input id="email" type="email" placeholder="you@hirekraft.ai" autocomplete="email">
+  <input id="pw" type="password" placeholder="Password" autocomplete="current-password">
+  <button class="btn" id="go">Sign in</button>
+  <p class="note" id="gn"></p>
+</div>
+<main id="app" hidden>
+  <h1>IP &amp; Docs</h1>
+  <p class="sub" id="who"></p>
+  <div class="eyebrow">The documents</div>
+  <div id="docs"></div>
+  <div id="reader"></div>
+  <div class="eyebrow">Ask the brain</div>
+  <div class="row"><input id="q" placeholder="Ask anything — it reads decisions, seat reports and doctrine"><button class="btn" id="ask">Ask</button></div>
+  <div id="ans"></div>
+  <div class="eyebrow">Not connected yet</div>
+  <div class="unwired">Clicking a principle, and clicking a source, are not wired on this screen yet. They are the next two. Nothing here is composed on demand except an answer you ask for above.</div>
+  <p class="note"><button class="btn ghost" id="out">Sign out</button></p>
+</main>
+<script>
+const FN="https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-july";
+const PATH="https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-path";
+const $=i=>document.getElementById(i);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tok=()=>{try{return localStorage.getItem("studio_token")||""}catch{return""}};
+const setTok=t=>{try{t?localStorage.setItem("studio_token",t):localStorage.removeItem("studio_token")}catch{}};
+
+// Every call ends in a stated outcome. A silent form is indistinguishable from never
+// having tried, which is the failure this estate has paid for repeatedly.
+async function call(url,body,auth=true){
+  const c=new AbortController();const t=setTimeout(()=>c.abort(),20000);
+  try{
+    const r=await fetch(url,{method:"POST",signal:c.signal,
+      headers:Object.assign({"content-type":"application/json"},auth&&tok()?{authorization:"Bearer "+tok()}:{}),
+      body:JSON.stringify(body)});
+    const txt=await r.text();let j={};try{j=JSON.parse(txt)}catch{j={error:txt.slice(0,200)}}
+    return {status:r.status,body:j};
+  }catch(e){
+    return {status:0,body:{error:e&&e.name==="AbortError"?"No answer within 20 seconds.":"Could not reach the studio."}};
+  }finally{clearTimeout(t)}
+}
+
+$("go").onclick=async()=>{
+  const b=$("go");b.disabled=true;b.textContent="Signing in\u2026";$("gn").className="note";$("gn").textContent="";
+  const r=await call(PATH,{action:"signin_password",email:$("email").value.trim(),password:$("pw").value},false);
+  b.disabled=false;b.textContent="Sign in";
+  if(r.status===200&&r.body.ok){setTok(r.body.access_token);$("pw").value="";return boot();}
+  $("gn").className="note bad";$("gn").textContent=r.body.message||r.body.error||("Something went wrong ("+r.status+").");
+};
+$("out").onclick=()=>{setTok("");location.reload()};
+
+let DOCS=[];
+function renderDocs(){
+  $("docs").innerHTML=DOCS.map((d,i)=>
+    '<div class="doc" data-i="'+i+'"><h3>'+esc(d.doc_type)+'</h3><div class="meta">v'+esc(d.version)+
+    ' \u00b7 '+Number(d.chars).toLocaleString()+' characters \u00b7 written '+esc((d.updated_at||"").slice(0,10))+
+    ' \u00b7 click to read</div></div>').join("");
+  [...document.querySelectorAll(".doc")].forEach(el=>el.onclick=()=>openDoc(DOCS[+el.dataset.i]));
+}
+
+async function openDoc(d){
+  $("reader").innerHTML='<p class="note">Fetching '+esc(d.doc_type)+'\u2026</p>';
+  const r=await call(FN,{action:"doc",doc_type:d.doc_type});
+  if(r.status!==200||!r.body.ok){
+    $("reader").innerHTML='<p class="note bad">Could not open it: '+esc(r.body.error||r.status)+'</p>';return;
+  }
+  const doc=r.body.doc;
+  // The listed size and the delivered size are shown together on purpose: a truncated
+  // body then reads as a mismatch rather than passing as the document itself.
+  $("reader").innerHTML='<div class="row"><b>'+esc(doc.doc_type)+' v'+esc(doc.version)+'</b>'+
+    '<span class="note">'+Number(doc.chars).toLocaleString()+' characters delivered</span>'+
+    '<button class="btn ghost" id="dl">Download</button>'+
+    '<button class="btn ghost" id="close">Close</button></div>'+
+    '<div class="body">'+esc(doc.body)+'</div>';
+  $("close").onclick=()=>{$("reader").innerHTML=""};
+  $("dl").onclick=()=>{
+    const blob=new Blob([doc.body],{type:"text/markdown;charset=utf-8"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=doc.doc_type+"-v"+doc.version+".md";
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  };
+}
+
+$("ask").onclick=async()=>{
+  const q=$("q").value.trim();if(!q)return;
+  const b=$("ask");b.disabled=true;b.textContent="Reading\u2026";
+  $("ans").innerHTML='<p class="note">Reading decisions, seat reports and doctrine\u2026</p>';
+  const r=await call(FN,{action:"ask",q});
+  b.disabled=false;b.textContent="Ask";
+  if(r.status!==200){$("ans").innerHTML='<p class="note bad">'+esc(r.body.error||("Failed ("+r.status+")"))+'</p>';return}
+  const d=r.body;
+  const text=d.answer||d.summary||(typeof d==="string"?d:JSON.stringify(d,null,1));
+  $("ans").innerHTML='<div class="ans">'+esc(text)+'</div>';
+};
+
+async function boot(){
+  if(!tok())return;
+  const r=await call(FN,{action:"docs"});
+  if(r.status===401){setTok("");$("gn").className="note bad";$("gn").textContent="Your session ended. Sign in again.";return}
+  if(r.status!==200||!r.body.ok){$("gn").className="note bad";$("gn").textContent=r.body.error||("Could not read the studio ("+r.status+")");return}
+  DOCS=r.body.documents||[];
+  $("gate").hidden=true;$("app").hidden=false;
+  $("who").textContent=r.body.visitor+" \u00b7 "+DOCS.length+" current documents, served from the brain";
+  renderDocs();
+}
+boot();
+</script></body></html>
