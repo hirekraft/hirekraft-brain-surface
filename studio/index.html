@@ -391,7 +391,7 @@ function workshops(ln,srcs){
   + pathBlock()
   + '<div class="blk">Work orders <span class="ct">'+wo.length+' · grouped by subsystem</span><span class="ln"></span></div>'
   + '<div class="orders">'+(wo.length
-      ? wo.map((o,i)=>'<div class="ord">'
+      ? groupBySubsystem(wo).map((o,i)=>'<div class="ord">'
         + '<span class="seq">'+String(i+1).padStart(2,"0")+'</span>'
         + '<div class="ti">'+esc(o.ti)+'<span class="chip '+esc(o.pl)+'">'+esc(o.pl)+'</span></div>'
         + '<div class="tg">'+(o.tg||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join("")
@@ -420,6 +420,18 @@ function pathBlock(){
     + (s.gate?'<div class="ga"><b>Gate — a proof, not a milestone</b>'+esc(s.gate)+'</div>'
             :'<div class="ga none"><b>Gate</b>The principle states no gate for this step.</div>')
     + '</div></div>').join("")+'</div>';
+}
+
+/* Work orders group by subsystem — a real column on promise_ledger. The four
+   workshop stages the old surface grouped by were authored and are gone. */
+function groupBySubsystem(wo){
+  const key=o=>((o.tg&&o.tg[0])?String(o.tg[0]):"unassigned");
+  return wo.slice().sort((a,b)=>{
+    const ka=key(a), kb=key(b);
+    if(ka!==kb) return ka<kb?-1:1;
+    const rank={stale:0,high:1,norm:2};
+    return (rank[a.pl]==null?9:rank[a.pl])-(rank[b.pl]==null?9:rank[b.pl]);
+  });
 }
 
 function lab(ln){
@@ -484,8 +496,15 @@ function frame(){
 }
 
 function principles(){
-  const p=D.principles;
-  return '<div class="lede">The doctrine — <b>'+esc(p.doctrine_sections)+' principle sections</b> inside '+esc(p.sections)+' corpus sections. Not a stored list: it deepens as decisions land, and it is counted at read time.</div>'
+  const p=D.principles, dc=D.doctrine||{};
+  const idx=dc.principle_index||[];
+  return '<div class="lede">The doctrine — <b>'+esc(dc.numbered_principles||idx.length)+' numbered principles</b> across '+esc(dc.doctrine_sections||"—")+' current sections of the operating principles. Click any one and the brain composes it now, from its current text and the decisions that produced it.</div>'
+  + '<div class="lab-note">'+esc(dc.count_note||"")+'</div>'
+  + '<div class="blk">The principles <span class="ct">'+idx.length+'</span><span class="ln"></span></div>'
+  + '<div id="pdepth"></div>'
+  + (idx.length
+     ? '<div class="pidx"><div class="pg">'+idx.map(x=>'<div class="pi" data-n="'+esc(x.n)+'"><span class="pn">'+esc(x.n)+'</span><span>'+esc(x.name)+'</span></div>').join("")+'</div></div>'
+     : '<div class="empty">The principle index could not be read from the corpus just now.</div>')
   + '<div class="blk">Composed from<span class="ln"></span></div>'
   + '<div class="fr-grid">'
   + '<div class="fc"><h3>'+esc(p.sections)+'</h3><p>corpus sections, current</p></div>'
@@ -501,6 +520,46 @@ function principles(){
   + '<div id="ans" style="margin-top:14px"></div>';
 }
 
+/* THE PRINCIPLE DEEP VIEW. The old surface printed "brain composed this view ·
+   generated from memory" over a hardcoded map of four fields per principle. This one
+   actually composes: the principle's current text, the decisions citing it oldest
+   first, and the other sections enforcing it. Where the record has nothing it says so
+   — 26 of the 95 principles are cited by number, and the rest are honestly empty. */
+function bindPrinciples(){
+  document.querySelectorAll(".pi").forEach(el=>{
+    el.onclick=()=>openPrinciple(Number(el.dataset.n));
+  });
+}
+
+async function openPrinciple(n){
+  const el=document.getElementById("pdepth"); if(!el) return;
+  el.innerHTML='<div class="pdepth"><div class="gen"><span class="gdt"></span>composing from the record…</div></div>';
+  el.scrollIntoView({behavior:"smooth",block:"nearest"});
+  const r=await call(FN,{action:"principle",n:n});
+  if(r.status!==200||!r.body||r.body.ok===false){
+    el.innerHTML='<div class="pdepth"><div class="ds"><p>'+esc((r.body&&(r.body.error))||("Failed ("+r.status+")"))+'</p></div></div>';
+    return;
+  }
+  const d=r.body;
+  const trail=(d.how_it_came_together||[]);
+  el.innerHTML='<div class="pdepth">'
+    + '<div class="gen"><span class="gdt"></span>composed now from the record · not a stored view</div>'
+    + '<h3>'+esc(d.n)+' — '+esc(d.name)+'</h3>'
+    + '<div class="ds"><b>What it says</b><p>'+esc(d.text)+'</p></div>'
+    + '<div class="ds"><b>How it came together</b>'
+    +   (trail.length
+         ? trail.map(t=>'<p style="margin-bottom:9px"><span style="font-family:var(--mono);font-size:10.5px;color:var(--ink-3)">'+esc(String(t.on))+'</span><br/>'+esc(t.why)+'</p>').join("")
+         : '<p style="color:var(--ink-3)">'+esc(d.trail_note||"No decision in the record cites this principle by number.")+'</p>')
+    + '</div>'
+    + '<div class="ds"><b>Where it is enforced</b>'
+    +   ((d.enforced_where||[]).length
+         ? '<p>'+d.enforced_where.map(e=>esc(e.doc)+" — "+esc(e.heading)).join("<br/>")+'</p>'
+         : '<p style="color:var(--ink-3)">'+esc(d.enforced_note||"No other current section cites it by number.")+'</p>')
+    + '</div>'
+    + '<div class="ft">'+esc(d.how||"")+' · composed '+esc(String(d.composed_at||"").slice(11,19))+'</div>'
+    + '</div>';
+}
+
 async function doAsk(){
   const qi=document.getElementById("q"); const q=qi.value.trim(); if(!q) return;
   const b=document.getElementById("askb"); const a=document.getElementById("ans");
@@ -509,7 +568,19 @@ async function doAsk(){
   const r=await call(FN,{action:"ask",q:q});
   b.disabled=false; b.textContent="Ask";
   if(r.status!==200){ a.innerHTML='<div class="empty">'+esc(r.body.error||("Failed ("+r.status+")"))+'</div>'; return; }
+  /* surface_ask and surface_why return {how, query, trail:[{on, why}]} — verified at
+     source rather than assumed. The previous renderer looked for .answer/.summary and
+     would have dropped to raw JSON on every call. */
   const d=r.body;
+  const trail=d.trail||d.results||d.items;
+  if(Array.isArray(trail)&&trail.length){
+    a.innerHTML=(d.how?'<div class="lab-note" style="margin-bottom:8px">'+esc(d.how)+'</div>':'')
+      + trail.map(t=>'<div class="lab-card"><div class="lc-top"><span class="lc-name">'+esc(t.kind||"from the record")+'</span>'
+        + '<span class="lc-meta">'+esc(String(t.on||t.decided_on||"").slice(0,10))+'</span></div>'
+        + '<div class="lc-body">'+esc(t.why||t.body||t.text||"")+'</div></div>').join("");
+    return;
+  }
+  if(Array.isArray(trail)){ a.innerHTML='<div class="empty">Nothing in the record matches that.</div>'; return; }
   const text=d.answer||d.summary||(typeof d==="string"?d:JSON.stringify(d,null,1));
   a.innerHTML='<div class="lab-card"><div class="lc-body">'+esc(text)+'</div></div>';
 }
