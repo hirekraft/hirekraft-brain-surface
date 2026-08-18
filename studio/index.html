@@ -513,7 +513,7 @@ function principles(){
   + '<div class="fc"><h3>'+esc(D.sweep.open_backlog)+'</h3><p>open backlog items</p></div>'
   + '</div>'
   + '<div class="blk">Ask the brain<span class="ln"></span></div>'
-  + '<div class="lab-note">It reads decisions, seat reports and doctrine.</div>'
+  + '<div class="lab-note">Retrieves by meaning across doctrine, decisions, seat reports and chats, then answers from what it retrieved and cites it. The label above each answer says which of those actually happened.</div>'
   + '<div style="display:flex;gap:8px;margin-top:12px;max-width:660px">'
   + '<input id="q" placeholder="Ask anything about the studio" style="flex:1;background:var(--raise);border:1px solid var(--hair);border-radius:7px;padding:10px 12px;font-family:var(--sans);font-size:14px;outline:none"/>'
   + '<button class="btn pri" id="askb">Ask</button></div>'
@@ -568,21 +568,48 @@ async function doAsk(){
   const r=await call(FN,{action:"ask",q:q});
   b.disabled=false; b.textContent="Ask";
   if(r.status!==200){ a.innerHTML='<div class="empty">'+esc(r.body.error||("Failed ("+r.status+")"))+'</div>'; return; }
-  /* surface_ask and surface_why return {how, query, trail:[{on, why}]} — verified at
-     source rather than assumed. The previous renderer looked for .answer/.summary and
-     would have dropped to raw JSON on every call. */
-  const d=r.body;
-  const trail=d.trail||d.results||d.items;
-  if(Array.isArray(trail)&&trail.length){
-    a.innerHTML=(d.how?'<div class="lab-note" style="margin-bottom:8px">'+esc(d.how)+'</div>':'')
-      + trail.map(t=>'<div class="lab-card"><div class="lc-top"><span class="lc-name">'+esc(t.kind||"from the record")+'</span>'
-        + '<span class="lc-meta">'+esc(String(t.on||t.decided_on||"").slice(0,10))+'</span></div>'
-        + '<div class="lc-body">'+esc(t.why||t.body||t.text||"")+'</div></div>').join("");
+  /* Rendered against the shape the DEPLOYED function returns, read from
+     pg_get_functiondef rather than guessed from one call. This renderer was wrong twice:
+     first written for {trail}, then still wrong because surface_ask actually returns four
+     arrays. It is now keyed on `mode`, which the server sets to what genuinely happened,
+     so the screen cannot call retrieval an answer. Any unrecognised mode says so instead
+     of dumping the object. */
+  const d=r.body||{};
+  const note = d.how ? '<div class="lab-note" style="margin-bottom:10px">'+esc(d.how)+'</div>' : '';
+  const cites = (d.passages||[]).map(p=>'<div class="lab-card"><div class="lc-top">'
+      + '<span class="lc-name">['+esc(p.ref)+'] '+esc(p.kind)+' — '+esc(p.name)+'</span>'
+      + '<span class="lc-meta">'+esc(p.date)+' · '+esc(p.similarity)+'</span></div>'
+      + '<div class="lc-body">'+esc(p.text)+'</div></div>').join("");
+
+  if(d.mode==="answered"){
+    a.innerHTML='<div class="pdepth"><div class="gen"><span class="gdt"></span>answered from the record · '+esc(d.model||"")+'</div>'
+      + '<div class="ds"><p>'+esc(d.answer)+'</p></div>'
+      + '<div class="ft">'+esc(d.how)+'</div></div>'
+      + '<div class="blk">What it read <span class="ct">'+(d.passages||[]).length+'</span><span class="ln"></span></div>'+cites;
     return;
   }
-  if(Array.isArray(trail)){ a.innerHTML='<div class="empty">Nothing in the record matches that.</div>'; return; }
-  const text=d.answer||d.summary||(typeof d==="string"?d:JSON.stringify(d,null,1));
-  a.innerHTML='<div class="lab-card"><div class="lc-body">'+esc(text)+'</div></div>';
+  if(d.mode==="retrieved"){
+    a.innerHTML='<div class="blk">What the record says about this <span class="ct">'+(d.passages||[]).length+'</span><span class="ln"></span></div>'
+      + note + cites;
+    return;
+  }
+  if(d.mode==="nothing_retrieved"){ a.innerHTML='<div class="empty">'+esc(d.how)+'</div>'; return; }
+  if(d.mode==="text_search_fallback"){
+    const f=d.fallback||{};
+    const rows=[].concat(
+      (f.decisions||[]).map(x=>({k:"decision",   on:x.on,     t:x.what})),
+      (f.open_items||[]).map(x=>({k:"open item", on:x.raised, t:x.item})),
+      (f.promises||[]).map(x=>({k:"promise "+(x.verdict||""), on:"", t:x.promise})),
+      (f.dissolved||[]).map(x=>({k:"dissolved",  on:"",        t:x.stands})));
+    a.innerHTML='<div class="empty" style="margin-bottom:10px">'+esc(d.how)+'</div>'
+      + (rows.length ? rows.map(x=>'<div class="lab-card"><div class="lc-top"><span class="lc-name">'+esc(x.k)+'</span>'
+          + '<span class="lc-meta">'+esc(String(x.on||"").slice(0,10))+'</span></div>'
+          + '<div class="lc-body">'+esc(x.t)+'</div></div>').join("")
+        : '<div class="empty">No word match either.</div>');
+    return;
+  }
+  a.innerHTML='<div class="empty">The ask returned a shape this screen does not recognise'
+    + (d.mode?' (mode: '+esc(d.mode)+')':'')+'. Nothing is claimed about it.</div>';
 }
 
 /* IP & Docs — listing is not opening. The list carries the claimed size; opening
