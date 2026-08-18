@@ -1,157 +1,496 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>The studio — IP &amp; Docs</title>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>The Studio Surface</title>
 <!--
-  The studio surface client. Data comes from studio-july on studio-core; this file
-  is only markup and script and carries no studio values of its own.
+  THE ONE STUDIO SURFACE. This address is the only one that serves the studio.
 
-  WHY IT LIVES HERE AND NOT IN THE FUNCTION. studio-july v2 served this page itself,
-  which would have made the deploy path a single function. The platform forecloses it:
-  an edge function on *.supabase.co/functions/v1 cannot send content-type text/html.
-  Four constructions were tested in one probe — object literal, Headers.set with and
-  without the space after the semicolon, and bare text/html — and all four came back
-  text/plain, which renders a surface as raw source. Three controls make that a
-  platform constraint rather than a construction bug: cache-control:no-store passed
-  through untouched, application/json from the SAME function passed through untouched,
-  and the same pg_net path reports text/html correctly for example.com.
+  It carries the July layout (Workshops · Lab · Parts Bin · The Frame · Principles)
+  and the IP & Docs reader, ask box and sign-in that were already proven working —
+  reused verbatim, not reimplemented. Reimplementing them is how two surfaces became
+  three.
 
-  WHY NOT NETLIFY. calm-kringle tracks no branch of hirekraft/studio-surface, so
-  nothing committed reached the screen Alex reads — which is how a placeholder
-  survived on it for six weeks. This repo is writable through Studio MCP, so the
-  surface is deployable without Alex in the loop, which was the actual requirement.
+  WHY HERE. An edge function on *.supabase.co/functions/v1 cannot send text/html:
+  four constructions all returned text/plain, with three controls proving it a
+  platform constraint (cache-control passed through, application/json from the same
+  function passed through, and the same fetch path reports text/html for example.com).
+  This repo is writable through Studio MCP, so the deploy path stays tracked and Alex
+  is not in the loop. Retired with proof: studio-surface.netlify.app (tombstoned) and
+  the GET handler on studio-july (now a pointer, not a page).
+
+  This file holds NO studio values. Every number arrives through a POST carrying a
+  real session, so an unauthenticated read of these bytes discloses nothing and there
+  is nowhere for a stale copy to hide.
 -->
 <style>
-:root{--ink:#1a1a18;--dim:#6b6b63;--line:#e2e0d8;--bg:#faf9f5;--acc:#7a5c3e}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 ui-serif,Georgia,serif}
-main{max-width:900px;margin:0 auto;padding:28px 20px 80px}
-h1{font-size:22px;margin:0 0 2px}
-.sub{color:var(--dim);font-size:14px;margin:0 0 22px}
-.eyebrow{font:600 11px/1 ui-sans-serif,system-ui;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin:26px 0 10px}
-button{font:inherit;cursor:pointer}
-input{font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:#fff;width:100%}
-.btn{background:var(--ink);color:#fff;border:0;border-radius:7px;padding:9px 15px}
-.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
-.note{font:13px/1.5 ui-sans-serif,system-ui;color:var(--dim);margin:8px 0 0}
-.note.bad{color:#a3341f}
-#gate{max-width:380px;margin:12vh auto;display:grid;gap:9px}
-.doc{border:1px solid var(--line);border-radius:9px;background:#fff;padding:13px 15px;margin-bottom:9px;cursor:pointer}
-.doc:hover{border-color:var(--acc)}
-.doc h3{margin:0;font-size:16px}
-.doc .meta{font:12px/1.5 ui-sans-serif,system-ui;color:var(--dim);margin-top:3px}
-.body{white-space:pre-wrap;font:14px/1.62 ui-monospace,SFMono-Regular,Menlo,monospace;background:#fff;border:1px solid var(--line);border-radius:9px;padding:16px;max-height:64vh;overflow:auto;margin-top:10px}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
-.unwired{border:1px dashed var(--line);border-radius:9px;padding:13px 15px;color:var(--dim);font:13px/1.55 ui-sans-serif,system-ui}
-.ans{border-left:3px solid var(--acc);padding:2px 0 2px 13px;margin-top:12px;white-space:pre-wrap}
-</style></head><body>
-<div id="gate">
-  <h1>The studio</h1>
-  <input id="email" type="email" placeholder="you@hirekraft.ai" autocomplete="email">
-  <input id="pw" type="password" placeholder="Password" autocomplete="current-password">
-  <button class="btn" id="go">Sign in</button>
-  <p class="note" id="gn"></p>
-</div>
-<main id="app" hidden>
-  <h1>IP &amp; Docs</h1>
-  <p class="sub" id="who"></p>
-  <div class="eyebrow">The documents</div>
-  <div id="docs"></div>
-  <div id="reader"></div>
-  <div class="eyebrow">Ask the brain</div>
-  <div class="row"><input id="q" placeholder="Ask anything — it reads decisions, seat reports and doctrine"><button class="btn" id="ask">Ask</button></div>
-  <div id="ans"></div>
-  <div class="eyebrow">Not connected yet</div>
-  <div class="unwired">Clicking a principle, and clicking a source, are not wired on this screen yet. They are the next two. Nothing here is composed on demand except an answer you ask for above.</div>
-  <p class="note"><button class="btn ghost" id="out">Sign out</button></p>
-</main>
-<script>
-const FN="https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-july";
-const PATH="https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-path";
-const $=i=>document.getElementById(i);
-const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const tok=()=>{try{return localStorage.getItem("studio_token")||""}catch{return""}};
-const setTok=t=>{try{t?localStorage.setItem("studio_token",t):localStorage.removeItem("studio_token")}catch{}};
+  :root{
+    --bg:#f7f6f3; --raise:#ffffff; --sunk:#f1efea;
+    --hair:#e6e2da; --hair-2:#efece6;
+    --ink:#191a1c; --ink-2:#52545a; --ink-3:#8c8f96; --ink-4:#b8bbc1;
+    --amber:#bd6515; --amber-bg:#f6ead9; --amber-line:#e0a665;
+    --green:#3f7245; --green-bg:#e8f0e8; --green-line:#9bbf9e;
+    --red:#a83f37; --red-bg:#f6e4e1; --red-line:#d98e85;
+    --blue:#36608f; --blue-bg:#e7eef6; --steel:#3b3f47;
+    --sh-1:0 1px 2px rgba(20,18,14,.05);
+    --sh-2:0 1px 3px rgba(20,18,14,.06),0 6px 20px rgba(20,18,14,.05);
+    --sh-3:0 2px 10px rgba(20,18,14,.06),0 16px 50px rgba(20,18,14,.10);
+    --mono:"SF Mono",ui-monospace,"Cascadia Code","Roboto Mono",Menlo,monospace;
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased;letter-spacing:-0.006em}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 32px}
+  @media(max-width:640px){.wrap{padding:0 18px}}
 
-// Every call ends in a stated outcome. A silent form is indistinguishable from never
-// having tried, which is the failure this estate has paid for repeatedly.
-async function call(url,body,auth=true){
-  const c=new AbortController();const t=setTimeout(()=>c.abort(),20000);
+  .masthead{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 0;border-bottom:1px solid var(--hair)}
+  .brand{display:flex;align-items:center;gap:13px;min-width:0}
+  .mark{width:26px;height:26px;border-radius:6px;background:var(--steel);position:relative;flex:0 0 auto;overflow:hidden}
+  .mark span{position:absolute;left:6px;width:14px;height:2px;background:var(--amber)}
+  .mark span:nth-child(1){top:7px}
+  .mark span:nth-child(2){top:12px;background:var(--green-line);width:9px}
+  .mark span:nth-child(3){top:17px;background:rgba(255,255,255,.3);width:11px}
+  .brand h1{font-size:17px;font-weight:650;letter-spacing:-0.022em}
+  .brand .sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);white-space:nowrap}
+  @media(max-width:640px){.brand .sub{display:none}}
+  .mhr{display:flex;align-items:center;gap:14px}
+  .ip-btn{font-family:var(--mono);font-size:11px;color:var(--ink-2);background:var(--raise);border:1px solid var(--hair);padding:7px 12px;border-radius:7px;cursor:pointer;transition:.15s}
+  .ip-btn:hover{border-color:var(--ink-4);box-shadow:var(--sh-1)}
+  .who{font-family:var(--mono);font-size:11px;color:var(--ink-3);cursor:pointer}
+
+  .gauges{display:flex;align-items:stretch;margin-top:16px;background:var(--raise);border:1px solid var(--hair);border-radius:9px;overflow:hidden;box-shadow:var(--sh-1);cursor:pointer;width:fit-content;max-width:100%;flex-wrap:wrap}
+  .gauges:hover{box-shadow:var(--sh-2)}
+  .gz{display:flex;align-items:center;gap:8px;padding:9px 15px;border-right:1px solid var(--hair-2)}
+  .gz:last-child{border-right:none;padding:9px 12px}
+  .gz .gdot{width:7px;height:7px;border-radius:50%}
+  .gdot.ok{background:var(--green)}.gdot.warn{background:var(--amber)}.gdot.bad{background:var(--red);box-shadow:0 0 0 3px var(--red-bg)}.gdot.live{background:var(--blue)}
+  .gz .gl{font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+  .gz .gv{font-family:var(--mono);font-size:11px;color:var(--ink);font-weight:600}
+  .gz.alert .gv{color:var(--red)}
+  .gz .chev{font-size:9px;color:var(--ink-4)}
+  .gauges-detail{display:none;margin-top:8px;background:var(--raise);border:1px solid var(--hair);border-radius:9px;padding:6px;box-shadow:var(--sh-2);max-width:620px}
+  .gauges-detail[data-open="true"]{display:block}
+  .gd-row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px}
+  .gd-row:hover{background:var(--hair-2)}
+  .gd-row .ddot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .ddot.ok{background:var(--green)}.ddot.warn{background:var(--amber)}.ddot.bad{background:var(--red)}.ddot.live{background:var(--blue)}
+  .gd-row .dn{font-family:var(--mono);font-size:12px;flex:1}
+  .gd-row .ds{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+
+  nav.sections{display:flex;gap:2px;margin-top:24px;border-bottom:1px solid var(--hair);overflow-x:auto}
+  .sec{font-size:13.5px;color:var(--ink-3);background:none;border:none;cursor:pointer;padding:11px 15px 14px;position:relative;font-weight:500;letter-spacing:-0.01em;white-space:nowrap;transition:.15s}
+  .sec:hover{color:var(--ink-2)}
+  .sec[aria-selected="true"]{color:var(--ink)}
+  .sec[aria-selected="true"]::after{content:"";position:absolute;left:15px;right:15px;bottom:-1px;height:2px;background:var(--amber);border-radius:2px}
+
+  main{padding:34px 0 90px}
+  .view{display:none}.view[data-active="true"]{display:block;animation:fade .28s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .lede{color:var(--ink-2);max-width:650px;margin-bottom:4px;font-size:15px;line-height:1.6}
+  .lede b{color:var(--ink);font-weight:600}
+
+  .blk{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin:36px 0 14px;display:flex;align-items:center;gap:11px}
+  .blk .ct{color:var(--ink-2)}.blk .ln{flex:1;height:1px;background:var(--hair)}
+
+  /* THE LINE — instrument rail, problems dominate, health recedes */
+  .rail{background:var(--raise);border:1px solid var(--hair);border-radius:10px;overflow:hidden;box-shadow:var(--sh-1)}
+  .row{display:grid;grid-template-columns:3px 260px 1fr auto auto;align-items:center;gap:15px;padding:11px 16px 11px 13px;border-bottom:1px solid var(--hair-2);transition:.12s}
+  .row:last-child{border-bottom:none}
+  .row .edge{width:3px;height:30px;border-radius:2px;background:transparent}
+  .row .nm{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);word-break:break-all}
+  .row .nm small{display:block;color:var(--ink-4);font-size:10.5px;margin-top:1px;font-family:var(--sans)}
+  .row .st{font-size:12.5px;color:var(--ink-3)}
+  .row .gg{font-family:var(--mono);font-size:10.5px;color:var(--ink-4);white-space:nowrap}
+  .row .md{font-family:var(--mono);font-size:9px;letter-spacing:.05em;padding:2px 6px;border-radius:4px;background:var(--sunk);color:var(--ink-4)}
+  .row.ok{opacity:.6}.row.ok:hover{opacity:1;background:var(--hair-2)}.row.ok .edge{background:var(--green-line)}
+  .row.off{opacity:.48}.row.off:hover{opacity:.85;background:var(--hair-2)}.row.off .edge{background:var(--ink-4)}.row.off .nm{color:var(--ink-3)}
+  .row.bad{opacity:1;background:linear-gradient(90deg,var(--red-bg) 0%,transparent 55%)}.row.bad .edge{background:var(--red)}.row.bad .nm{color:var(--ink);font-weight:600}.row.bad .st{color:var(--red);font-weight:500}
+  .row.warn .edge{background:var(--amber-line)}.row.warn .st{color:var(--amber)}
+  @media(max-width:640px){.row{grid-template-columns:3px 1fr auto}.row .st,.row .gg{display:none}}
+
+  /* WORK ORDERS */
+  .orders{background:var(--raise);border:1px solid var(--hair);border-radius:11px;overflow:hidden;box-shadow:var(--sh-2)}
+  .ord{padding:20px 22px;border-bottom:1px solid var(--hair-2);display:grid;grid-template-columns:30px 1fr auto;gap:0 18px;transition:.14s}
+  .ord:last-child{border-bottom:none}
+  .ord:hover{background:#fdfcfa}
+  .ord .seq{font-family:var(--mono);font-size:11px;color:var(--ink-4);grid-row:1/span 4;padding-top:3px}
+  .ord .ti{font-size:15.5px;font-weight:600;letter-spacing:-0.015em;grid-column:2;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .chip{font-family:var(--mono);font-size:8.5px;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:5px;font-weight:600;white-space:nowrap}
+  .chip.high{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-line)}
+  .chip.stale{background:var(--red-bg);color:var(--red);border:1px solid var(--red-line)}
+  .chip.norm{background:var(--sunk);color:var(--ink-3);border:1px solid var(--hair)}
+  .ord .tg{grid-column:2;display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 9px}
+  .tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.02em;padding:2px 7px;border-radius:4px;background:var(--sunk);color:var(--ink-3)}
+  .ord .wy{grid-column:2;color:var(--ink-2);font-size:13.5px;line-height:1.55;max-width:560px}
+  .ord .fx{grid-column:2;font-size:13px;color:var(--ink);margin-top:10px;padding:11px 13px;background:var(--sunk);border-radius:7px;max-width:560px}
+  .ord .fx b{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--amber);display:block;margin-bottom:3px}
+  .ord .act{grid-column:3;grid-row:1/span 4;display:flex;flex-direction:column;gap:7px;align-self:start;padding-top:1px}
+  .btn{font-family:var(--mono);font-size:10.5px;padding:8px 12px;border-radius:6px;border:1px solid var(--hair);background:var(--raise);color:var(--ink-2);cursor:pointer;white-space:nowrap;text-align:left;transition:.14s}
+  .btn:hover{border-color:var(--amber);color:var(--amber)}
+  .btn.pri{background:var(--steel);color:#fff;border-color:var(--steel)}
+  .btn.pri:hover{background:var(--amber);border-color:var(--amber)}
+  .btn:disabled{opacity:.55;cursor:default}
+  @media(max-width:640px){.ord{grid-template-columns:1fr}.ord .seq{display:none}.ord .ti,.ord .tg,.ord .wy,.ord .fx{grid-column:1}.ord .act{grid-column:1;grid-row:auto;flex-direction:row;margin-top:12px}}
+
+  /* PARTS */
+  .stock{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px}
+  .pt{background:var(--raise);border:1px solid var(--hair);border-radius:7px;padding:12px 13px;border-left:3px solid var(--hair);transition:.13s}
+  .pt:hover{box-shadow:var(--sh-1)}
+  .pt.stocked{border-left-color:var(--green-line)}.pt.lab{border-left-color:var(--amber-line)}
+  .pt.sourced{border-left-color:#8fb0d6}.pt.specific{border-left-color:#bd9bb8}
+  .pt .pn{font-family:var(--mono);font-size:12px;color:var(--ink);margin-bottom:5px;line-height:1.3}
+  .pt .pd{font-size:11.5px;color:var(--ink-3);line-height:1.4}
+  .pt .ps{font-family:var(--mono);font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-4);display:block;margin-top:6px}
+
+  /* FRAME */
+  .fr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:10px;overflow:hidden}
+  .fc{background:var(--raise);padding:19px 20px}
+  .fc h3{font-size:14.5px;font-weight:600;letter-spacing:-0.01em;margin-bottom:6px}
+  .fc p{font-size:13px;color:var(--ink-2);line-height:1.5}
+  .fc .pill{display:inline-block;font-family:var(--mono);font-size:9.5px;color:var(--green);background:var(--green-bg);padding:2px 7px;border-radius:4px;margin-top:9px}
+
+  /* PRINCIPLES */
+  .lab-card{background:var(--raise);border:1px solid var(--hair);border-radius:9px;padding:16px 18px;box-shadow:var(--sh-1);margin-bottom:9px;border-left:3px solid var(--amber-line)}
+  .lab-card .lc-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:4px}
+  .lab-card .lc-name{font-weight:600;font-size:14.5px}
+  .lab-card .lc-meta{font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+  .lab-card .lc-body{color:var(--ink-2);font-size:13.5px;line-height:1.55;white-space:pre-wrap}
+  .lab-note{font-family:var(--mono);font-size:11px;color:var(--ink-3);line-height:1.6;margin-top:6px}
+  .lab-hd{display:flex;align-items:center;gap:12px;background:var(--raise);border:1px solid var(--hair);border-radius:10px;padding:14px 18px;box-shadow:var(--sh-1);flex-wrap:wrap}
+  .lab-hd .ldot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
+  .lab-hd .lt{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+  .lab-hd .lt b{color:var(--green)}
+  .lab-hd .lr{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-4)}
+
+  .foot{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:30px;padding-top:15px;border-top:1px solid var(--hair);line-height:1.6}
+
+  /* IP & DOCS — the reader, reused as proven: open in place, download,
+     and the delivered size shown against the claimed size so a truncated
+     body reads as a mismatch instead of passing as the document. */
+  .ov{position:fixed;inset:0;background:rgba(25,26,28,.3);backdrop-filter:blur(2px);display:none;z-index:40}
+  .ov[data-open="true"]{display:block}
+  .dr{position:fixed;top:0;right:0;height:100%;width:720px;max-width:96vw;background:var(--bg);border-left:1px solid var(--hair);transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1);z-index:41;overflow-y:auto;padding:24px 22px 50px;box-shadow:var(--sh-3)}
+  .ov[data-open="true"] .dr{transform:none}
+  .dr h2{font-size:15px;font-weight:600;display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+  .dr .x{background:none;border:none;color:var(--ink-3);cursor:pointer;font-size:21px;line-height:1}
+  .dr .dl{color:var(--ink-3);font-size:12px;margin-bottom:20px;line-height:1.5}
+  .iprow{display:block;background:var(--raise);border:1px solid var(--hair);border-radius:7px;padding:12px 14px;margin-bottom:7px;transition:.14s;cursor:pointer}
+  .iprow:hover{border-color:var(--amber);box-shadow:var(--sh-1)}
+  .iprow .rt{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .iprow .rn{font-family:var(--mono);font-size:12px;color:var(--ink)}
+  .iprow .rw{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);white-space:nowrap}
+  .iprow .rd{font-size:12px;color:var(--ink-3);margin-top:3px}
+  .docbody{white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;line-height:1.62;background:var(--raise);border:1px solid var(--hair);border-radius:9px;padding:16px;max-height:62vh;overflow:auto;margin-top:10px}
+  .drow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  .mismatch{color:var(--red);font-weight:600}
+
+  /* SIGN IN — absent from the document until a session verifies */
+  .gate{max-width:360px;margin:16vh auto 0;padding:0 22px}
+  .gate .gm{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+  .gate h1{font-size:17px;font-weight:650;letter-spacing:-0.022em}
+  .gate .gs{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:2px}
+  .gate label{font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);display:block;margin:14px 0 5px}
+  .gate input{width:100%;background:var(--raise);border:1px solid var(--hair);border-radius:7px;padding:10px 12px;font-family:var(--sans);font-size:14px;color:var(--ink);outline:none}
+  .gate input:focus{border-color:var(--amber)}
+  .gate .go{width:100%;margin-top:18px;background:var(--steel);color:#fff;border:1px solid var(--steel);border-radius:7px;padding:11px;font-family:var(--mono);font-size:11.5px;cursor:pointer;transition:.14s}
+  .gate .go:hover{background:var(--amber);border-color:var(--amber)}
+  .gate .go:disabled{opacity:.55;cursor:default}
+  .gate .msg{font-family:var(--mono);font-size:11px;line-height:1.6;margin-top:14px;color:var(--ink-3)}
+  .gate .msg.bad{color:var(--red)}
+  .empty{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);background:var(--sunk);border:1px dashed var(--hair);border-radius:8px;padding:14px 16px;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const FN   = "https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-july";
+const PATH = "https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-path";
+const root = document.getElementById("root");
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tok    = () => { try{ return localStorage.getItem("studio_token")||""; }catch{ return ""; } };
+const setTok = t  => { try{ t?localStorage.setItem("studio_token",t):localStorage.removeItem("studio_token"); }catch{} };
+let D=null, DOCS=[];
+
+/* Every call ends in a stated outcome. A silent form is indistinguishable from
+   never having tried, which is the failure this estate has paid for repeatedly. */
+async function call(url,body,auth){
+  const c=new AbortController(); const t=setTimeout(()=>c.abort(),20000);
   try{
     const r=await fetch(url,{method:"POST",signal:c.signal,
-      headers:Object.assign({"content-type":"application/json"},auth&&tok()?{authorization:"Bearer "+tok()}:{}),
+      headers:Object.assign({"content-type":"application/json"},(auth!==false&&tok())?{authorization:"Bearer "+tok()}:{}),
       body:JSON.stringify(body)});
-    const txt=await r.text();let j={};try{j=JSON.parse(txt)}catch{j={error:txt.slice(0,200)}}
-    return {status:r.status,body:j};
+    const txt=await r.text(); let j={}; try{ j=JSON.parse(txt); }catch{ j={error:txt.slice(0,200)}; }
+    return {status:r.status, body:j};
   }catch(e){
-    return {status:0,body:{error:e&&e.name==="AbortError"?"No answer within 20 seconds.":"Could not reach the studio."}};
-  }finally{clearTimeout(t)}
+    return {status:0, body:{error:(e&&e.name==="AbortError")?"No answer within 20 seconds.":"Could not reach the studio."}};
+  }finally{ clearTimeout(t); }
 }
 
-$("go").onclick=async()=>{
-  const b=$("go");b.disabled=true;b.textContent="Signing in\u2026";$("gn").className="note";$("gn").textContent="";
-  const r=await call(PATH,{action:"signin_password",email:$("email").value.trim(),password:$("pw").value},false);
-  b.disabled=false;b.textContent="Sign in";
-  if(r.status===200&&r.body.ok){setTok(r.body.access_token);$("pw").value="";return boot();}
-  $("gn").className="note bad";$("gn").textContent=r.body.message||r.body.error||("Something went wrong ("+r.status+").");
-};
-$("out").onclick=()=>{setTok("");location.reload()};
+/* The gate. The surface is ABSENT from the document until a session verifies —
+   nothing below is written into the DOM before that, and no value ships in these
+   bytes. Sign-in delegates to studio-path, which already mints and refreshes the
+   session against the same GoTrue identity and the same allowlist. */
+function gate(msg,bad){
+  root.innerHTML = '<div class="gate">'
+    + '<div class="gm"><div class="mark"><span></span><span></span><span></span></div>'
+    + '<div><h1>The Studio Surface</h1><div class="gs">customer one · the factory floor</div></div></div>'
+    + '<label for="e">email</label><input id="e" type="email" autocomplete="username"/>'
+    + '<label for="p">password</label><input id="p" type="password" autocomplete="current-password"/>'
+    + '<button class="go" id="go">sign in</button>'
+    + '<div class="msg '+(bad?"bad":"")+'" id="m">'+esc(msg||"")+'</div></div>';
+  const go=document.getElementById("go");
+  const submit=async()=>{
+    go.disabled=true; const m=document.getElementById("m");
+    m.className="msg"; m.textContent="checking…";
+    const r=await call(PATH,{action:"signin_password",
+      email:document.getElementById("e").value.trim(),
+      password:document.getElementById("p").value},false);
+    if(r.status===200 && r.body.ok && r.body.access_token){ setTok(r.body.access_token); return boot(); }
+    gate(r.body.message||r.body.error||("that did not sign in ("+r.status+")"),true);
+  };
+  go.onclick=submit;
+  document.getElementById("p").onkeydown=e=>{ if(e.key==="Enter") submit(); };
+}
 
-let DOCS=[];
-function renderDocs(){
-  $("docs").innerHTML=DOCS.map((d,i)=>
-    '<div class="doc" data-i="'+i+'"><h3>'+esc(d.doc_type)+'</h3><div class="meta">v'+esc(d.version)+
-    ' \u00b7 '+Number(d.chars).toLocaleString()+' characters \u00b7 written '+esc((d.updated_at||"").slice(0,10))+
-    ' \u00b7 click to read</div></div>').join("");
-  [...document.querySelectorAll(".doc")].forEach(el=>el.onclick=()=>openDoc(DOCS[+el.dataset.i]));
+async function boot(){
+  if(!tok()) return gate("");
+  root.innerHTML='<div class="gate"><div class="msg">reading both brains at source…</div></div>';
+  const [j,dl]=await Promise.all([call(FN,{action:"july"}),call(FN,{action:"docs"})]);
+  if(j.status===401){ setTok(""); return gate("Your session ended. Sign in again.",true); }
+  if(j.status!==200){ return gate(j.body.error||("could not read the studio ("+j.status+")"),true); }
+  D=j.body; DOCS=(dl.status===200&&dl.body.ok)?(dl.body.documents||[]):[];
+  render();
+}
+
+function gaugeBits(){
+  const f=D.freshness, legs=[
+    ["chats",f.chats.days,f.chats.means],["snapshots",f.snapshots.days,f.snapshots.means],
+    ["decisions",f.decisions.days,f.decisions.means],["corpus",f.corpus.days,f.corpus.means],
+    ["capture",f.capture.days,f.capture.means]];
+  const worst=Math.max.apply(null,legs.map(l=>Number(l[1])||0));
+  const cls=d=>d>3?"bad":d>1.5?"warn":"ok";
+  return {legs,worst,cls};
+}
+
+function render(){
+  const g=gaugeBits(), ln=D.line||{}, ig=D.integrity||{};
+  const srcs=(ln.seen?(ln.sources||[]):[]).concat(D.absent_sources||[]);
+  const bad=srcs.filter(s=>s.c==="bad").length;
+
+  root.innerHTML=
+  '<div class="wrap">'
+  + '<div class="masthead">'
+  +   '<div class="brand"><div class="mark"><span></span><span></span><span></span></div>'
+  +     '<div><h1>The Studio Surface</h1><div class="sub">customer one · the factory floor</div></div></div>'
+  +   '<div class="mhr"><button class="ip-btn" id="ipb">IP &amp; Docs</button>'
+  +     '<span class="who" id="out" title="sign out">'+esc((D.visitor||"").split("@")[0])+'</span></div>'
+  + '</div>'
+  + '<div class="gauges" id="gz">'
+  +   '<div class="gz '+(g.worst>3?"alert":"")+'"><span class="gdot '+g.cls(g.worst)+'"></span><span class="gl">freshness</span><span class="gv">'+(g.worst<=1?"current":g.worst+"d behind")+'</span></div>'
+  +   '<div class="gz"><span class="gdot '+(ln.seen?(ln.reading>0?"ok":"bad"):"bad")+'"></span><span class="gl">reading</span><span class="gv">'+(ln.seen?(ln.reading+" of "+ln.total):"unreachable")+'</span></div>'
+  +   '<div class="gz"><span class="gdot '+(bad?"bad":"ok")+'"></span><span class="gl">problems</span><span class="gv">'+bad+'</span></div>'
+  +   '<div class="gz"><span class="gdot live"></span><span class="gl">seats closed</span><span class="gv">'+(ig.seats?ig.seats.closed_total:"—")+'</span></div>'
+  +   '<div class="gz"><span class="chev">▾</span></div>'
+  + '</div>'
+  + '<div class="gauges-detail" id="gzd">'
+  +   g.legs.map(l=>'<div class="gd-row"><span class="ddot '+g.cls(Number(l[1])||0)+'"></span><span class="dn">'+esc(l[0])+'</span><span class="ds">'+esc(l[1])+'d · '+esc(l[2])+'</span></div>').join("")
+  + '</div>'
+  + '<nav class="sections" id="nav">'
+  +   ["Workshops","Lab","Parts Bin","The Frame","Principles"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
+  + '</nav>'
+  + '<main>'
+  +   '<section class="view" data-active="true" data-i="0">'+workshops(ln,srcs)+'</section>'
+  +   '<section class="view" data-i="1">'+lab(ln)+'</section>'
+  +   '<section class="view" data-i="2">'+parts()+'</section>'
+  +   '<section class="view" data-i="3">'+frame()+'</section>'
+  +   '<section class="view" data-i="4">'+principles()+'</section>'
+  +   '<div class="foot">'+esc(D.footer)+'<br/>Served by '+esc(D.served_by.fn)+' · studio half from surface_july() · the line from july_sources() on the customer brain · this is the only address that serves the studio · nothing on this page is stored.</div>'
+  + '</main></div>'
+  + '<div class="ov" id="ov"><div class="dr" id="drw">'+ipdocs()+'</div></div>';
+
+  document.getElementById("gz").onclick=()=>{ const d=document.getElementById("gzd");
+    d.dataset.open = d.dataset.open==="true"?"false":"true"; };
+  const tabs=document.querySelectorAll("#nav .sec");
+  tabs.forEach(b=>b.onclick=()=>{
+    tabs.forEach(x=>x.setAttribute("aria-selected", x===b ? "true":"false"));
+    document.querySelectorAll(".view").forEach(v=>v.dataset.active = (v.dataset.i===b.dataset.i)?"true":"false");
+  });
+  const ov=document.getElementById("ov");
+  document.getElementById("ipb").onclick=()=>{ ov.dataset.open="true"; };
+  ov.onclick=e=>{ if(e.target===ov) ov.dataset.open="false"; };
+  document.getElementById("out").onclick=()=>{ setTok(""); location.reload(); };
+  bindDocs();
+  const ask=document.getElementById("askb"); if(ask) ask.onclick=doAsk;
+}
+
+function workshops(ln,srcs){
+  const wo=D.work_orders||[];
+  return '<div class="lede">Where the work happens. The line below is <b>every source, connected versus actually reading</b> — different facts, kept apart. Problems dominate; healthy sources recede.</div>'
+  + '<div class="blk">The line — sources <span class="ct">'+(ln.seen?(ln.reading+" of "+ln.total+" reading"):"")+'</span><span class="ln"></span></div>'
+  + (ln.seen
+     ? '<div class="rail">'+srcs.map(s=>'<div class="row '+esc(s.c==="warn ok"?"warn":s.c)+'">'
+       + '<span class="edge"></span>'
+       + '<span class="nm">'+esc(s.n)+'<small>'+esc(s.sub)+'</small></span>'
+       + '<span class="st">'+esc(s.st)+'</span>'
+       + '<span class="gg">'+esc(s.g)+'</span>'
+       + '<span class="md">'+esc(s.m)+'</span></div>').join("")+'</div>'
+       + '<div class="lab-note">'+esc(ln.reading_means?("Reading means: "+ln.reading_means+"."):"")+' '+esc(ln.how||"")+'</div>'
+     : '<div class="empty">The line is not connected right now. '+esc(ln.why||"The customer brain could not be reached from this screen.")+'</div>')
+  + '<div class="blk">Work orders <span class="ct">'+wo.length+'</span><span class="ln"></span></div>'
+  + '<div class="orders">'+(wo.length
+      ? wo.map((o,i)=>'<div class="ord">'
+        + '<span class="seq">'+String(i+1).padStart(2,"0")+'</span>'
+        + '<div class="ti">'+esc(o.ti)+'<span class="chip '+esc(o.pl)+'">'+esc(o.pl)+'</span></div>'
+        + '<div class="tg">'+(o.tg||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join("")
+        +   '<span class="tag">'+esc(o.src)+'</span><span class="tag">'+esc(o.ref)+'</span></div>'
+        + '<div class="wy">'+esc(o.wy)+'</div>'
+        + '<div class="fx"><b>Finish</b>'+esc(o.fx)+'</div></div>').join("")
+      : '<div class="ord"><div class="wy">No work orders. Nothing open carries a finish condition right now.</div></div>')
+  + '</div>';
+}
+
+function lab(ln){
+  const t=ln.seen?ln.by_type:null;
+  return '<div class="lede">The proving bench — the Tool pointed at <b>real HireKraft data</b>. This is the customer brain: what is connected and reading. Doctrine, decisions and parts live in the Studio brain and are not mixed in here.</div>'
+  + '<div class="blk">Live lab — HireKraft brain<span class="ln"></span></div>'
+  + (ln.seen
+    ? '<div class="lab-hd"><span class="ldot"></span><span class="lt"><b>HireKraft brain</b> · '
+      + esc(Object.keys(t||{}).map(k=>t[k]+" "+k).join(" + "))+' · '+esc(ln.chunks_total)+' chunks</span>'
+      + '<span class="lr">uvdoom… · the lab</span></div>'
+      + '<div class="lab-note">'+esc(ln.reading)+' of '+esc(ln.total)+' sources have content from the last two days. The rest are registered, off, or walking green while reading nothing — which is why the line separates the two.</div>'
+    : '<div class="empty">Not connected right now. '+esc(ln.why||"")+'</div>')
+  + '<div class="blk">The two brains<span class="ln"></span></div>'
+  + '<div class="fr-grid">'
+  + '<div class="fc"><h3>Studio brain</h3><p>Doctrine, decisions, parts, promises, seat record. '+esc(D.principles.sections)+' corpus sections, '+esc(D.principles.decisions)+' decisions, '+esc(D.principles.seat_reports)+' seat reports.</p><span class="pill">yzsudn… · the record</span></div>'
+  + '<div class="fc"><h3>HireKraft brain</h3><p>What is connected and reading. '+(ln.seen?(esc(ln.total)+" sources, "+esc(ln.chunks_total)+" chunks"):"unreachable right now")+'.</p><span class="pill">uvdoom… · the lab</span></div>'
+  + '</div>';
+}
+
+function parts(){
+  const p=D.parts;
+  const bin=(items,cls,label,desc)=>'<div class="blk">'+label+' <span class="ct">'+(items?items.length:0)+'</span><span class="ln"></span></div>'
+    + '<div class="lab-note" style="margin-bottom:12px">'+desc+'</div>'
+    + (items&&items.length
+      ? '<div class="stock">'+items.map(x=>'<div class="pt '+cls+'"><div class="pn">'+esc(String(x.name).slice(0,90))+'</div><div class="pd">'+esc(x.sub||"")+'</div><span class="ps">'+esc(x.id)+'</span></div>').join("")+'</div>'
+      : '<div class="empty">Nothing in this bin.</div>');
+  return '<div class="lede">Everything Studio has built, in its bin — sorted by <b>what the promise ledger can actually verify</b>, not by what was claimed.</div>'
+  + bin(p.stocked,"stocked","Stocked — proven","verdict TRUE: verified against the live system.")
+  + bin(p.in_lab,"lab","In-lab — shape being learned","verdict PARTIAL: real, incomplete.")
+  + bin(p.open_slots,"sourced","Sourced &amp; open slots","verdict FALSE or UNVERIFIABLE: decided or claimed, not standing up.")
+  + '<div class="blk">Product-specific — never a part<span class="ln"></span></div>'
+  + '<div class="empty">'+esc(p.never_a_part.why)+'</div>';
+}
+
+function frame(){
+  const d=D.ip_docs||[], drift=D.shard_drift_note, ig=D.integrity;
+  return '<div class="lede">What Studio is. The apparatus is the product; the Tool is the first thing manufactured. The frame below is <b>the corpus as it actually stands</b>, not a description of it.</div>'
+  + '<div class="blk">The corpus<span class="ln"></span></div>'
+  + '<div class="fr-grid">'+d.map(x=>'<div class="fc"><h3>'+esc(String(x.doc).replace(/_/g," "))+'</h3>'
+    + '<p>v'+esc(x.version)+' · '+esc(x.sections)+' sections · '+esc(Math.round(x.chars/1000))+'k chars · written '+esc(String(x.written).slice(0,10))+'</p>'
+    + (x.shard_drift
+       ? '<span class="pill" style="color:var(--red);background:var(--red-bg)">sharded at v'+esc(x.sharded_at)+' — recall reads the older text</span>'
+       : '<span class="pill">sharded current</span>')+'</div>').join("")+'</div>'
+  + (drift?'<div class="blk">What that costs<span class="ln"></span></div><div class="empty">'+esc(drift)+'</div>':"")
+  + '<div class="blk">What nothing has re-examined<span class="ln"></span></div>'
+  + '<div class="empty">'+esc(ig.examination.note)+'</div>'
+  + '<div class="blk">The seat record<span class="ln"></span></div>'
+  + '<div class="fr-grid">'
+  + '<div class="fc"><h3>Closed</h3><p>'+esc(ig.seats.closed_total)+' seats have closed, '+esc(ig.seats.closed_21d)+' in the last 21 days.</p></div>'
+  + '<div class="fc"><h3>Traced to a promise</h3><p>'+esc(ig.seats.traced_21d)+' of '+esc(ig.seats.closed_21d)+' named a real promise_ledger id. '+esc(ig.seats.untraced_21d)+' did not.</p></div>'
+  + '<div class="fc"><h3>Running now</h3><p>'+esc(ig.seats.running_why)+'</p></div>'
+  + '</div>'
+  + '<div class="blk">Contradictions — growing daily, unattended<span class="ln"></span></div>'
+  + '<div class="fr-grid">'
+  + '<div class="fc"><h3>Disagreements</h3><p>'+esc(ig.contradictions.disagrees)+' pairs judged DISAGREES, '+esc(ig.contradictions.supersedes)+' SUPERSEDES, out of '+esc(ig.contradictions.pairs)+' scanned.</p></div>'
+  + '<div class="fc"><h3>Not yet judged</h3><p>'+esc(ig.contradictions.unadjudicated)+' pairs are unadjudicated. The hunt continues on its own.</p></div>'
+  + '<div class="fc"><h3>Promise conflicts</h3><p>'+esc(ig.contradictions.promise_conflicts)+' open.</p></div>'
+  + '<div class="fc"><h3>Dissolved</h3><p>'+esc(D.dissolved.records)+' records — work that left the queue without being built.</p></div>'
+  + '</div>';
+}
+
+function principles(){
+  const p=D.principles;
+  return '<div class="lede">The doctrine — <b>'+esc(p.doctrine_sections)+' principle sections</b> inside '+esc(p.sections)+' corpus sections. Not a stored list: it deepens as decisions land, and it is counted at read time.</div>'
+  + '<div class="blk">Composed from<span class="ln"></span></div>'
+  + '<div class="fr-grid">'
+  + '<div class="fc"><h3>'+esc(p.sections)+'</h3><p>corpus sections, current</p></div>'
+  + '<div class="fc"><h3>'+esc(p.decisions)+'</h3><p>decisions on the record</p></div>'
+  + '<div class="fc"><h3>'+esc(p.seat_reports)+'</h3><p>seat reports</p></div>'
+  + '<div class="fc"><h3>'+esc(D.sweep.open_backlog)+'</h3><p>open backlog items</p></div>'
+  + '</div>'
+  + '<div class="blk">Ask the brain<span class="ln"></span></div>'
+  + '<div class="lab-note">It reads decisions, seat reports and doctrine.</div>'
+  + '<div style="display:flex;gap:8px;margin-top:12px;max-width:660px">'
+  + '<input id="q" placeholder="Ask anything about the studio" style="flex:1;background:var(--raise);border:1px solid var(--hair);border-radius:7px;padding:10px 12px;font-family:var(--sans);font-size:14px;outline:none"/>'
+  + '<button class="btn pri" id="askb">Ask</button></div>'
+  + '<div id="ans" style="margin-top:14px"></div>';
+}
+
+async function doAsk(){
+  const qi=document.getElementById("q"); const q=qi.value.trim(); if(!q) return;
+  const b=document.getElementById("askb"); const a=document.getElementById("ans");
+  b.disabled=true; b.textContent="Reading…";
+  a.innerHTML='<div class="lab-note">Reading decisions, seat reports and doctrine…</div>';
+  const r=await call(FN,{action:"ask",q:q});
+  b.disabled=false; b.textContent="Ask";
+  if(r.status!==200){ a.innerHTML='<div class="empty">'+esc(r.body.error||("Failed ("+r.status+")"))+'</div>'; return; }
+  const d=r.body;
+  const text=d.answer||d.summary||(typeof d==="string"?d:JSON.stringify(d,null,1));
+  a.innerHTML='<div class="lab-card"><div class="lc-body">'+esc(text)+'</div></div>';
+}
+
+/* IP & Docs — listing is not opening. The list carries the claimed size; opening
+   shows the delivered size beside it, and flags a mismatch rather than letting a
+   truncated body pass as the document. */
+function ipdocs(){
+  return '<h2>IP &amp; Docs <button class="x" id="drx">×</button></h2>'
+  + '<div class="dl">Everything Studio owns, served from the brain. Version, size and shard state read at this moment — never from a list.</div>'
+  + '<div id="doclist">'+(DOCS.length
+      ? DOCS.map((d,i)=>'<div class="iprow" data-i="'+i+'"><div class="rt">'
+        + '<span class="rn">'+esc(String(d.doc_type).replace(/_/g," "))+'</span>'
+        + '<span class="rw">v'+esc(d.version)+'</span></div>'
+        + '<div class="rd">'+Number(d.chars).toLocaleString()+' characters · written '+esc(String(d.updated_at||"").slice(0,10))+' · click to read</div></div>').join("")
+      : '<div class="empty">The document list did not load. Nothing is claimed about it.</div>')
+  + '</div><div id="reader"></div>';
+}
+
+function bindDocs(){
+  const x=document.getElementById("drx");
+  if(x) x.onclick=()=>{ document.getElementById("ov").dataset.open="false"; };
+  document.querySelectorAll("#doclist .iprow").forEach(el=>{
+    el.onclick=()=>openDoc(DOCS[Number(el.dataset.i)]);
+  });
 }
 
 async function openDoc(d){
-  $("reader").innerHTML='<p class="note">Fetching '+esc(d.doc_type)+'\u2026</p>';
+  const rd=document.getElementById("reader");
+  rd.innerHTML='<div class="lab-note">Fetching '+esc(d.doc_type)+'…</div>';
   const r=await call(FN,{action:"doc",doc_type:d.doc_type});
   if(r.status!==200||!r.body.ok){
-    $("reader").innerHTML='<p class="note bad">Could not open it: '+esc(r.body.error||r.status)+'</p>';return;
+    rd.innerHTML='<div class="empty">Could not open it: '+esc(r.body.error||r.status)+'</div>'; return;
   }
   const doc=r.body.doc;
-  // The listed size and the delivered size are shown together on purpose: a truncated
-  // body then reads as a mismatch rather than passing as the document itself.
-  $("reader").innerHTML='<div class="row"><b>'+esc(doc.doc_type)+' v'+esc(doc.version)+'</b>'+
-    '<span class="note">'+Number(doc.chars).toLocaleString()+' characters delivered</span>'+
-    '<button class="btn ghost" id="dl">Download</button>'+
-    '<button class="btn ghost" id="close">Close</button></div>'+
-    '<div class="body">'+esc(doc.body)+'</div>';
-  $("close").onclick=()=>{$("reader").innerHTML=""};
-  $("dl").onclick=()=>{
+  const claimed=Number(d.chars), delivered=Number(doc.chars);
+  const mism = claimed!==delivered;
+  rd.innerHTML='<div class="drow"><b>'+esc(doc.doc_type)+' v'+esc(doc.version)+'</b>'
+    + '<span class="lab-note" style="margin:0">'+delivered.toLocaleString()+' characters delivered'
+    + (mism?' <span class="mismatch">· listed '+claimed.toLocaleString()+' — MISMATCH</span>':' · matches the listed size')+'</span>'
+    + '<button class="btn" id="dl">Download .md</button>'
+    + '<button class="btn" id="dclose">Close</button></div>'
+    + '<div class="docbody">'+esc(doc.body)+'</div>';
+  document.getElementById("dclose").onclick=()=>{ rd.innerHTML=""; };
+  document.getElementById("dl").onclick=()=>{
     const blob=new Blob([doc.body],{type:"text/markdown;charset=utf-8"});
     const a=document.createElement("a");
     a.href=URL.createObjectURL(blob);
     a.download=doc.doc_type+"-v"+doc.version+".md";
-    document.body.appendChild(a);a.click();a.remove();
+    document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);
   };
 }
 
-$("ask").onclick=async()=>{
-  const q=$("q").value.trim();if(!q)return;
-  const b=$("ask");b.disabled=true;b.textContent="Reading\u2026";
-  $("ans").innerHTML='<p class="note">Reading decisions, seat reports and doctrine\u2026</p>';
-  const r=await call(FN,{action:"ask",q});
-  b.disabled=false;b.textContent="Ask";
-  if(r.status!==200){$("ans").innerHTML='<p class="note bad">'+esc(r.body.error||("Failed ("+r.status+")"))+'</p>';return}
-  const d=r.body;
-  const text=d.answer||d.summary||(typeof d==="string"?d:JSON.stringify(d,null,1));
-  $("ans").innerHTML='<div class="ans">'+esc(text)+'</div>';
-};
-
-async function boot(){
-  if(!tok())return;
-  const r=await call(FN,{action:"docs"});
-  if(r.status===401){setTok("");$("gn").className="note bad";$("gn").textContent="Your session ended. Sign in again.";return}
-  if(r.status!==200||!r.body.ok){$("gn").className="note bad";$("gn").textContent=r.body.error||("Could not read the studio ("+r.status+")");return}
-  DOCS=r.body.documents||[];
-  $("gate").hidden=true;$("app").hidden=false;
-  $("who").textContent=r.body.visitor+" \u00b7 "+DOCS.length+" current documents, served from the brain";
-  renderDocs();
-}
 boot();
-</script></body></html>
+</script>
+</body>
+</html>
