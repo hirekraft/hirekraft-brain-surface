@@ -409,10 +409,10 @@ function workshops(ln,srcs){
   + '<div class="orders">'+(wo.length
       ? groupBySubsystem(wo).map((o,i)=>'<div class="ord">'
         + '<span class="seq">'+String(i+1).padStart(2,"0")+'</span>'
-        + '<div class="ti">'+esc(o.ti)+'<span class="chip '+esc(o.pl)+'">'+esc(o.pl)+'</span></div>'
+        + '<div class="ti">'+esc(wordTrim(o.ti,120))+'<span class="chip '+esc(o.pl)+'">'+esc(o.pl)+'</span></div>'
         + '<div class="tg">'+(o.tg||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join("")
         +   '<span class="tag">'+esc(o.src)+'</span><span class="tag">'+esc(o.ref)+'</span></div>'
-        + '<div class="wy">'+esc(o.wy)+'</div>'
+        + '<div class="wy">'+esc(wordTrim(o.wy,420))+'</div>'
         + '<div class="fx"><b>Finish</b>'+esc(o.fx)+'</div></div>').join("")
       : '<div class="ord"><div class="wy">No work orders. Nothing open carries a finish condition right now.</div></div>')
   + '</div>';
@@ -474,7 +474,7 @@ function parts(){
   const bin=(items,cls,label,desc)=>'<div class="blk">'+label+' <span class="ct">'+(items?items.length:0)+'</span><span class="ln"></span></div>'
     + '<div class="lab-note" style="margin-bottom:12px">'+desc+'</div>'
     + (items&&items.length
-      ? '<div class="stock">'+items.map(x=>'<div class="pt '+cls+'"><div class="pn">'+esc(String(x.name).slice(0,90))+'</div><div class="pd">'+esc(x.sub||"")+'</div><span class="ps">'+esc(x.id)+'</span></div>').join("")+'</div>'
+      ? '<div class="stock">'+items.map(x=>'<div class="pt '+cls+'"><div class="pn">'+esc(wordTrim(x.name,90))+'</div><div class="pd">'+esc(x.sub||"")+'</div><span class="ps">'+esc(x.id)+'</span></div>').join("")+'</div>'
       : '<div class="empty">Nothing in this bin.</div>');
   return '<div class="lede">Everything Studio has built, in its bin — sorted by <b>what the promise ledger can actually verify</b>, not by what was claimed.</div>'
   + bin(p.stocked,"stocked","Stocked — proven","verdict TRUE: verified against the live system.")
@@ -546,6 +546,13 @@ function principles(){
    — 26 of the 95 principles are cited by number, and the rest are honestly empty. */
 /* Citations are markers in the composed text. Turn them into controls that OPEN the
    evidence they support, so a reader never hunts for [E9] down a page of passages. */
+/* Truncation cuts at a WORD BOUNDARY. Fixed-count slicing produced "vertical in the
+   attachmen" and "not a foundatio". Applied at render, where truncation belongs. */
+function wordTrim(t,n){
+  const s=String(t||"").trim();
+  if(s.length<=n) return s;
+  return s.slice(0,n).replace(/\s+\S*$/,"")+"…";
+}
 function firstLine(t){
   const s=String(t||"").replace(/\s+/g," ").trim();
   return s.length>90 ? s.slice(0,90).replace(/\s+\S*$/,"")+"…" : s;
