@@ -157,6 +157,30 @@
   .lab-card .lc-meta{font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
   .lab-card .lc-body{color:var(--ink-2);font-size:13.5px;line-height:1.55;white-space:pre-wrap}
   .lab-note{font-family:var(--mono);font-size:11px;color:var(--ink-3);line-height:1.6;margin-top:6px}
+  /* principle index + composed deep view */
+  .pidx{columns:2;column-gap:14px}
+  @media(max-width:640px){.pidx{columns:1}}
+  .pg{break-inside:avoid;margin-bottom:14px;background:var(--raise);border:1px solid var(--hair);border-radius:9px;padding:15px 17px}
+  .pi{font-size:12.5px;color:var(--ink-2);margin:0 -8px;padding:5px 8px;border-radius:6px;display:flex;gap:9px;cursor:pointer;transition:.12s;line-height:1.4}
+  .pi:hover{background:var(--hair-2);color:var(--ink)}
+  .pi .pn{font-family:var(--mono);color:var(--amber);font-size:10.5px;flex:0 0 auto;width:22px;text-align:right}
+  .pdepth{background:var(--raise);border:1px solid var(--hair);border-left:3px solid var(--amber);border-radius:9px;padding:22px 24px;margin-bottom:20px;box-shadow:var(--sh-2)}
+  .pdepth .gen{font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--amber);margin-bottom:11px;display:flex;align-items:center;gap:7px}
+  .pdepth h3{font-size:17px;font-weight:600;letter-spacing:-0.02em;margin-bottom:8px}
+  .pdepth .ds{margin-bottom:13px}
+  .pdepth .ds b{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);display:block;margin-bottom:3px}
+  .pdepth .ds p{font-size:13.5px;color:var(--ink);line-height:1.55;white-space:pre-wrap}
+  .pdepth .ft{font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-top:14px;padding-top:12px;border-top:1px solid var(--hair-2)}
+  /* the path — the only sequencing claim the corpus asserts */
+  .steps{position:relative;margin-top:14px}
+  .step{display:flex;gap:16px;padding-bottom:14px}
+  .step .no{flex:none;width:42px;height:42px;border-radius:50%;background:var(--raise);border:2px solid var(--hair);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+  .step .sb{flex:1;background:var(--raise);border:1px solid var(--hair);border-radius:11px;padding:13px 16px;min-width:0}
+  .step .ti2{font-weight:600;font-size:14.5px;letter-spacing:-.01em}
+  .step .de{font-size:13px;color:var(--ink-2);margin-top:5px;line-height:1.5}
+  .step .ga{font-size:12.5px;color:var(--ink);margin-top:9px;padding:9px 12px;background:var(--sunk);border-radius:7px}
+  .step .ga b{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--amber);display:block;margin-bottom:3px}
+  .step .ga.none{color:var(--ink-3)}
   .lab-hd{display:flex;align-items:center;gap:12px;background:var(--raise);border:1px solid var(--hair);border-radius:10px;padding:14px 18px;box-shadow:var(--sh-1);flex-wrap:wrap}
   .lab-hd .ldot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
   .lab-hd .lt{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
@@ -287,6 +311,8 @@ function render(){
   +     '<span class="who" id="out" title="sign out">'+esc((D.visitor||"").split("@")[0])+'</span></div>'
   + '</div>'
   + '<div class="gauges" id="gz">'
+  +   '<div class="gz"><span class="gdot live"></span><span class="gl">clock</span><span class="gv" id="clk">—</span></div>'
+  +   '<div class="gz"><span class="gdot live"></span><span class="gl">generated</span><span class="gv" id="genage">—</span></div>'
   +   '<div class="gz '+(g.worst>3?"alert":"")+'"><span class="gdot '+g.cls(g.worst)+'"></span><span class="gl">freshness</span><span class="gv">'+(g.worst<=1?"current":g.worst+"d behind")+'</span></div>'
   +   '<div class="gz"><span class="gdot '+(ln.seen?(ln.reading>0?"ok":"bad"):"bad")+'"></span><span class="gl">reading</span><span class="gv">'+(ln.seen?(ln.reading+" of "+ln.total):"unreachable")+'</span></div>'
   +   '<div class="gz"><span class="gdot '+(bad?"bad":"ok")+'"></span><span class="gl">problems</span><span class="gv">'+bad+'</span></div>'
@@ -322,6 +348,31 @@ function render(){
   document.getElementById("out").onclick=()=>{ setTok(""); location.reload(); };
   bindDocs();
   const ask=document.getElementById("askb"); if(ask) ask.onclick=doAsk;
+  bindPrinciples();
+  startClock();
+}
+
+/* THE CLOCK, two facts side by side. The wall clock is for orientation only: a stale
+   page shows a perfectly live one, which is exactly what the old surface did with a
+   hardcoded "live · America/Los_Angeles · Jun 19". What actually answers "is this page
+   being generated now" is the age of the server's as_of stamp, so both are shown and
+   only the second is load-bearing. */
+function startClock(){
+  if(window.__clk) clearInterval(window.__clk);
+  const tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||"local";
+  const gen=Date.parse(D.as_of);
+  const tick=()=>{
+    const c=document.getElementById("clk"), a=document.getElementById("genage");
+    if(!c||!a){ clearInterval(window.__clk); return; }
+    const now=new Date();
+    c.textContent=now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})
+      +" · "+tz+" · "+now.toLocaleDateString([],{month:"short",day:"numeric"});
+    if(!isFinite(gen)){ a.textContent="unknown"; a.style.color="var(--red)"; return; }
+    const s=Math.max(0,Math.round((Date.now()-gen)/1000));
+    a.textContent = s<90 ? s+"s ago" : s<5400 ? Math.round(s/60)+"m ago" : Math.round(s/3600)+"h ago";
+    a.style.color = s>900 ? "var(--red)" : "";
+  };
+  tick(); window.__clk=setInterval(tick,1000);
 }
 
 function workshops(ln,srcs){
@@ -337,7 +388,8 @@ function workshops(ln,srcs){
        + '<span class="md">'+esc(s.m)+'</span></div>').join("")+'</div>'
        + '<div class="lab-note">'+esc(ln.reading_means?("Reading means: "+ln.reading_means+"."):"")+' '+esc(ln.how||"")+'</div>'
      : '<div class="empty">The line is not connected right now. '+esc(ln.why||"The customer brain could not be reached from this screen.")+'</div>')
-  + '<div class="blk">Work orders <span class="ct">'+wo.length+'</span><span class="ln"></span></div>'
+  + pathBlock()
+  + '<div class="blk">Work orders <span class="ct">'+wo.length+' · grouped by subsystem</span><span class="ln"></span></div>'
   + '<div class="orders">'+(wo.length
       ? wo.map((o,i)=>'<div class="ord">'
         + '<span class="seq">'+String(i+1).padStart(2,"0")+'</span>'
@@ -350,6 +402,26 @@ function workshops(ln,srcs){
   + '</div>';
 }
 
+/* THE PATH. The old surface showed four workshop stages (01 Ingestion → 04 Factory)
+   and said Ingestion was open with the rest sequenced behind it. Nothing in the corpus
+   asserted that, so it is gone. Principle 90 is the only sequencing claim the record
+   makes, and it is parsed from the principle itself — if the principle is rewritten,
+   this follows it. Steps that state no gate say so rather than being given one. */
+function pathBlock(){
+  const p=D.doctrine&&D.doctrine.path;
+  if(!p||!p.steps||!p.steps.length)
+    return '<div class="blk">The path<span class="ln"></span></div><div class="empty">The path could not be read from the corpus just now. Nothing is claimed about the order of work.</div>';
+  return '<div class="blk">The path <span class="ct">'+p.steps.length+' steps</span><span class="ln"></span></div>'
+  + '<div class="lab-note" style="margin-bottom:6px">'+esc(p.source)+' · '+esc(p.ordering)+'</div>'
+  + '<div class="lab-note" style="margin-bottom:10px">'+esc(p.note||"")+'</div>'
+  + '<div class="steps">'+p.steps.map(s=>'<div class="step"><div class="no">'+esc(s.n)+'</div><div class="sb">'
+    + '<div class="ti2">'+esc(s.title)+'</div>'
+    + '<div class="de">'+esc(s.detail)+'</div>'
+    + (s.gate?'<div class="ga"><b>Gate — a proof, not a milestone</b>'+esc(s.gate)+'</div>'
+            :'<div class="ga none"><b>Gate</b>The principle states no gate for this step.</div>')
+    + '</div></div>').join("")+'</div>';
+}
+
 function lab(ln){
   const t=ln.seen?ln.by_type:null;
   return '<div class="lede">The proving bench — the Tool pointed at <b>real HireKraft data</b>. This is the customer brain: what is connected and reading. Doctrine, decisions and parts live in the Studio brain and are not mixed in here.</div>'
@@ -360,6 +432,8 @@ function lab(ln){
       + '<span class="lr">uvdoom… · the lab</span></div>'
       + '<div class="lab-note">'+esc(ln.reading)+' of '+esc(ln.total)+' sources have content from the last two days. The rest are registered, off, or walking green while reading nothing — which is why the line separates the two.</div>'
     : '<div class="empty">Not connected right now. '+esc(ln.why||"")+'</div>')
+  + '<div class="blk">What is testable now<span class="ln"></span></div>'
+  + '<div class="empty">Not connected yet, and not derivable. The old surface listed parts as <b>now testing</b>, <b>blocked by freshness</b> and <b>waiting on build</b>; those were editorial judgments, and nothing in either brain records what is considered ready to test. This section fills from Alex using the Tool and saying so — not from derivation. A plausible list here would be the same defect the rest of this page exists to remove.</div>'
   + '<div class="blk">The two brains<span class="ln"></span></div>'
   + '<div class="fr-grid">'
   + '<div class="fc"><h3>Studio brain</h3><p>Doctrine, decisions, parts, promises, seat record. '+esc(D.principles.sections)+' corpus sections, '+esc(D.principles.decisions)+' decisions, '+esc(D.principles.seat_reports)+' seat reports.</p><span class="pill">yzsudn… · the record</span></div>'
