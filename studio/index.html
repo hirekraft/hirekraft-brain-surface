@@ -544,6 +544,29 @@ function principles(){
    actually composes: the principle's current text, the decisions citing it oldest
    first, and the other sections enforcing it. Where the record has nothing it says so
    — 26 of the 95 principles are cited by number, and the rest are honestly empty. */
+/* Citations are markers in the composed text. Turn them into controls that OPEN the
+   evidence they support, so a reader never hunts for [E9] down a page of passages. */
+function firstLine(t){
+  const s=String(t||"").replace(/\s+/g," ").trim();
+  return s.length>90 ? s.slice(0,90).replace(/\s+\S*$/,"")+"…" : s;
+}
+function citeHTML(text){
+  return esc(String(text||"")).replace(/\[(E|D)(\d+)\]/g,
+    (m,k,i)=>'<span class="cite" data-cite="'+k+i+'">['+k+i+']</span>');
+}
+function bindCites(scope){
+  (scope||document).querySelectorAll(".cite").forEach(el=>{
+    el.onclick=()=>{
+      const t=document.getElementById("cite-"+el.dataset.cite);
+      if(!t) return;
+      t.open=true;
+      t.classList.add("hit");
+      t.scrollIntoView({behavior:"smooth",block:"center"});
+      setTimeout(()=>t.classList.remove("hit"),1600);
+    };
+  });
+}
+
 function bindPrinciples(){
   document.querySelectorAll(".pi").forEach(el=>{
     el.onclick=()=>openPrinciple(Number(el.dataset.n));
@@ -573,7 +596,7 @@ async function openPrinciple(n){
     + '<div class="gen"><span class="gdt"></span>'+(d.mode==="explained"?"in plain words · the exact wording is below":"shown as written")+'</div>'
     + '<h3>'+esc(d.n)+' — '+esc(d.name)+'</h3>'
     + (d.mode==="explained"
- why      ? '<div class="ds"><b>What it says</b><div class="ansbody">'+citeHTML(d.plain)+'</div></div>'
+        ? '<div class="ds"><b>What it says</b><div class="ansbody">'+citeHTML(d.plain)+'</div></div>'
         + (d.why?'<div class="ds"><b>Why it exists</b><div class="ansbody">'+citeHTML(d.why)+'</div></div>':'')
       : '')
     + '<details class="ev" style="margin-top:10px"><summary><span class="er">§</span><span class="ek">verbatim</span>'
@@ -603,16 +626,22 @@ async function doAsk(){
      of dumping the object. */
   const d=r.body||{};
   const note = d.how ? '<div class="lab-note" style="margin-bottom:10px">'+esc(d.how)+'</div>' : '';
-  const cites = (d.passages||[]).map(p=>'<div class="lab-card"><div class="lc-top">'
-      + '<span class="lc-name">['+esc(p.ref)+'] '+esc(p.kind)+' — '+esc(p.name)+'</span>'
-      + '<span class="lc-meta">'+esc(p.date)+' · '+esc(p.similarity)+'</span></div>'
-      + '<div class="lc-body">'+esc(p.text)+'</div></div>').join("");
+  /* Collapsed by default. Twelve open passages bury a four-paragraph answer, and by
+     [E9] the reader has lost which claim it supported. Each carries an id its citation
+     opens directly. */
+  const cites = (d.passages||[]).map(p=>'<details class="ev" id="cite-'+esc(p.ref)+'"><summary>'
+      + '<span class="er">['+esc(p.ref)+']</span>'
+      + '<span class="ek">'+esc(p.kind)+'</span>'
+      + '<span class="en">'+esc(p.name)+'</span>'
+      + '<span class="em">'+esc(p.date)+'</span></summary>'
+      + '<div class="eb">'+esc(p.text)+'</div></details>').join("");
 
   if(d.mode==="answered"){
-    a.innerHTML='<div class="pdepth"><div class="gen"><span class="gdt"></span>answered from the record · '+esc(d.model||"")+'</div>'
-      + '<div class="ds"><p>'+esc(d.answer)+'</p></div>'
+    a.innerHTML='<div class="pdepth"><div class="gen"><span class="gdt"></span>answered from the record</div>'
+      + '<div class="ansbody">'+citeHTML(d.answer)+'</div>'
       + '<div class="ft">'+esc(d.how)+'</div></div>'
-      + '<div class="blk">What it read <span class="ct">'+(d.passages||[]).length+'</span><span class="ln"></span></div>'+cites;
+      + '<div class="blk">The evidence <span class="ct">'+(d.passages||[]).length+' · click a citation to open one</span><span class="ln"></span></div>'+cites;
+    bindCites(a);
     return;
   }
   if(d.mode==="retrieved"){
