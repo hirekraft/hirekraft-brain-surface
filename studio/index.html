@@ -171,6 +171,22 @@
   .pdepth .ds b{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);display:block;margin-bottom:3px}
   .pdepth .ds p{font-size:13.5px;color:var(--ink);line-height:1.55;white-space:pre-wrap}
   .pdepth .ft{font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-top:14px;padding-top:12px;border-top:1px solid var(--hair-2)}
+  /* evidence collapsed by default; a citation opens the one it supports */
+  .ev{background:var(--raise);border:1px solid var(--hair);border-radius:9px;margin-bottom:7px;overflow:hidden}
+  .ev>summary{cursor:pointer;list-style:none;padding:11px 14px;display:flex;gap:10px;align-items:baseline}
+  .ev>summary::-webkit-details-marker{display:none}
+  .ev>summary:hover{background:var(--hair-2)}
+  .ev .er{font-family:var(--mono);font-size:10.5px;color:var(--amber);flex:0 0 auto;width:26px}
+  .ev .ek{font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);flex:0 0 auto}
+  .ev .en{font-size:12.5px;color:var(--ink-2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ev .em{font-family:var(--mono);font-size:10px;color:var(--ink-4);flex:0 0 auto}
+  .ev .eb{padding:0 14px 14px 50px;white-space:pre-wrap;font-size:12.5px;line-height:1.6;color:var(--ink-2)}
+  .ev[open]{border-color:var(--amber-line)}
+  .ev.hit{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-bg)}
+  .cite{font-family:var(--mono);font-size:10.5px;color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-line);border-radius:4px;padding:0 4px;cursor:pointer;white-space:nowrap}
+  .cite:hover{background:var(--amber);color:#fff}
+  .ansbody{font-size:15px;line-height:1.62;white-space:pre-wrap}
+  .ansbody p{margin-bottom:11px}
   /* the path — the only sequencing claim the corpus asserts */
   .steps{position:relative;margin-top:14px}
   .step{display:flex;gap:16px;padding-bottom:14px}
@@ -497,13 +513,16 @@ function frame(){
 
 function principles(){
   const p=D.principles, dc=D.doctrine||{};
-  const idx=dc.principle_index||[];
+  const groups=dc.principle_groups||[];
+  const idx=[].concat.apply([], groups.map(g=>g.items||[]));
   return '<div class="lede">The doctrine — <b>'+esc(dc.numbered_principles||idx.length)+' numbered principles</b> across '+esc(dc.doctrine_sections||"—")+' current sections of the operating principles. Click any one and the brain composes it now, from its current text and the decisions that produced it.</div>'
   + '<div class="lab-note">'+esc(dc.count_note||"")+'</div>'
   + '<div class="blk">The principles <span class="ct">'+idx.length+'</span><span class="ln"></span></div>'
   + '<div id="pdepth"></div>'
-  + (idx.length
-     ? '<div class="pidx"><div class="pg">'+idx.map(x=>'<div class="pi" data-n="'+esc(x.n)+'"><span class="pn">'+esc(x.n)+'</span><span>'+esc(x.name)+'</span></div>').join("")+'</div></div>'
+  + (groups.length
+     ? '<div class="pidx">'+groups.map(g=>'<div class="pg"><h4>'+esc(g.group)+' <span style="color:var(--ink-4)">'+(g.items||[]).length+'</span></h4>'
+         + (g.items||[]).map(x=>'<div class="pi" data-n="'+esc(x.n)+'"><span class="pn">'+esc(x.n)+'</span><span>'+esc(x.name)+'</span></div>').join("")
+         + '</div>').join("")+'</div>'
      : '<div class="empty">The principle index could not be read from the corpus just now.</div>')
   + '<div class="blk">Composed from<span class="ln"></span></div>'
   + '<div class="fr-grid">'
@@ -531,33 +550,41 @@ function bindPrinciples(){
   });
 }
 
+/* The point first, in plain words. The exact wording and the decisions behind it sit
+   underneath, collapsed — reachable, never poured into the middle of the explanation. */
 async function openPrinciple(n){
   const el=document.getElementById("pdepth"); if(!el) return;
-  el.innerHTML='<div class="pdepth"><div class="gen"><span class="gdt"></span>composing from the record…</div></div>';
+  el.innerHTML='<div class="pdepth"><div class="gen"><span class="gdt"></span>reading the record…</div></div>';
   el.scrollIntoView({behavior:"smooth",block:"nearest"});
   const r=await call(FN,{action:"principle",n:n});
   if(r.status!==200||!r.body||r.body.ok===false){
-    el.innerHTML='<div class="pdepth"><div class="ds"><p>'+esc((r.body&&(r.body.error))||("Failed ("+r.status+")"))+'</p></div></div>';
+    el.innerHTML='<div class="pdepth"><div class="ds"><p>'+esc((r.body&&r.body.error)||("Failed ("+r.status+")"))+'</p></div></div>';
     return;
   }
   const d=r.body;
-  const trail=(d.how_it_came_together||[]);
+  const dec=d.decisions||[];
+  const decBlocks=dec.map(t=>'<details class="ev" id="cite-'+esc(t.ref)+'"><summary>'
+      + '<span class="er">['+esc(t.ref)+']</span><span class="ek">decision</span>'
+      + '<span class="en">'+esc(firstLine(t.why))+'</span>'
+      + '<span class="em">'+esc(String(t.on||"").slice(0,10))+'</span></summary>'
+      + '<div class="eb">'+esc(t.why)+'</div></details>').join("");
+
   el.innerHTML='<div class="pdepth">'
-    + '<div class="gen"><span class="gdt"></span>composed now from the record · not a stored view</div>'
+    + '<div class="gen"><span class="gdt"></span>'+(d.mode==="explained"?"in plain words · the exact wording is below":"shown as written")+'</div>'
     + '<h3>'+esc(d.n)+' — '+esc(d.name)+'</h3>'
-    + '<div class="ds"><b>What it says</b><p>'+esc(d.text)+'</p></div>'
-    + '<div class="ds"><b>How it came together</b>'
-    +   (trail.length
-         ? trail.map(t=>'<p style="margin-bottom:9px"><span style="font-family:var(--mono);font-size:10.5px;color:var(--ink-3)">'+esc(String(t.on))+'</span><br/>'+esc(t.why)+'</p>').join("")
-         : '<p style="color:var(--ink-3)">'+esc(d.trail_note||"No decision in the record cites this principle by number.")+'</p>')
-    + '</div>'
-    + '<div class="ds"><b>Where it is enforced</b>'
-    +   ((d.enforced_where||[]).length
-         ? '<p>'+d.enforced_where.map(e=>esc(e.doc)+" — "+esc(e.heading)).join("<br/>")+'</p>'
-         : '<p style="color:var(--ink-3)">'+esc(d.enforced_note||"No other current section cites it by number.")+'</p>')
-    + '</div>'
-    + '<div class="ft">'+esc(d.how||"")+' · composed '+esc(String(d.composed_at||"").slice(11,19))+'</div>'
+    + (d.mode==="explained"
+ why      ? '<div class="ds"><b>What it says</b><div class="ansbody">'+citeHTML(d.plain)+'</div></div>'
+        + (d.why?'<div class="ds"><b>Why it exists</b><div class="ansbody">'+citeHTML(d.why)+'</div></div>':'')
+      : '')
+    + '<details class="ev" style="margin-top:10px"><summary><span class="er">§</span><span class="ek">verbatim</span>'
+    +   '<span class="en">The principle exactly as written</span></summary>'
+    +   '<div class="eb">'+esc(d.text)+'</div></details>'
+    + (dec.length
+       ? '<div class="ds" style="margin-top:14px"><b>The decisions behind it</b>'+decBlocks+'</div>'
+       : '<div class="ds" style="margin-top:14px"><b>The decisions behind it</b><p style="color:var(--ink-3);font-size:13px">'+esc(d.trail_note||"No decision in the record cites this principle by number.")+'</p></div>')
+    + '<div class="ft">'+esc(d.how||"")+'</div>'
     + '</div>';
+  bindCites(el);
 }
 
 async function doAsk(){
