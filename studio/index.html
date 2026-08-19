@@ -881,12 +881,48 @@ function parts(){
     + (items&&items.length
       ? '<div class="stock">'+items.map(x=>'<div class="pt '+cls+'"><div class="pn">'+esc(wordTrim(x.name,90))+'</div><div class="pd">'+esc(x.sub||"")+'</div><span class="ps">'+esc(x.id)+'</span></div>').join("")+'</div>'
       : '<div class="empty">Nothing in this bin.</div>');
-  return '<div class="lede">Everything Studio has built, in its bin — sorted by <b>what the promise ledger can actually verify</b>, not by what was claimed.</div>'
-  + bin(p.stocked,"stocked","Stocked — proven","verdict TRUE: verified against the live system.")
-  + bin(p.in_lab,"lab","In-lab — shape being learned","verdict PARTIAL: real, incomplete.")
-  + bin(p.open_slots,"sourced","Sourced &amp; open slots","verdict FALSE or UNVERIFIABLE: decided or claimed, not standing up.")
+  /* A PART IS SOMETHING WE BUILT — the walker substrate, identity-aware retrieval, the
+     universal schema. What was in this bin were MARKETING CLAIMS carrying verdicts:
+     "leak by construction is impossible", "we parse them, 99.1% of the time cleanly".
+     Those are promises about the product, not parts of it.
+
+     Nothing in the estate records parts as such, which is exactly why the promise ledger
+     got substituted for one. The bin stays near-empty and says so, rather than being
+     filled with the wrong thing. It fills as Tool work produces parts. */
+  const total=(p.stocked||[]).length+(p.in_lab||[]).length+(p.open_slots||[]).length;
+  return '<div class="lede">Finished, reusable things the studio has built — <b>parts</b>. Forged in the Lab, graduated here.</div>'
+  + '<div class="blk">Stocked <span class="ct">nothing recorded</span><span class="ln"></span></div>'
+  + '<div class="empty">Nothing in the estate records a part as a part, so this bin is empty rather than filled with something else.<br/><br/>'
+  + 'It held '+total+' rows from the promise ledger until now. Those are <b>claims about the product with verdicts attached</b> — how far we are from what we have promised — which is worth seeing and is not a parts list. It has moved to The Frame.<br/><br/>'
+  + 'This fills as Tool work produces parts. Until then it is thin, and that is correct.</div>'
   + '<div class="blk">Product-specific — never a part<span class="ln"></span></div>'
   + '<div class="empty">'+esc(p.never_a_part.why)+'</div>';
+}
+
+/* Derived from the hunt's LAST RUN, not from its schedule. A run still in flight after a
+   day has not finished; saying it "continues on its own" is the failure this catches. */
+function huntBlock(ig){
+  const r=(RUN&&RUN.rail&&RUN.rail.hunt_run)||null;
+  const c=ig.contradictions||{};
+  let head='Contradictions', state='', note='';
+  if(!r){ head='Contradictions — the hunt has never run'; state='bad';
+    note='No run of the contradiction hunt is recorded at all.'; }
+  else if(!r.finished_at){
+    const days=Math.max(0,Math.round((Date.now()-Date.parse(r.started_at))/86400000));
+    head='Contradictions — THE HUNT IS NOT RUNNING'; state='bad';
+    note='Its last run started '+days+' day'+(days===1?"":"s")+' ago and never finished — '
+       + r.pairs_done+' of '+r.pairs_queued+' pairs judged, then it stopped. '
+       + 'The counts below are therefore frozen at that point, not current. '
+       + 'This panel previously read “growing daily, unattended”, which described what the hunt was for rather than what it last did.';
+  } else { head='Contradictions'; state='ok'; note='Its last run finished cleanly.'; }
+  return '<div class="blk">'+esc(head)+'<span class="ln"></span></div>'
+    + (state==="bad"?('<div class="empty" style="border-color:var(--red-line);color:var(--ink);margin-bottom:12px">'+esc(note)+'</div>')
+                    :('<div class="lab-note" style="margin-bottom:12px">'+esc(note)+'</div>'))
+    + '<div class="fr-grid">'
+    + '<div class="fc"><h3>'+esc(c.disagrees)+'</h3><p>pairs judged to disagree, out of '+esc(c.pairs)+' scanned</p></div>'
+    + '<div class="fc"><h3>'+esc(c.unadjudicated)+'</h3><p>never judged'+(state==="bad"?" — and nothing is judging them":"")+'</p></div>'
+    + '<div class="fc"><h3>'+esc(c.promise_conflicts)+'</h3><p>open promise conflicts</p></div>'
+    + '</div>';
 }
 
 function frame(){
@@ -907,13 +943,22 @@ function frame(){
   + '<div class="fc"><h3>Traced to a promise</h3><p>'+esc(ig.seats.traced_21d)+' of '+esc(ig.seats.closed_21d)+' named a real promise_ledger id. '+esc(ig.seats.untraced_21d)+' did not.</p></div>'
   + '<div class="fc"><h3>Running now</h3><p>'+esc(ig.seats.running_why)+'</p></div>'
   + '</div>'
-  + '<div class="blk">Contradictions — growing daily, unattended<span class="ln"></span></div>'
+  /* THIS PANEL IS WHY THE RULE EXISTS. It read "growing daily, unattended" and "the hunt
+     continues on its own" while the hunt had not finished a run since 17 August. The
+     control built to catch silent failure failed silently, because it described what the
+     hunt was FOR rather than what it last DID. It now derives from the last run's outcome,
+     and every panel on this surface describing a running process must do the same. */
+  + huntBlock(ig)
+  + '<div class="blk">How far from what we have promised <span class="ct">the promise ledger</span><span class="ln"></span></div>'
+  + '<div class="lab-note" style="margin-bottom:12px">Claims about the product, each with a verdict. These are not parts, which is why they are no longer in the Parts Bin.</div>'
   + '<div class="fr-grid">'
-  + '<div class="fc"><h3>Disagreements</h3><p>'+esc(ig.contradictions.disagrees)+' pairs judged DISAGREES, '+esc(ig.contradictions.supersedes)+' SUPERSEDES, out of '+esc(ig.contradictions.pairs)+' scanned.</p></div>'
-  + '<div class="fc"><h3>Not yet judged</h3><p>'+esc(ig.contradictions.unadjudicated)+' pairs are unadjudicated. The hunt continues on its own.</p></div>'
-  + '<div class="fc"><h3>Promise conflicts</h3><p>'+esc(ig.contradictions.promise_conflicts)+' open.</p></div>'
-  + '<div class="fc"><h3>Dissolved</h3><p>'+esc(D.dissolved.records)+' records — work that left the queue without being built.</p></div>'
-  + '</div>';
+  + '<div class="fc"><h3>'+esc((D.parts.counts||{}).TRUE||0)+'</h3><p>verified against the live system</p></div>'
+  + '<div class="fc"><h3>'+esc((D.parts.counts||{}).PARTIAL||0)+'</h3><p>real, incomplete</p></div>'
+  + '<div class="fc"><h3 style="color:var(--red)">'+esc((D.parts.counts||{}).FALSE||0)+'</h3><p>claimed, not standing up</p></div>'
+  + '<div class="fc"><h3>'+esc((D.parts.counts||{}).UNVERIFIABLE||0)+'</h3><p>no way to tell either way</p></div>'
+  + '</div>'
+  + '<div class="blk">Dissolved<span class="ln"></span></div>'
+  + '<div class="fr-grid"><div class="fc"><h3>'+esc(D.dissolved.records)+'</h3><p>records — work that left the queue without being built</p></div></div>';
 }
 
 function principles(){
