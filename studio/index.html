@@ -69,6 +69,15 @@
   .gz .gv{font-family:var(--mono);font-size:11px;color:var(--ink);font-weight:600}
   .gz.alert .gv{color:var(--red)}
   .gz .chev{font-size:9px;color:var(--ink-4)}
+  /* SCOPE. Three different things sat unlabelled on one bar: the page, the Studio's own
+     brain, and a customer's brain. A number is unreadable when you cannot tell what it is
+     about, so every group states its subject. */
+  .scopes{display:flex;gap:14px;margin-top:16px;flex-wrap:wrap;align-items:flex-start}
+  .scope{display:flex;flex-direction:column;gap:5px}
+  .scope>.sl{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-4);padding-left:2px}
+  .scope>.sl b{color:var(--ink-3);font-weight:600}
+  .scope .gauges{margin-top:0}
+  .cust-name{font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-line);border-radius:4px;padding:1px 5px;margin-right:2px}
   .gauges-detail{display:none;margin-top:8px;background:var(--raise);border:1px solid var(--hair);border-radius:9px;padding:6px;box-shadow:var(--sh-2);max-width:620px}
   .gauges-detail[data-open="true"]{display:block}
   .gd-row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px}
@@ -342,12 +351,12 @@ function gaugeBits(){
 }
 
 function render(){
-  const g=gaugeBits(), ln=D.line||{}, ig=D.integrity||{};
-  const srcs=(ln.seen?(ln.sources||[]):[]).concat(D.absent_sources||[]);
-  /* The problem count is only a count when the source list was actually read. If the
-     cross-project read failed, srcs holds only the absent-source rows and would total a
-     confident, wrong zero. */
-  const problems=counter(srcs.filter(s=>s.c==="bad").length, ln.seen===true);
+  /* CUSTOMERS, PLURAL. The Tool is one product with many customers; the surface says
+     customers, currently one. The payload carries a LIST, so a second customer is a row
+     rather than a rewrite — and no multi-customer machinery exists beyond reading it. */
+  const cust=(D.customers&&D.customers.customers)||[];
+  const ln=cust[0]||{};
+  const g=gaugeBits(), ig=D.integrity||{};
   const seats=counter(ig.seats&&ig.seats.closed_total, !!(ig.seats));
 
   root.innerHTML=
@@ -358,15 +367,18 @@ function render(){
   +   '<div class="mhr"><button class="ip-btn" id="ipb">IP &amp; Docs</button>'
   +     '<span class="who" id="out" title="sign out">'+esc((D.visitor||"").split("@")[0])+'</span></div>'
   + '</div>'
-  + '<div class="gauges" id="gz">'
-  +   '<div class="gz"><span class="gdot live"></span><span class="gl">clock</span><span class="gv" id="clk">—</span></div>'
-  +   '<div class="gz"><span class="gdot live"></span><span class="gl">generated</span><span class="gv" id="genage">—</span></div>'
-  +   '<div class="gz '+(g.worst!==null&&g.worst>3?"alert":"")+'" title="'+esc(g.missing.length?("not measured: "+g.missing.join(", ")):"worst of five legs, each measured at source")+'"><span class="gdot '+g.cls(g.worst)+'"></span><span class="gl">freshness</span><span class="gv">'
-  +     (g.worst===null?"unknown":(g.worst<=1?"current":g.worst+"d behind"))+'</span></div>'
-  +   '<div class="gz"><span class="gdot '+(ln.seen?(ln.reading>0?"ok":"bad"):"bad")+'"></span><span class="gl">reading</span><span class="gv">'+(ln.seen?(ln.reading+" of "+ln.total):"unreachable")+'</span></div>'
-  +   '<div class="gz" title="'+esc(problems.known?"sources in trouble, counted from a source list that was read":"the source read failed, so the number of problems is unknown — not zero")+'"><span class="gdot '+(problems.known?(problems.v?"bad":"ok"):"bad")+'"></span><span class="gl">problems</span><span class="gv">'+esc(problems.v)+'</span></div>'
-  +   '<div class="gz"><span class="gdot '+(seats.known?"live":"bad")+'"></span><span class="gl">seats closed</span><span class="gv">'+esc(seats.v)+'</span></div>'
-  +   '<div class="gz"><span class="chev">▾</span></div>'
+  + '<div class="scopes">'
+  +   '<div class="scope"><div class="sl">this <b>page</b></div><div class="gauges">'
+  +     '<div class="gz"><span class="gdot live"></span><span class="gl">clock</span><span class="gv" id="clk">—</span></div>'
+  +     '<div class="gz"><span class="gdot live"></span><span class="gl">generated</span><span class="gv" id="genage">—</span></div>'
+  +   '</div></div>'
+  +   '<div class="scope"><div class="sl">the <b>studio</b> brain</div><div class="gauges" id="gz">'
+  +     '<div class="gz '+(g.worst!==null&&g.worst>3?"alert":"")+'" title="'+esc(g.missing.length?("not measured: "+g.missing.join(", ")):"worst of five legs, each measured at source")+'"><span class="gdot '+g.cls(g.worst)+'"></span><span class="gl">freshness</span><span class="gv">'
+  +       (g.worst===null?"unknown":(g.worst<=1?"current":g.worst+"d behind"))+'</span></div>'
+  +     '<div class="gz"><span class="gdot '+(seats.known?"live":"bad")+'"></span><span class="gl">seats closed</span><span class="gv">'+esc(seats.v)+'</span></div>'
+  +     '<div class="gz"><span class="chev">▾</span></div>'
+  +   '</div></div>'
+  +   custScopes(cust)
   + '</div>'
   + '<div class="gauges-detail" id="gzd">'
   +   g.legs.map(l=>'<div class="gd-row"><span class="ddot '+g.cls(l[1])+'"></span><span class="dn">'+esc(l[0])+'</span><span class="ds">'+(l[1]===null?"not measured":esc(l[1])+"d")+' · '+esc(l[2])+'</span></div>').join("")
@@ -422,6 +434,30 @@ function startClock(){
     a.style.color = s>900 ? "var(--red)" : "";
   };
   tick(); window.__clk=setInterval(tick,1000);
+}
+
+/* One gauge group per customer, each NAMING the customer it is about. An unreachable
+   read names who is unreachable: cosmetic with one customer, the whole message with three. */
+function custScopes(cust){
+  if(!cust.length)
+    return '<div class="scope"><div class="sl">customers</div><div class="gauges">'
+      + '<div class="gz"><span class="gdot bad"></span><span class="gl">customers</span><span class="gv">unknown</span></div>'
+      + '</div></div>';
+  return cust.map(c=>{
+    const srcs=(c.seen?(c.sources||[]):[]).concat(D.absent_sources||[]);
+    /* The problem count is only a count when that customer's source list was actually
+       read. A failed read leaves the absent-source rows alone and would total a
+       confident, wrong zero. */
+    const problems=counter(srcs.filter(s=>s.c==="bad").length, c.seen===true);
+    return '<div class="scope"><div class="sl"><b>'+esc(c.name||c.id||"customer")+'</b>’s brain</div><div class="gauges">'
+      + '<div class="gz" title="'+esc(c.seen?"sources whose content arrived in the last two days":(c.why||"unreachable"))+'">'
+      +   '<span class="gdot '+(c.seen?(c.reading>0?"ok":"bad"):"bad")+'"></span><span class="gl">reading</span>'
+      +   '<span class="gv">'+(c.seen?(esc(c.reading)+" of "+esc(c.total)):"unreachable")+'</span></div>'
+      + '<div class="gz" title="'+esc(problems.known?("sources in trouble at "+(c.name||"")):((c.name||"this customer")+"’s source read failed, so the number of problems is unknown — not zero"))+'">'
+      +   '<span class="gdot '+(problems.known?(problems.v?"bad":"ok"):"bad")+'"></span><span class="gl">problems</span>'
+      +   '<span class="gv">'+esc(problems.v)+'</span></div>'
+      + '</div></div>';
+  }).join("");
 }
 
 function workshops(ln,srcs){
