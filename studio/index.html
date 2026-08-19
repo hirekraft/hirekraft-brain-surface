@@ -738,6 +738,124 @@ function bindSteps(){
    watches a customer. It is REMOVED, not hidden, and says where it went. The customer
    group stays in the status bar so an unreachable customer brain is still visible at a
    glance. The Lab will be thin until Tool work produces parts, and that is correct. */
+/* WHAT THE STUDIO RUNS ON. None of this machinery was on the map, which is how the comp
+   scanner died for a week unnoticed, how the mail cap locked Alex out with no warning, and
+   how a retired host served a stale page for two months.
+
+   THREE STATES, and the third is a feature. Proven means something exercised it and the
+   outcome was recorded, with when. Assumed means we depend on it and nothing checks it —
+   never green. Yours to check means no credential exists, and the row carries the actual
+   procedure rather than the word "check". A fourth appears only on evidence: failing. */
+function runsOn(){
+  if(RUN_STATE==="loading")
+    return '<div class="lede">What the studio runs on.</div><div class="lab-note">reading…</div>';
+  if(!RUN||RUN.error)
+    return '<div class="lede">What the studio runs on.</div>'
+      + '<div class="empty">This could not be read, so the state of the machinery is unknown — not healthy. '
+      + esc((RUN&&RUN.error)||"")+'</div>';
+
+  const deps=RUN.dependencies||[];
+  const acts=RUN.actions||{}, pages=RUN.pages||{};
+  const extra=[];
+  if(acts.seen){
+    (acts.workflows||[]).forEach(function(w){
+      const failed = w.conclusion==="failure";
+      const alsoBefore = (w.consecutive_failures>1) ? (" — and the "+w.consecutive_failures+" before it") : "";
+      extra.push({ group:"code", name:"GitHub Actions — "+w.name,
+        state: failed ? "failing" : "proven",
+        evidence: failed ? ("Its last run FAILED"+alsoBefore+".") : ("Its last run succeeded ("+w.event+")."),
+        last_at: w.at });
+    });
+  } else {
+    extra.push({group:"code",name:"GitHub Actions",state:"assumed",
+      evidence:(acts.why||"Workflow outcomes could not be read.")});
+  }
+  extra.push(pages.seen
+    ? {group:"hosting",name:"GitHub Pages",state:(pages.status===200?"proven":"failing"),
+       evidence:"The served address was loaded just now: "+pages.status+", "+pages.bytes+" bytes."}
+    : {group:"hosting",name:"GitHub Pages",state:"assumed",evidence:(pages.why||"could not be loaded")});
+
+  const all=deps.filter(function(d){ return d.name.indexOf("GitHub Actions")<0 && d.name.indexOf("GitHub Pages")<0; }).concat(extra);
+  const rank={failing:0,yours_to_check:1,assumed:2,proven:3};
+  all.sort(function(a,b){ return (rank[a.state]-rank[b.state])||(a.name<b.name?-1:1); });
+  const cls={failing:"bad",yours_to_check:"warn",assumed:"warn",proven:"ok"};
+  const label={failing:"FAILING",yours_to_check:"YOURS TO CHECK",assumed:"ASSUMED",proven:"PROVEN"};
+  const nFail=all.filter(function(d){ return d.state==="failing"; }).length;
+
+  const rows=all.map(function(d){
+    return '<div class="row '+cls[d.state]+'"><span class="edge"></span>'
+      + '<span class="nm">'+esc(d.name)+'<small>'+esc(d.group)+'</small></span>'
+      + '<span class="st">'+esc(d.evidence)+(d.procedure?('<br/><b>Do this:</b> '+esc(d.procedure)):"")+'</span>'
+      + '<span class="gg">'+(d.last_at?esc(ago(d.last_at)):"—")+'</span>'
+      + '<span class="md">'+label[d.state]+'</span></div>';
+  }).join("");
+
+  const lims=(RUN.limits||[]).filter(function(l){ return l.known; });
+  const unk=RUN.unknown_ceilings||[];
+  const ph=RUN.phantom_watcher;
+
+  const limRows=lims.map(function(l){
+    const urgent=(l.days_left!==null&&l.days_left!==undefined&&l.days_left<60);
+    return '<div class="row '+(urgent?"bad":"warn")+'"><span class="edge"></span>'
+      + '<span class="nm">'+esc(l.vendor)+'<small>'+esc(l.what)+'</small></span>'
+      + '<span class="st">'+esc(l.ceiling||(l.expires_on?("Expires "+l.expires_on):""))
+      + ((l.days_left===null||l.days_left===undefined)?"":(' · '+esc(l.days_left)+' days left'))
+      + '<br/>'+esc(l.consequence)+'</span>'
+      + '<span class="gg">'+(l.watcher_exists?"watched":"no watcher")+'</span>'
+      + '<span class="md">LIMIT</span></div>';
+  }).join("");
+
+  const unkCards=unk.map(function(u){
+    return '<div class="fc"><h3>'+esc(u.vendor)+'</h3><p>'+esc(u.what)+'</p>'
+      + '<p style="color:var(--red);margin-top:6px">'+esc(u.consequence)+'</p>'
+      + '<span class="pill" style="color:var(--ink-3);background:var(--sunk)">'+esc(u.source_note)+'</span></div>';
+  }).join("");
+
+  return '<div class="lede">What the studio runs on. The state of each is <b>what last exercised it</b>, not what we believe about it.</div>'
+  + '<div class="lab-note">'+esc(RUN.how||"")+'</div>'
+  + '<div class="blk">The machinery <span class="ct">'+all.length+(nFail?(" · "+nFail+" failing"):"")+'</span><span class="ln"></span></div>'
+  + '<div class="rail">'+rows+'</div>'
+  + '<div class="blk">Limits <span class="ct">a ceiling we can see</span><span class="ln"></span></div>'
+  + (lims.length?('<div class="rail">'+limRows+'</div>'):'<div class="empty">No ceiling is recorded with a number.</div>')
+  + ((ph&&ph.named_watcher_found===false)
+     ? ('<div class="blk">A guard that does not exist<span class="ln"></span></div>'
+        + '<div class="empty" style="border-color:var(--red-line);color:var(--ink)">'
+        + 'In production text right now, '+esc(ph.claimed_in)+' reads: “'+esc(ph.claim)+'”.<br/><br/><b>'
+        + esc(ph.verdict)+'</b><br/><br/>Everything actually scheduled: '+esc(ph.active_jobs)+'.</div>')
+     : "")
+  + '<div class="blk">Ceilings we cannot see <span class="ct">'+unk.length+'</span><span class="ln"></span></div>'
+  + '<div class="lab-note" style="margin-bottom:10px">These are not alarms and they are not healthy. A limit exists, nothing here can read how close we are, and it stops the work at the moment it is hit.</div>'
+  + (unk.length?('<div class="fr-grid">'+unkCards+'</div>'):'<div class="empty">None recorded.</div>')
+  + studioRail()
+  + '<div class="blk">Scheduled work<span class="ln"></span></div>'
+  + '<div class="fr-grid">'
+  + '<div class="fc"><h3>'+esc((RUN.crons||{}).active)+'</h3><p>jobs scheduled on the studio’s database</p></div>'
+  + '<div class="fc"><h3 style="color:'+((((RUN.crons||{}).not_succeeded)||0)>0?"var(--red)":"inherit")+'">'+esc((RUN.crons||{}).not_succeeded)+'</h3><p>whose last run did not succeed</p></div>'
+  + '<div class="fc"><h3>'+esc((RUN.volumes||{}).anthropic_24h)+' / '+esc((RUN.volumes||{}).openai_24h)+'</h3><p>model calls in 24h — answering / embedding</p></div>'
+  + '<div class="fc"><h3>'+esc((RUN.volumes||{}).sync_24h)+'</h3><p>mirror syncs in 24h</p></div>'
+  + '</div>';
+}
+
+/* THE STUDIO'S OWN SOURCE RAIL — same shape as a customer's. Rows describing a running
+   process derive from that process's LAST RUN, never from the fact that it is scheduled. */
+function studioRail(){
+  const r=RUN&&RUN.rail;
+  if(!r||!r.sources)
+    return '<div class="blk">The studio’s own sources<span class="ln"></span></div>'
+      + '<div class="empty">The studio’s inputs could not be read.</div>';
+  const reading=r.sources.filter(function(s){ return s.reading; }).length;
+  const rows=r.sources.map(function(s){
+    return '<div class="row '+esc(s.c==="warn ok"?"warn":s.c)+'"><span class="edge"></span>'
+      + '<span class="nm">'+esc(s.n)+'<small>'+esc(s.sub)+'</small></span>'
+      + '<span class="st">'+esc(s.st)+'</span>'
+      + '<span class="gg">'+esc(s.g)+'</span>'
+      + '<span class="md">'+esc(s.m)+'</span></div>';
+  }).join("");
+  return '<div class="blk">The studio’s own sources <span class="ct">'+reading+' of '+r.sources.length+' reading</span><span class="ln"></span></div>'
+    + '<div class="rail">'+rows+'</div>'
+    + '<div class="lab-note">'+esc(r.how||"")+'</div>';
+}
+
 function lab(ln,srcs){
   return '<div class="lede">The forge — <b>a part being made right now</b>. One pipeline: forged here, graduated to the Parts Bin when it is finished and reusable.</div>'
   + '<div class="blk">On the bench <span class="ct">nothing recorded</span><span class="ln"></span></div>'
