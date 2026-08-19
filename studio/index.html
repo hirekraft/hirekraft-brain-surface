@@ -493,7 +493,39 @@ function startClock(){
 
 /* One gauge group per customer, each NAMING the customer it is about. An unreachable
    read names who is unreachable: cosmetic with one customer, the whole message with three. */
+/* read_health, rendered at last. It was returned in the payload and displayed NOWHERE for
+   two seats — written-by-one-path-read-by-zero, committed by the seat that keeps naming
+   it — and it is precisely the field that would have shown the customer read failing. */
+function readHealthBlock(){
+  const h=CUST&&CUST.read_health;
+  if(CUST_STATE==="loading")
+    return '<div class="blk">Cross-brain reads<span class="ln"></span></div><div class="lab-note">reading…</div>';
+  if(!h)
+    return '<div class="blk">Cross-brain reads<span class="ln"></span></div>'
+      + '<div class="empty">The read log could not be read, so the health of these reads is unknown.</div>';
+  const f=Number(h.failures_24h), t=Number(h.reads_24h);
+  return '<div class="blk">Cross-brain reads <span class="ct">last 24 hours</span><span class="ln"></span></div>'
+    + '<div class="fr-grid">'
+    + '<div class="fc"><h3>'+esc(isFinite(t)?t:"unknown")+'</h3><p>reads logged</p></div>'
+    + '<div class="fc"><h3 style="color:'+(f>0?"var(--red)":"inherit")+'">'+esc(isFinite(f)?f:"unknown")+'</h3><p>failed</p></div>'
+    + '<div class="fc"><h3>Last failure</h3><p>'+(h.last_failure
+        ? esc(String(h.last_failure.at).slice(0,16))+' — '+esc(h.last_failure.leg)+(h.last_failure.status?(" "+esc(h.last_failure.status)):"")
+        : "None recorded.")+'</p></div>'
+    + '</div>'
+    + '<div class="lab-note">'+esc(h.note||"")+'</div>';
+}
+
 function custScopes(cust){
+  /* STILL LOADING IS NOT UNKNOWN, AND NEITHER IS ZERO. The customer half is fetched
+     separately, so this state is real and is shown as itself. */
+  if(CUST_STATE==="loading")
+    return '<div class="scope"><div class="sl">customers</div><div class="gauges">'
+      + '<div class="gz"><span class="gdot warn"></span><span class="gl">customers</span><span class="gv">reading…</span></div>'
+      + '</div></div>';
+  if(CUST&&CUST.error)
+    return '<div class="scope"><div class="sl">customers</div><div class="gauges">'
+      + '<div class="gz" title="'+esc(CUST.error)+'"><span class="gdot bad"></span><span class="gl">customers</span><span class="gv">unreachable</span></div>'
+      + '</div></div>';
   if(!cust.length)
     return '<div class="scope"><div class="sl">customers</div><div class="gauges">'
       + '<div class="gz"><span class="gdot bad"></span><span class="gl">customers</span><span class="gv">unknown</span></div>'
@@ -586,11 +618,12 @@ function lab(ln){
     : '<div class="empty">Not connected right now. '+esc(ln.why||"")+'</div>')
   + '<div class="blk">What is testable now<span class="ln"></span></div>'
   + '<div class="empty">Not connected yet, and not derivable. The old surface listed parts as <b>now testing</b>, <b>blocked by freshness</b> and <b>waiting on build</b>; those were editorial judgments, and nothing in either brain records what is considered ready to test. This section fills from Alex using the Tool and saying so — not from derivation. A plausible list here would be the same defect the rest of this page exists to remove.</div>'
-  + '<div class="blk">Whose brain is whose <span class="ct">'+((D.customers&&D.customers.count)||0)+' customer'+(((D.customers&&D.customers.count)||0)===1?"":"s")+'</span><span class="ln"></span></div>'
-  + '<div class="lab-note" style="margin-bottom:12px">'+esc((D.customers&&D.customers.note)||"")+'</div>'
+  + readHealthBlock()
+  + '<div class="blk">Whose brain is whose <span class="ct">'+((CUST&&CUST.count)||0)+' customer'+(((CUST&&CUST.count)||0)===1?"":"s")+'</span><span class="ln"></span></div>'
+  + '<div class="lab-note" style="margin-bottom:12px">'+esc((CUST&&CUST.note)||"")+'</div>'
   + '<div class="fr-grid">'
   + '<div class="fc"><h3>The Studio’s own brain</h3><p>Doctrine, decisions, parts, promises, seat record. '+esc(D.principles.sections)+' corpus sections, '+esc(D.principles.decisions)+' decisions, '+esc(D.principles.seat_reports)+' seat reports. Nothing here belongs to a customer.</p><span class="pill">the record</span></div>'
-  + ((D.customers&&D.customers.customers)||[]).map(c=>'<div class="fc"><h3>'+esc(c.name)+'’s brain</h3><p>'
+  + ((CUST&&CUST.customers)||[]).map(c=>'<div class="fc"><h3>'+esc(c.name)+'’s brain</h3><p>'
     + (c.seen?("What is connected and reading: "+esc(c.total)+" sources, "+esc(c.reading)+" reading, "+esc(c.chunks_total)+" pieces of content.")
             :("Unreachable right now, so nothing about "+esc(c.name)+" is known from here."))
     + ' Customer since '+esc(String(c.since||"").slice(0,10))+'.</p><span class="pill">'+(c.seen?"the lab":"unreachable")+'</span></div>').join("")
