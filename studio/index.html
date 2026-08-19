@@ -526,7 +526,7 @@ function lab(ln){
   + (ln.seen
     ? '<div class="lab-hd"><span class="ldot"></span><span class="lt"><b>'+esc(ln.name||"customer")+'’s brain</b> · '
       + esc(Object.keys(t||{}).map(k=>t[k]+" "+k).join(" + "))+' · '+esc(ln.chunks_total)+' chunks</span>'
-      + '<span class="lr">uvdoom… · the lab</span></div>'
+      + '<span class="lr">'+esc(String(ln.ref||"").slice(0,6))+'… · the lab</span></div>'
       + '<div class="lab-note">'+esc(ln.reading)+' of '+esc(ln.total)+' sources at '+esc(ln.name||"this customer")+' have content from the last two days. The rest are registered, off, or walking green while reading nothing — which is why the line separates the two.</div>'
     : '<div class="empty">Not connected right now. '+esc(ln.why||"")+'</div>')
   + '<div class="blk">What is testable now<span class="ln"></span></div>'
