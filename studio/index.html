@@ -248,6 +248,40 @@
   .gate .msg{font-family:var(--mono);font-size:11px;line-height:1.6;margin-top:14px;color:var(--ink-3)}
   .gate .msg.bad{color:var(--red)}
   .empty{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);background:var(--sunk);border:1px dashed var(--hair);border-radius:8px;padding:14px 16px;line-height:1.6}
+
+  /* THE SPINE. The path is the frame everything hangs off, so it sits above the tabs
+     and is present whichever tab is open — not a section inside one. */
+  .spine{margin-top:26px;padding:22px 24px;background:var(--raise);border:1px solid var(--hair);border-radius:12px;box-shadow:var(--sh-2)}
+  @media(max-width:640px){.spine{padding:16px 15px}}
+  .sp-hd{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .sp-t{font-size:18px;font-weight:650;letter-spacing:-0.022em}
+  .sp-s{font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+  .sp-note{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);line-height:1.6;margin-top:7px}
+  .sp-here{margin-top:13px;padding:11px 14px;border-radius:8px;background:var(--amber-bg);border:1px solid var(--amber-line);font-size:13px;color:var(--ink);line-height:1.5}
+  .sp-here b{font-weight:650}
+  .step.now .sb{border-color:var(--amber-line);box-shadow:0 0 0 3px var(--amber-bg)}
+  .step .no.now{border-color:var(--amber);color:var(--amber);font-weight:600}
+  .step .cl{font-size:12.5px;color:var(--ink-2);margin-top:8px;padding:8px 11px;background:var(--sunk);border-radius:7px;border-left:2px solid var(--hair)}
+  .step .cl b{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);display:block;margin-bottom:2px}
+  .chip.quiet{background:transparent;color:var(--ink-4);border:1px dashed var(--hair)}
+  .sp-empty{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:10px;padding:9px 12px;background:var(--sunk);border-radius:7px;line-height:1.55}
+  .sp-open{margin-top:11px}
+  .sp-orders{display:none;margin-top:10px;border-top:1px solid var(--hair-2);padding-top:4px}
+  .sp-orders[data-open="true"]{display:block}
+  .ord2{padding:14px 0;border-bottom:1px solid var(--hair-2)}
+  .ord2:last-child{border-bottom:none}
+  .ord2 .ti{font-size:14.5px;font-weight:600;letter-spacing:-0.012em;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .ord2 .tg{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0 8px}
+  .ord2 .wy{color:var(--ink-2);font-size:13px;line-height:1.55;max-width:620px}
+  .ord2 .fx{font-size:12.5px;color:var(--ink);margin-top:9px;padding:10px 12px;background:var(--sunk);border-radius:7px;max-width:620px}
+  .ord2 .fx b{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--amber);display:block;margin-bottom:3px}
+  .nofin{background:var(--raise);border:1px solid var(--hair);border-radius:9px;overflow:hidden}
+  .nf{display:flex;gap:13px;padding:8px 14px;border-bottom:1px solid var(--hair-2);align-items:baseline}
+  .nf:last-child{border-bottom:none}
+  .nf:hover{background:var(--hair-2)}
+  .nfd{font-family:var(--mono);font-size:10px;color:var(--ink-4);flex:0 0 auto;width:74px}
+  .nft{font-size:12.5px;color:var(--ink-2);line-height:1.45}
+  .sp-foot{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);line-height:1.6;margin-top:20px;padding-top:14px;border-top:1px solid var(--hair)}
 </style>
 </head>
 <body>
@@ -438,15 +472,15 @@ function render(){
   + '<div class="gauges-detail" id="gzd">'
   +   g.legs.map(l=>'<div class="gd-row"><span class="ddot '+g.cls(l[1])+'"></span><span class="dn">'+esc(l[0])+'</span><span class="ds">'+(l[1]===null?"not measured":esc(l[1])+"d")+' · '+esc(l[2])+'</span></div>').join("")
   + '</div>'
+  + spine()
   + '<nav class="sections" id="nav">'
-  +   ["Workshops","Lab","Parts Bin","The Frame","Principles"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
+  +   ["Lab","Parts Bin","The Frame","Principles"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
   + '</nav>'
   + '<main>'
-  +   '<section class="view" data-active="true" data-i="0">'+workshops(ln,srcs)+'</section>'
-  +   '<section class="view" data-i="1">'+lab(ln)+'</section>'
-  +   '<section class="view" data-i="2">'+parts()+'</section>'
-  +   '<section class="view" data-i="3">'+frame()+'</section>'
-  +   '<section class="view" data-i="4">'+principles()+'</section>'
+  +   '<section class="view" data-active="true" data-i="0">'+lab(ln,srcs)+'</section>'
+  +   '<section class="view" data-i="1">'+parts()+'</section>'
+  +   '<section class="view" data-i="2">'+frame()+'</section>'
+  +   '<section class="view" data-i="3">'+principles()+'</section>'
   +   '<div class="foot">'+esc(D.footer)+'<br/>Served by '+esc(D.served_by.fn)+' · the Studio’s own numbers and each customer’s, kept apart · this is the only address that serves the studio · nothing on this page is stored.</div>'
   + '</main></div>'
   + '<div class="ov" id="ov"><div class="dr" id="drw">'+ipdocs()+'</div></div>';
@@ -465,6 +499,7 @@ function render(){
   bindDocs();
   const ask=document.getElementById("askb"); if(ask) ask.onclick=doAsk;
   bindPrinciples();
+  bindSteps();
   startClock();
 }
 
@@ -547,10 +582,13 @@ function custScopes(cust){
   }).join("");
 }
 
-function workshops(ln,srcs){
-  const wo=D.work_orders||[];
-  return '<div class="lede">Where the work happens. The line below is <b>every source, connected versus actually reading</b> — different facts, kept apart. Problems dominate; healthy sources recede.</div>'
-  + '<div class="blk"><span class="cust-name">'+esc(ln.name||"customer")+'</span> the line — sources <span class="ct">'+(ln.seen?(ln.reading+" of "+ln.total+" reading"):"")+'</span><span class="ln"></span></div>'
+/* THE SOURCE RAIL. It is about a customer's brain, not about the studio, so it lives
+   under the customer heading in the Lab rather than in a workshop of its own. The
+   Workshops tab held three unrelated things; each has gone where it belongs, and the
+   tab is gone rather than left as an empty label. */
+function sourceRail(ln,srcs){
+  return '<div class="blk"><span class="cust-name">'+esc(ln.name||"customer")+'</span> the line — sources <span class="ct">'+(ln.seen?(ln.reading+" of "+ln.total+" reading"):"")+'</span><span class="ln"></span></div>'
+  + '<div class="lab-note" style="margin-bottom:10px">Connected and actually reading are different facts, kept apart. Problems dominate; healthy sources recede.</div>'
   + (ln.seen
      ? '<div class="rail">'+srcs.map(s=>'<div class="row '+esc(s.c==="warn ok"?"warn":s.c)+'">'
        + '<span class="edge"></span>'
@@ -560,53 +598,131 @@ function workshops(ln,srcs){
        + '<span class="md">'+esc(s.m)+'</span></div>').join("")+'</div>'
        + '<div class="lab-note">'+esc(ln.reading_means?("Reading means: "+ln.reading_means+"."):"")+' '+esc(ln.how||"")+'</div>'
      : '<div class="empty">'+esc(ln.why||((ln.name||"That customer")+"’s brain could not be reached from this screen."))+'</div>')
-  + pathBlock()
-  + '<div class="blk">Work orders <span class="ct">'+wo.length+' · grouped by subsystem</span><span class="ln"></span></div>'
-  + '<div class="orders">'+(wo.length
-      ? groupBySubsystem(wo).map((o,i)=>'<div class="ord">'
-        + '<span class="seq">'+String(i+1).padStart(2,"0")+'</span>'
-        + '<div class="ti">'+esc(wordTrim(o.ti,120))+'<span class="chip '+esc(o.pl)+'">'+esc(o.pl)+'</span></div>'
-        + '<div class="tg">'+(o.tg||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join("")
-        +   '<span class="tag">'+esc(o.src)+'</span><span class="tag">'+esc(o.ref)+'</span></div>'
-        + '<div class="wy">'+esc(wordTrim(o.wy,420))+'</div>'
-        + '<div class="fx"><b>Finish</b>'+esc(o.fx)+'</div></div>').join("")
-      : '<div class="ord"><div class="wy">No work orders. Nothing open carries a finish condition right now.</div></div>')
+  ;
+}
+
+/* THE SPINE. The path was a section inside a tab; it is the convergence lens — the end
+   goal held as reference, how close the assembly is, and the gap that matters most now —
+   so it is the frame everything else hangs off, above the tabs and present whichever tab
+   is open.
+
+   Principle 90 is the only sequencing claim the record makes, parsed from the principle
+   itself: rewrite the principle and this follows. Steps that state no gate say so rather
+   than being given one, and a lettered clause like 5b sits inside the step it qualifies
+   rather than being counted as a step — splitting on the word STEP had been showing eight
+   where the principle states seven.
+
+   WORK ORDERS HANG UNDER THE STEP THEY WOULD CLOSE. Grouped by subsystem the list was
+   only usable by someone who already knew which subsystem served which step. The step is
+   derived server-side by matching each order's subsystem against the step's own words;
+   an order that matches nothing is reported as unplaced rather than forced somewhere. */
+function spine(){
+  const p=(D.doctrine&&D.doctrine.path)||null;
+  const w=D.work_orders||null;
+  if(!p||!p.steps||!p.steps.length)
+    return '<div class="spine"><div class="sp-hd"><div class="sp-t">The path to a sellable Tool</div></div>'
+      + '<div class="empty" style="margin-top:12px">The path could not be read from the corpus just now. Nothing is claimed about the order of work.</div></div>';
+
+  const byStep={}; ((w&&w.by_step)||[]).forEach(s=>{ byStep[s.n]=s; });
+  const t=(w&&w.totals)||{};
+  /* WHERE WE ARE, DERIVED AND LABELLED AS DERIVED. Nothing in either brain marks a
+     current step, so this is the earliest step carrying open work — stated as that and
+     not as a claim that the steps before it are finished. */
+  const counts=p.steps.map(s=>Number((byStep[s.n]||{}).count)||0);
+  let here=-1;
+  for(let i=0;i<p.steps.length;i++){ if(counts[i]>0){ here=i; break; } }
+
+  return '<div class="spine">'
+  + '<div class="sp-hd"><div class="sp-t">The path to a sellable Tool</div>'
+  +   '<div class="sp-s">'+esc(p.step_count||p.steps.length)+' steps · '+esc(p.source)+'</div></div>'
+  + '<div class="sp-note">'+esc(p.ordering)+'</div>'
+  + (p.clause_note?'<div class="sp-note">'+esc(p.clause_note)+'</div>':'')
+  + (here>=0
+     ? '<div class="sp-here">Where we are — <b>step '+esc(p.steps[here].n)+', '+esc(p.steps[here].title)+'</b>. '
+       + 'That is the earliest step with open work recorded against it, worked out just now. Nothing in either brain marks a current step, so this is derived rather than declared.</div>'
+     : '<div class="sp-here">No step has open work recorded against it. That is not evidence the path is finished — it means nothing in the promise ledger or the backlog names a step.</div>')
+  + '<div class="steps" style="margin-top:18px">'+p.steps.map((s,i)=>{
+      const g=byStep[s.n]||{count:0,orders:[]};
+      const n=Number(g.count)||0;
+      const label=n+' work order'+(n===1?'':'s')+' — what would close this';
+      return '<div class="step'+(i===here?' now':'')+'">'
+      + '<div class="no'+(i===here?' now':'')+'">'+esc(s.n)+'</div><div class="sb">'
+      + '<div class="ti2">'+esc(s.title)
+      +   (i===here?'<span class="chip high">where we are</span>':'')
+      +   '<span class="chip '+(n?'norm':'quiet')+'">'+(n?esc(n)+' open':'nothing open')+'</span></div>'
+      + '<div class="de">'+esc(s.detail)+'</div>'
+      + ((s.clauses||[]).map(c=>'<div class="cl"><b>'+esc(c.label)+'</b>'+esc(c.text)+'</div>').join(''))
+      + (s.gate?'<div class="ga"><b>Gate — a proof, not a milestone</b>'+esc(s.gate)+'</div>'
+              :'<div class="ga none"><b>Gate</b>The principle states no gate for this step.</div>')
+      + (n
+         ? '<button class="btn sp-open" data-step="'+esc(s.n)+'" data-label="'+esc(label)+'">'+esc(label)+' ▾</button>'
+           + '<div class="sp-orders" id="so-'+esc(s.n)+'">'+(g.orders||[]).map(orderCard).join('')+'</div>'
+         : '<div class="sp-empty">No open work order names this step. That is not evidence it is closed — it means nothing in the promise ledger or the backlog maps here.</div>')
+      + '</div></div>';
+    }).join('')+'</div>'
+  + unplacedBlock(w)
+  + noFinishBlock(w)
+  + (t.orders
+     ? '<div class="sp-foot">'+esc(t.orders)+' open items in total · '+esc(t.with_finish_condition)
+       + ' carry a finish condition ('+esc(t.placed_on_a_step)+' on a step, '+esc(t.unplaced)+' not on the path) · '
+       + esc(t.without_finish_condition)+' cannot say what would close them · '
+       + esc(t.from_promise_ledger)+' from the promise ledger, '+esc(t.from_backlog)+' from the backlog.<br/>'
+       + esc((w&&w.how)||'')+'</div>'
+     : '')
   + '</div>';
 }
 
-/* THE PATH. The old surface showed four workshop stages (01 Ingestion → 04 Factory)
-   and said Ingestion was open with the rest sequenced behind it. Nothing in the corpus
-   asserted that, so it is gone. Principle 90 is the only sequencing claim the record
-   makes, and it is parsed from the principle itself — if the principle is rewritten,
-   this follows it. Steps that state no gate say so rather than being given one. */
-function pathBlock(){
-  const p=D.doctrine&&D.doctrine.path;
-  if(!p||!p.steps||!p.steps.length)
-    return '<div class="blk">The path<span class="ln"></span></div><div class="empty">The path could not be read from the corpus just now. Nothing is claimed about the order of work.</div>';
-  return '<div class="blk">The path <span class="ct">'+p.steps.length+' steps</span><span class="ln"></span></div>'
-  + '<div class="lab-note" style="margin-bottom:6px">'+esc(p.source)+' · '+esc(p.ordering)+'</div>'
-  + '<div class="lab-note" style="margin-bottom:10px">'+esc(p.note||"")+'</div>'
-  + '<div class="steps">'+p.steps.map(s=>'<div class="step"><div class="no">'+esc(s.n)+'</div><div class="sb">'
-    + '<div class="ti2">'+esc(s.title)+'</div>'
-    + '<div class="de">'+esc(s.detail)+'</div>'
-    + (s.gate?'<div class="ga"><b>Gate — a proof, not a milestone</b>'+esc(s.gate)+'</div>'
-            :'<div class="ga none"><b>Gate</b>The principle states no gate for this step.</div>')
-    + '</div></div>').join("")+'</div>';
+function orderCard(o){
+  return '<div class="ord2">'
+  + '<div class="ti">'+esc(wordTrim(o.ti,120))+'<span class="chip '+esc(o.pl)+'">'+esc(o.pl)+'</span></div>'
+  + '<div class="tg">'+(o.tg||[]).map(x=>'<span class="tag">'+esc(x)+'</span>').join('')
+  +   '<span class="tag">'+esc(o.src)+'</span></div>'
+  + '<div class="wy">'+esc(wordTrim(o.wy,420))+'</div>'
+  + '<div class="fx"><b>Finish</b>'+esc(o.fx)+'</div></div>';
 }
 
-/* Work orders group by subsystem — a real column on promise_ledger. The four
-   workshop stages the old surface grouped by were authored and are gone. */
-function groupBySubsystem(wo){
-  const key=o=>((o.tg&&o.tg[0])?String(o.tg[0]):"unassigned");
-  return wo.slice().sort((a,b)=>{
-    const ka=key(a), kb=key(b);
-    if(ka!==kb) return ka<kb?-1:1;
-    const rank={stale:0,high:1,norm:2};
-    return (rank[a.pl]==null?9:rank[a.pl])-(rank[b.pl]==null?9:rank[b.pl]);
+/* AN UNPLACEABLE ITEM IS A FINDING, NOT A FILING PROBLEM. These carry a finish
+   condition, so they are real work; their subsystem simply matches no step in the
+   principle. Forcing them under a step would hide that. */
+function unplacedBlock(w){
+  const u=w&&w.unplaced;
+  if(!u||!Number(u.count)) return '';
+  return '<div class="blk">Not on the path <span class="ct">'+esc(u.count)+'</span><span class="ln"></span></div>'
+  + '<div class="sp-note" style="margin-bottom:8px">'+esc(u.why)+'</div>'
+  + '<div class="sp-note" style="margin-bottom:12px">Subsystems the path does not name: '+esc((u.subsystems||[]).join(', '))+'.</div>'
+  + '<div class="orders" style="padding:0 20px">'+(u.orders||[]).map(orderCard).join('')+'</div>';
+}
+
+/* THE BACKLOG-AS-DEPOSIT PROBLEM, VISIBLE. Kept and counted rather than deleted, and
+   no target invented for any of them. They are separated from the real work orders
+   because a row that cannot say what would close it cannot be worked. */
+function noFinishBlock(w){
+  const f=w&&w.no_finish_condition;
+  if(!f) return '';
+  if(!Number(f.count))
+    return '<div class="blk">Raised, never given a finish condition<span class="ln"></span></div>'
+      + '<div class="empty">None. Every open item can say what would close it.</div>';
+  return '<div class="blk">Raised, never given a finish condition <span class="ct">'+esc(f.count)+'</span><span class="ln"></span></div>'
+  + '<div class="sp-note" style="margin-bottom:12px">'+esc(f.why)
+  +   (f.oldest?(' Raised between '+esc(String(f.oldest).slice(0,10))+' and '+esc(String(f.newest).slice(0,10))+'.'):'')+'</div>'
+  + '<div class="nofin">'+(f.items||[]).map(x=>'<div class="nf">'
+    + '<span class="nfd">'+esc(String(x.raised||'').slice(0,10)||'undated')+'</span>'
+    + '<span class="nft">'+esc(wordTrim(x.ti,150))+'</span></div>').join('')+'</div>';
+}
+
+function bindSteps(){
+  document.querySelectorAll('.sp-open').forEach(b=>{
+    b.onclick=()=>{
+      const d=document.getElementById('so-'+b.dataset.step);
+      if(!d) return;
+      const open=d.dataset.open==='true';
+      d.dataset.open=open?'false':'true';
+      b.textContent=b.dataset.label+(open?' ▾':' ▴');
+    };
   });
 }
 
-function lab(ln){
+function lab(ln,srcs){
   const t=ln.seen?ln.by_type:null;
   return '<div class="lede">The proving bench — the Tool pointed at <b>real customer data</b>. These are the customers’ brains: what is connected and reading, per customer. Doctrine, decisions and parts live in the Studio’s own brain and are not mixed in here.</div>'
   + '<div class="blk"><span class="cust-name">'+esc(ln.name||"customer")+'</span> live lab<span class="ln"></span></div>'
@@ -616,6 +732,7 @@ function lab(ln){
       + '<span class="lr">'+esc(String(ln.ref||"").slice(0,6))+'… · the lab</span></div>'
       + '<div class="lab-note">'+esc(ln.reading)+' of '+esc(ln.total)+' sources at '+esc(ln.name||"this customer")+' have content from the last two days. The rest are registered, off, or walking green while reading nothing — which is why the line separates the two.</div>'
     : '<div class="empty">Not connected right now. '+esc(ln.why||"")+'</div>')
+  + sourceRail(ln,srcs)
   + '<div class="blk">What is testable now<span class="ln"></span></div>'
   + '<div class="empty">Not connected yet, and not derivable. The old surface listed parts as <b>now testing</b>, <b>blocked by freshness</b> and <b>waiting on build</b>; those were editorial judgments, and nothing in either brain records what is considered ready to test. This section fills from Alex using the Tool and saying so — not from derivation. A plausible list here would be the same defect the rest of this page exists to remove.</div>'
   + readHealthBlock()
