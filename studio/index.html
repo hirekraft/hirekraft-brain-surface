@@ -260,6 +260,8 @@ const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 const tok    = () => { try{ return localStorage.getItem("studio_token")||""; }catch{ return ""; } };
 const setTok = t  => { try{ t?localStorage.setItem("studio_token",t):localStorage.removeItem("studio_token"); }catch{} };
 let D=null, DOCS=[];
+let CUST=null;              // the customer half, filled in whenever it arrives
+let CUST_STATE="loading";   // loading | done — never inferred from CUST being empty
 
 /* Every call ends in a stated outcome. A silent form is indistinguishable from
    never having tried, which is the failure this estate has paid for repeatedly. */
@@ -302,14 +304,63 @@ function gate(msg,bad){
   document.getElementById("p").onkeydown=e=>{ if(e.key==="Enter") submit(); };
 }
 
+/* EACH BRAIN FAILS ON ITS OWN, AND SO DOES THE PAGE.
+
+   The page hung on "reading both brains at source…" forever. Two faults, one visible:
+
+   1. render() referenced a variable no longer in its scope, so it THREW and the loading
+      markup was never replaced. A thrown renderer is indistinguishable from a slow
+      network: a spinner that never resolves looks exactly like one about to. Rendering is
+      now wrapped, and a draw failure SAYS it is a fault in the surface itself rather than
+      sitting on a hopeful message.
+
+   2. The Studio half and the customer half arrived in ONE response, so one customer being
+      unreachable held everything — principles, documents, the corpus, the path, the ask,
+      none of which depend on a customer. Two requests now, rendered independently: the
+      page draws as soon as the Studio half answers, and the customer half fills in when
+      it arrives or reports its own failure, per customer. */
+function paint(){
+  try { render(); }
+  catch(e){
+    root.innerHTML='<div class="wrap"><div class="masthead"><div class="brand">'
+      + '<div class="mark"><span></span><span></span><span></span></div>'
+      + '<div><h1>The Studio Surface</h1><div class="sub">customer one · the factory floor</div></div></div></div>'
+      + '<main><div class="empty">The page failed to draw. That is a fault in this surface, not in either brain: '
+      + esc(String((e&&e.message)||e))+'</div></main></div>';
+  }
+}
+
 async function boot(){
   if(!tok()) return gate("");
-  root.innerHTML='<div class="gate"><div class="msg">reading both brains at source…</div></div>';
-  const [j,dl]=await Promise.all([call(FN,{action:"july"}),call(FN,{action:"docs"})]);
+  root.innerHTML='<div class="gate"><div class="msg">reading the studio…</div></div>';
+
+  const pStudio=call(FN,{action:"studio"});
+  const pCust  =call(FN,{action:"customers"});
+  const pDocs  =call(FN,{action:"docs"});
+
+  // The customer half never blocks the first paint.
+  pCust.then(c=>{
+    CUST=(c.status===200&&c.body&&c.body.ok)
+      ? c.body
+      : {count:null,customers:[],read_health:null,
+         error:(c.body&&c.body.error)||("the customer read failed ("+c.status+")")};
+    CUST_STATE="done";
+    if(D) paint();
+  });
+  pDocs.then(dl=>{ DOCS=(dl.status===200&&dl.body.ok)?(dl.body.documents||[]):[]; if(D) paint(); });
+
+  const j=await pStudio;
   if(j.status===401){ setTok(""); return gate("Your session ended. Sign in again.",true); }
-  if(j.status!==200){ return gate(j.body.error||("could not read the studio ("+j.status+")"),true); }
-  D=j.body; DOCS=(dl.status===200&&dl.body.ok)?(dl.body.documents||[]):[];
-  render();
+  if(j.status!==200){
+    // The Studio half is the page's backbone, but a customer may still be readable and
+    // worth naming, so report what the other half said rather than declaring nothing known.
+    const c=await pCust;
+    const named=(c.status===200&&c.body&&c.body.customers)?c.body.customers:[];
+    return gate((j.body.error||("the studio's own brain could not be read ("+j.status+")"))
+      +(named.length?(" — customers answered: "+named.map(x=>x.name+(x.seen?" ok":" unreachable")).join(", ")):""),true);
+  }
+  D=j.body;
+  paint();
 }
 
 /* A COUNTER DERIVED FROM A FAILED OR MISSING READ RENDERS UNKNOWN, NEVER ZERO.
@@ -354,8 +405,12 @@ function render(){
   /* CUSTOMERS, PLURAL. The Tool is one product with many customers; the surface says
      customers, currently one. The payload carries a LIST, so a second customer is a row
      rather than a rewrite — and no multi-customer machinery exists beyond reading it. */
-  const cust=(D.customers&&D.customers.customers)||[];
+  const cust=(CUST&&CUST.customers)||[];
   const ln=cust[0]||{};
+  /* srcs was dropped from this scope when the problems counter moved into custScopes, and
+     render() still referenced it — that ReferenceError is what hung the page. Defined
+     here, once, for the sections that render one customer's line. */
+  const srcs=(ln.seen?(ln.sources||[]):[]).concat(D.absent_sources||[]);
   const g=gaugeBits(), ig=D.integrity||{};
   const seats=counter(ig.seats&&ig.seats.closed_total, !!(ig.seats));
 
