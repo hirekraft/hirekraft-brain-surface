@@ -303,20 +303,52 @@ async function boot(){
   render();
 }
 
+/* A COUNTER DERIVED FROM A FAILED OR MISSING READ RENDERS UNKNOWN, NEVER ZERO.
+
+   The problems gauge showed 0 while the cross-project source read had failed. Zero is a
+   measurement; an empty list from a read that never happened is not. Rendering absence as
+   zero is construction-guaranteed green, and it landed in the one field whose entire job
+   is to show trouble.
+
+   The bar had one field failing safe (reading, which said unreachable) beside three
+   failing silent. That asymmetry is worse than either alone: the honest field teaches the
+   reader to trust the bar, and the silent ones then lie with that borrowed credit. Every
+   counter now goes through here. */
+function counter(value, ok){
+  if(ok===false) return {v:"unknown", c:"bad", known:false};
+  if(value===null||value===undefined) return {v:"unknown", c:"bad", known:false};
+  const n=Number(value);
+  if(!isFinite(n)) return {v:"unknown", c:"bad", known:false};
+  return {v:n, c:null, known:true};
+}
+
 function gaugeBits(){
-  const f=D.freshness, legs=[
-    ["chats",f.chats.days,f.chats.means],["snapshots",f.snapshots.days,f.snapshots.means],
-    ["decisions",f.decisions.days,f.decisions.means],["corpus",f.corpus.days,f.corpus.means],
-    ["capture",f.capture.days,f.capture.means]];
-  const worst=Math.max.apply(null,legs.map(l=>Number(l[1])||0));
-  const cls=d=>d>3?"bad":d>1.5?"warn":"ok";
-  return {legs,worst,cls};
+  const f=D.freshness||{};
+  const leg=(k,label)=>{
+    const o=f[k]||{};
+    const n=Number(o.days);
+    return [label, isFinite(n)?n:null, o.means||"not measured"];
+  };
+  const legs=[leg("chats","chats"),leg("snapshots","snapshots"),leg("decisions","decisions"),
+              leg("corpus","corpus"),leg("capture","capture")];
+  /* A missing leg makes the WORST leg unknown, not zero. Previously Number(null)||0
+     scored an unmeasured leg as perfectly fresh and could show "current" in green while
+     a source of the freshness figure had not been read at all. */
+  const missing=legs.filter(l=>l[1]===null).map(l=>l[0]);
+  const known=legs.map(l=>l[1]).filter(n=>n!==null);
+  const worst=missing.length?null:(known.length?Math.max.apply(null,known):null);
+  const cls=d=>d===null?"bad":d>3?"bad":d>1.5?"warn":"ok";
+  return {legs,worst,cls,missing};
 }
 
 function render(){
   const g=gaugeBits(), ln=D.line||{}, ig=D.integrity||{};
   const srcs=(ln.seen?(ln.sources||[]):[]).concat(D.absent_sources||[]);
-  const bad=srcs.filter(s=>s.c==="bad").length;
+  /* The problem count is only a count when the source list was actually read. If the
+     cross-project read failed, srcs holds only the absent-source rows and would total a
+     confident, wrong zero. */
+  const problems=counter(srcs.filter(s=>s.c==="bad").length, ln.seen===true);
+  const seats=counter(ig.seats&&ig.seats.closed_total, !!(ig.seats));
 
   root.innerHTML=
   '<div class="wrap">'
@@ -329,14 +361,15 @@ function render(){
   + '<div class="gauges" id="gz">'
   +   '<div class="gz"><span class="gdot live"></span><span class="gl">clock</span><span class="gv" id="clk">—</span></div>'
   +   '<div class="gz"><span class="gdot live"></span><span class="gl">generated</span><span class="gv" id="genage">—</span></div>'
-  +   '<div class="gz '+(g.worst>3?"alert":"")+'"><span class="gdot '+g.cls(g.worst)+'"></span><span class="gl">freshness</span><span class="gv">'+(g.worst<=1?"current":g.worst+"d behind")+'</span></div>'
+  +   '<div class="gz '+(g.worst!==null&&g.worst>3?"alert":"")+'" title="'+esc(g.missing.length?("not measured: "+g.missing.join(", ")):"worst of five legs, each measured at source")+'"><span class="gdot '+g.cls(g.worst)+'"></span><span class="gl">freshness</span><span class="gv">'
+  +     (g.worst===null?"unknown":(g.worst<=1?"current":g.worst+"d behind"))+'</span></div>'
   +   '<div class="gz"><span class="gdot '+(ln.seen?(ln.reading>0?"ok":"bad"):"bad")+'"></span><span class="gl">reading</span><span class="gv">'+(ln.seen?(ln.reading+" of "+ln.total):"unreachable")+'</span></div>'
-  +   '<div class="gz"><span class="gdot '+(bad?"bad":"ok")+'"></span><span class="gl">problems</span><span class="gv">'+bad+'</span></div>'
-  +   '<div class="gz"><span class="gdot live"></span><span class="gl">seats closed</span><span class="gv">'+(ig.seats?ig.seats.closed_total:"—")+'</span></div>'
+  +   '<div class="gz" title="'+esc(problems.known?"sources in trouble, counted from a source list that was read":"the source read failed, so the number of problems is unknown — not zero")+'"><span class="gdot '+(problems.known?(problems.v?"bad":"ok"):"bad")+'"></span><span class="gl">problems</span><span class="gv">'+esc(problems.v)+'</span></div>'
+  +   '<div class="gz"><span class="gdot '+(seats.known?"live":"bad")+'"></span><span class="gl">seats closed</span><span class="gv">'+esc(seats.v)+'</span></div>'
   +   '<div class="gz"><span class="chev">▾</span></div>'
   + '</div>'
   + '<div class="gauges-detail" id="gzd">'
-  +   g.legs.map(l=>'<div class="gd-row"><span class="ddot '+g.cls(Number(l[1])||0)+'"></span><span class="dn">'+esc(l[0])+'</span><span class="ds">'+esc(l[1])+'d · '+esc(l[2])+'</span></div>').join("")
+  +   g.legs.map(l=>'<div class="gd-row"><span class="ddot '+g.cls(l[1])+'"></span><span class="dn">'+esc(l[0])+'</span><span class="ds">'+(l[1]===null?"not measured":esc(l[1])+"d")+' · '+esc(l[2])+'</span></div>').join("")
   + '</div>'
   + '<nav class="sections" id="nav">'
   +   ["Workshops","Lab","Parts Bin","The Frame","Principles"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
