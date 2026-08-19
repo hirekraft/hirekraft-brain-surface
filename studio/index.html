@@ -392,7 +392,7 @@ function render(){
   +   '<section class="view" data-i="2">'+parts()+'</section>'
   +   '<section class="view" data-i="3">'+frame()+'</section>'
   +   '<section class="view" data-i="4">'+principles()+'</section>'
-  +   '<div class="foot">'+esc(D.footer)+'<br/>Served by '+esc(D.served_by.fn)+' · studio half from surface_july() · the line from july_sources() on the customer brain · this is the only address that serves the studio · nothing on this page is stored.</div>'
+  +   '<div class="foot">'+esc(D.footer)+'<br/>Served by '+esc(D.served_by.fn)+' · the Studio’s own numbers and each customer’s, kept apart · this is the only address that serves the studio · nothing on this page is stored.</div>'
   + '</main></div>'
   + '<div class="ov" id="ov"><div class="dr" id="drw">'+ipdocs()+'</div></div>';
 
@@ -463,7 +463,7 @@ function custScopes(cust){
 function workshops(ln,srcs){
   const wo=D.work_orders||[];
   return '<div class="lede">Where the work happens. The line below is <b>every source, connected versus actually reading</b> — different facts, kept apart. Problems dominate; healthy sources recede.</div>'
-  + '<div class="blk">The line — sources <span class="ct">'+(ln.seen?(ln.reading+" of "+ln.total+" reading"):"")+'</span><span class="ln"></span></div>'
+  + '<div class="blk"><span class="cust-name">'+esc(ln.name||"customer")+'</span> the line — sources <span class="ct">'+(ln.seen?(ln.reading+" of "+ln.total+" reading"):"")+'</span><span class="ln"></span></div>'
   + (ln.seen
      ? '<div class="rail">'+srcs.map(s=>'<div class="row '+esc(s.c==="warn ok"?"warn":s.c)+'">'
        + '<span class="edge"></span>'
@@ -472,7 +472,7 @@ function workshops(ln,srcs){
        + '<span class="gg">'+esc(s.g)+'</span>'
        + '<span class="md">'+esc(s.m)+'</span></div>').join("")+'</div>'
        + '<div class="lab-note">'+esc(ln.reading_means?("Reading means: "+ln.reading_means+"."):"")+' '+esc(ln.how||"")+'</div>'
-     : '<div class="empty">The line is not connected right now. '+esc(ln.why||"The customer brain could not be reached from this screen.")+'</div>')
+     : '<div class="empty">'+esc(ln.why||((ln.name||"That customer")+"’s brain could not be reached from this screen."))+'</div>')
   + pathBlock()
   + '<div class="blk">Work orders <span class="ct">'+wo.length+' · grouped by subsystem</span><span class="ln"></span></div>'
   + '<div class="orders">'+(wo.length
@@ -521,20 +521,24 @@ function groupBySubsystem(wo){
 
 function lab(ln){
   const t=ln.seen?ln.by_type:null;
-  return '<div class="lede">The proving bench — the Tool pointed at <b>real HireKraft data</b>. This is the customer brain: what is connected and reading. Doctrine, decisions and parts live in the Studio brain and are not mixed in here.</div>'
-  + '<div class="blk">Live lab — HireKraft brain<span class="ln"></span></div>'
+  return '<div class="lede">The proving bench — the Tool pointed at <b>real customer data</b>. These are the customers’ brains: what is connected and reading, per customer. Doctrine, decisions and parts live in the Studio’s own brain and are not mixed in here.</div>'
+  + '<div class="blk"><span class="cust-name">'+esc(ln.name||"customer")+'</span> live lab<span class="ln"></span></div>'
   + (ln.seen
-    ? '<div class="lab-hd"><span class="ldot"></span><span class="lt"><b>HireKraft brain</b> · '
+    ? '<div class="lab-hd"><span class="ldot"></span><span class="lt"><b>'+esc(ln.name||"customer")+'’s brain</b> · '
       + esc(Object.keys(t||{}).map(k=>t[k]+" "+k).join(" + "))+' · '+esc(ln.chunks_total)+' chunks</span>'
       + '<span class="lr">uvdoom… · the lab</span></div>'
-      + '<div class="lab-note">'+esc(ln.reading)+' of '+esc(ln.total)+' sources have content from the last two days. The rest are registered, off, or walking green while reading nothing — which is why the line separates the two.</div>'
+      + '<div class="lab-note">'+esc(ln.reading)+' of '+esc(ln.total)+' sources at '+esc(ln.name||"this customer")+' have content from the last two days. The rest are registered, off, or walking green while reading nothing — which is why the line separates the two.</div>'
     : '<div class="empty">Not connected right now. '+esc(ln.why||"")+'</div>')
   + '<div class="blk">What is testable now<span class="ln"></span></div>'
   + '<div class="empty">Not connected yet, and not derivable. The old surface listed parts as <b>now testing</b>, <b>blocked by freshness</b> and <b>waiting on build</b>; those were editorial judgments, and nothing in either brain records what is considered ready to test. This section fills from Alex using the Tool and saying so — not from derivation. A plausible list here would be the same defect the rest of this page exists to remove.</div>'
-  + '<div class="blk">The two brains<span class="ln"></span></div>'
+  + '<div class="blk">Whose brain is whose <span class="ct">'+((D.customers&&D.customers.count)||0)+' customer'+(((D.customers&&D.customers.count)||0)===1?"":"s")+'</span><span class="ln"></span></div>'
+  + '<div class="lab-note" style="margin-bottom:12px">'+esc((D.customers&&D.customers.note)||"")+'</div>'
   + '<div class="fr-grid">'
-  + '<div class="fc"><h3>Studio brain</h3><p>Doctrine, decisions, parts, promises, seat record. '+esc(D.principles.sections)+' corpus sections, '+esc(D.principles.decisions)+' decisions, '+esc(D.principles.seat_reports)+' seat reports.</p><span class="pill">yzsudn… · the record</span></div>'
-  + '<div class="fc"><h3>HireKraft brain</h3><p>What is connected and reading. '+(ln.seen?(esc(ln.total)+" sources, "+esc(ln.chunks_total)+" chunks"):"unreachable right now")+'.</p><span class="pill">uvdoom… · the lab</span></div>'
+  + '<div class="fc"><h3>The Studio’s own brain</h3><p>Doctrine, decisions, parts, promises, seat record. '+esc(D.principles.sections)+' corpus sections, '+esc(D.principles.decisions)+' decisions, '+esc(D.principles.seat_reports)+' seat reports. Nothing here belongs to a customer.</p><span class="pill">the record</span></div>'
+  + ((D.customers&&D.customers.customers)||[]).map(c=>'<div class="fc"><h3>'+esc(c.name)+'’s brain</h3><p>'
+    + (c.seen?("What is connected and reading: "+esc(c.total)+" sources, "+esc(c.reading)+" reading, "+esc(c.chunks_total)+" pieces of content.")
+            :("Unreachable right now, so nothing about "+esc(c.name)+" is known from here."))
+    + ' Customer since '+esc(String(c.since||"").slice(0,10))+'.</p><span class="pill">'+(c.seen?"the lab":"unreachable")+'</span></div>').join("")
   + '</div>';
 }
 
