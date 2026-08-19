@@ -698,10 +698,18 @@ function orderCard(o){
 function unplacedBlock(w){
   const u=w&&w.unplaced;
   if(!u||!Number(u.count)) return '';
+  /* COLLAPSED TO A COUNT WITH A SAMPLE AND THE REASON. A wall of Bench-era items does not
+     reflect where the project is; the finding survives, the wall does not. */
+  const sample=(u.orders||[]).slice(0,3);
   return '<div class="blk">Not on the path <span class="ct">'+esc(u.count)+'</span><span class="ln"></span></div>'
   + '<div class="sp-note" style="margin-bottom:8px">'+esc(u.why)+'</div>'
-  + '<div class="sp-note" style="margin-bottom:12px">Subsystems the path does not name: '+esc((u.subsystems||[]).join(', '))+'.</div>'
-  + '<div class="orders" style="padding:0 20px">'+(u.orders||[]).map(orderCard).join('')+'</div>';
+  + '<div class="sp-note" style="margin-bottom:10px">Subsystems the path does not name: '+esc((u.subsystems||[]).join(', '))+'.</div>'
+  + '<div class="nofin">'+sample.map(function(x){ return '<div class="nf">'
+      + '<span class="nfd">sample</span><span class="nft">'+esc(wordTrim(x.ti,140))+'</span></div>'; }).join('')
+  + '</div>'
+  + (Number(u.count)>sample.length
+     ? ('<div class="sp-note" style="margin-top:8px">'+esc(Number(u.count)-sample.length)+' more, not listed. They are a count and a reason, not a wall.</div>')
+     : '');
 }
 
 /* THE BACKLOG-AS-DEPOSIT PROBLEM, VISIBLE. Kept and counted rather than deleted, and
@@ -716,9 +724,13 @@ function noFinishBlock(w){
   return '<div class="blk">Raised, never given a finish condition <span class="ct">'+esc(f.count)+'</span><span class="ln"></span></div>'
   + '<div class="sp-note" style="margin-bottom:12px">'+esc(f.why)
   +   (f.oldest?(' Raised between '+esc(String(f.oldest).slice(0,10))+' and '+esc(String(f.newest).slice(0,10))+'.'):'')+'</div>'
-  + '<div class="nofin">'+(f.items||[]).map(x=>'<div class="nf">'
+  /* Same treatment: a count, a sample, and the stated reason. */
+  + '<div class="nofin">'+(f.items||[]).slice(0,3).map(function(x){ return '<div class="nf">'
     + '<span class="nfd">'+esc(String(x.raised||'').slice(0,10)||'undated')+'</span>'
-    + '<span class="nft">'+esc(wordTrim(x.ti,150))+'</span></div>').join('')+'</div>';
+    + '<span class="nft">'+esc(wordTrim(x.ti,140))+'</span></div>'; }).join('')+'</div>'
+  + (Number(f.count)>3
+     ? ('<div class="sp-note" style="margin-top:8px">'+esc(Number(f.count)-3)+' more, not listed.</div>')
+     : '');
 }
 
 function bindSteps(){
