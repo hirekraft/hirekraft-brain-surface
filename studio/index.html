@@ -1010,6 +1010,18 @@ function principles(){
    evidence they support, so a reader never hunts for [E9] down a page of passages. */
 /* Truncation cuts at a WORD BOUNDARY. Fixed-count slicing produced "vertical in the
    attachmen" and "not a foundatio". Applied at render, where truncation belongs. */
+/* An earlier seat removed the shared `ago` helper while this seat was writing against it.
+   Caught by running render() in a harness before Alex loaded the page, not by him
+   finding a blank screen. Defined here rather than assumed to exist elsewhere. */
+function ago(iso){
+  const t=Date.parse(iso);
+  if(!isFinite(t)) return "—";
+  const d=(Date.now()-t)/86400000;
+  if(d<1/1440) return "just now";
+  if(d<1/24) return Math.round(d*1440)+"m ago";
+  if(d<1) return Math.round(d*24)+"h ago";
+  return Math.round(d)+"d ago";
+}
 function wordTrim(t,n){
   const s=String(t||"").trim();
   if(s.length<=n) return s;
