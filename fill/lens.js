@@ -93,11 +93,20 @@ const fmtDay = (iso) => iso
 
 // Health is stated in words. Healthy is quiet; anything else says what it is.
 const HEALTH = {
-  live:      "reading live",
-  stalled:   "not read recently",
-  read_once: "read once, not on a schedule",
-  unread:    "connected, not read yet",
-  off:       "switched off",
+  reading:     "reading live",
+  behind:      "behind its schedule",
+  paused:      "read before; nothing scheduled to read it again",
+  never:       "connected, never read",
+  refused:     "connected, but the last read was refused",
+  unconnected: "not connected",
+};
+// The words above are the claim; these map them onto the skin's existing states so
+// the new vocabulary introduces no new colour. "refused" and "never" used to both
+// render as "read once, not on a schedule" -- a revoked source reading as a calm
+// sentence -- which is why the derivation moved into the database.
+const HEALTH_CLASS = {
+  reading: "live", behind: "stalled", paused: "unread",
+  never: "unread", refused: "stalled", unconnected: "off",
 };
 
 const escape = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
@@ -211,7 +220,7 @@ function fillTree() {
       continue;
     }
     // The overview carries shape and aliveness — never a raw file count.
-    const live = (data.members ?? []).filter((m) => m.health === "live").length;
+    const live = (data.members ?? []).filter((m) => m.health === "reading").length;
     const total = data.members?.length ?? data.count;
     const alive = data.kind === "reached"
       ? "reached when asked"
@@ -271,9 +280,9 @@ function drawMembers(key, body) {
     btn.addEventListener("click", () => drawPlaceholder(li, m, data));
     li.appendChild(btn);
 
-    const st = el("div", `state ${m.health}`);
+    const st = el("div", `state ${HEALTH_CLASS[m.health] ?? ""}`);
     st.innerHTML = `<span class="dot"></span>${HEALTH[m.health] ?? m.health}`
-      + (m.latest && m.health !== "live" ? ` &middot; newest item ${fmtDay(m.latest)}` : "");
+      + (m.latest && m.health !== "reading" ? ` &middot; newest item ${fmtDay(m.latest)}` : "");
     li.appendChild(st);
 
     list.appendChild(li);
@@ -348,8 +357,11 @@ function fillRecognition() {
   for (const g of shape.groups.filter((g) => !g.connected)) {
     lines.push({ gap: `Nothing describes your ${g.label.toLowerCase()} yet.` });
   }
-  for (const m of shape.groups.flatMap((g) => g.members ?? []).filter((m) => m.health === "unread")) {
-    lines.push({ gap: `${m.name} is connected but has not been read, so nothing from it is known.` });
+  for (const m of shape.groups.flatMap((g) => g.members ?? []).filter((m) => m.health === "never")) {
+    lines.push({ gap: `${m.name} is connected but has never been read, so nothing from it is known.` });
+  }
+  for (const m of shape.groups.flatMap((g) => g.members ?? []).filter((m) => m.health === "refused")) {
+    lines.push({ gap: `${m.name} is connected, but the last attempt to read it was refused.` });
   }
 
   for (const l of lines) {
@@ -385,6 +397,13 @@ function fillAttention() {
         box.appendChild(link);
       });
       li.appendChild(box);
+    } else if (a.actionable === false) {
+      // Never a button that would fail. An item this person cannot action says so,
+      // and says whose it is, rather than routing them into a refusal.
+      li.classList.add("ours");
+      const mine = el("div", "a-mine");
+      mine.textContent = `${a.fix}. ${a.why_not ?? ""}`.trim();
+      li.appendChild(mine);
     } else {
       const fix = el("button", "a-fix");
       fix.type = "button";
@@ -397,6 +416,9 @@ function fillAttention() {
 }
 
 function routeFix(a) {
+  // Route by the source the fault is actually about, never by words in its title.
+  if (a.source && a.source.startsWith("gmail:")) return openConnect("email");
+  if (a.source && a.source.startsWith("drive:")) return openConnect("drives");
   const t = a.title.toLowerCase();
   if (t.includes("calendar"))   return openConnect("calendar");
   if (t.includes("contacts"))   return openConnect("contacts");
@@ -690,7 +712,16 @@ function answer(raw) {
       + "only when a question needs it. Large one-off drops are measured and priced for your approval "
       + "first — though that estimate is not yet calculated in this build.";
   }
-  return "I can answer what is connected, how far back each source reaches, what needs you, how the "
+  if (/(reading|updating|up to date|fresh|behind|stopped|still working)/.test(q)) {
+    if (!tab) return "I have not been able to read the source list, so I cannot tell you what "
+      + "is reading. That is a reading failure on this screen, not an answer.";
+    return `${tab.counts.connected} of ${tab.counts.sources} sources have a permission held, and `
+      + `${tab.counts.reading} are actually reading. Those are different facts — a held `
+      + `permission does not mean anything is arriving. ${tab.counts.faulted} have something `
+      + `wrong, listed under "every source" in the order they need fixing.`;
+  }
+  return "I can answer what is connected, what is actually reading, how far back each source "
+    + "reaches, what needs you, how the "
     + "two kinds of connection differ, and what this can and cannot see. Questions about the contents "
     + "of your actual mail and documents come when those lenses are built — I would rather say that "
     + "than guess.";
@@ -728,3 +759,7 @@ say("I am here the whole way through. Ask about anything on this screen — what
   + "back it reads, or what any of it means.");
 
 readBrain();                     // then the live reading lands into the frame
+readBrainTab();                  // and the same for the source tab, independently
+
+// Deep link, so the tab is reachable directly rather than only by retyping a URL.
+if (location.hash === "#sources") goto("s-brain");
