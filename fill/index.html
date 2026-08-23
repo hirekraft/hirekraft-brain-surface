@@ -151,6 +151,7 @@
 
     <div class="actions" style="margin-top:2.5rem">
       <button class="go ghost" data-goto="s-connect">Connect something else</button>
+      <button class="go ghost" data-goto="s-brain">Every source, in detail</button>
       <button class="go ghost" data-goto="s-recognition">Read it back to me</button>
     </div>
 
@@ -158,6 +159,41 @@
       reaches Sense. That one arrangement has two consequences worth knowing: you can leave at
       any time and nothing has been moved, and you can check anything it tells you, because the
       source is still yours.</p>
+  </section>
+
+  <!-- 6. EVERY SOURCE - connected and reading, kept apart.
+       The summary above answers "what is in the memory". This answers "is any of it
+       still arriving", which is a different question and was previously collapsed
+       into the first one. -->
+  <section class="step" id="s-brain" hidden>
+    <p class="eyebrow">Your brain</p>
+    <h2>Every source, and whether it is actually reading.</h2>
+    <p class="quiet">Connected and reading are two different facts and are kept apart here.
+      <b>Connected</b> means a permission was accepted. <b>Reading</b> means a read actually
+      completed, something is scheduled to do it again, and the last attempt did not fail.
+      A held permission on its own brings nothing in.</p>
+
+    <div class="counts" id="brain-counts" aria-live="polite"></div>
+    <div id="brain-empty"></div>
+
+    <h2 style="margin-top:4rem">What needs fixing</h2>
+    <p class="quiet">In the order they need fixing, and the order is the point: restoring a
+      permission on a source that nothing is scheduled to read leaves a connection that looks
+      healthy and brings in nothing, which is worse than one that is visibly broken. So the
+      structural faults come first. Each one says how many it clears and what it leaves behind,
+      and the ones marked as ours are ours; they are not hidden from you, and they are not
+      yours to do.</p>
+    <ol class="attn faults" id="brain-faults" aria-live="polite"></ol>
+
+    <h2 style="margin-top:4rem">Every source</h2>
+    <ul class="srclist" id="brain-sources" aria-busy="true"></ul>
+
+    <div id="brain-state"></div>
+
+    <div class="actions" style="margin-top:2.5rem">
+      <button class="go ghost" data-goto="s-summary">Back to your brain</button>
+      <button class="go ghost" data-goto="s-connect">Connect something else</button>
+    </div>
   </section>
 
 </main>
