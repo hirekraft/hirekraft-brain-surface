@@ -322,6 +322,75 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .banner.bad { border-left: 2px solid var(--accent); }
 .banner a { color: var(--ink); }
 
+
+/* ── the source tab: two facts side by side, never merged ──────────── */
+
+.counts {
+  display: grid; gap: var(--gap); margin-top: var(--gap-lg);
+  border-top: 1px solid var(--line);
+}
+@media (min-width: 700px) { .counts { grid-template-columns: repeat(5, 1fr); } }
+.count {
+  padding: var(--gap) 0; border-bottom: 1px solid var(--line-2);
+}
+.count b {
+  display: block; font-size: var(--t-head); font-weight: var(--w-mid);
+  color: var(--ink); font-variant-numeric: tabular-nums; line-height: var(--lead-tight);
+}
+.count .c-word {
+  display: block; font-size: var(--t-small); color: var(--ink-2);
+  margin-top: calc(var(--u) * .5);
+}
+/* a number that cannot say what it counted is the same defect as one that was typed */
+.count .c-of {
+  display: block; font-size: var(--t-micro); color: var(--ink-4);
+  margin-top: calc(var(--u) * .5); max-width: 26ch;
+}
+
+.srclist { list-style: none; margin-top: var(--gap-lg); border-top: 1px solid var(--line); }
+.srclist li {
+  padding: var(--gap) 0; border-bottom: 1px solid var(--line-2);
+  max-width: var(--measure);
+}
+.srclist .s-name { font-weight: var(--w-mid); color: var(--ink); font-size: var(--t-small); }
+.srclist .s-facts {
+  margin-top: calc(var(--u) * 1.5); display: flex; flex-wrap: wrap;
+  gap: calc(var(--u) * 3);
+}
+.srclist .f { font-size: var(--t-micro); color: var(--ink-3); }
+.srclist .f.yes { color: var(--ink-2); }
+.srclist .f.yes::before {
+  content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--ink-2); margin-right: 6px; vertical-align: 1px;
+}
+.srclist .f.no { color: var(--ink-4); }
+.srclist .f.no::before {
+  content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--ink-4); margin-right: 6px; vertical-align: 1px;
+}
+.srclist .s-faults {
+  margin-top: calc(var(--u) * 1.5); font-size: var(--t-micro); color: var(--accent);
+}
+
+/* faults: numbered, and the accent still marks only what needs a person */
+.attn.faults { list-style: none; counter-reset: none; }
+.attn.faults > li {
+  display: grid; grid-template-columns: 26px 1fr; gap: var(--gap);
+  align-items: start;
+}
+.attn.faults > li.ours, .attn > li.ours { border-left-color: var(--line); }
+.attn .a-n {
+  font-size: var(--t-micro); color: var(--ink-4); font-variant-numeric: tabular-nums;
+  padding-top: 2px;
+}
+.attn .a-clears {
+  margin-top: calc(var(--u) * 1.5); font-size: var(--t-micro); color: var(--ink-4);
+}
+/* what we owe, stated plainly rather than offered as a button that would fail */
+.attn .a-mine {
+  margin-top: calc(var(--u) * 2); font-size: var(--t-small); color: var(--ink-3);
+}
+
 .skip { position: absolute; left: -9999px; }
 .skip:focus {
   left: var(--gap); top: var(--gap); background: var(--ink); color: var(--paper);
