@@ -182,8 +182,9 @@ function renderWho() {
 
 // ── the tree: structure first, then the reading lands into it ────────────────
 
-function drawTreeFrame() {
-  const tree = $("#tree");
+function drawTreeFrame(sel = "#tree", pfx = "") {
+  const tree = $(sel);
+  if (!tree) return;
   tree.innerHTML = "";
   for (const g of GROUPS) {
     const wrap = el("div", "grp");
@@ -192,7 +193,7 @@ function drawTreeFrame() {
     const row = el("button", "grp-row");
     row.type = "button";
     row.setAttribute("aria-expanded", "false");
-    row.id = `row-${g.key}`;
+    row.id = `row-${pfx}${g.key}`;
     row.innerHTML =
       `<span class="grp-label">${g.label}</span>` +
       `<span class="grp-shape" data-shape><span class="skel"></span></span>` +
@@ -200,19 +201,25 @@ function drawTreeFrame() {
 
     const body = el("div");
     body.hidden = true;
-    body.id = `body-${g.key}`;
+    body.id = `body-${pfx}${g.key}`;
     row.setAttribute("aria-controls", body.id);
 
-    row.addEventListener("click", () => toggle(g.key));
+    row.addEventListener("click", () => toggle(g.key, pfx));
     wrap.append(row, body);
     tree.appendChild(wrap);
   }
 }
 
-function fillTree() {
+// One renderer for both trees. The brain tab passes its own groups and prefix
+// rather than getting a second implementation of the same picture.
+function groupsFor(pfx) { return (pfx ? tab?.groups : shape?.groups) ?? []; }
+
+function fillTree(sel = "#tree", pfx = "") {
+  const root = $(sel);
+  if (!root) return;
   for (const g of GROUPS) {
-    const data = shape.groups.find((x) => x.key === g.key);
-    const cell = $(`[data-group="${g.key}"] [data-shape]`);
+    const data = groupsFor(pfx).find((x) => x.key === g.key);
+    const cell = $(`[data-group="${g.key}"] [data-shape]`, root);
     if (!data) { cell.innerHTML = `<span class="state unread">not tracked</span>`; continue; }
 
     if (!data.connected) {
@@ -230,19 +237,19 @@ function fillTree() {
   }
 }
 
-function toggle(key) {
-  const row = $(`#row-${key}`);
-  const body = $(`#body-${key}`);
+function toggle(key, pfx = "") {
+  const row = $(`#row-${pfx}${key}`);
+  const body = $(`#body-${pfx}${key}`);
   const open = row.getAttribute("aria-expanded") === "true";
   row.setAttribute("aria-expanded", String(!open));
   body.hidden = open;
-  if (!open) drawMembers(key, body);
+  if (!open) drawMembers(key, body, pfx);
 }
 
 // Level 2 — the members, expanded in place. Each carries its reading window.
-function drawMembers(key, body) {
+function drawMembers(key, body, pfx = "") {
   body.innerHTML = "";
-  const data = shape?.groups.find((x) => x.key === key);
+  const data = groupsFor(pfx).find((x) => x.key === key);
 
   if (!data) {
     body.innerHTML = `<p class="empty-note">This part of the brain has not been read in this `
@@ -272,8 +279,9 @@ function drawMembers(key, body) {
       : `<span class="state unread">no dates recorded for this source</span>`;
     const grants = m.grants && m.grants > 1 ? ` &middot; reachable by ${m.grants} people` : "";
 
+    const nav = m.nav ? `<span class="m-nav">${escape(m.nav)}</span>` : "";
     btn.innerHTML =
-      `<span class="m-name${m.named === false ? " unnamed" : ""}">${escape(m.name)}${grants}</span>` +
+      `<span class="m-name${m.named === false ? " unnamed" : ""}">${escape(m.name)}${grants}${nav}</span>` +
       `<span class="m-win">${win}</span>` +
       `<svg class="chev" width="14" height="14" aria-hidden="true"><use href="#i-chev"/></svg>`;
 
@@ -935,6 +943,7 @@ say("I am here the whole way through. Ask about anything on this screen — what
   + "back it reads, or what any of it means.");
 
 readBrain();                     // then the live reading lands into the frame
+drawTreeFrame("#brain-tree", "b-");   // the tab's frame, drawn by the same renderer
 readBrainTab();                  // and the same for the source tab, independently
 
 // Deep link, so the tab is reachable directly rather than only by retyping a URL.
