@@ -743,31 +743,21 @@ function answer(raw) {
 
 let tab = null;
 
-// Every number states what it measures. A figure that cannot say what it counted
-// is the same defect as a figure that was typed.
-const COUNTS = [
-  { key: "sources",    word: "sources",      of: "connections that exist at all" },
-  { key: "connected",  word: "connected",    of: "a permission is held for them" },
-  { key: "reading",    word: "reading",      of: "a read has landed and the last attempt worked" },
-  { key: "never_read", word: "never read",   of: "no read of them has ever completed" },
-  { key: "faulted",    word: "with a fault", of: "something below is wrong with them" },
-];
+// The locked spec: sources ARE the picture. No chunk counts, no fill bar. The tab
+// draws the same grouped tree the filling lens draws, through the same renderer,
+// and hangs "where we could do more" beneath it.
 
 async function readBrainTab() {
-  const list = $("#brain-sources");
   try {
     const { data, error } = await sb.rpc("brain_tab");
     if (error) throw error;
     if (data?.state === "unbound") { tabState("unbound"); return; }
     tab = data;
-    fillCounts();
-    fillFaults();
-    fillSources();
+    fillTree("#brain-tree", "b-");
+    fillMore();
     tabState("live");
   } catch (e) {
     tabState("unreachable", e?.message ?? String(e));
-  } finally {
-    if (list) list.setAttribute("aria-busy", "false");
   }
 }
 
@@ -778,137 +768,73 @@ function tabState(state, detail) {
   const b = el("div", "banner");
   if (state === "live") {
     b.className = "quiet";
-    b.textContent = `Read live at ${fmtWindow(tab.read_at)}. Every figure on this tab comes `
-      + `from that one reading, and none of it is stored.`;
+    b.textContent = `Read live at ${fmtWindow(tab.read_at)}. Nothing here is stored or typed.`;
   } else if (state === "unbound") {
     b.className = "banner bad";
-    b.innerHTML = `This browser is not signed in to a brain identity, so there is nothing to `
-      + `show. Nothing is hidden and nothing has failed — an unsigned request resolves to `
-      + `nobody. <a href="../login/">Sign in</a> and this fills in.`;
-    emptyTab("nothing to read");
+    b.innerHTML = `This browser is not signed in, so there is nothing to show. Nothing is `
+      + `hidden and nothing failed \u2014 an unsigned request resolves to nobody. `
+      + `<a href="../login/">Sign in</a> and this fills in.`;
+    blankTab("nothing to read");
   } else {
     b.className = "banner bad";
-    b.textContent = "The brain could not be reached just now, so nothing on this tab is filled "
-      + "in. This is the reading failing, not your sources being empty. "
+    b.textContent = "We could not reach your brain just now, so nothing here is filled in. "
+      + "This is our reading failing, not your sources being empty. "
       + (detail ? `Reported: ${detail}` : "");
-    emptyTab("could not reach");
+    blankTab("could not reach");
   }
   box.appendChild(b);
 }
 
 // A blank that never resolves would be a spinner that lies.
-function emptyTab(word) {
-  for (const id of ["brain-counts", "brain-faults", "brain-sources", "brain-empty"]) {
-    const n = $("#" + id);
-    if (n) n.innerHTML = `<li class="quiet" style="border-left:0;list-style:none">${word}</li>`;
-  }
+function blankTab(word) {
+  document.querySelectorAll("#brain-tree [data-shape]").forEach((c) => {
+    c.innerHTML = `<span class="state unread"><span class="dot"></span>${word}</span>`;
+  });
+  const m = $("#brain-more");
+  if (m) m.innerHTML = `<li class="quiet" style="border-left:0">${word}</li>`;
 }
 
-function fillCounts() {
-  const box = $("#brain-counts");
-  box.innerHTML = "";
-  for (const c of COUNTS) {
-    const d = el("div", "count");
-    d.innerHTML = `<b>${tab.counts[c.key]}</b><span class="c-word">${c.word}</span>`
-      + `<span class="c-of">${c.of}</span>`;
-    box.appendChild(d);
-  }
-
-  // The empty cases are two different facts and are never collapsed into one blank.
-  const e = $("#brain-empty");
-  e.innerHTML = "";
-  if (tab.empty === "no_sources") {
-    e.innerHTML = `<div class="banner">Nothing is connected yet, so there is nothing to read `
-      + `from. This is empty because it was never pointed at anything — not because a `
-      + `reading failed.</div>`;
-  } else if (tab.empty === "nothing_read") {
-    e.innerHTML = `<div class="banner bad">Nothing has been read yet. Connections exist, but `
-      + `no read has ever completed, so the memory holds nothing from them. This is not a `
-      + `quiet, healthy empty — it is work that has not happened.</div>`;
-  } else if (tab.counts.reading === 0) {
-    e.innerHTML = `<div class="banner bad">Nothing is reading right now. There are `
-      + `${tab.counts.connected} connections held, and none of them is currently bringing `
-      + `anything new in. What is in the memory is what already arrived.</div>`;
-  }
-}
-
-// Problems dominant, ordered, and the order is the argument.
-function fillFaults() {
-  const ol = $("#brain-faults");
-  ol.innerHTML = "";
-  if (!tab.faults.length) {
-    ol.innerHTML = `<li class="quiet" style="border-left:0">Nothing is wrong with any source.</li>`;
+// WHERE WE COULD DO MORE. Us-voice, grouped by CAUSE. Ten drives held by one
+// studio-side hold is one line, not ten. Only something needing a human decision
+// or a human-only fix is flagged; our own work is shown calmly rather than dressed
+// up as the customer's to-do.
+function fillMore() {
+  const ul = $("#brain-more");
+  if (!ul) return;
+  ul.innerHTML = "";
+  if (!tab.more?.length) {
+    ul.innerHTML = `<li class="quiet" style="border-left:0">Nothing needs us right now.</li>`;
     return;
   }
-  for (const f of tab.faults) {
-    const li = el("li", f.actionable ? "yours" : "ours");
-    const leaves = f.leaves.length
-      ? `Clears fault ${f.n} only. Fixing it leaves ${f.leaves.length} other `
-        + `${f.leaves.length === 1 ? "fault" : "faults"} on this same source: `
-        + `${f.leaves.join(", ")}.`
-      : `Clears fault ${f.n}, which is the only one on this source.`;
+  for (const a of tab.more) {
+    const li = el("li", a.needs_customer ? "" : "ours");
+    const covers = a.covers > 1
+      ? `<div class="a-clears">One cause, covering ${a.covers} of your sources.</div>` : "";
+    li.innerHTML = `<div class="a-title">${escape(a.title)}</div>`
+      + `<div class="a-detail">${escape(a.detail)}</div>` + covers;
 
-    const num = el("div", "a-n");
-    num.textContent = String(f.n);
-
-    // Built as nodes rather than written as innerHTML and queried back, so nothing
-    // here depends on re-finding an element this function just wrote.
-    const body = el("div", "a-body");
-    body.innerHTML =
-      `<div class="a-title">${escape(f.source_label)} — ${escape(f.title)}</div>` +
-      `<div class="a-detail">${escape(f.detail)}</div>` +
-      `<div class="a-clears">${escape(leaves)}</div>`;
-    li.append(num, body);
-    if (f.actionable) {
-      const btn = el("button", "a-fix");
-      btn.type = "button";
-      btn.textContent = f.fix;
-      btn.addEventListener("click", () => routeFault(f));
-      body.appendChild(btn);
+    if (a.actionable) {
+      const b = el("button", "a-fix");
+      b.type = "button";
+      b.textContent = a.fix;
+      b.addEventListener("click", () => routeMore(a));
+      li.appendChild(b);
     } else {
-      // No button that would fail. What it needs, and whose it is, stated instead.
+      // Never a control that would fail. What it needs, and whose it is, instead.
       const n = el("div", "a-mine");
-      n.textContent = `${f.fix}. ${f.why_not ?? ""}`.trim();
-      body.appendChild(n);
+      n.textContent = `${a.fix}. ${a.why_not ?? ""}`.trim();
+      li.appendChild(n);
     }
-    ol.appendChild(li);
-  }
-}
-
-function routeFault(f) {
-  if (f.source && f.source.startsWith("gmail:")) return openConnect("email");
-  if (f.source && f.source.startsWith("drive:")) return openConnect("drives");
-  say(`That one has no one-tap fix wired. What it needs: ${f.fix.toLowerCase()}.`);
-}
-
-function fillSources() {
-  const ul = $("#brain-sources");
-  ul.innerHTML = "";
-  for (const s of tab.sources) {
-    const li = el("li", s.faults.length ? "flag" : "");
-    // The two facts, side by side, never rolled into one word.
-    const conn = s.connected
-      ? `<span class="f yes">connected</span>`
-      : `<span class="f no">not connected</span>`;
-    const read = s.reading
-      ? `<span class="f yes">reading</span>`
-      : `<span class="f no">not reading</span>`;
-    const when = s.last_read_at
-      ? `last read ${fmtDay(s.last_read_at)}`
-      : `never read`;
-    const held = s.items
-      ? `${s.items.toLocaleString()} in the memory`
-      : `nothing in the memory`;
-    li.innerHTML =
-      `<div class="s-name">${escape(s.label)}</div>` +
-      `<div class="s-facts">${conn} ${read} <span class="f">${when}</span> ` +
-      `<span class="f">${held}</span></div>` +
-      (s.faults.length
-        ? `<div class="s-faults">${s.faults.length} `
-          + `${s.faults.length === 1 ? "fault" : "faults"} above: ${s.faults.join(", ")}</div>`
-        : "");
     ul.appendChild(li);
   }
+}
+
+function routeMore(a) {
+  const k = (a.affected ?? [])[0] ?? "";
+  if (k.startsWith("gmail:")) return openConnect("email");
+  if (k.startsWith("drive:")) return openConnect("drives");
+  if (k.startsWith("qbo:")) return openConnect("systems");
+  say(`What that needs: ${a.fix.toLowerCase()}.`);
 }
 
 // ── steps ───────────────────────────────────────────────────────────────────
