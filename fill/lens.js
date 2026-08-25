@@ -761,99 +761,10 @@ function answer(raw) {
     + "than guess.";
 }
 
-// The locked spec: sources ARE the picture. No chunk counts, no fill bar. The tab
-// draws the same grouped tree the filling lens draws, through the same renderer,
-// and hangs "where we could do more" beneath it.
-
-async function readBrainTab() {
-  try {
-    const { data, error } = await sb.rpc("brain_tab");
-    if (error) throw error;
-    if (data?.state === "unbound") { tabState("unbound"); return; }
-    tab = data;
-    fillTree("#brain-tree", "b-");
-    fillMore();
-    tabState("live");
-  } catch (e) {
-    tabState("unreachable", e?.message ?? String(e));
-  }
-}
-
-function tabState(state, detail) {
-  const box = $("#brain-state");
-  if (!box) return;
-  box.innerHTML = "";
-  const b = el("div", "banner");
-  if (state === "live") {
-    b.className = "quiet";
-    b.textContent = `Read live at ${fmtWindow(tab.read_at)}. Nothing here is stored or typed.`;
-  } else if (state === "unbound") {
-    b.className = "banner bad";
-    b.innerHTML = `This browser is not signed in, so there is nothing to show. Nothing is `
-      + `hidden and nothing failed \u2014 an unsigned request resolves to nobody. `
-      + `<a href="../login/">Sign in</a> and this fills in.`;
-    blankTab("nothing to read");
-  } else {
-    b.className = "banner bad";
-    b.textContent = "We could not read your source list just now, so nothing on this tab is "
-      + "filled in. This is our reading failing, not your sources being empty. "
-      + (detail ? `Reported: ${detail}` : "We have no reason to report, which is itself a gap.");
-    blankTab("could not reach");
-  }
-  box.appendChild(b);
-}
-
-// A blank that never resolves would be a spinner that lies.
-function blankTab(word) {
-  document.querySelectorAll("#brain-tree [data-shape]").forEach((c) => {
-    c.innerHTML = `<span class="state unread"><span class="dot"></span>${word}</span>`;
-  });
-  const m = $("#brain-more");
-  if (m) m.innerHTML = `<li class="quiet" style="border-left:0">${word}</li>`;
-}
-
-// WHERE WE COULD DO MORE. Us-voice, grouped by CAUSE. Ten drives held by one
-// studio-side hold is one line, not ten. Only something needing a human decision
-// or a human-only fix is flagged; our own work is shown calmly rather than dressed
-// up as the customer's to-do.
-function fillMore() {
-  const ul = $("#brain-more");
-  if (!ul) return;
-  ul.innerHTML = "";
-  if (!tab.more?.length) {
-    ul.innerHTML = `<li class="quiet" style="border-left:0">Nothing needs us right now.</li>`;
-    return;
-  }
-  for (const a of tab.more) {
-    const li = el("li", a.needs_customer ? "" : "ours");
-    const covers = a.covers > 1
-      ? `<div class="a-clears">One cause, covering ${a.covers} of your sources.</div>` : "";
-    li.innerHTML = `<div class="a-title">${escape(a.title)}</div>`
-      + `<div class="a-detail">${escape(a.detail)}</div>` + covers;
-
-    if (a.actionable) {
-      const b = el("button", "a-fix");
-      b.type = "button";
-      b.textContent = a.fix;
-      b.addEventListener("click", () => routeMore(a));
-      li.appendChild(b);
-    } else {
-      // Never a control that would fail. What it needs, and whose it is, instead.
-      const n = el("div", "a-mine");
-      n.textContent = `${a.fix}. ${a.why_not ?? ""}`.trim();
-      li.appendChild(n);
-    }
-    ul.appendChild(li);
-  }
-}
-
-function routeMore(a) {
-  const k = (a.affected ?? [])[0] ?? "";
-  if (k.startsWith("gmail:")) return openConnect("email");
-  if (k.startsWith("drive:")) return openConnect("drives");
-  if (k.startsWith("qbo:")) return openConnect("systems");
-  say(`What that needs: ${a.fix.toLowerCase()}.`);
-}
+// The sources tab was a second build of this same lens and is retired. What it
+// derived came across into brain_shape: the credential mechanism, the drill-in
+// labels, the faults grouped by cause, and the count that separates what needs you
+// from what is ours.
 
 // ── steps ───────────────────────────────────────────────────────────────────
 
