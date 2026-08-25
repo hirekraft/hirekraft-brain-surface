@@ -214,9 +214,9 @@ function drawTreeFrame(sel = "#tree", pfx = "") {
   }
 }
 
-// One renderer for both trees. The brain tab passes its own groups and prefix
-// rather than getting a second implementation of the same picture.
-function groupsFor(pfx) { return (pfx ? tab?.groups : shape?.groups) ?? []; }
+// One lens, one reading. The prefix arguments survive so the renderer stays
+// reusable, but there is only one set of groups now.
+function groupsFor() { return shape?.groups ?? []; }
 
 function fillTree(sel = "#tree", pfx = "") {
   const root = $(sel);
@@ -230,14 +230,22 @@ function fillTree(sel = "#tree", pfx = "") {
       cell.innerHTML = `<span class="state unread"><span class="dot"></span>nothing connected</span>`;
       continue;
     }
-    // The overview carries shape and aliveness — never a raw file count.
-    const live = (data.members ?? []).filter((m) => m.health === "reading").length;
+    // The overview carries shape, aliveness and reach back — never a raw file count.
+    // "Email - 6 mailboxes - reading live - back to Mar 2024".
+    const live = data.live ?? (data.members ?? []).filter((m) => m.health === "reading").length;
     const total = data.members?.length ?? data.count;
     const alive = data.kind === "reached"
       ? "reached when asked"
-      : (live === total ? "all reading live" : `${live} of ${total} reading live`);
+      : (live === total ? "all reading live"
+         : live === 0 ? "none reading live" : `${live} of ${total} reading live`);
+    // "back to Mar 2024" - the month the memory reaches back to, not a full date.
+    const span = data.span
+      ? ` &middot; back to ${new Date(data.span).toLocaleDateString(undefined,
+          { month: "short", year: "numeric" })}`
+      : "";
     cell.innerHTML =
-      `<span>${data.count} ${escape(data.noun)}</span> &middot; <span class="state">${alive}</span>`;
+      `<span>${data.count} ${escape(data.noun)}</span> &middot; <span class="state">${alive}</span>`
+      + span;
   }
 }
 
@@ -289,7 +297,10 @@ function drawMembers(key, body, pfx = "") {
       `<span class="m-win">${win}</span>` +
       `<svg class="chev" width="14" height="14" aria-hidden="true"><use href="#i-chev"/></svg>`;
 
-    btn.addEventListener("click", () => drawPlaceholder(li, m, data));
+    btn.addEventListener("click", () => {
+      if (m.opens) { userMoved = true; location.href = m.opens; return; }
+      drawPlaceholder(li, m, data);
+    });
     li.appendChild(btn);
 
     const st = el("div", `state ${HEALTH_CLASS[m.health] ?? ""}`);
@@ -390,6 +401,15 @@ function fillRecognition() {
 
 function fillAttention() {
   const ul = $("#attn");
+  const head = $("#attn-count");
+  if (head) {
+    const n = shape.needs_you ?? 0;
+    const other = (shape.attention?.length ?? 0) - n;
+    head.textContent = n === 0
+      ? "nothing needs you"
+      : `${n} need${n === 1 ? "s" : ""} you`
+        + (other > 0 ? `, ${other} ${other === 1 ? "is" : "are"} ours` : "");
+  }
   ul.innerHTML = "";
   if (!shape.attention?.length) {
     ul.innerHTML = `<li class="quiet" style="border-left:0">Nothing needs you right now.</li>`;
@@ -409,7 +429,7 @@ function fillAttention() {
         box.appendChild(link);
       });
       li.appendChild(box);
-    } else if (a.actionable === false) {
+    } else if (a.needs_customer === false || a.actionable === false) {
       // Never a button that would fail. An item this person cannot action says so,
       // and says whose it is, rather than routing them into a refusal.
       li.classList.add("ours");
