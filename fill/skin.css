@@ -400,6 +400,22 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   margin-top: calc(var(--u) * 2); font-size: var(--t-small); color: var(--ink-3);
 }
 
+/* -- the holding state -------------------------------------------------
+   The stall line is a CSS animation rather than a JS timer on purpose: if the
+   script throws before it routes, a timer never fires but an animation still
+   runs, so the page says what happened instead of holding forever. */
+.holding .lede { color: var(--ink-2); }
+.holding .stall {
+  margin-top: var(--gap-lg); max-width: var(--measure);
+  font-size: var(--t-small); color: var(--ink-3);
+  border-left: 2px solid var(--line); padding-left: var(--gap);
+  opacity: 0; animation: stall-in 1s var(--ease) 8s forwards;
+}
+@keyframes stall-in { from { opacity: 0 } to { opacity: 1 } }
+@media (prefers-reduced-motion: reduce) {
+  .holding .stall { animation-duration: 0s; }
+}
+
 .skip { position: absolute; left: -9999px; }
 .skip:focus {
   left: var(--gap); top: var(--gap); background: var(--ink); color: var(--paper);
