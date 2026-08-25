@@ -323,7 +323,16 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .banner a { color: var(--ink); }
 
 
-/* ── the source tab: two facts side by side, never merged ──────────── */
+/* -- drawer labels and our-own-work, per the locked spec -------------- */
+.m-nav {
+  display: block; font-size: var(--t-micro); color: var(--ink-4);
+  margin-top: calc(var(--u) * .5);
+}
+/* our own work: shown, never flagged. The accent stays reserved for a person. */
+.attn > li.ours { border-left-color: var(--line); }
+.attn > li.ours .a-title { color: var(--ink-2); font-weight: var(--w-plain); }
+
+/* -- the source tab -------------------------------------------------- */
 
 .counts {
   display: grid; gap: var(--gap); margin-top: var(--gap-lg);
