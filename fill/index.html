@@ -137,24 +137,32 @@
     <p class="eyebrow">Your brain</p>
     <h2 id="sum-head">What is in it.</h2>
     <p class="quiet">The sources are the picture. There is nothing to fill up — the memory is
-      whatever is connected, and this is all of it.</p>
+      whatever is connected, and this is all of it. <b>Connected</b> and <b>reading</b> are
+      different facts and are kept apart: a permission we hold brings nothing in on its own.
+      Open a group to see each one, and open a mailbox to read it.</p>
 
     <!-- Structure renders immediately with space reserved; the reading lands into it. -->
     <div class="tree" id="tree" aria-busy="true"></div>
 
     <div id="live-state" aria-live="polite"></div>
 
-    <h2 style="margin-top:4rem">Where we could do more</h2>
-    <p class="quiet">Only things that need a decision from you, or a fix only you can make.
-      Retries, rate limits and duplicates sort themselves out and are not listed here.</p>
+    <h2 style="margin-top:4rem">Where we could do more
+      <span class="grp-shape" id="attn-count"></span></h2>
+    <p class="quiet">Grouped by what is causing it, so one hold across ten drives reads as one
+      thing rather than ten. Marked items need a decision from you. The rest are ours, and we
+      list them so you can see we know. Retries, rate limits and duplicates sort themselves out
+      and never appear here.</p>
     <ul class="attn" id="attn" aria-live="polite"></ul>
 
     <div class="actions" style="margin-top:2.5rem">
       <button class="go ghost" data-goto="s-connect">Connect something else</button>
-      <button class="go ghost" data-goto="s-brain">Every source, in detail</button>
       <button class="go ghost" data-goto="s-recognition">Read it back to me</button>
       <button class="go ghost" data-goto="s-intro">What this is</button>
     </div>
+
+    <p class="pull">A note on this screen: the consultant should be a rail down the left that
+      never leaves, and right now it is the bar along the bottom instead. That is a gap between
+      this surface and its own spec, and we would rather name it than let you wonder.</p>
 
     <p class="sovereign">This brain is yours. It sits in your own database and nothing in it
       reaches Sense. That one arrangement has two consequences worth knowing: you can leave at
@@ -162,37 +170,6 @@
       source is still yours.</p>
   </section>
 
-  <!-- 6. EVERY SOURCE - connected and reading, kept apart.
-       The summary above answers "what is in the memory". This answers "is any of it
-       still arriving", which is a different question and was previously collapsed
-       into the first one. -->
-  <section class="step" id="s-brain" hidden>
-    <p class="eyebrow">Your brain</p>
-    <h2>Every source, and whether it is actually reading.</h2>
-    <p class="quiet">Connected and reading are two different facts and are kept apart here.
-      <b>Connected</b> means a permission was accepted. <b>Reading</b> means a read actually
-      completed, something is scheduled to do it again, and the last attempt did not fail.
-      A held permission on its own brings nothing in.</p>
-
-    <div id="brain-tree" class="tree" aria-busy="true"></div>
-
-    <h2 style="margin-top:4rem">Where we could do more</h2>
-    <p class="quiet">Grouped by what is actually causing it, so one hold on ten drives reads
-      as one thing rather than ten. The marked ones need a decision from you. The rest are
-      ours, and we show them so you can see we know.</p>
-    <ul class="attn" id="brain-more" aria-live="polite"></ul>
-
-    <p class="pull">A note on this screen: the consultant should be a rail down the left that
-      never leaves, and right now it is the bar along the bottom instead. That is a gap between
-      this surface and its own spec, and we would rather name it than let you wonder.</p>
-
-    <div id="brain-state"></div>
-
-    <div class="actions" style="margin-top:2.5rem">
-      <button class="go ghost" data-goto="s-summary">Back to your brain</button>
-      <button class="go ghost" data-goto="s-connect">Connect something else</button>
-    </div>
-  </section>
 
 </main>
 
