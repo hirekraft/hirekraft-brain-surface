@@ -745,12 +745,14 @@ function answer(raw) {
       + "first — though that estimate is not yet calculated in this build.";
   }
   if (/(reading|updating|up to date|fresh|behind|stopped|still working)/.test(q)) {
-    if (!tab) return "I have not been able to read the source list, so I cannot tell you what "
+    if (!shape) return "I have not been able to read your sources, so I cannot tell you what "
       + "is reading. That is a reading failure on this screen, not an answer.";
-    return `${tab.counts.connected} of ${tab.counts.sources} sources have a permission held, and `
-      + `${tab.counts.reading} are actually reading. Those are different facts — a held `
-      + `permission does not mean anything is arriving. ${tab.counts.faulted} have something `
-      + `wrong, listed under "every source" in the order they need fixing.`;
+    const gs = shape.groups.filter((g) => g.connected);
+    const conn = gs.reduce((n, g) => n + (g.count ?? 0), 0);
+    const live = gs.reduce((n, g) => n + (g.live ?? 0), 0);
+    return `${conn} sources have a permission held and ${live} are actually reading. Those are `
+      + `different facts: a permission we hold brings nothing in on its own. `
+      + `${shape.needs_you ?? 0} of the things below need a decision from you.`;
   }
   return "I can answer what is connected, what is actually reading, how far back each source "
     + "reaches, what needs you, how the "
@@ -758,14 +760,6 @@ function answer(raw) {
     + "of your actual mail and documents come when those lenses are built — I would rather say that "
     + "than guess.";
 }
-
-// -- the brain tab ------------------------------------------------------------
-// CONNECTED and READING are different facts and are never merged here. Connected
-// means a permission was accepted. Reading means a read actually completed, on a
-// schedule, and the last attempt did not fail. Everything below comes from one
-// call to brain_tab(), which resolves the caller from their signed token.
-
-let tab = null;
 
 // The locked spec: sources ARE the picture. No chunk counts, no fill bar. The tab
 // draws the same grouped tree the filling lens draws, through the same renderer,
@@ -907,8 +901,5 @@ say("I am here the whole way through. Ask about anything on this screen — what
   + "back it reads, or what any of it means.");
 
 readBrain();                     // then the live reading lands into the frame
-drawTreeFrame("#brain-tree", "b-");   // the tab's frame, drawn by the same renderer
-readBrainTab();                  // and the same for the source tab, independently
-
-// Deep link, so the tab is reachable directly rather than only by retyping a URL.
-if (location.hash === "#sources") goto("s-brain");
+// An old #sources link still lands somewhere true: there is one lens now.
+if (location.hash === "#sources") { userMoved = true; goto("s-summary"); }
