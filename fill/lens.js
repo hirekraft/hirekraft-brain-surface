@@ -120,7 +120,7 @@ async function readBrain() {
     const { data, error } = await sb.rpc("brain_shape");
     if (error) throw error;
 
-    if (data?.state === "unbound") { renderState("unbound"); return; }
+    if (data?.state === "unbound") { renderState("unbound"); routeOnState("unbound"); return; }
 
     shape = data;
     renderWho();
@@ -128,11 +128,11 @@ async function readBrain() {
     fillAttention();
     fillRecognition();
     renderState("live");
-    routeOnState();
+    routeOnState("live");
   } catch (e) {
     // Never fabricate and never hang. Say the reading did not come back.
     renderState("unreachable", e?.message ?? String(e));
-    routeOnState(true);
+    routeOnState("unknown");
   } finally {
     tree.setAttribute("aria-busy", "false");
   }
@@ -768,15 +768,21 @@ function answer(raw) {
 
 // ── steps ───────────────────────────────────────────────────────────────────
 
-function routeOnState(unknown = false) {
+// The page opens on the holding state, so this must ALWAYS land somewhere - a
+// route that declines to move now leaves the person waiting rather than on a
+// merely-wrong screen.
+function routeOnState(mode) {
   if (userMoved) return;                        // never move someone who has chosen
-  if (location.hash === "#sources") return;     // a deep link is a choice too
-  // When the reading failed we do not know the state, so we must not assert a first
-  // run either. Show the lens with its honest failure rather than an opening screen
-  // that implies nothing is connected.
-  if (unknown) { goto("s-summary"); return; }
+  if (location.hash === "#sources") { goto("s-summary"); return; }
+  // Nobody signed in: the introduction is the honest screen, and it claims nothing
+  // about data because there is no identity to claim it about.
+  if (mode === "unbound") { goto("s-intro"); return; }
+  // The reading failed, so the state is unknown. Show the lens carrying its own
+  // failure rather than a first-run screen, which would assert an empty brain on
+  // the strength of a request that never came back.
+  if (mode === "unknown") { goto("s-summary"); return; }
   const connected = (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
-  if (connected > 0) goto("s-summary");
+  goto(connected > 0 ? "s-summary" : "s-intro");
 }
 
 function goto(id) {
@@ -812,5 +818,6 @@ say("I am here the whole way through. Ask about anything on this screen — what
   + "back it reads, or what any of it means.");
 
 readBrain();                     // then the live reading lands into the frame
-// An old #sources link still lands somewhere true: there is one lens now.
+// An old #sources link still lands somewhere true: there is one lens now. Routed
+// immediately rather than waiting for the read, because it is already a decision.
 if (location.hash === "#sources") { userMoved = true; goto("s-summary"); }
