@@ -128,9 +128,11 @@ async function readBrain() {
     fillAttention();
     fillRecognition();
     renderState("live");
+    routeOnState();
   } catch (e) {
     // Never fabricate and never hang. Say the reading did not come back.
     renderState("unreachable", e?.message ?? String(e));
+    routeOnState(true);
   } finally {
     tree.setAttribute("aria-busy", "false");
   }
@@ -841,6 +843,17 @@ function routeMore(a) {
 
 // ── steps ───────────────────────────────────────────────────────────────────
 
+function routeOnState(unknown = false) {
+  if (userMoved) return;                        // never move someone who has chosen
+  if (location.hash === "#sources") return;     // a deep link is a choice too
+  // When the reading failed we do not know the state, so we must not assert a first
+  // run either. Show the lens with its honest failure rather than an opening screen
+  // that implies nothing is connected.
+  if (unknown) { goto("s-summary"); return; }
+  const connected = (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
+  if (connected > 0) goto("s-summary");
+}
+
 function goto(id) {
   document.querySelectorAll("section.step").forEach((s) => { s.hidden = s.id !== id; });
   window.scrollTo({ top: 0 });
@@ -852,9 +865,12 @@ function goto(id) {
 drawTreeFrame();                 // the frame first, instantly, with space reserved
 stageTypes();
 
+// Once a person has chosen a screen, a late-arriving reading must not move them
+// off it. Declared before the first read is issued, below.
+let userMoved = false;
 document.addEventListener("click", (e) => {
   const b = e.target.closest("[data-goto]");
-  if (b) goto(b.dataset.goto);
+  if (b) { userMoved = true; goto(b.dataset.goto); }
 });
 
 $("#ask-send").addEventListener("click", ask);
