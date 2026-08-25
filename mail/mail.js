@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { onBrainChange } from "../doorbell.js";
 
 /* ================= config ================= */
 const BRAIN = "https://uvdoompnnypmneyrvtas.supabase.co";
@@ -714,6 +715,85 @@ async function boot(){
   }
 }
 
+/* ================= the doorbell ================= */
+/* A tick says only that something changed. We re-ask through lens() - the same
+   gated endpoint boot() uses - and render what comes back. The tick is never
+   trusted for content, and a missed one costs nothing because the re-ask returns
+   current state either way. */
+async function refresh(){
+  if(!SESSION_JWT) return;
+  try{
+    const [src,inbox]=await Promise.all([
+      lens("sources",{}),
+      lens("inbox",{source_key:MAILBOX}),
+    ]);
+    const before = STATE.pages.length;
+    STATE.sources=src;
+    STATE.pages=inbox.messages||[];
+    STATE.nextToken=inbox.next_page_token||null;
+    STATE.totalEstimate=inbox.total_estimate||null;
+    STATE.filter=inbox.filter_applied||null;
+
+    const est = STATE.totalEstimate ? (" of ~"+STATE.totalEstimate) : "";
+    document.getElementById("sub").innerHTML='<span class="mono">'+esc(STATE.pages.length)+est+
+      ' threads &middot; read live, nothing copied</span>';
+
+    /* Never redraw under someone who is reading something. A late-arriving reading
+       must not move a person off what they chose to open - so if a thread or a case
+       is open, the list updates underneath and we say so quietly instead. */
+    if(STATE.openThread || STATE.openCase){ noteArrival(STATE.pages.length - before); return; }
+    clearArrival();
+    paintCounts(); renderStage();
+  }catch(e){
+    /* We heard the bell and could not answer it. Say which of the two happened,
+       because "nothing new" and "we could not look" are different facts. */
+    noteProblem(String(e.message||e));
+  }
+}
+
+function arrivalBox(){
+  let n=document.getElementById("doorbellNote");
+  if(!n){
+    n=document.createElement("div");
+    n.id="doorbellNote";
+    n.className="note";
+    n.style.margin="16px 0 0";
+    const stage=document.getElementById("stage");
+    stage.parentNode.insertBefore(n,stage);
+  }
+  return n;
+}
+function clearArrival(){ const n=document.getElementById("doorbellNote"); if(n) n.remove(); }
+
+function noteArrival(delta){
+  const n=arrivalBox();
+  n.className="note";
+  n.innerHTML='<h3>'+(delta>0
+      ? esc(delta)+' new '+(delta===1?'thread has':'threads have')+' arrived'
+      : 'This mailbox has changed')+'</h3>'+
+    '<p>The list behind this has already updated. We have left what you are reading '+
+    'alone rather than redrawing it under you.</p>';
+  const b=document.createElement("button");
+  b.className="btn"; b.type="button"; b.textContent="Back to the list";
+  b.addEventListener("click",()=>{ STATE.openThread=null; STATE.openCase=null;
+    clearArrival(); paintCounts(); renderStage(); });
+  n.appendChild(b);
+}
+
+function noteProblem(why){
+  const n=arrivalBox();
+  n.className="note err";
+  n.innerHTML='<h3>Something changed and we could not re-read it</h3>'+
+    '<p>'+esc(why)+'</p>'+
+    '<p style="margin-top:7px">What is on screen is what we read a moment ago, so it is '+
+    'real but it may now be out of date. Reloading re-asks from the top.</p>';
+}
+
 window.addEventListener("DOMContentLoaded",()=>{
-  boot();
+  boot().then(()=>{
+    /* Subscribed only once a session exists. Without one the socket would connect
+       as the publishable key, RLS would refuse every row, and the page would look
+       exactly like a mailbox where nothing ever happens. */
+    if(SESSION_JWT) onBrainChange(sb, SESSION_JWT, refresh, {label:"mail"});
+  });
 });
