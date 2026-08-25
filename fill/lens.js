@@ -9,6 +9,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { onBrainChange } from "../doorbell.js";
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
@@ -771,8 +772,11 @@ function answer(raw) {
 // The page opens on the holding state, so this must ALWAYS land somewhere - a
 // route that declines to move now leaves the person waiting rather than on a
 // merely-wrong screen.
+let routed = false;
 function routeOnState(mode) {
+  if (routed) return;                           // this chooses the OPENING screen, once
   if (userMoved) return;                        // never move someone who has chosen
+  routed = true;
   if (location.hash === "#sources") { goto("s-summary"); return; }
   // Nobody signed in: the introduction is the honest screen, and it claims nothing
   // about data because there is no identity to claim it about.
@@ -821,3 +825,22 @@ readBrain();                     // then the live reading lands into the frame
 // An old #sources link still lands somewhere true: there is one lens now. Routed
 // immediately rather than waiting for the read, because it is already a decision.
 if (location.hash === "#sources") { userMoved = true; goto("s-summary"); }
+
+/* ================= the doorbell ================= */
+/* A source going live, falling behind, or a read landing is the same class of
+   change as new mail, so this lens takes the same bell. The re-ask goes through
+   brain_shape() - the one gated reading - and a group the person has opened is
+   redrawn from the new reading rather than snapped shut. */
+async function refreshBrain() {
+  await readBrain();
+  document.querySelectorAll('#tree [aria-expanded="true"]').forEach((row) => {
+    const key = row.id.replace(/^row-/, "");
+    const body = $("#body-" + key);
+    if (body && !body.hidden) drawMembers(key, body);
+  });
+}
+
+sb.auth.getSession().then(({ data }) => {
+  const jwt = data?.session?.access_token;
+  if (jwt) onBrainChange(sb, jwt, refreshBrain, { label: "brain" });
+});
