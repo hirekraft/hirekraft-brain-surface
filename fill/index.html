@@ -173,20 +173,17 @@
       completed, something is scheduled to do it again, and the last attempt did not fail.
       A held permission on its own brings nothing in.</p>
 
-    <div class="counts" id="brain-counts" aria-live="polite"></div>
-    <div id="brain-empty"></div>
+    <div id="brain-tree" class="tree" aria-busy="true"></div>
 
-    <h2 style="margin-top:4rem">What needs fixing</h2>
-    <p class="quiet">In the order they need fixing, and the order is the point: restoring a
-      permission on a source that nothing is scheduled to read leaves a connection that looks
-      healthy and brings in nothing, which is worse than one that is visibly broken. So the
-      structural faults come first. Each one says how many it clears and what it leaves behind,
-      and the ones marked as ours are ours; they are not hidden from you, and they are not
-      yours to do.</p>
-    <ol class="attn faults" id="brain-faults" aria-live="polite"></ol>
+    <h2 style="margin-top:4rem">Where we could do more</h2>
+    <p class="quiet">Grouped by what is actually causing it, so one hold on ten drives reads
+      as one thing rather than ten. The marked ones need a decision from you. The rest are
+      ours, and we show them so you can see we know.</p>
+    <ul class="attn" id="brain-more" aria-live="polite"></ul>
 
-    <h2 style="margin-top:4rem">Every source</h2>
-    <ul class="srclist" id="brain-sources" aria-busy="true"></ul>
+    <p class="pull">A note on this screen: the consultant should be a rail down the left that
+      never leaves, and right now it is the bar along the bottom instead. That is a gap between
+      this surface and its own spec, and we would rather name it than let you wonder.</p>
 
     <div id="brain-state"></div>
 
