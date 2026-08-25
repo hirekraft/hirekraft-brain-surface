@@ -44,8 +44,27 @@
 
 <main id="main" class="shell">
 
+  <!-- ── 0. HOLDING — the default, and it makes no claim about anyone's data ──
+       Neither the introduction nor the lens is correct until the reading answers:
+       one would tell a returning customer they have nothing, the other would show
+       a frame for data we have not read yet. So the page opens on neither. ── -->
+  <section class="step holding" id="s-holding">
+    <h1>Reading your brain.</h1>
+    <p class="lede">One moment. We are looking at what is connected before showing you
+      anything, so that what you see is your own state rather than a guess at it.</p>
+    <p class="stall">This is taking longer than it should. The page did not finish reading,
+      which is our problem and not something wrong with your brain. Reloading usually
+      settles it; if it does not, your sign-in may have expired &mdash;
+      <a href="../login/">sign in again</a>.</p>
+    <noscript>
+      <p class="stall" style="opacity:1;animation:none">This page needs JavaScript to read
+        your brain, and it is switched off, so nothing here can load. Nothing is wrong with
+        your data &mdash; we simply cannot reach it from this browser.</p>
+    </noscript>
+  </section>
+
   <!-- ── 1. INTRO — the concept first, then facts that can be checked ── -->
-  <section class="step" id="s-intro">
+  <section class="step" id="s-intro" hidden>
     <h1>A working memory of your business.</h1>
     <p class="lede">Tool reads what your business already runs on — your mail, your files, your
       records — and builds one current understanding of it. You can ask it questions and act on
