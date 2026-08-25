@@ -158,7 +158,9 @@ function renderState(state, detail) {
     b.textContent = "The brain could not be reached just now, so nothing above is filled in. "
       + "This is the reading failing, not the sources being empty. "
       + (detail ? `Reported: ${detail}` : "");
-    who.innerHTML = `<span class="quiet">reading unavailable</span>`;
+    who.innerHTML = `<span class="quiet">reading unavailable</span>`
+      + `<br><span class="m-nav">we could not read your source list`
+      + `${detail ? ` &mdash; ${escape(detail)}` : ""}</span>`;
     blankSkeletons("could not reach");
   }
   box.appendChild(b);
@@ -777,9 +779,9 @@ function tabState(state, detail) {
     blankTab("nothing to read");
   } else {
     b.className = "banner bad";
-    b.textContent = "We could not reach your brain just now, so nothing here is filled in. "
-      + "This is our reading failing, not your sources being empty. "
-      + (detail ? `Reported: ${detail}` : "");
+    b.textContent = "We could not read your source list just now, so nothing on this tab is "
+      + "filled in. This is our reading failing, not your sources being empty. "
+      + (detail ? `Reported: ${detail}` : "We have no reason to report, which is itself a gap.");
     blankTab("could not reach");
   }
   box.appendChild(b);
