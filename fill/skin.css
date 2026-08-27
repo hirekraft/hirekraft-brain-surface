@@ -170,8 +170,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   border: 1px solid var(--line); border-radius: var(--radius);
 }
 .choice:hover { border-color: var(--ink-4); }
-.choice .c-name { font-weight: var(--w-mid); color: var(--ink); font-size: var(--t-small); }
-.choice .c-sub { font-size: var(--t-small); color: var(--ink-3); margin-top: calc(var(--u) * .5); }
+.choice .c-name { display: block; font-weight: var(--w-mid); color: var(--ink); font-size: var(--t-small); }
+.choice .c-sub { display: block; font-size: var(--t-small); color: var(--ink-3); margin-top: calc(var(--u) * .5); }
 .choice svg { margin-top: 2px; color: var(--ink); }
 
 .notice {
