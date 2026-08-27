@@ -466,10 +466,13 @@ function pickerRow(item, accountKey) {
   const btn = el("button", "member");
   btn.type = "button";
 
+  btn.className = "member pick";
+
   const draw = (chosen, note) => {
     const where = item.kind === "shared_drive" ? "shared drive" : "in your own Drive";
     btn.innerHTML =
-      `<span class="m-name">${escape(item.name)}</span>`
+      `<span class="pick-box"><svg aria-hidden="true"><use href="#i-check"/></svg></span>`
+      + `<span class="m-name">${escape(item.name)}</span>`
       + `<span class="m-win">${escape(note ?? (chosen ? "coming in" : "not coming in"))}</span>`;
     btn.setAttribute("aria-pressed", String(chosen));
     const st = $(".state", li) ?? el("div", "state");
@@ -541,8 +544,9 @@ async function stageDrivePicker(accountKey) {
 
   stage.innerHTML = "";
   const said = el("div", "notice");
-  said.innerHTML = `Only the names were read to build this list &mdash; no file was opened and `
-    + `nothing was added to the memory. What you choose here is read; nothing else ever is.`;
+  said.innerHTML = `<b>Tick a line to bring it in; tick it again to stop.</b> `
+    + `Only the names were read to build this list &mdash; no file was opened and nothing was `
+    + `added to the memory. What you tick is read; nothing else ever is.`;
   stage.appendChild(said);
 
   const section = (title, sub, items) => {
