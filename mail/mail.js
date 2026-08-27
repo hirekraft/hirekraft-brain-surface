@@ -697,7 +697,13 @@ async function boot(){
     STATE.cases=cases||[];
     STATE.engagement=engagement||{};
 
-    const addr=(await humanMailbox(MAILBOX)) || MAILBOX.replace("gmail:","");
+    // THE ADDRESS IS THE MAILBOX. fill_label returns a DESCRIPTION of what lives
+    // in it - "candidate and placement records" - which is useful and is not its
+    // name. Using it as the title replaced the one fact on this screen that says
+    // whose mail you are looking at. alex@ hid the bug for months because it has
+    // no label, so the fallback to the address always fired and always looked right.
+    const addr = MAILBOX.replace("gmail:","");
+    const desc = await humanMailbox(MAILBOX);
     document.getElementById("title").textContent=addr;
     const est = STATE.totalEstimate ? (" of ~"+STATE.totalEstimate) : "";
     document.getElementById("sub").innerHTML='<span class="mono">'+esc(STATE.pages.length)+est+' threads · read live, nothing copied</span>';
@@ -705,7 +711,7 @@ async function boot(){
 
     setupToggle(); paintCounts(); renderStage();
     clearSpeech();
-    say("This is <b>"+esc(addr)+"</b>, read live just now — your whole inbox, nothing filtered out but spam.");
+    say("This is <b>"+esc(addr)+"</b>"+(desc?" ("+esc(desc)+")":"")+", read live just now — your whole inbox, nothing filtered out but spam.");
     say("Open any email: we lead with <b>what you didn't know</b> — the cross-source story — then the thread, then what you can do. Answer, forward, or just register it into a case.","small");
   }catch(e){
     document.getElementById("sub").textContent="";
