@@ -715,8 +715,24 @@ async function boot(){
     say("Open any email: we lead with <b>what you didn't know</b> — the cross-source story — then the thread, then what you can do. Answer, forward, or just register it into a case.","small");
   }catch(e){
     document.getElementById("sub").textContent="";
-    document.getElementById("stage").innerHTML='<div class="note err" style="margin:16px 0 0"><h3>We couldn\'t open the mailbox</h3><p>'+esc(String(e.message||e))+'</p>'+
-      '<p style="margin-top:7px"><b>The way out:</b> this usually means the mailbox isn\'t connected under your own sign-in, or the connection has lapsed. Reconnecting it from your brain page fixes it.</p></div>';
+    // Two different refusals were being given the same advice, and for the commoner
+    // of them the advice was actively wrong: re-connecting a mailbox that is already
+    // connected does nothing, because what is missing is not a key but permission to
+    // read it here. Telling someone to redo the step they just completed is worse
+    // than saying nothing.
+    const why=String(e.message||e);
+    const wayOut = /not bound to this identity/i.test(why)
+      ? 'this mailbox is connected and its key is stored. It is simply not yours to read yet, '
+        + 'which is a separate thing. Your <a href="../fill/">brain page</a> carries the step that '
+        + 'makes it readable by you. Signing in again will not help - that part is done.'
+      : /credential/i.test(why)
+      ? 'this mailbox is still read through the shared company key, which this lens refuses on '
+        + 'purpose because it cannot tell you apart from anyone else holding it. Sign in as this '
+        + 'mailbox once from your <a href="../fill/">brain page</a> and it becomes readable here.'
+      : 'this usually means the mailbox is not connected under your own sign-in, or the connection '
+        + 'has lapsed. Reconnecting it from your <a href="../fill/">brain page</a> fixes it.';
+    document.getElementById("stage").innerHTML='<div class="note err" style="margin:16px 0 0"><h3>We couldn\'t open the mailbox</h3><p>'+esc(why)+'</p>'+
+      '<p style="margin-top:7px"><b>The way out:</b> '+wayOut+'</p></div>';
     say("We couldn't get in. The reason is on the page — no guessing from us.","small");
   }
 }
