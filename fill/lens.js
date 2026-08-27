@@ -317,6 +317,17 @@ function drawMembers(key, body, pfx = "") {
     return;
   }
 
+  // Without this the drive rows are a report on decisions nobody was ever asked
+  // to make. The list below is the consequence of the choice; this is the choice.
+  if (key === "drives") {
+    const choose = el("button", "go");
+    choose.type = "button";
+    choose.textContent = "Choose what comes in";
+    choose.style.marginBottom = "1.2rem";
+    choose.addEventListener("click", () => stageDrivePicker(driveAccountKey()));
+    body.appendChild(choose);
+  }
+
   const list = el("ul", "members");
   for (const m of data.members) {
     const li = el("li");
@@ -424,6 +435,143 @@ function drawPlaceholder(li, m, group) {
 }
 
 // ── recognition: describe what is seen, name what is not. Never rank. ───────
+
+// ── the picker: the customer names what comes in ─────────────────────────────
+//
+// Two gates, in order (Principle 64). This is the first: the outer boundary, drawn
+// by the person who knows where their business lives. The brain classifies inside
+// it and never draws it. "Africa Trip 2025" and "HireKraft_Citi_Bank" sit next to
+// each other in the same list, and no classifier should be deciding between them.
+
+function driveAccountKey() {
+  const who = shape?.viewer?.email;
+  return who ? `drive:oauth:${who}` : null;
+}
+
+// supabase-js reports a non-2xx as a bare "Edge Function returned a non-2xx status",
+// which throws away the sentence the function wrote explaining why. Read the body.
+async function driveFn(body) {
+  const { data, error } = await sb.functions.invoke("workspace-drive-sources", { body });
+  if (error) {
+    let detail = error.message ?? String(error);
+    try { const j = await error.context?.json(); if (j?.error) detail = j.error; } catch { /* keep detail */ }
+    throw new Error(detail);
+  }
+  if (data && data.ok === false) throw new Error(data.error ?? "it stopped short without saying why");
+  return data;
+}
+
+function pickerRow(item, accountKey) {
+  const li = el("li");
+  const btn = el("button", "member");
+  btn.type = "button";
+
+  const draw = (chosen, note) => {
+    const where = item.kind === "shared_drive" ? "shared drive" : "in your own Drive";
+    btn.innerHTML =
+      `<span class="m-name">${escape(item.name)}</span>`
+      + `<span class="m-win">${escape(note ?? (chosen ? "coming in" : "not coming in"))}</span>`;
+    btn.setAttribute("aria-pressed", String(chosen));
+    const st = $(".state", li) ?? el("div", "state");
+    st.className = `state ${chosen ? "live" : "unread"}`;
+    st.innerHTML = `<span class="dot"></span>${escape(where)}`
+      + (item.read_here > 0 ? ` &middot; ${item.read_here} already read` : "");
+    if (!st.parentNode) li.appendChild(st);
+  };
+
+  btn.addEventListener("click", async () => {
+    const next = !item.chosen;
+    btn.disabled = true;
+    draw(item.chosen, next ? "bringing it in" : "stopping");
+    try {
+      if (next) {
+        const p = await driveFn({
+          action: "point", root_kind: item.kind, root_id: item.id,
+          label: item.name, account_source_key: accountKey,
+        });
+        await driveFn({ action: "walk_now", source_id: p.source_id });
+      } else {
+        await driveFn({ action: "unpoint", source_key: item.source_key });
+      }
+      item.chosen = next;
+      draw(item.chosen, next ? "coming in - reading has started" : "not coming in");
+    } catch (e) {
+      // The refusal is quoted, not summarised. These sentences say which person a
+      // source belongs to and why it was refused, and a paraphrase loses that.
+      draw(item.chosen, `did not change: ${e?.message ?? e}`);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  li.appendChild(btn);
+  draw(item.chosen);
+  return li;
+}
+
+async function stageDrivePicker(accountKey) {
+  userMoved = true;
+  goto("s-connect");
+  const stage = $("#connect-stage");
+  $("#connect-eyebrow").textContent = "Drives and folders";
+  $("#connect-head").textContent = "Which of these should come in?";
+  $("#connect-sub").textContent = "";
+  stage.innerHTML = `<p class="quiet">Reading the names of your drives and folders.</p>`;
+
+  if (!accountKey) {
+    stage.innerHTML = "";
+    const n = el("div", "notice flagged");
+    n.innerHTML = `<b>No Google Drive account is signed in yet.</b> Sign in first and this `
+      + `list fills with what that account reaches.`;
+    stage.appendChild(n);
+    return;
+  }
+
+  let data;
+  try {
+    data = await driveFn({ action: "discover", account_source_key: accountKey });
+  } catch (e) {
+    stage.innerHTML = "";
+    const n = el("div", "notice flagged");
+    n.innerHTML = `<b>The list could not be read, so nothing below is a claim about your Drive.</b> `
+      + escape(e?.message ?? e);
+    stage.appendChild(n);
+    return;
+  }
+
+  stage.innerHTML = "";
+  const said = el("div", "notice");
+  said.innerHTML = `Only the names were read to build this list &mdash; no file was opened and `
+    + `nothing was added to the memory. What you choose here is read; nothing else ever is.`;
+  stage.appendChild(said);
+
+  const section = (title, sub, items) => {
+    if (!items.length) return;
+    const h = el("h3");
+    h.textContent = title;
+    h.style.marginTop = "2rem";
+    stage.appendChild(h);
+    const p = el("p", "quiet");
+    p.textContent = sub;
+    stage.appendChild(p);
+    const ul = el("ul", "members");
+    for (const it of items) ul.appendChild(pickerRow(it, accountKey));
+    stage.appendChild(ul);
+  };
+
+  section("Shared drives", "The company's own drives. Everyone on them already sees what is in them.",
+          data.items.filter((i) => i.kind === "shared_drive"));
+  section("In your own Drive", "Nothing here comes in unless you say so. Choosing a folder brings "
+          + "everything inside it, now and later.",
+          data.items.filter((i) => i.kind === "my_drive_folder"));
+
+  const back = el("button", "go ghost");
+  back.type = "button";
+  back.textContent = "See what is connected now";
+  back.style.marginTop = "2rem";
+  back.addEventListener("click", async () => { goto("s-summary"); await refreshBrain(); });
+  stage.appendChild(back);
+}
 
 function fillRecognition() {
   const ul = $("#recog");
@@ -1139,6 +1287,10 @@ readBrain();                     // then the live reading lands into the frame
     say(`It is connected, but making it readable by you did not complete: ${e?.message ?? e}`);
   }
   fillAdoptable();
+
+  // A drive consent is step one of two, and until now there was no step two - which
+  // is exactly why signing in read as nothing having happened. Go to the choosing.
+  if (!isMail) await stageDrivePicker(done);
 })();
 // An old #sources link still lands somewhere true: there is one lens now. Routed
 // immediately rather than waiting for the read, because it is already a decision.
