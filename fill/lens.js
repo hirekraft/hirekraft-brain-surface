@@ -766,6 +766,22 @@ function stageConsent(provider, scope, groupKey) {
     + `withdraw it from your ${escape(provider.name)} account at any time.`;
   stage.appendChild(n);
 
+  // Drive names no mailbox, so without this the person is handed to Google with no
+  // statement of whose account is about to be used - which is how a connect reads
+  // as something happening TO you rather than something you did.
+  if (provider.type === "drive") {
+    const who = shape?.viewer?.email;
+    const w = el("div", "notice flagged");
+    w.innerHTML = `<b>You are signing in as ${escape(who ?? "your own Google account")}.</b> `
+      + `Connecting a drive under a different Google account is not built yet: this is `
+      + `recorded under the account above whichever one you pick on Google's screen, so `
+      + `use this one.`
+      + `<br><br>Signing in stores the permission and nothing more. It does not add a drive `
+      + `to the list, and it does not start reading one. Each drive says on its own line `
+      + `where it stands.`;
+    stage.appendChild(w);
+  }
+
   // Gate on what this actually is, not on the scope word next to it. Written as
   // `scope === "admin"`, this put the company mailbox list on the Drive consent
   // screen, where picking a line would have created a drive keyed by a mailbox.
@@ -1090,7 +1106,14 @@ readBrain();                     // then the live reading lands into the frame
     return say(`The connection did not complete: ${failed}. Nothing was stored.`);
   }
 
-  say(`${done} is connected, and its key is stored in your own workspace.`);
+  // A source key is not a sentence. Say it the way the person would.
+  const isMail = done.startsWith("gmail:");
+  const named  = done.replace(/^gmail:/, "").replace(/^drive:oauth:/, "");
+  say(isMail
+    ? `${named} is connected. The permission is stored in your own workspace.`
+    : `Google Drive is connected for ${named}. The permission is stored in your own `
+      + `workspace - and that is all it is. No drive was added to the list and no read `
+      + `was started by this. Each drive says on its own line where it stands.`);
 
   // FINISH THE ACT THE PERSON JUST PERFORMED. Holding a mailbox's key and being
   // allowed to read it here stay two different facts, and the standing offer below
@@ -1104,7 +1127,9 @@ readBrain();                     // then the live reading lands into the frame
     if (error) throw error;
     if (data?.ok) {
       say(data.changed
-        ? `It is now yours to read. Open it from the Email group above.`
+        ? (isMail
+            ? `It is now yours to read. Open it from the Email group above.`
+            : `It is now yours to read.`)
         : `It was already yours to read.`);
     } else {
       say(`It is connected, but not yet readable by you: `
