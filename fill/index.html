@@ -163,6 +163,11 @@
     <!-- Structure renders immediately with space reserved; the reading lands into it. -->
     <div class="tree" id="tree" aria-busy="true"></div>
 
+    <!-- Appears only when there is something to act on. Holding a mailbox's key
+         and being allowed to read it here are two different facts, and this is
+         where the second one is granted. Empty means nothing is waiting. -->
+    <div id="adopt" aria-live="polite"></div>
+
     <div id="live-state" aria-live="polite"></div>
 
     <h2 style="margin-top:4rem">Where we could do more
