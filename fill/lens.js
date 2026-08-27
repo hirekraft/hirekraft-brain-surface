@@ -592,12 +592,13 @@ function stageConsent(provider, scope, groupKey) {
   stage.appendChild(n);
 
   if (scope === "admin") {
+    // The copy on the previous screen promises every company mailbox is listed.
+    // It used to show a blank address box, which is a different thing and left
+    // the person guessing their own addresses. The list is read live.
     const which = el("div", "notice");
-    which.innerHTML = `<b>Which mailbox should this cover?</b> Leave it blank to use your own.`
-      + `<br><input id="mbx" type="email" placeholder="name@yourcompany.com" `
-      + `style="margin-top:.6rem;width:100%;max-width:22rem;font:inherit;padding:.5rem;`
-      + `border:1px solid currentColor;border-radius:4px;background:none;color:inherit">`;
+    which.innerHTML = `<b>Which mailbox?</b> <span class="quiet">reading your company mailboxes</span>`;
     stage.appendChild(which);
+    listMailboxes(which);
   }
 
   stage.appendChild(consentButton(provider, scope, groupKey));
@@ -606,6 +607,53 @@ function stageConsent(provider, scope, groupKey) {
   back.type = "button"; back.textContent = "Back";
   back.addEventListener("click", () => stageScope(groupKey, provider));
   stage.appendChild(back);
+}
+
+// The address box stays as the fallback, and is the only input consentButton
+// reads. Picking from the list fills it; typing into it still works.
+function mbxInput(v) {
+  return `<input id="mbx" type="email" value="${escape(v)}" placeholder="name@yourcompany.com" `
+    + `style="margin-top:.6rem;width:100%;max-width:22rem;font:inherit;padding:.5rem;`
+    + `border:1px solid currentColor;border-radius:4px;background:none;color:inherit">`;
+}
+
+// Live, from connectable_mailboxes(). Each line says what is true of that mailbox
+// today rather than offering an identical button for every one of them.
+async function listMailboxes(box) {
+  try {
+    const { data, error } = await sb.rpc("connectable_mailboxes");
+    if (error) throw error;
+    const rows = data ?? [];
+    if (!rows.length) {
+      box.innerHTML = `<b>Which mailbox?</b> Nothing is on record yet, so type the address.`
+        + mbxInput("");
+      return;
+    }
+    box.innerHTML = `<b>Which mailbox?</b> These are the company mailboxes on record. `
+      + `Pick the one you are about to sign in as.`
+      + `<div class="choices" id="mbx-list"></div>`
+      + `<div class="quiet" style="margin-top:.6rem">Or type another address.</div>`
+      + mbxInput("");
+    const list = box.querySelector("#mbx-list");
+    for (const r of rows) {
+      const b = el("button", "choice");
+      b.type = "button";
+      b.innerHTML = `<span aria-hidden="true"></span>`
+        + `<span><span class="c-name">${escape(r.address)}</span>`
+        + `<span class="c-sub">${escape(r.note)}</span></span>`;
+      b.addEventListener("click", () => {
+        list.querySelectorAll(".choice").forEach((x) => x.removeAttribute("aria-pressed"));
+        b.setAttribute("aria-pressed", "true");
+        const input = box.querySelector("#mbx");
+        if (input) input.value = r.address;
+      });
+      list.appendChild(b);
+    }
+  } catch (e) {
+    // Never a spinner that lies. If the list cannot be read, say so and fall back.
+    box.innerHTML = `<b>Which mailbox?</b> The list could not be read `
+      + `(${escape(e?.message ?? e)}), so type the address instead.` + mbxInput("");
+  }
 }
 
 function consentButton(provider, scope, groupKey) {
