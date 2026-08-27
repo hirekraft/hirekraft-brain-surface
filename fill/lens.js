@@ -406,10 +406,19 @@ function fillRecognition() {
 // read it through this surface, and the two must stay separate acts: a silent
 // sweep on page load would re-point sources nobody asked about. So this is an
 // offer, shown only when there is one to make, and taken deliberately.
-async function fillAdoptable() {
+// justDone: an address bound a moment ago. Without it this block re-renders, finds
+// nothing left to offer, and empties itself - which is correct and reads exactly
+// like the button having done nothing. The confirmation has to outlive the
+// refresh that the success caused.
+async function fillAdoptable(justDone) {
   const box = $("#adopt");
   if (!box) return;
   box.innerHTML = "";
+
+  const doneLine = justDone
+    ? `<b>Done.</b> ${escape(justDone)} is now yours to read. `
+      + `Open it from the Email group above.`
+    : null;
 
   let rows = [];
   try {
@@ -419,11 +428,19 @@ async function fillAdoptable() {
   } catch {
     return;   // an offer that cannot be made is simply absent; it claims nothing
   }
-  if (!rows.length) return;
+  if (!rows.length) {
+    if (doneLine) {
+      const w = el("div", "notice");
+      w.innerHTML = doneLine;
+      box.appendChild(w);
+    }
+    return;
+  }
 
   const many = rows.length !== 1;
   const wrap = el("div", "notice flagged");
-  wrap.innerHTML = `<b>${rows.length} mailbox${many ? "es" : ""} ${many ? "are" : "is"} `
+  wrap.innerHTML = (doneLine ? doneLine + "<br><br>" : "")
+    + `<b>${rows.length} mailbox${many ? "es" : ""} ${many ? "are" : "is"} `
     + `signed in but not yet readable by you.</b> Signing in proved you hold the key. `
     + `This is the separate step that says who may read it here.`;
 
@@ -450,7 +467,8 @@ async function fillAdoptable() {
         sub.textContent = data.changed
           ? "bound to you - it reads here now"
           : "already yours to read";
-        fillAdoptable();
+        // Re-render, but carry the result through it rather than losing it.
+        fillAdoptable(r.address);
       } catch (e) {
         sub.textContent = `Could not bind: ${e?.message ?? e}`;
         b.disabled = false;
