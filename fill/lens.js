@@ -688,7 +688,7 @@ function stageConsent(provider, scope, groupKey) {
     const which = el("div", "notice");
     which.innerHTML = `<b>Which mailbox?</b> <span class="quiet">reading your company mailboxes</span>`;
     stage.appendChild(which);
-    listMailboxes(which);
+    listMailboxes(which, provider, scope);
   }
 
   stage.appendChild(consentButton(provider, scope, groupKey));
@@ -709,7 +709,7 @@ function mbxInput(v) {
 
 // Live, from connectable_mailboxes(). Each line says what is true of that mailbox
 // today rather than offering an identical button for every one of them.
-async function listMailboxes(box) {
+async function listMailboxes(box, provider, scope) {
   try {
     const { data, error } = await sb.rpc("connectable_mailboxes");
     if (error) throw error;
@@ -722,7 +722,9 @@ async function listMailboxes(box) {
     box.innerHTML = `<b>Which mailbox?</b> These are the company mailboxes on record. `
       + `Pick the one you are about to sign in as.`
       + `<div class="choices" id="mbx-list"></div>`
-      + `<div class="quiet" style="margin-top:.6rem">Or type another address.</div>`
+      + `<p class="quiet">A mailbox that has never been connected here does not `
+      + `appear on this list. Type its address instead - a new address, or one this `
+      + `brain has never been pointed at.</p>`
       + mbxInput("");
     const list = box.querySelector("#mbx-list");
     for (const r of rows) {
@@ -731,11 +733,18 @@ async function listMailboxes(box) {
       b.innerHTML = `<span aria-hidden="true"></span>`
         + `<span><span class="c-name">${escape(r.address)}</span>`
         + `<span class="c-sub">${escape(r.note)}</span></span>`;
+      // ONE GESTURE. This used to fill the address box, which then needed a second
+      // click on a button somewhere below - two acts for a choice the click had
+      // already made, and the filled box read like a form to check rather than a
+      // decision taken.
       b.addEventListener("click", () => {
         list.querySelectorAll(".choice").forEach((x) => x.removeAttribute("aria-pressed"));
         b.setAttribute("aria-pressed", "true");
-        const input = box.querySelector("#mbx");
-        if (input) input.value = r.address;
+        const sub = b.querySelector(".c-sub");
+        if (sub) sub.textContent = `opening ${provider.name}`;
+        beginConnect(provider, scope, r.address, b, () => {
+          if (sub) sub.textContent = r.note;
+        });
       });
       list.appendChild(b);
     }
@@ -746,51 +755,57 @@ async function listMailboxes(box) {
   }
 }
 
+// ONE PATH TO THE PROVIDER, whether the address came from a click on the list or
+// from the box. Two copies of this would be two truths, and the one nobody used
+// would be the one that rotted.
+async function beginConnect(provider, scope, mailbox, btn, restore) {
+  if (btn) btn.disabled = true;
+  const giveBack = () => { if (btn) btn.disabled = false; if (restore) restore(); };
+  try {
+    // source_begin resolves the acting identity from the token. There is no
+    // identity to pass, which is the point. And nothing on the far side of the
+    // consent hop knows this surface's address, so this page says where to come
+    // back to rather than anyone hard-coding it.
+    const { data, error } = await sb.rpc("source_begin", {
+      p_source_type: provider.type, p_scope: scope, p_mailbox: mailbox || null,
+      p_return_to: location.origin + location.pathname,
+    });
+    if (error) throw error;
+
+    if (!data?.ok) {
+      giveBack();
+      return stageStopped({
+        unbound:    "You are not signed in to a brain identity, so nothing can be connected. Sign in first.",
+        owner_only: "Connecting on behalf of the firm is an owner-level act, and this identity is not an owner.",
+        not_wired:  "That provider is not wired up, so there is nothing to consent to yet.",
+        no_mailbox: "No address to connect. Pick a mailbox, or type one.",
+      }[data?.reason] ?? `It stopped short: ${data?.reason ?? "unknown"}.`);
+    }
+
+    if (data.existing) {
+      const n = el("div", "notice flagged");
+      n.innerHTML = `<b>This source is already connected.</b> ${escape(data.note)}`;
+      $("#connect-stage").appendChild(n);
+    }
+    // Hand off to the provider. The consent itself is a human act, by design.
+    window.location.href = `${SUPABASE_URL}/functions/v1/oauth-start`
+      + `?source_id=${encodeURIComponent(data.source_id)}`;
+  } catch (e) {
+    giveBack();
+    stageStopped(`The connect could not be started: ${e?.message ?? e}`);
+  }
+}
+
 function consentButton(provider, scope, groupKey) {
   const wrap = el("div", "actions");
   const b = el("button", "go");
   b.type = "button";
   b.textContent = `Continue to ${provider.name}`;
-  b.addEventListener("click", async () => {
-    b.disabled = true;
+  b.addEventListener("click", () => {
+    const label = b.textContent;
     b.textContent = "Preparing\u2026";
-    const mailbox = $("#mbx")?.value?.trim() || null;
-    try {
-      // source_begin resolves the acting identity from the token. There is no
-      // identity to pass, which is the point.
-      // Where to come back to. Nothing on the far side of the consent hop knows
-      // this surface's address, and hard-coding one anywhere would break for the
-      // next customer. This page knows, so it says.
-      const { data, error } = await sb.rpc("source_begin", {
-        p_source_type: provider.type, p_scope: scope, p_mailbox: mailbox,
-        p_return_to: location.origin + location.pathname,
-      });
-      if (error) throw error;
-
-      if (!data?.ok) {
-        b.disabled = false;
-        b.textContent = `Continue to ${provider.name}`;
-        return stageStopped({
-          unbound:    "You are not signed in to a brain identity, so nothing can be connected. Sign in first.",
-          owner_only: "Connecting on behalf of the firm is an owner-level act, and this identity is not an owner.",
-          not_wired:  "That provider is not wired up, so there is nothing to consent to yet.",
-          no_mailbox: "No address to connect. Enter the mailbox this should cover.",
-        }[data?.reason] ?? `It stopped short: ${data?.reason ?? "unknown"}.`);
-      }
-
-      if (data.existing) {
-        const n = el("div", "notice flagged");
-        n.innerHTML = `<b>This source is already connected.</b> ${escape(data.note)}`;
-        $("#connect-stage").appendChild(n);
-      }
-      // Hand off to the provider. The consent itself is a human act, by design.
-      window.location.href = `${SUPABASE_URL}/functions/v1/oauth-start`
-        + `?source_id=${encodeURIComponent(data.source_id)}`;
-    } catch (e) {
-      b.disabled = false;
-      b.textContent = `Continue to ${provider.name}`;
-      stageStopped(`The connect could not be started: ${e?.message ?? e}`);
-    }
+    beginConnect(provider, scope, $("#mbx")?.value?.trim() || null, b,
+      () => { b.textContent = label; });
   });
   wrap.appendChild(b);
   return wrap;
