@@ -128,6 +128,7 @@ async function readBrain() {
     fillTree();
     fillAttention();
     fillRecognition();
+    fillAdoptable();
     renderState("live");
     routeOnState("live");
   } catch (e) {
@@ -399,6 +400,67 @@ function fillRecognition() {
 }
 
 // ── where we could do more ───────────────────────────────────────────────────
+
+// ── mailboxes that hold a key but are not yet yours to read ─────────────────
+// Signing in to Google proves you hold the mailbox's key. It does not say who may
+// read it through this surface, and the two must stay separate acts: a silent
+// sweep on page load would re-point sources nobody asked about. So this is an
+// offer, shown only when there is one to make, and taken deliberately.
+async function fillAdoptable() {
+  const box = $("#adopt");
+  if (!box) return;
+  box.innerHTML = "";
+
+  let rows = [];
+  try {
+    const { data, error } = await sb.rpc("connectable_mailboxes");
+    if (error) throw error;
+    rows = (data ?? []).filter((r) => r.credential_held && !r.bound_to_me);
+  } catch {
+    return;   // an offer that cannot be made is simply absent; it claims nothing
+  }
+  if (!rows.length) return;
+
+  const many = rows.length !== 1;
+  const wrap = el("div", "notice flagged");
+  wrap.innerHTML = `<b>${rows.length} mailbox${many ? "es" : ""} ${many ? "are" : "is"} `
+    + `signed in but not yet readable by you.</b> Signing in proved you hold the key. `
+    + `This is the separate step that says who may read it here.`;
+
+  const list = el("div", "choices");
+  for (const r of rows) {
+    const b = el("button", "choice");
+    b.type = "button";
+    b.innerHTML = `<span aria-hidden="true"></span><span>`
+      + `<span class="c-name">${escape(r.address)}</span>`
+      + `<span class="c-sub">${escape(r.note)} Make it readable by me.</span></span>`;
+    b.addEventListener("click", async () => {
+      const sub = b.querySelector(".c-sub");
+      b.disabled = true;
+      sub.textContent = "binding";
+      try {
+        const { data, error } = await sb.rpc("source_adopt", { p_source_key: r.source_key });
+        if (error) throw error;
+        if (!data?.ok) {
+          // The refusal is quoted rather than summarised, so the reason survives.
+          sub.textContent = data?.note ?? `Not bound: ${data?.reason ?? "unknown"}.`;
+          b.disabled = false;
+          return;
+        }
+        sub.textContent = data.changed
+          ? "bound to you - it reads here now"
+          : "already yours to read";
+        fillAdoptable();
+      } catch (e) {
+        sub.textContent = `Could not bind: ${e?.message ?? e}`;
+        b.disabled = false;
+      }
+    });
+    list.appendChild(b);
+  }
+  wrap.appendChild(list);
+  box.appendChild(wrap);
+}
 
 function fillAttention() {
   const ul = $("#attn");
