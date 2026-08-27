@@ -468,24 +468,36 @@ function pickerRow(item, accountKey) {
 
   btn.className = "member pick";
 
-  const draw = (chosen, note) => {
+  // Two states. A drive is being read, or it is not. "Starting" and "stopping" are
+  // the moments in between and are written as motion, not as a third condition.
+  const draw = (chosen, moving, trouble) => {
     const where = item.kind === "shared_drive" ? "shared drive" : "in your own Drive";
     btn.innerHTML =
       `<span class="pick-box"><svg aria-hidden="true"><use href="#i-check"/></svg></span>`
       + `<span class="m-name">${escape(item.name)}</span>`
-      + `<span class="m-win">${escape(note ?? (chosen ? "coming in" : "not coming in"))}</span>`;
+      + `<span class="m-win">${escape(moving ?? (chosen ? "reading" : "not reading"))}</span>`;
     btn.setAttribute("aria-pressed", String(chosen));
+
+    // What is true of this drive, under its name. A drive that is being read and has
+    // never returned a document is not the same as one that is working, and used to
+    // look identical to it.
+    let tail = "";
+    if (trouble) tail = ` &middot; ${escape(trouble)}`;
+    else if (item.files_read > 0) {
+      tail = ` &middot; ${item.files_read} ${item.files_read === 1 ? "file" : "files"} read`
+           + (chosen ? "" : " before this was stopped");
+    } else if (chosen) tail = " &middot; nothing read from it yet";
+
     const st = $(".state", li) ?? el("div", "state");
-    st.className = `state ${chosen ? "live" : "unread"}`;
-    st.innerHTML = `<span class="dot"></span>${escape(where)}`
-      + (item.read_here > 0 ? ` &middot; ${item.read_here} already read` : "");
+    st.className = `state ${trouble ? "stalled" : chosen ? "live" : "unread"}`;
+    st.innerHTML = `<span class="dot"></span>${escape(where)}${tail}`;
     if (!st.parentNode) li.appendChild(st);
   };
 
   btn.addEventListener("click", async () => {
     const next = !item.chosen;
     btn.disabled = true;
-    draw(item.chosen, next ? "bringing it in" : "stopping");
+    draw(item.chosen, next ? "starting\u2026" : "stopping\u2026");
     try {
       if (next) {
         const p = await driveFn({
@@ -497,11 +509,11 @@ function pickerRow(item, accountKey) {
         await driveFn({ action: "unpoint", source_key: item.source_key });
       }
       item.chosen = next;
-      draw(item.chosen, next ? "coming in - reading has started" : "not coming in");
+      draw(item.chosen);
     } catch (e) {
       // The refusal is quoted, not summarised. These sentences say which person a
       // source belongs to and why it was refused, and a paraphrase loses that.
-      draw(item.chosen, `did not change: ${e?.message ?? e}`);
+      draw(item.chosen, null, `did not change: ${e?.message ?? e}`);
     } finally {
       btn.disabled = false;
     }
@@ -544,9 +556,9 @@ async function stageDrivePicker(accountKey) {
 
   stage.innerHTML = "";
   const said = el("div", "notice");
-  said.innerHTML = `<b>Tick a line to bring it in; tick it again to stop.</b> `
-    + `Only the names were read to build this list &mdash; no file was opened and nothing was `
-    + `added to the memory. What you tick is read; nothing else ever is.`;
+  said.innerHTML = `<b>Tick a box to have Tool read that drive or folder. Untick it to stop.</b> `
+    + `Tool reads what is ticked here and nothing else. Building this list needed only `
+    + `the names &mdash; no file was opened, and nothing was added to the memory.`;
   stage.appendChild(said);
 
   const section = (title, sub, items) => {
