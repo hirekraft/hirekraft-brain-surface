@@ -983,7 +983,7 @@ readBrain();                     // then the live reading lands into the frame
 // Landing back from a provider. The round trip now ends where it started, rather
 // than on a page telling the person to close the window and find their own way
 // back. Each outcome says which one it was; none of them is silent.
-(() => {
+(async () => {
   const q = new URLSearchParams(location.search);
   const done = q.get("connected");
   const declined = q.get("connect_declined");
@@ -991,18 +991,41 @@ readBrain();                     // then the live reading lands into the frame
   if (!done && !declined && !failed) return;
   userMoved = true;
   goto("s-summary");
-  if (done) {
-    say(`${done} is connected, and its key is stored in your own workspace. `
-      + `Holding the key and being allowed to read it here are two different things, `
-      + `so there is one more step waiting for you above.`);
-  } else if (declined) {
-    const why = q.get("reason");
-    say(`That sign-in was declined${why ? ` (${why})` : ""}. Nothing changed, and nothing was stored.`);
-  } else {
-    say(`The connection did not complete: ${failed}. Nothing was stored.`);
-  }
   // Clear the marker so a reload does not repeat the message as though it just happened.
   history.replaceState({}, "", location.pathname);
+
+  if (declined) {
+    const why = q.get("reason");
+    return say(`That sign-in was declined${why ? ` (${why})` : ""}. Nothing changed, and nothing was stored.`);
+  }
+  if (failed) {
+    return say(`The connection did not complete: ${failed}. Nothing was stored.`);
+  }
+
+  say(`${done} is connected, and its key is stored in your own workspace.`);
+
+  // FINISH THE ACT THE PERSON JUST PERFORMED. Holding a mailbox's key and being
+  // allowed to read it here stay two different facts, and the standing offer below
+  // still exists for anything found lying in that state. But making someone hunt
+  // for a button immediately after they signed in as this exact mailbox, in this
+  // session, by their own deliberate act, is not a safeguard - it is an unfinished
+  // sentence. The thing this guards against is a SILENT SWEEP over sources nobody
+  // asked about; this is the one source they just asked about, named in the return.
+  try {
+    const { data, error } = await sb.rpc("source_adopt", { p_source_key: done });
+    if (error) throw error;
+    if (data?.ok) {
+      say(data.changed
+        ? `It is now yours to read. Open it from the Email group above.`
+        : `It was already yours to read.`);
+    } else {
+      say(`It is connected, but not yet readable by you: `
+        + `${data?.note ?? data?.reason ?? "the reason was not given"}`);
+    }
+  } catch (e) {
+    say(`It is connected, but making it readable by you did not complete: ${e?.message ?? e}`);
+  }
+  fillAdoptable();
 })();
 // An old #sources link still lands somewhere true: there is one lens now. Routed
 // immediately rather than waiting for the read, because it is already a decision.
