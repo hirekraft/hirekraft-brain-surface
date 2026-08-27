@@ -213,6 +213,20 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   font-size: var(--t-micro); color: var(--ink-3);
   font-variant-numeric: tabular-nums; text-align: right;
 }
+/* the picker: the list IS the control, so it has to read as one. The third grid
+   column is the chevron on a member row and there is none here, so the columns
+   are restated rather than left with a 14px hole on the right. */
+.member.pick { grid-template-columns: 18px 1fr auto; }
+.pick-box {
+  width: 16px; height: 16px; border-radius: 3px;
+  border: 1px solid var(--ink-4); color: transparent;
+  display: grid; place-items: center;
+}
+.pick-box svg { width: 11px; height: 11px; }
+.member.pick:hover .pick-box { border-color: var(--accent); }
+.member.pick[aria-pressed="true"] .pick-box { border-color: var(--accent); color: var(--accent); }
+.member.pick[disabled] { opacity: .55; }
+
 .empty-note {
   padding: calc(var(--u) * 2) var(--gap) var(--gap);
   font-size: var(--t-small); color: var(--ink-3); max-width: var(--measure);
