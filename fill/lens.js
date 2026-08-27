@@ -492,6 +492,13 @@ function pickerRow(item, accountKey) {
     st.className = `state ${trouble ? "stalled" : chosen ? "live" : "unread"}`;
     st.innerHTML = `<span class="dot"></span>${escape(where)}${tail}`;
     if (!st.parentNode) li.appendChild(st);
+
+    // Offered only where it applies: something stopped that still holds what it read.
+    // On the same line as the sentence that says so, because a fact with its remedy
+    // somewhere else is how a screen tells someone they are stuck.
+    if (!chosen && !moving && !trouble && item.files_read > 0) {
+      st.appendChild(forgetControl(item, draw));
+    }
   };
 
   btn.addEventListener("click", async () => {
@@ -522,6 +529,46 @@ function pickerRow(item, accountKey) {
   li.appendChild(btn);
   draw(item.chosen);
   return li;
+}
+
+// Stopping is reversible; this is not. So it asks once, in the same place, and says
+// the number out loud before it does anything.
+function forgetControl(item, redraw) {
+  const b = el("button", "a-fix");
+  b.type = "button";
+  b.style.marginLeft = ".7rem";
+  b.textContent = "Remove what it read";
+  let armed = false;
+
+  b.addEventListener("click", async (ev) => {
+    ev.stopPropagation();
+    if (!armed) {
+      armed = true;
+      b.textContent = `Yes, remove ${item.files_read} ${item.files_read === 1 ? "file" : "files"}`;
+      return;
+    }
+    b.disabled = true;
+    b.textContent = "removing\u2026";
+    try {
+      const { data, error } = await sb.rpc("source_forget", { p_source_key: item.source_key });
+      if (error) throw error;
+      if (!data?.ok) {
+        // Quoted, not summarised. These sentences say what the person MAY do, and a
+        // paraphrase turns "not yours to do" into "something went wrong".
+        b.disabled = false; armed = false;
+        b.textContent = data?.note ?? "It did not happen, and no reason was given.";
+        return;
+      }
+      say(`${item.name}: ${data.files_removed} removed from the memory. `
+        + `The files themselves are untouched in your Drive.`);
+      item.files_read = 0;
+      redraw(false);
+    } catch (e) {
+      b.disabled = false; armed = false;
+      b.textContent = `Could not remove: ${e?.message ?? e}`;
+    }
+  });
+  return b;
 }
 
 async function stageDrivePicker(accountKey) {
