@@ -26,6 +26,12 @@ const icon = (id, cls = "mark") =>
 
 let shape = null;   // the live reading, or null until it lands
 
+// Mailbox rows, keyed by source key. Their words live in mailbox_state() on the
+// brain rather than here: the wording IS the design on this screen, and a wording
+// change should cost a migration, not a redeploy of a lens.
+let mailboxes = new Map();
+let mbxError = null;
+
 // ── the six groups are known before any data arrives, so the frame can be drawn
 //    immediately and the reading can land into reserved space without moving it.
 const GROUPS = [
@@ -124,6 +130,7 @@ async function readBrain() {
     if (data?.state === "unbound") { renderState("unbound"); routeOnState("unbound"); return; }
 
     shape = data;
+    await readMailboxes();
     renderWho();
     fillTree();
     fillAttention();
@@ -137,6 +144,21 @@ async function readBrain() {
     routeOnState("unknown");
   } finally {
     tree.setAttribute("aria-busy", "false");
+  }
+}
+
+// Never falls back to the old vocabulary when it fails. A row that cannot say its
+// state says that, rather than borrowing a sentence from somewhere else that might
+// happen to be reassuring.
+async function readMailboxes() {
+  mailboxes = new Map();
+  mbxError = null;
+  try {
+    const { data, error } = await sb.rpc("mailbox_state");
+    if (error) throw error;
+    for (const r of data ?? []) mailboxes.set(r.source_key, r);
+  } catch (e) {
+    mbxError = e?.message ?? String(e);
   }
 }
 
@@ -234,12 +256,26 @@ function fillTree(sel = "#tree", pfx = "") {
     }
     // The overview carries shape, aliveness and reach back — never a raw file count.
     // "Email - 6 mailboxes - reading live - back to Mar 2024".
-    const live = data.live ?? (data.members ?? []).filter((m) => m.health === "reading").length;
     const total = data.members?.length ?? data.count;
-    const alive = data.kind === "reached"
-      ? "reached when asked"
-      : (live === total ? "all reading live"
-         : live === 0 ? "none reading live" : `${live} of ${total} reading live`);
+    let alive;
+    if (g.key === "email" && mailboxes.size) {
+      // The group counts in the same words its own rows use. Two vocabularies for
+      // one fact is how a summary starts disagreeing with the list below it.
+      const rows = [...mailboxes.values()];
+      const need = rows.filter((r) => r.needs_you).length;
+      const ok = rows.length - need;
+      alive = need === 0 ? "all working"
+            : ok === 0   ? `${need} need you`
+            : `${ok} working, ${need} need you`;
+    } else if (g.key === "email" && mbxError) {
+      alive = "state could not be read";
+    } else {
+      const live = data.live ?? (data.members ?? []).filter((m) => m.health === "reading").length;
+      alive = data.kind === "reached"
+        ? "reached when asked"
+        : (live === total ? "all reading live"
+           : live === 0 ? "none reading live" : `${live} of ${total} reading live`);
+    }
     // "back to Mar 2024" - the month the memory reaches back to, not a full date.
     const span = data.span
       ? ` &middot; back to ${new Date(data.span).toLocaleDateString(undefined,
@@ -315,14 +351,57 @@ function drawMembers(key, body, pfx = "") {
     });
     li.appendChild(btn);
 
-    const st = el("div", `state ${HEALTH_CLASS[m.health] ?? ""}`);
-    st.innerHTML = `<span class="dot"></span>${HEALTH[m.health] ?? m.health}`
-      + (m.latest && m.health !== "reading" ? ` &middot; newest item ${fmtDay(m.latest)}` : "");
-    li.appendChild(st);
+    const mb = key === "email" ? mailboxes.get(m.target) : null;
+    if (mb) {
+      li.appendChild(mailboxLine(mb));
+    } else if (key === "email" && mbxError) {
+      const st = el("div", "state stalled");
+      st.innerHTML = `<span class="dot"></span>Its state could not be read just now `
+        + `(${escape(mbxError)}), so this line is not a claim either way.`;
+      li.appendChild(st);
+    } else {
+      const st = el("div", `state ${HEALTH_CLASS[m.health] ?? ""}`);
+      st.innerHTML = `<span class="dot"></span>${HEALTH[m.health] ?? m.health}`
+        + (m.latest && m.health !== "reading" ? ` &middot; newest item ${fmtDay(m.latest)}` : "");
+      li.appendChild(st);
+    }
 
     list.appendChild(li);
   }
   body.appendChild(list);
+}
+
+// The states carry no new colour: they land on the skin's existing three.
+const MBX_CLASS = {
+  working: "live", closed_to_you: "stalled", stopped: "stalled",
+  off: "unread", not_yours: "unread",
+};
+
+// One mailbox, one state, and where something is wrong the press that fixes it is
+// on this line. A problem in one place and its solution in another is how a screen
+// tells someone they are stuck.
+function mailboxLine(mb) {
+  const wrap = el("div", `state ${MBX_CLASS[mb.state] ?? ""}`);
+  wrap.innerHTML = `<span class="dot"></span><b>${escape(mb.headline)}</b> `
+    + `<span class="quiet">${escape(mb.detail)}</span>`;
+  if (!mb.action_label) return wrap;
+
+  const b = el("button", "go ghost");
+  b.type = "button";
+  b.textContent = mb.action_label;
+  b.style.marginLeft = ".6rem";
+  b.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    const was = b.textContent;
+    b.textContent = "opening Google";
+    // Individual scope, always. The administrator path writes a firm-property
+    // posture - the one the mail lens refuses - so that consent would complete
+    // and this row would not move.
+    const gmail = PICKERS.email.options.find((o) => o.type === "gmail");
+    beginConnect(gmail, "individual", mb.address, b, () => { b.textContent = was; });
+  });
+  wrap.appendChild(b);
+  return wrap;
 }
 
 // Level 3 — wired, and honest that the room is not built yet.
