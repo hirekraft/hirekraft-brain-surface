@@ -300,7 +300,17 @@ function drawMembers(key, body, pfx = "") {
       `<svg class="chev" width="14" height="14" aria-hidden="true"><use href="#i-chev"/></svg>`;
 
     btn.addEventListener("click", () => {
-      if (m.opens) { userMoved = true; location.href = m.opens; return; }
+      // brain_shape has always carried `target` (the real source key) beside
+      // `opens`, and the link ignored it - so every mailbox opened whatever the
+      // mail lens defaults to. Clicking recruitment@ landed on alex@, which is
+      // the worst possible version of wrong on a surface about whose mail is whose.
+      if (m.opens) {
+        userMoved = true;
+        location.href = m.target && m.target.startsWith("gmail:")
+          ? `${m.opens}?mailbox=${encodeURIComponent(m.target)}`
+          : m.opens;
+        return;
+      }
       drawPlaceholder(li, m, data);
     });
     li.appendChild(btn);
