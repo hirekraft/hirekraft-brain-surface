@@ -730,8 +730,12 @@ function consentButton(provider, scope, groupKey) {
     try {
       // source_begin resolves the acting identity from the token. There is no
       // identity to pass, which is the point.
+      // Where to come back to. Nothing on the far side of the consent hop knows
+      // this surface's address, and hard-coding one anywhere would break for the
+      // next customer. This page knows, so it says.
       const { data, error } = await sb.rpc("source_begin", {
         p_source_type: provider.type, p_scope: scope, p_mailbox: mailbox,
+        p_return_to: location.origin + location.pathname,
       });
       if (error) throw error;
 
@@ -932,6 +936,31 @@ say("I am here the whole way through. Ask about anything on this screen — what
   + "back it reads, or what any of it means.");
 
 readBrain();                     // then the live reading lands into the frame
+
+// Landing back from a provider. The round trip now ends where it started, rather
+// than on a page telling the person to close the window and find their own way
+// back. Each outcome says which one it was; none of them is silent.
+(() => {
+  const q = new URLSearchParams(location.search);
+  const done = q.get("connected");
+  const declined = q.get("connect_declined");
+  const failed = q.get("connect_error");
+  if (!done && !declined && !failed) return;
+  userMoved = true;
+  goto("s-summary");
+  if (done) {
+    say(`${done} is connected, and its key is stored in your own workspace. `
+      + `Holding the key and being allowed to read it here are two different things, `
+      + `so there is one more step waiting for you above.`);
+  } else if (declined) {
+    const why = q.get("reason");
+    say(`That sign-in was declined${why ? ` (${why})` : ""}. Nothing changed, and nothing was stored.`);
+  } else {
+    say(`The connection did not complete: ${failed}. Nothing was stored.`);
+  }
+  // Clear the marker so a reload does not repeat the message as though it just happened.
+  history.replaceState({}, "", location.pathname);
+})();
 // An old #sources link still lands somewhere true: there is one lens now. Routed
 // immediately rather than waiting for the read, because it is already a decision.
 if (location.hash === "#sources") { userMoved = true; goto("s-summary"); }
