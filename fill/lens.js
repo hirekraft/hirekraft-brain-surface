@@ -718,6 +718,12 @@ function stageScope(groupKey, provider) {
     return;
   }
 
+  // Only mail has a real fork here. For Drive both branches resolve to the same
+  // source key, the same posture and the same reach - the choice decided nothing
+  // except who was allowed to make it. Asking anyway is a screen pretending to
+  // take a decision from you.
+  if (provider.type !== "gmail") return stageConsent(provider, "individual", groupKey);
+
   $("#connect-head").textContent = "Whose account?";
   $("#connect-sub").textContent = "This decides what gets listed, and what your colleagues see later.";
 
@@ -760,7 +766,10 @@ function stageConsent(provider, scope, groupKey) {
     + `withdraw it from your ${escape(provider.name)} account at any time.`;
   stage.appendChild(n);
 
-  if (scope === "admin") {
+  // Gate on what this actually is, not on the scope word next to it. Written as
+  // `scope === "admin"`, this put the company mailbox list on the Drive consent
+  // screen, where picking a line would have created a drive keyed by a mailbox.
+  if (scope === "admin" && provider.type === "gmail") {
     // The copy on the previous screen promises every company mailbox is listed.
     // It used to show a blank address box, which is a different thing and left
     // the person guessing their own addresses. The list is read live.
