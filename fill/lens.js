@@ -628,13 +628,26 @@ async function stageDrivePicker(accountKey) {
           + "everything inside it, now and later.",
           data.items.filter((i) => i.kind === "my_drive_folder"));
 
-  const back = el("button", "go ghost");
-  back.type = "button";
-  back.textContent = "See what is connected now";
-  back.style.marginTop = "2rem";
-  back.addEventListener("click", async () => { goto("s-summary"); await refreshBrain(); });
-  stage.appendChild(back);
+  // No button here: the section already carries "See what is connected now", and a
+  // second copy of it put an identical control under the dock.
 }
+
+// The dock is fixed to the bottom and its height is not a constant - it grows the
+// moment the consultant says anything. The page reserved a fixed number for it, so
+// whatever sat at the foot of a screen went under it. Reserve what it actually
+// occupies instead, and keep reserving it as that changes.
+function reserveForDock() {
+  const dock = $("#dock");
+  if (!dock) return;
+  const set = () => {
+    const h = dock.getBoundingClientRect().height;
+    document.body.style.paddingBottom = `calc(${Math.ceil(h)}px + 2.5rem)`;
+  };
+  set();
+  if (typeof ResizeObserver === "function") new ResizeObserver(set).observe(dock);
+  window.addEventListener("resize", set);
+}
+reserveForDock();
 
 function fillRecognition() {
   const ul = $("#recog");
@@ -1277,7 +1290,13 @@ stageTypes();
 let userMoved = false;
 document.addEventListener("click", (e) => {
   const b = e.target.closest("[data-goto]");
-  if (b) { userMoved = true; goto(b.dataset.goto); }
+  if (b) {
+    userMoved = true;
+    goto(b.dataset.goto);
+    // Arriving at the summary after changing what is read must not show the reading
+    // from before the change.
+    if (b.dataset.goto === "s-summary") refreshBrain();
+  }
 });
 
 $("#ask-send").addEventListener("click", ask);
