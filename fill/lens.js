@@ -373,16 +373,19 @@ function drawMembers(key, body, pfx = "") {
     li.appendChild(btn);
 
     const mb = key === "email"  ? mailboxes.get(m.target)
-             : key === "drives" ? driveStates.get(m.target)
+             : key === "drives" ? driveStateFor(m.target)
              : null;
     if (mb) {
       li.appendChild(mb.tone ? driveLine(mb) : mailboxLine(mb));
     } else if (key === "drives") {
-      // A drive row with no state is not a drive the customer chose: an old record
-      // with no root, kept because deciding what to do with it is theirs. Saying
-      // "connected, never read" about it would dress residue up as a source.
+      // No state for this row. That is a statement about OUR records, not about the
+      // drive: it may be an old entry with no root, or something this screen cannot
+      // account for. Either way it says it cannot say. The previous wording here
+      // declared every one of them worthless, which is the failure a fallback must
+      // never commit - asserting instead of admitting.
       const st = el("div", "state tone-plain");
-      st.innerHTML = `<span class="dot"></span>An old record, not something Tool reads`;
+      st.innerHTML = `<span class="dot"></span>Not one of the drives you chose &mdash; `
+        + `an older record, kept until you decide about it`;
       li.appendChild(st);
     } else if (key === "email" && mbxError) {
       const st = el("div", "state stalled");
@@ -403,6 +406,17 @@ function drawMembers(key, body, pfx = "") {
 
 // One drive, one line, the same sentence the picker shows. Where something needs a
 // person it says so; where it does not, it is quiet.
+// A mail member's target is a full source key; a drive member's is the bare Google
+// id. Try what we are given and the two forms a drive key takes, rather than assume
+// one group's shape from the other's.
+function driveStateFor(target) {
+  if (!target) return null;
+  return driveStates.get(target)
+      ?? driveStates.get(`drive:shared:${target}`)
+      ?? driveStates.get(`drive:folder:${target}`)
+      ?? null;
+}
+
 function driveLine(s) {
   const wrap = el("div", `state tone-${s.tone}`);
   wrap.innerHTML = `<span class="dot"></span><span class="s-head">${escape(s.headline)}</span>`
