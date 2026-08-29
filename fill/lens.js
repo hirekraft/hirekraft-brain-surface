@@ -130,7 +130,7 @@ async function readBrain() {
     if (data?.state === "unbound") { renderState("unbound"); routeOnState("unbound"); return; }
 
     shape = data;
-    await readMailboxes();
+    await Promise.all([readMailboxes(), readDriveStates()]);
     renderWho();
     fillTree();
     fillAttention();
@@ -258,7 +258,17 @@ function fillTree(sel = "#tree", pfx = "") {
     // "Email - 6 mailboxes - reading live - back to Mar 2024".
     const total = data.members?.length ?? data.count;
     let alive;
-    if (g.key === "email" && mailboxes.size) {
+    if (g.key === "drives" && driveStates.size) {
+      // The same words the rows below use, and the same words the picker uses.
+      const rows = [...driveStates.values()];
+      const need = rows.filter((r) => r.state === "needs_signin" || r.state === "shut_out").length;
+      const busy = rows.filter((r) => r.state === "filling").length;
+      const ok   = rows.filter((r) => r.state === "ready").length;
+      alive = [busy ? `${busy} reading now` : null,
+               ok ? `${ok} up to date` : null,
+               need ? `${need} need you` : null]
+              .filter(Boolean).join(", ") || "none chosen yet";
+    } else if (g.key === "email" && mailboxes.size) {
       // The group counts in the same words its own rows use. Two vocabularies for
       // one fact is how a summary starts disagreeing with the list below it.
       const rows = [...mailboxes.values()];
@@ -362,9 +372,18 @@ function drawMembers(key, body, pfx = "") {
     });
     li.appendChild(btn);
 
-    const mb = key === "email" ? mailboxes.get(m.target) : null;
+    const mb = key === "email"  ? mailboxes.get(m.target)
+             : key === "drives" ? driveStates.get(m.target)
+             : null;
     if (mb) {
-      li.appendChild(mailboxLine(mb));
+      li.appendChild(mb.tone ? driveLine(mb) : mailboxLine(mb));
+    } else if (key === "drives") {
+      // A drive row with no state is not a drive the customer chose: an old record
+      // with no root, kept because deciding what to do with it is theirs. Saying
+      // "connected, never read" about it would dress residue up as a source.
+      const st = el("div", "state tone-plain");
+      st.innerHTML = `<span class="dot"></span>An old record, not something Tool reads`;
+      li.appendChild(st);
     } else if (key === "email" && mbxError) {
       const st = el("div", "state stalled");
       st.innerHTML = `<span class="dot"></span>Its state could not be read just now `
@@ -380,6 +399,16 @@ function drawMembers(key, body, pfx = "") {
     list.appendChild(li);
   }
   body.appendChild(list);
+}
+
+// One drive, one line, the same sentence the picker shows. Where something needs a
+// person it says so; where it does not, it is quiet.
+function driveLine(s) {
+  const wrap = el("div", `state tone-${s.tone}`);
+  wrap.innerHTML = `<span class="dot"></span><span class="s-head">${escape(s.headline)}</span>`
+    + (s.detail ? ` &middot; ${escape(s.detail)}` : "");
+  if (s.action === "sign_in") wrap.appendChild(signInAgainControl(s));
+  return wrap;
 }
 
 // The states carry no new colour: they land on the skin's existing three.
