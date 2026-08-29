@@ -450,6 +450,20 @@ function driveAccountKey() {
 
 // supabase-js reports a non-2xx as a bare "Edge Function returned a non-2xx status",
 // which throws away the sentence the function wrote explaining why. Read the body.
+// The states, keyed by source. Their words live in drive_state() on the brain, so
+// changing what a row SAYS is a migration rather than a redeploy of this file.
+let driveStates = new Map();
+
+async function readDriveStates() {
+  try {
+    const { data, error } = await sb.rpc("drive_state");
+    if (error) throw error;
+    driveStates = new Map((data ?? []).map((r) => [r.source_key, r]));
+  } catch {
+    driveStates = new Map();   // a state that cannot be read is not asserted
+  }
+}
+
 async function driveFn(body) {
   const { data, error } = await sb.functions.invoke("workspace-drive-sources", { body });
   if (error) {
@@ -468,37 +482,32 @@ function pickerRow(item, accountKey) {
 
   btn.className = "member pick";
 
-  // Two states. A drive is being read, or it is not. "Starting" and "stopping" are
-  // the moments in between and are written as motion, not as a third condition.
+  // Every word here comes from drive_state(): the queue for progress, the stored
+  // files for what landed, the recorded permission for whether it can still reach.
+  // The tick decides whether a drive SHOULD be read; it never says what IS happening.
   const draw = (chosen, moving, trouble) => {
-    const where = item.kind === "shared_drive" ? "shared drive" : "in your own Drive";
+    const s = driveStates.get(item.source_key);
+    const head = moving ?? (s ? s.headline : (chosen ? "reading" : "Not reading"));
     btn.innerHTML =
       `<span class="pick-box"><svg aria-hidden="true"><use href="#i-check"/></svg></span>`
       + `<span class="m-name">${escape(item.name)}</span>`
-      + `<span class="m-win">${escape(moving ?? (chosen ? "reading" : "not reading"))}</span>`;
+      + `<span class="m-win">${escape(head)}</span>`;
     btn.setAttribute("aria-pressed", String(chosen));
 
-    // What is true of this drive, under its name. A drive that is being read and has
-    // never returned a document is not the same as one that is working, and used to
-    // look identical to it.
-    let tail = "";
-    if (trouble) tail = ` &middot; ${escape(trouble)}`;
-    else if (item.files_read > 0) {
-      tail = ` &middot; ${item.files_read} ${item.files_read === 1 ? "file" : "files"} read`
-           + (chosen ? "" : " before this was stopped");
-    } else if (chosen) tail = " &middot; nothing read from it yet";
+    const tone = moving ? "amber" : (s ? s.tone : "plain");
+    const detail = trouble ?? (moving ? "" : (s ? s.detail : ""));
 
     const st = $(".state", li) ?? el("div", "state");
-    st.className = `state ${trouble ? "stalled" : chosen ? "live" : "unread"}`;
-    st.innerHTML = `<span class="dot"></span>${escape(where)}${tail}`;
+    st.className = `state tone-${trouble ? "red" : tone}`;
+    st.innerHTML = `<span class="dot"></span>`
+      + `<span class="s-head">${escape(head)}</span>`
+      + (detail ? ` &middot; ${escape(detail)}` : "");
     if (!st.parentNode) li.appendChild(st);
 
-    // Offered only where it applies: something stopped that still holds what it read.
-    // On the same line as the sentence that says so, because a fact with its remedy
-    // somewhere else is how a screen tells someone they are stuck.
-    if (!chosen && !moving && !trouble && item.files_read > 0) {
-      st.appendChild(forgetControl(item, draw));
-    }
+    // The remedy sits on the line that states the problem, and only where there is
+    // one. Everything else stays silent: a fault that heals itself is not a task.
+    if (!moving && !trouble && s?.action === "forget") st.appendChild(forgetControl(item, draw));
+    if (!moving && !trouble && s?.action === "sign_in") st.appendChild(signInAgainControl(s));
   };
 
   btn.addEventListener("click", async () => {
@@ -528,11 +537,49 @@ function pickerRow(item, accountKey) {
 
   li.appendChild(btn);
   draw(item.chosen);
+  rowRedraws.push(() => draw(item.chosen));
   return li;
+}
+
+// The one fault on these rows a person can actually fix. Everything else that goes
+// wrong is ours and retries itself, so it is never put in front of them as a job.
+function signInAgainControl(s) {
+  const b = el("button", "a-fix");
+  b.type = "button";
+  b.style.marginLeft = ".7rem";
+  b.textContent = s.action_label ?? "Sign in again";
+  b.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    const drive = PICKERS.drives.options.find((o) => o.type === "drive");
+    beginConnect(drive, "individual", null, b, () => { b.textContent = s.action_label; });
+  });
+  return b;
 }
 
 // Stopping is reversible; this is not. So it asks once, in the same place, and says
 // the number out loud before it does anything.
+// Watching a drive fill should be watching, not reloading. This re-reads only the
+// states -- one cheap call, no Drive traffic -- and only while something is actually
+// moving. The moment nothing is filling it stops, so an idle screen is silent.
+let fillWatch = null;
+function watchWhileFilling() {
+  if (fillWatch) { clearInterval(fillWatch); fillWatch = null; }
+  const anyFilling = () => [...driveStates.values()].some((s) => s.state === "filling");
+  if (!anyFilling()) return;
+  fillWatch = setInterval(async () => {
+    if (!document.getElementById("connect-stage")?.isConnected) {
+      clearInterval(fillWatch); fillWatch = null; return;
+    }
+    await readDriveStates();
+    for (const redraw of rowRedraws) redraw();
+    if (!anyFilling()) { clearInterval(fillWatch); fillWatch = null; }
+  }, 8000);
+}
+
+// Every row registers how to redraw itself, so a fresh reading lands on the rows
+// that are already on screen instead of rebuilding the list under the person's hands.
+let rowRedraws = [];
+
 function forgetControl(item, redraw) {
   const b = el("button", "a-fix");
   b.type = "button";
@@ -591,7 +638,10 @@ async function stageDrivePicker(accountKey) {
 
   let data;
   try {
-    data = await driveFn({ action: "discover", account_source_key: accountKey });
+    [data] = await Promise.all([
+      driveFn({ action: "discover", account_source_key: accountKey }),
+      readDriveStates(),
+    ]);
   } catch (e) {
     stage.innerHTML = "";
     const n = el("div", "notice flagged");
@@ -602,6 +652,7 @@ async function stageDrivePicker(accountKey) {
   }
 
   stage.innerHTML = "";
+  rowRedraws = [];
   const said = el("div", "notice");
   said.innerHTML = `<b>Tick a box to have Tool read that drive or folder. Untick it to stop.</b> `
     + `Tool reads what is ticked here and nothing else. Building this list needed only `
@@ -627,6 +678,8 @@ async function stageDrivePicker(accountKey) {
   section("In your own Drive", "Nothing here comes in unless you say so. Choosing a folder brings "
           + "everything inside it, now and later.",
           data.items.filter((i) => i.kind === "my_drive_folder"));
+
+  watchWhileFilling();
 
   // No button here: the section already carries "See what is connected now", and a
   // second copy of it put an identical control under the dock.
