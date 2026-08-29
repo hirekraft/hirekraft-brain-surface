@@ -240,6 +240,16 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   display: inline-block; width: 5px; height: 5px; border-radius: 50%;
   background: var(--ink-4); margin-right: 6px; vertical-align: 1px;
 }
+/* status tones. The word is always present beside the dot; the colour is the
+   glance, never the message. */
+.state.tone-green .dot { background: #2f7d4f; }
+.state.tone-amber .dot { background: #b0740b; }
+.state.tone-red   .dot { background: var(--accent); }
+.state.tone-plain .dot { background: none; box-shadow: inset 0 0 0 1px var(--ink-4); }
+.state.tone-red { color: var(--accent); }
+.state .s-head { color: var(--ink-2); }
+.state.tone-red .s-head { color: var(--accent); }
+
 .state.live .dot { background: var(--ink-2); }
 .state.stalled .dot { background: var(--accent); }
 .state.off .dot, .state.unread .dot { background: none; box-shadow: inset 0 0 0 1px var(--ink-4); }
