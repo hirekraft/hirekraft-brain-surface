@@ -422,7 +422,36 @@ function driveLine(s) {
   wrap.innerHTML = `<span class="dot"></span><span class="s-head">${escape(s.headline)}</span>`
     + (s.detail ? ` &middot; ${escape(s.detail)}` : "");
   if (s.action === "sign_in") wrap.appendChild(signInAgainControl(s));
+  if (s.action === "resume")  wrap.appendChild(resumeControl(s));
   return wrap;
+}
+
+// One switch, and it says so. The drive is already chosen and already read; all
+// that lapsed is anything looking at it again.
+function resumeControl(s) {
+  const b = el("button", "a-fix");
+  b.type = "button";
+  b.style.marginLeft = ".7rem";
+  b.textContent = s.action_label ?? "Start reading it again";
+  b.addEventListener("click", async (ev) => {
+    ev.stopPropagation();
+    b.disabled = true;
+    const was = b.textContent;
+    b.textContent = "starting\u2026";
+    try {
+      const { data, error } = await sb.rpc("source_resume", { p_source_key: s.source_key });
+      if (error) throw error;
+      if (!data?.ok) { b.disabled = false; b.textContent = data?.note ?? was; return; }
+      say(`${s.label}: back on its schedule. ${data.note}`);
+      await readDriveStates();
+      for (const redraw of rowRedraws) redraw();
+      await refreshBrain();
+    } catch (e) {
+      b.disabled = false;
+      b.textContent = `Could not start it: ${e?.message ?? e}`;
+    }
+  });
+  return b;
 }
 
 // The states carry no new colour: they land on the skin's existing three.
