@@ -277,6 +277,9 @@ function fillTree(sel = "#tree", pfx = "") {
       alive = need === 0 ? "all working"
             : ok === 0   ? `${need} need you`
             : `${ok} working, ${need} need you`;
+      // A mailbox row is keyed by its full source key on this screen, and the picker
+      // keys drives by a bare id. Both lookups are explicit rather than assumed -
+      // guessing one shape from the other is what labelled every live drive junk.
     } else if (g.key === "email" && mbxError) {
       alive = "state could not be read";
     } else {
@@ -464,9 +467,11 @@ const MBX_CLASS = {
 // on this line. A problem in one place and its solution in another is how a screen
 // tells someone they are stuck.
 function mailboxLine(mb) {
-  const wrap = el("div", `state ${MBX_CLASS[mb.state] ?? ""}`);
-  wrap.innerHTML = `<span class="dot"></span><b>${escape(mb.headline)}</b> `
-    + `<span class="quiet">${escape(mb.detail)}</span>`;
+  // Same tone vocabulary as a drive. A row that needs a person looks the same
+  // whether it is a mailbox or a drive, because that is the whole point of a tone.
+  const wrap = el("div", `state tone-${mb.tone ?? MBX_CLASS[mb.state] ?? "plain"}`);
+  wrap.innerHTML = `<span class="dot"></span><span class="s-head">${escape(mb.headline)}</span>`
+    + (mb.detail ? ` &middot; ${escape(mb.detail)}` : "");
   if (!mb.action_label) return wrap;
 
   const b = el("button", "go ghost");
