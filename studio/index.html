@@ -909,11 +909,16 @@ function customerLine(){
   return cust.map(function(c){
     if(!c.seen) return '<div class="pi"><span class="pn">!</span><span style="color:var(--red)">'
       + esc(c.name)+'’s brain cannot be read right now, so nothing about it is known.</span></div>';
-    const srcs=(c.sources||[]);
-    const bad=srcs.filter(function(s){ return s.c==="bad"; }).length;
+    /* A problems figure counted from an ABSENT source list is zero by construction, which
+       is the defect this surface exists to remove — caught in my own line by rendering it
+       against a payload that had no sources. Say the list is missing instead. */
+    const srcs=c.sources;
+    const problems=Array.isArray(srcs)
+      ? (srcs.filter(function(s){ return s.c==="bad"; }).length + ' with problems')
+      : 'problems not counted — the source list was not returned';
     return '<div class="pi" data-tool="1"><span class="pn">›</span><span>'
       + esc(c.name)+': '+esc(c.reading)+' of '+esc(c.total)+' sources reading, '
-      + esc(bad)+' with problems — fixed on the Tool</span></div>';
+      + esc(problems)+' — fixed on the Tool</span></div>';
   }).join("");
 }
 
