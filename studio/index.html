@@ -889,9 +889,24 @@ function front(){
     if(failing.length===0){ brokenLine=systems+" systems, nothing failing."; }
     else {
       brokenBad=true;
+      /* THE COUNT IS RUNS, AND THE LABEL SAID DAYS. Estate Harvest was created today by a
+         live seat and failed three times in three hours; the page reported "failed 3 days
+         running", which is impossible for a workflow that has existed for hours. A count
+         of consecutive failing RUNS cannot be spoken as DAYS, and a window of recent runs
+         silently assumes the workflow existed for the whole window.
+
+         Days are now derived from the distinct dates those failures actually fall on, so a
+         workflow younger than the window can never be described as failing for longer than
+         it has existed. Repeated manual retries read as retries, not as a daily failure. */
       const names=failing.map(function(w){
         const nm=/contradiction/i.test(w.name)?"the daily contradiction check":w.name;
-        return nm+(w.consecutive_failures>1?(" — failed "+w.consecutive_failures+" days running"):" — failed today");
+        const runs=Number(w.consecutive_failures)||1;
+        const days=Number(w.consecutive_failure_days)||0;
+        let how;
+        if(days>1)      how=" — failed on "+days+" separate days";
+        else if(runs>1) how=" — failed "+runs+" times today";
+        else            how=" — failed on its last run";
+        return nm+how;
       });
       brokenLine=systems+" systems, "+failing.length+" failing: "+names.join("; ")+".";
     }
@@ -1285,8 +1300,17 @@ function bindCites(scope){
   });
 }
 
+/* SCOPED TO PRINCIPLE ROWS ONLY. This bound EVERY .pi on the page, and the front page's
+   "What is in the brain" lines use the same class — so it ran after the goto binding and
+   overwrote each of their handlers with openPrinciple(NaN), which the server rejects. The
+   chevrons were wired, then silently unwired by a second binder competing for the same
+   selector. The markup was right, the deploy was right, and the behaviour was still gone.
+
+   Two binders sharing a class selector, the later one winning silently: the last writer
+   leaves no trace of what it displaced, so the symptom looks like the FIRST binding never
+   happened. Requiring data-n makes the selector say who it is for. */
 function bindPrinciples(){
-  document.querySelectorAll(".pi").forEach(el=>{
+  document.querySelectorAll(".pi[data-n]").forEach(el=>{
     el.onclick=()=>openPrinciple(Number(el.dataset.n));
   });
 }
