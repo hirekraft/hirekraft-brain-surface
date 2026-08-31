@@ -557,8 +557,8 @@ function render(){
       const w=el.dataset.goto;
       if(w==="docs"){ const ov=document.getElementById("ov"); if(ov) ov.dataset.open="true"; return; }
       if(w==="principles"){ goTab(5); return; }
-      if(w==="ask"){ goTab(5); return; }
       if(w==="runson"){ goTab(1); return; }
+      if(w.indexOf("records:")===0){ openRecords(w.slice(8)); return; }
     };
   });
   document.querySelectorAll("[data-tool]").forEach(function(el){
@@ -837,8 +837,20 @@ function front(){
   const F=(D&&D.front)||null;
   if(!F) return '<div class="empty">The front page could not be read.</div>';
 
+  /* AN AFFORDANCE WITH NO BEHAVIOUR IS THE CLASS THIS SURFACE REMOVES. Every one of these
+     lines showed a chevron; none of them opened anything.
+
+     Two had destinations and are wired: documents to IP & Docs, principles to the
+     Principles tab. Two had no view anywhere, so one was built — decisions and write-ups
+     now open an index, newest first, and a row opens the body. The last is a TOTAL, not a
+     place: 1,319 searchable pieces is what the brain can answer from, there is nowhere to
+     go, and it carries no chevron. */
+  const dest={docs:'docs', principles:'principles', decisions:'records:decisions', reports:'records:reports'};
   const brain=(F.in_the_brain||[]).map(function(x){
-    return '<div class="pi" data-goto="'+esc(x.opens)+'"><span class="pn">›</span><span>'+esc(x.line)+'</span></div>';
+    const to=dest[x.what]||null;
+    if(!to) return '<div class="pi" style="cursor:default"><span class="pn" style="color:var(--ink-4)">·</span>'
+      + '<span style="color:var(--ink-2)">'+esc(x.line)+'</span></div>';
+    return '<div class="pi" data-goto="'+esc(to)+'"><span class="pn">›</span><span>'+esc(x.line)+'</span></div>';
   }).join("");
 
   const needs=(F.needs_you||[]);
@@ -1365,6 +1377,57 @@ function bindDocs(){
   document.querySelectorAll("#doclist .iprow").forEach(el=>{
     el.onclick=()=>openDoc(DOCS[Number(el.dataset.i)]);
   });
+}
+
+/* THE LIST THAT DID NOT EXIST. Newest first, opening the body. Bodies are fetched one at a
+   time because the twenty newest write-ups alone are 135KB and this must not weigh on the
+   page Alex opens daily. */
+async function openRecords(kind){
+  const ov=document.getElementById("ov"), drw=document.getElementById("drw");
+  if(!ov||!drw) return;
+  ov.dataset.open="true";
+  drw.innerHTML='<h2>Loading <button class="x" id="drx">×</button></h2>';
+  const r=await call(FN,{action:"records",kind:kind,n:60});
+  if(r.status!==200||!r.body||r.body.ok===false){
+    drw.innerHTML='<h2>Could not open <button class="x" id="drx">×</button></h2>'
+      + '<div class="empty">'+esc((r.body&&r.body.error)||("failed ("+r.status+")"))+'</div>';
+    bindDrawer(); return;
+  }
+  const d=r.body;
+  drw.innerHTML='<h2>'+esc(d.title)+' <button class="x" id="drx">×</button></h2>'
+    + '<div class="dl">'+esc(d.means)+' Showing the '+((d.items||[]).length)+' newest of '+esc(d.total)+'.</div>'
+    + '<div id="reclist">'+(d.items||[]).map(function(it){
+        return '<div class="iprow" data-rec="'+esc(it.id)+'" data-kind="'+esc(d.kind)+'"><div class="rt">'
+          + '<span class="rn">'+esc(String(it.when||"").slice(0,10))+'</span>'
+          + '<span class="rw">'+esc(it.chars)+' chars</span></div>'
+          + '<div class="rd">'+esc(it.line||"(no first line)")+'</div></div>';
+      }).join("")+'</div><div id="recbody"></div>';
+  bindDrawer();
+  drw.querySelectorAll("#reclist .iprow").forEach(function(el){
+    el.onclick=function(){ openRecord(el.dataset.kind, el.dataset.rec); };
+  });
+}
+
+async function openRecord(kind,id){
+  const box=document.getElementById("recbody"); if(!box) return;
+  box.innerHTML='<div class="lab-note">opening…</div>';
+  const r=await call(FN,{action:"record",kind:kind,id:id});
+  if(r.status!==200||!r.body||r.body.ok===false){
+    box.innerHTML='<div class="empty">'+esc((r.body&&r.body.error)||("failed ("+r.status+")"))+'</div>'; return;
+  }
+  const d=r.body;
+  box.innerHTML='<div class="drow"><b>'+esc(d.title)+'</b>'
+    + '<span class="lab-note" style="margin:0">'+esc(String(d.when||"").slice(0,10))+' · '+esc(d.chars)+' characters</span>'
+    + '<button class="btn" id="recclose">Close</button></div>'
+    + '<div class="docbody">'+esc(d.body)+'</div>';
+  const c=document.getElementById("recclose");
+  if(c) c.onclick=function(){ box.innerHTML=""; };
+  box.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+function bindDrawer(){
+  const x=document.getElementById("drx");
+  if(x) x.onclick=function(){ document.getElementById("ov").dataset.open="false"; };
 }
 
 async function openDoc(d){
