@@ -524,16 +524,16 @@ function render(){
   +   (g.caveat?('<div class="gd-row" style="align-items:flex-start"><span class="ddot warn" style="margin-top:5px"></span><span class="dn">write times</span>'
         + '<span class="ds" style="flex:2">'+esc(g.caveat)+'</span></div>'):"")
   + '</div>'
-  + spine()
   + '<nav class="sections" id="nav">'
-  +   ["What we run on","Lab","Parts Bin","The Frame","Principles"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
+  +   ["Front","What we run on","Lab","Parts Bin","The Frame","Principles"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
   + '</nav>'
   + '<main>'
-  +   '<section class="view" data-active="true" data-i="0">'+runsOn()+'</section>'
-  +   '<section class="view" data-i="1">'+lab(ln,srcs)+'</section>'
-  +   '<section class="view" data-i="2">'+parts()+'</section>'
-  +   '<section class="view" data-i="3">'+frame()+'</section>'
-  +   '<section class="view" data-i="4">'+principles()+'</section>'
+  +   '<section class="view" data-active="true" data-i="0">'+front()+'</section>'
+  +   '<section class="view" data-i="1">'+runsOn()+'</section>'
+  +   '<section class="view" data-i="2">'+lab(ln,srcs)+'</section>'
+  +   '<section class="view" data-i="3">'+parts()+'</section>'
+  +   '<section class="view" data-i="4">'+frame()+'</section>'
+  +   '<section class="view" data-i="5">'+principles()+'</section>'
   +   '<div class="foot">'+esc(D.footer)+'<br/>Served by '+esc(D.served_by.fn)+' · the Studio’s own numbers and each customer’s, kept apart · this is the only address that serves the studio · nothing on this page is stored.</div>'
   + '</main></div>'
   + '<div class="ov" id="ov"><div class="dr" id="drw">'+ipdocs()+'</div></div>';
@@ -549,6 +549,23 @@ function render(){
   document.getElementById("ipb").onclick=()=>{ ov.dataset.open="true"; };
   ov.onclick=e=>{ if(e.target===ov) ov.dataset.open="false"; };
   document.getElementById("out").onclick=()=>{ setTok(""); location.reload(); };
+  /* The front page's lines are the way in to everything that came off it. */
+  const tabs2=document.querySelectorAll("#nav .sec");
+  const goTab=function(i){ if(tabs2[i]) tabs2[i].click(); };
+  document.querySelectorAll("[data-goto]").forEach(function(el){
+    el.onclick=function(){
+      const w=el.dataset.goto;
+      if(w==="docs"){ const ov=document.getElementById("ov"); if(ov) ov.dataset.open="true"; return; }
+      if(w==="principles"){ goTab(5); return; }
+      if(w==="ask"){ goTab(5); return; }
+      if(w==="runson"){ goTab(1); return; }
+    };
+  });
+  const wwa=document.getElementById("wwa");
+  if(wwa) wwa.onclick=function(){
+    const m=document.getElementById("wwaMore");
+    if(m) m.style.display = (m.style.display==="none") ? "block" : "none";
+  };
   bindDocs();
   const ask=document.getElementById("askb"); if(ask) ask.onclick=doAsk;
   bindPrinciples();
@@ -800,6 +817,72 @@ function bindSteps(){
    outcome was recorded, with when. Assumed means we depend on it and nothing checks it —
    never green. Yours to check means no credential exists, and the row carries the actual
    procedure rather than the word "check". A fourth appears only on evidence: failing. */
+/* THE FRONT PAGE. Fourth attempt at this instrument; the three before it each ADDED, so
+   this pass only cuts. Four answers on one screen: is the brain current (the freshness
+   panel above, untouched), what is in the brain, where we are, does anything need me —
+   plus one line for is anything broken.
+
+   Everything that used to be here is still on the surface, one click across: the machinery
+   list, the ceilings, the guard that does not exist, scheduled work, the unplaced work
+   orders and the studio's own rail all live under What we run on. Nothing was deleted from
+   the estate; it was taken off the page Alex opens.
+
+   LANGUAGE: every line is in words he would say out loud. Anything needing a word he would
+   not use belongs further down. */
+function front(){
+  const F=(D&&D.front)||null;
+  if(!F) return '<div class="empty">The front page could not be read.</div>';
+
+  const brain=(F.in_the_brain||[]).map(function(x){
+    return '<div class="pi" data-goto="'+esc(x.opens)+'"><span class="pn">›</span><span>'+esc(x.line)+'</span></div>';
+  }).join("");
+
+  const needs=(F.needs_you||[]);
+  const needsBlock = needs.length
+    ? needs.map(function(n){
+        return '<div class="row bad"><span class="edge"></span>'
+          + '<span class="nm">'+esc(n.line)+(n.since?('<small>waiting since '+esc(String(n.since).slice(0,10))+'</small>'):'')+'</span>'
+          + '<span class="st">'+esc(n.fix||"")+'</span><span class="gg"></span><span class="md">YOU</span></div>';
+      }).join("")
+    : '<div class="empty">Nothing is waiting on you.</div>';
+
+  /* Composed here because this is where the workflow outcomes are. The database cannot see
+     GitHub Actions, so a count taken there read zero failing while the daily check had
+     failed five days running. */
+  let brokenLine, brokenBad=false;
+  if(RUN_STATE==="loading"){ brokenLine="checking…"; }
+  else if(!RUN||RUN.error){ brokenLine="Could not check — so whether anything is broken is unknown, not fine."; brokenBad=true; }
+  else {
+    const acts=(RUN.actions&&RUN.actions.workflows)||[];
+    const deps=(RUN.dependencies||[]).filter(function(d){ return d.name.indexOf("GitHub Actions")<0; });
+    const failing=acts.filter(function(w){ return w.conclusion==="failure"; });
+    const systems=deps.length+acts.length;
+    if(failing.length===0){ brokenLine=systems+" systems, nothing failing."; }
+    else {
+      brokenBad=true;
+      const names=failing.map(function(w){
+        const nm=/contradiction/i.test(w.name)?"the daily contradiction check":w.name;
+        return nm+(w.consecutive_failures>1?(" — failed "+w.consecutive_failures+" days running"):" — failed today");
+      });
+      brokenLine=systems+" systems, "+failing.length+" failing: "+names.join("; ")+".";
+    }
+  }
+
+  return '<div class="blk">What is in the brain<span class="ln"></span></div>'
+  + '<div class="pg">'+brain+'</div>'
+
+  + '<div class="blk">Where we are<span class="ln"></span></div>'
+  + '<div class="pi" id="wwa"><span class="pn">›</span><span><b>'+esc((F.where_we_are||{}).line||"")+'</b></span></div>'
+  + '<div id="wwaMore" style="display:none">'+spine()+'</div>'
+
+  + '<div class="blk">What needs you <span class="ct">'+needs.length+'</span><span class="ln"></span></div>'
+  + (needs.length?('<div class="rail">'+needsBlock+'</div>'):needsBlock)
+
+  + '<div class="blk">Is anything broken<span class="ln"></span></div>'
+  + '<div class="pi" data-goto="runson"><span class="pn">'+(brokenBad?"!":"›")+'</span>'
+  +   '<span'+(brokenBad?' style="color:var(--red)"':'')+'>'+esc(brokenLine)+'</span></div>';
+}
+
 function runsOn(){
   if(RUN_STATE==="loading")
     return '<div class="lede">What the studio runs on.</div><div class="lab-note">reading…</div>';
