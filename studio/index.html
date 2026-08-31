@@ -1000,6 +1000,22 @@ function runsOn(){
     for(let i=0;i<work.length;i++){ if(n.indexOf(String(work[i].matches).toLowerCase())>=0) return work[i]; }
     return null;
   };
+  /* THE SURFACE AND THE EMAIL WERE EXACTLY INVERTED: the surface carried liveness and no
+     findings, the email carried findings and no liveness, and each was loud about precisely
+     what the other should have covered. Liveness now derives from the last run's outcome,
+     so the findings sit beside it — ON EVERY STATE, not only on failure, because they are a
+     different question. A check that ran perfectly can still be sitting on hundreds of
+     unjudged contradictions, and a green row saying nothing about that is the inversion
+     rebuilt in one place. */
+  const hf=RUN.hunt_findings||null;
+  const findingsFor=function(name){
+    if(!hf||!hf.matches) return "";
+    if(String(name).toLowerCase().indexOf(String(hf.matches).toLowerCase())<0) return "";
+    const rs=(hf.reasons||[]);
+    if(hf.ok && !rs.length) return '<br/><b>Found:</b> nothing outstanding.';
+    if(!rs.length) return '<br/><b>Found:</b> not reported.';
+    return '<br/><b>Found:</b> '+rs.map(function(r){ return esc(r); }).join('; ')+'.';
+  };
   const rows=all.map(function(d){
     const yours=(d.state==="yours_to_check");
     const w=workFor(d.name);
@@ -1011,6 +1027,7 @@ function runsOn(){
     } else {
       body = esc(d.evidence)+(d.procedure?('<br/><b>Do this:</b> '+esc(d.procedure)):"");
     }
+    body += findingsFor(d.name);
     return '<div class="row '+cls[d.state]+'"><span class="edge"></span>'
       + '<span class="nm">'+esc(d.name)+'<small>'+esc(d.group)+'</small></span>'
       + '<span class="st">'+body+'</span>'
