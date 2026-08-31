@@ -501,6 +501,28 @@ function drawPlaceholder(li, m, group) {
   const what = group.key === "email"   ? "inbox"
              : group.key === "drives"  ? "files"
              : group.key === "systems" ? "figures" : "records";
+
+  // A row that says "not connected" has to carry the way to connect it. Describing a
+  // room that will exist later, to someone who opened that row to open the door, is
+  // the same defect as stating a problem in one place and its remedy in another -
+  // which every other line on this screen already refuses to do.
+  if (m.health === "unconnected") {
+    box.innerHTML =
+      `<h3>${escape(m.name)} is not connected yet.</h3>`
+      + `<p class="quiet">${group.key === "systems"
+          ? "Connecting stores a permission in your own workspace and nothing else. A system "
+            + "of record is read at the moment you ask something of it, never copied out."
+          : "Connecting stores a permission in your own workspace. Nothing is moved and "
+            + "nothing is reorganised."}</p>`;
+    const go = el("button", "go");
+    go.type = "button";
+    go.textContent = `Connect ${m.name}`;
+    go.addEventListener("click", (ev) => { ev.stopPropagation(); openConnect(group.key); });
+    box.appendChild(go);
+    li.appendChild(box);
+    return;
+  }
+
   box.innerHTML =
     `<h3>This is where the ${what} for ${escape(m.name)} will live.</h3>` +
     `<p class="quiet">Reading and acting on ${what} is a separate build. The way in is wired now, `
