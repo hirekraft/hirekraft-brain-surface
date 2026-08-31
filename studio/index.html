@@ -852,7 +852,13 @@ function front(){
      now open an index, newest first, and a row opens the body. The last is a TOTAL, not a
      place: 1,319 searchable pieces is what the brain can answer from, there is nowhere to
      go, and it carries no chevron. */
-  const dest={docs:'docs', principles:'principles', decisions:'records:decisions', reports:'records:reports'};
+  /* Keyed on the values the server actually emits — 'documents' and 'seat reports', not
+     'docs' and 'reports'. The first version guessed the keys and silently dropped the
+     chevron from two lines that DO have destinations, which is the same defect in the
+     opposite direction: a destination with no affordance. Caught by asserting every line's
+     chevron against its destination rather than by looking at the page. */
+  const dest={'documents':'docs', 'principles':'principles',
+              'decisions':'records:decisions', 'seat reports':'records:reports'};
   const brain=(F.in_the_brain||[]).map(function(x){
     const to=dest[x.what]||null;
     if(!to) return '<div class="pi" style="cursor:default"><span class="pn" style="color:var(--ink-4)">·</span>'
