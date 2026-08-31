@@ -976,10 +976,18 @@ function runsOn(){
   if(acts.seen){
     (acts.workflows||[]).forEach(function(w){
       const failed = w.conclusion==="failure";
-      const alsoBefore = (w.consecutive_failures>1) ? (" — and the "+w.consecutive_failures+" before it") : "";
+      /* Runs, spoken as runs. The count is of consecutive failing RUNS; days are derived
+         separately from the dates those runs fall on, because three failures in one
+         afternoon is not three days of failure. */
+      const runs=Number(w.consecutive_failures)||0;
+      const fdays=Number(w.consecutive_failure_days)||0;
+      const alsoBefore = (runs>1)
+        ? (" — and the "+(runs-1)+" before it"+(fdays>1?(", across "+fdays+" separate days"):", all today"))
+        : "";
       extra.push({ group:"code", name:"GitHub Actions — "+w.name,
         state: failed ? "failing" : "proven",
         evidence: failed ? ("Its last run FAILED"+alsoBefore+".") : ("Its last run succeeded ("+w.event+")."),
+        first_seen: w.first_seen, consecutive_failure_days: w.consecutive_failure_days,
         last_at: w.at });
     });
   } else {
