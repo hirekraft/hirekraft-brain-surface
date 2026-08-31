@@ -730,8 +730,8 @@ function spine(){
          : '<div class="sp-empty">No open work order names this step. That is not evidence it is closed — it means nothing in the promise ledger or the backlog maps here.</div>')
       + '</div></div>';
     }).join('')+'</div>'
-  + unplacedBlock(w)
-  + noFinishBlock(w)
+  /* The two work-order walls moved to What we run on. They are real findings and Alex does
+     not read them on the way to knowing where we are. */
   + (t.orders
      ? '<div class="sp-foot">'+esc(t.orders)+' open items in total · '+esc(t.with_finish_condition)
        + ' carry a finish condition ('+esc(t.placed_on_a_step)+' on a step, '+esc(t.unplaced)+' not on the path) · '
@@ -964,6 +964,8 @@ function runsOn(){
   + '<div class="lab-note" style="margin-bottom:10px">These are not alarms and they are not healthy. A limit exists, nothing here can read how close we are, and it stops the work at the moment it is hit.</div>'
   + (unk.length?('<div class="fr-grid">'+unkCards+'</div>'):'<div class="empty">None recorded.</div>')
   + studioRail()
+  + unplacedBlock(D.work_orders)
+  + noFinishBlock(D.work_orders)
   + '<div class="blk">Scheduled work<span class="ln"></span></div>'
   + '<div class="fr-grid">'
   + '<div class="fc"><h3>'+esc((RUN.crons||{}).active)+'</h3><p>jobs scheduled on the studio’s database</p></div>'
