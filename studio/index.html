@@ -958,11 +958,38 @@ function runsOn(){
   const label={failing:"FAILING",yours_to_check:"YOURS TO CHECK",assumed:"ASSUMED",proven:"PROVEN"};
   const nFail=all.filter(function(d){ return d.state==="failing"; }).length;
 
+  /* OURS OR YOURS, ON EVERY LINE. Alex should not have to work out which of twenty-five
+     problems he is meant to act on. The rule is derived, not assigned: a line is YOURS only
+     when no credential for it exists anywhere in the studio, so nothing here can act on it.
+     That is exactly the yours_to_check state, and today it is one line — Netlify. Everything
+     else is ours, and it is listed so he can see we know.
+
+     AND THE FAILING THING CARRIES ITS FIX, NOT ITS STATUS. "Its last run FAILED — and the
+     21 before it" is a status; the page's own law is no problem without its solution. The
+     fix comes from the open-work registry, because a seat registers at CLOSE and one that
+     is working right now leaves no trace to derive from. A failing line with no row there
+     says nobody is on it yet, which is the honest default and the more useful signal. */
+  const work=(RUN.open_work)||[];
+  const workFor=function(name){
+    const n=String(name).toLowerCase();
+    for(let i=0;i<work.length;i++){ if(n.indexOf(String(work[i].matches).toLowerCase())>=0) return work[i]; }
+    return null;
+  };
   const rows=all.map(function(d){
+    const yours=(d.state==="yours_to_check");
+    const w=workFor(d.name);
+    let body;
+    if(d.state==="failing"){
+      body = w
+        ? (esc(w.what)+'<br/><b>Being done:</b> '+esc(w.being_done))
+        : (esc(d.evidence)+'<br/><b>Being done:</b> nothing yet — no one is on this.');
+    } else {
+      body = esc(d.evidence)+(d.procedure?('<br/><b>Do this:</b> '+esc(d.procedure)):"");
+    }
     return '<div class="row '+cls[d.state]+'"><span class="edge"></span>'
       + '<span class="nm">'+esc(d.name)+'<small>'+esc(d.group)+'</small></span>'
-      + '<span class="st">'+esc(d.evidence)+(d.procedure?('<br/><b>Do this:</b> '+esc(d.procedure)):"")+'</span>'
-      + '<span class="gg">'+(d.last_at?esc(ago(d.last_at)):"—")+'</span>'
+      + '<span class="st">'+body+'</span>'
+      + '<span class="gg">'+(yours?'<b style="color:var(--amber)">YOURS</b>':'ours')+'</span>'
       + '<span class="md">'+label[d.state]+'</span></div>';
   }).join("");
 
@@ -989,7 +1016,9 @@ function runsOn(){
 
   return '<div class="lede">What the studio runs on. The state of each is <b>what last exercised it</b>, not what we believe about it.</div>'
   + '<div class="lab-note">'+esc(RUN.how||"")+'</div>'
-  + '<div class="blk">The machinery <span class="ct">'+all.length+(nFail?(" · "+nFail+" failing"):"")+'</span><span class="ln"></span></div>'
+  + '<div class="blk">The machinery <span class="ct">'+all.length+(nFail?(" · "+nFail+" failing"):"")
+  +   ' · '+all.filter(function(d){ return d.state==="yours_to_check"; }).length+' for you'+'</span><span class="ln"></span></div>'
+  + '<div class="lab-note" style="margin-bottom:10px">'+esc(RUN.ownership_rule||"")+'</div>'
   + '<div class="rail">'+rows+'</div>'
   + '<div class="blk">Limits <span class="ct">a ceiling we can see</span><span class="ln"></span></div>'
   + (lims.length?('<div class="rail">'+limRows+'</div>'):'<div class="empty">No ceiling is recorded with a number.</div>')
