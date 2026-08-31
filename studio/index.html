@@ -426,12 +426,39 @@ function counter(value, ok){
   return {v:n, c:null, known:true};
 }
 
+/* FRESHNESS IS THE ONE THING THIS SURFACE EXISTS TO DO, so every leg declares what it
+   computes and the worst leg is NAMED. A number that names no population, no window and no
+   grain cannot be traced to the thing producing it when it is wrong — it is only wrong.
+
+   Two faults were in the old computation. 'corpus' measured when the SHARDER last wrote a
+   row: a maintenance event that reads 0.0 the moment a re-shard runs while the doctrine
+   could be weeks stale, and grows while the doctrine is perfectly current. It no longer
+   counts toward the worst. And 'decisions' mixed grain with the rest, so the same evening's
+   work read 5 on one leg and 4.9 on another. Its source is a DATE with no time of day, so
+   it reports whole days and says so, rather than a decimal invented by casting to midnight:
+   UNIFORMITY ACHIEVED BY INVENTING PRECISION IS WORSE THAN THE MIXED GRAIN IT REPLACES. */
 function gaugeBits(){
   const f=D.freshness||{};
+  const served=f.legs;
+  if(Array.isArray(served)){
+    const legs=served.map(function(l){
+      const n=Number(l.days);
+      return [l.label, isFinite(n)?n:null, l.means, l];
+    });
+    const missing=served.filter(function(l){ return l.counts_toward_worst && !isFinite(Number(l.days)); })
+                        .map(function(l){ return l.label; });
+    const wo=f.worst||{};
+    const worst=(wo.days===null||wo.days===undefined)?null:Number(wo.days);
+    const cls=function(d){ return d===null?"bad":d>3?"bad":d>1.5?"warn":"ok"; };
+    return {legs:legs, worst:isFinite(worst)?worst:null, cls:cls, missing:missing,
+            worstLeg:wo.leg||null, how:f.how||"", corpus:f.corpus_integrity||null,
+            caveat:f.write_timestamp_caveat||""};
+  }
+  /* Older payload shape, kept so a stale response degrades rather than throwing. */
   const leg=(k,label)=>{
     const o=f[k]||{};
     const n=Number(o.days);
-    return [label, isFinite(n)?n:null, o.means||"not measured"];
+    return [label, isFinite(n)?n:null, o.means||"not measured", null];
   };
   const legs=[leg("chats","chats"),leg("snapshots","snapshots"),leg("decisions","decisions"),
               leg("corpus","corpus"),leg("capture","capture")];
@@ -442,7 +469,7 @@ function gaugeBits(){
   const known=legs.map(l=>l[1]).filter(n=>n!==null);
   const worst=missing.length?null:(known.length?Math.max.apply(null,known):null);
   const cls=d=>d===null?"bad":d>3?"bad":d>1.5?"warn":"ok";
-  return {legs,worst,cls,missing};
+  return {legs,worst,cls,missing,worstLeg:null,how:"",corpus:null,caveat:""};
 }
 
 function render(){
@@ -472,7 +499,7 @@ function render(){
   +     '<div class="gz"><span class="gdot live"></span><span class="gl">generated</span><span class="gv" id="genage">—</span></div>'
   +   '</div></div>'
   +   '<div class="scope"><div class="sl">the <b>studio</b> brain</div><div class="gauges" id="gz">'
-  +     '<div class="gz '+(g.worst!==null&&g.worst>3?"alert":"")+'" title="'+esc(g.missing.length?("not measured: "+g.missing.join(", ")):"worst of five legs, each measured at source")+'"><span class="gdot '+g.cls(g.worst)+'"></span><span class="gl">freshness</span><span class="gv">'
+  +     '<div class="gz '+(g.worst!==null&&g.worst>3?"alert":"")+'" title="'+esc(g.missing.length?("not measured: "+g.missing.join(", ")):(g.how||""))+'"><span class="gdot '+g.cls(g.worst)+'"></span><span class="gl">freshness'+(g.worstLeg?(" · "+esc(g.worstLeg)):"")+'</span><span class="gv">'
   +       (g.worst===null?"unknown":(g.worst<=1?"current":g.worst+"d behind"))+'</span></div>'
   +     '<div class="gz"><span class="gdot '+(seats.known?"live":"bad")+'"></span><span class="gl">seats closed</span><span class="gv">'+esc(seats.v)+'</span></div>'
   +     '<div class="gz"><span class="chev">▾</span></div>'
@@ -480,7 +507,22 @@ function render(){
   +   custScopes(cust)
   + '</div>'
   + '<div class="gauges-detail" id="gzd">'
-  +   g.legs.map(l=>'<div class="gd-row"><span class="ddot '+g.cls(l[1])+'"></span><span class="dn">'+esc(l[0])+'</span><span class="ds">'+(l[1]===null?"not measured":esc(l[1])+"d")+' · '+esc(l[2])+'</span></div>').join("")
+  /* Each leg shows its population, window, grain and source column, so a wrong number is
+     diagnosable rather than merely wrong. Legs excluded from the worst say so. */
+  +   g.legs.map(function(l){
+        const d=l[3];
+        return '<div class="gd-row" style="align-items:flex-start">'
+          + '<span class="ddot '+g.cls(l[1])+'" style="margin-top:5px"></span>'
+          + '<span class="dn">'+esc(l[0])+(d&&!d.counts_toward_worst?' <span style="color:var(--ink-4)">(not counted)</span>':'')+'</span>'
+          + '<span class="ds" style="flex:2">'+(l[1]===null?"not measured":esc(l[1])+"d")
+          + (d?('<br/>population: '+esc(d.population)+'<br/>window: '+esc(d.window)+'<br/>grain: '+esc(d.grain)+'<br/>source: '+esc(d.source)+'<br/>'+esc(d.means)):(' · '+esc(l[2])))
+          + '</span></div>';
+      }).join("")
+  +   (g.corpus?('<div class="gd-row" style="align-items:flex-start"><span class="ddot '+(g.corpus.docs_behind>0?"bad":"ok")+'" style="margin-top:5px"></span>'
+        + '<span class="dn">corpus</span><span class="ds" style="flex:2">'+esc(g.corpus.docs_behind)+' of '+esc(g.corpus.docs)+' documents sharded behind their live version'
+        + '<br/>'+esc(g.corpus.means)+'</span></div>'):"")
+  +   (g.caveat?('<div class="gd-row" style="align-items:flex-start"><span class="ddot warn" style="margin-top:5px"></span><span class="dn">write times</span>'
+        + '<span class="ds" style="flex:2">'+esc(g.caveat)+'</span></div>'):"")
   + '</div>'
   + spine()
   + '<nav class="sections" id="nav">'
