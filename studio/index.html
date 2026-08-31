@@ -555,7 +555,14 @@ function render(){
   document.querySelectorAll("[data-goto]").forEach(function(el){
     el.onclick=function(){
       const w=el.dataset.goto;
-      if(w==="docs"){ const ov=document.getElementById("ov"); if(ov) ov.dataset.open="true"; return; }
+      /* The drawer is shared with the record lists, so documents must RE-RENDER it rather
+         than just opening it — otherwise it shows whatever was opened last. */
+      if(w==="docs"){
+        const ov=document.getElementById("ov"), drw=document.getElementById("drw");
+        if(drw){ drw.innerHTML=ipdocs(); bindDocs(); bindDrawer(); }
+        if(ov) ov.dataset.open="true";
+        return;
+      }
       if(w==="principles"){ goTab(5); return; }
       if(w==="runson"){ goTab(1); return; }
       if(w.indexOf("records:")===0){ openRecords(w.slice(8)); return; }
