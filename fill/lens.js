@@ -1467,9 +1467,14 @@ readBrain();                     // then the live reading lands into the frame
   }
 
   // A source key is not a sentence. Say it the way the person would.
-  const isMail = done.startsWith("gmail:");
+  const isMail   = done.startsWith("gmail:");
+  const isSystem = done.startsWith("qbo:");
   const named  = done.replace(/^gmail:/, "").replace(/^drive:oauth:/, "");
-  say(isMail
+  say(isSystem
+    ? `QuickBooks is connected. The permission is stored in your own workspace, and that `
+      + `is all that changed - nothing has been copied out of it. QuickBooks is a system of `
+      + `record, so it is read at the moment you ask something of it, not before.`
+    : isMail
     ? `${named} is connected. The permission is stored in your own workspace.`
     : `Google Drive is connected for ${named}. The permission is stored in your own `
       + `workspace - and that is all it is. No drive was added to the list and no read `
@@ -1482,6 +1487,13 @@ readBrain();                     // then the live reading lands into the frame
   // session, by their own deliberate act, is not a safeguard - it is an unfinished
   // sentence. The thing this guards against is a SILENT SWEEP over sources nobody
   // asked about; this is the one source they just asked about, named in the return.
+  // A system source is firm property and deliberately belongs to no single identity -
+  // source_begin sets its owner to null. Adopting it would hand the company's books to
+  // whoever happened to click connect, as a silent side effect of a success message.
+  // There is also no second gate to walk to: nothing is chosen, and nothing is read
+  // until a question is asked.
+  if (isSystem) return;
+
   try {
     const { data, error } = await sb.rpc("source_adopt", { p_source_key: done });
     if (error) throw error;
