@@ -561,6 +561,9 @@ function render(){
       if(w==="runson"){ goTab(1); return; }
     };
   });
+  document.querySelectorAll("[data-tool]").forEach(function(el){
+    el.onclick=function(){ window.open(TOOL_SURFACE,"_blank","noopener"); };
+  });
   const wwa=document.getElementById("wwa");
   if(wwa) wwa.onclick=function(){
     const m=document.getElementById("wwaMore");
@@ -635,19 +638,20 @@ function custScopes(cust){
     return '<div class="scope"><div class="sl">customers</div><div class="gauges">'
       + '<div class="gz"><span class="gdot bad"></span><span class="gl">customers</span><span class="gv">unknown</span></div>'
       + '</div></div>';
-  return cust.map(c=>{
-    const srcs=(c.seen?(c.sources||[]):[]).concat(D.absent_sources||[]);
-    /* The problem count is only a count when that customer's source list was actually
-       read. A failed read leaves the absent-source rows alone and would total a
-       confident, wrong zero. */
-    const problems=counter(srcs.filter(s=>s.c==="bad").length, c.seen===true);
+  /* THE BARE NUMBERS ARE GONE FROM THE BAR. "reading 4 of 28" and "problems 17" could not
+     be clicked and could not be acted on, and they describe A CUSTOMER'S BRAIN — faults
+     that belong on the Tool surface, which already resolves them into groups by cause.
+     The studio does not get to be a second place to fix them.
+
+     What stays here is only the thing that must be visible at a glance and has no home
+     elsewhere: a customer brain we cannot reach at all. When it IS reachable, the one
+     plain line on the front page carries it and points at the Tool. */
+  const down=cust.filter(function(c){ return !c.seen; });
+  if(!down.length) return "";
+  return down.map(function(c){
     return '<div class="scope"><div class="sl"><b>'+esc(c.name||c.id||"customer")+'</b>’s brain</div><div class="gauges">'
-      + '<div class="gz" title="'+esc(c.seen?"sources whose content arrived in the last two days":(c.why||"unreachable"))+'">'
-      +   '<span class="gdot '+(c.seen?(c.reading>0?"ok":"bad"):"bad")+'"></span><span class="gl">reading</span>'
-      +   '<span class="gv">'+(c.seen?(esc(c.reading)+" of "+esc(c.total)):"unreachable")+'</span></div>'
-      + '<div class="gz" title="'+esc(problems.known?("sources in trouble at "+(c.name||"")):((c.name||"this customer")+"’s source read failed, so the number of problems is unknown — not zero"))+'">'
-      +   '<span class="gdot '+(problems.known?(problems.v?"bad":"ok"):"bad")+'"></span><span class="gl">problems</span>'
-      +   '<span class="gv">'+esc(problems.v)+'</span></div>'
+      + '<div class="gz" title="'+esc(c.why||"unreachable")+'"><span class="gdot bad"></span>'
+      + '<span class="gl">'+esc(c.name||"customer")+'</span><span class="gv">unreachable</span></div>'
       + '</div></div>';
   }).join("");
 }
@@ -880,7 +884,37 @@ function front(){
 
   + '<div class="blk">Is anything broken<span class="ln"></span></div>'
   + '<div class="pi" data-goto="runson"><span class="pn">'+(brokenBad?"!":"›")+'</span>'
-  +   '<span'+(brokenBad?' style="color:var(--red)"':'')+'>'+esc(brokenLine)+'</span></div>';
+  +   '<span'+(brokenBad?' style="color:var(--red)"':'')+'>'+esc(brokenLine)+'</span></div>'
+  + customerLine();
+}
+
+/* ONE PLAIN LINE FOR A CUSTOMER, AND IT OPENS THE PLACE THE FAULTS ARE FIXED.
+
+   Which of the two offered options is right was established from the record rather than
+   picked: /fill/ is called "the fresh Tool surface" in the 17 July decision, it is on the
+   canonical host, and it is backed by fill_attention(), which groups unresolved faults BY
+   BUCKET — by cause — separating what needs the customer from what is our side and what is
+   benign. That is the grouping Alex is describing, so a destination genuinely exists and
+   the line can link rather than dead-end.
+
+   THE TWO NUMBERS ARE NOT THE SAME POPULATION and the line must not imply they are: the
+   studio counts SOURCES in trouble (17 of 28), while the Tool groups FAILED ITEMS (1,982
+   in 4 buckets). The line therefore says sources, and sends him to the Tool for the faults
+   themselves rather than promising the same figure there. */
+const TOOL_SURFACE="https://hirekraft.github.io/hirekraft-brain-surface/fill/";
+function customerLine(){
+  if(CUST_STATE==="loading") return "";
+  const cust=(CUST&&CUST.customers)||[];
+  if(!cust.length) return "";
+  return cust.map(function(c){
+    if(!c.seen) return '<div class="pi"><span class="pn">!</span><span style="color:var(--red)">'
+      + esc(c.name)+'’s brain cannot be read right now, so nothing about it is known.</span></div>';
+    const srcs=(c.sources||[]);
+    const bad=srcs.filter(function(s){ return s.c==="bad"; }).length;
+    return '<div class="pi" data-tool="1"><span class="pn">›</span><span>'
+      + esc(c.name)+': '+esc(c.reading)+' of '+esc(c.total)+' sources reading, '
+      + esc(bad)+' with problems — fixed on the Tool</span></div>';
+  }).join("");
 }
 
 function runsOn(){
