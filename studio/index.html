@@ -570,6 +570,22 @@ function render(){
       if(w.indexOf("records:")===0){ openRecords(w.slice(8)); return; }
     };
   });
+  /* The queue, the pair, and the ruling. Every click ends in a stated outcome: a silent
+     button is indistinguishable from one that never fired, which is the class this whole
+     surface exists to remove — and nobody has ever clicked a ruling. */
+  document.querySelectorAll("[data-cscope]").forEach(function(el){
+    el.onclick=function(){ loadConflicts(el.dataset.cscope); };
+  });
+  document.querySelectorAll("[data-conf]").forEach(function(el){
+    el.onclick=function(){ openConflict(el.dataset.conf); };
+  });
+  document.querySelectorAll("[data-rule]").forEach(function(el){
+    el.onclick=function(){
+      const r=el.dataset.rule;
+      if(r==="close"){ CONF_OPEN=null; paint(); return; }
+      ruleConflict(r, el.dataset.winner||"");
+    };
+  });
   document.querySelectorAll("[data-tool]").forEach(function(el){
     el.onclick=function(){ window.open(TOOL_SURFACE,"_blank","noopener"); };
   });
@@ -1535,6 +1551,57 @@ function bindDocs(){
 /* THE LIST THAT DID NOT EXIST. Newest first, opening the body. Bodies are fetched one at a
    time because the twenty newest write-ups alone are 135KB and this must not weigh on the
    page Alex opens daily. */
+async function loadConflicts(scope){
+  CONF_SCOPE=scope||"cross"; CONF_STATE="loading"; CONF_OPEN=null;
+  const r=await call(FN,{action:"conflicts",scope:CONF_SCOPE,n:40});
+  if(r.status===200 && r.body && r.body.ok!==false){ CONF=r.body; CONF_STATE="done"; }
+  else { CONF={error:(r.body&&r.body.error)||("failed ("+r.status+")")}; CONF_STATE="failed"; }
+  paint();
+}
+
+async function openConflict(id){
+  CONF_OPEN="loading"; paint();
+  const r=await call(FN,{action:"conflict",id:id});
+  CONF_OPEN=(r.status===200 && r.body && r.body.ok!==false)
+    ? r.body
+    : {error:(r.body&&r.body.error)||("could not open it ("+r.status+")")};
+  paint();
+}
+
+/* THE RULING. It reports what actually happened, including WHICH SIDE it recorded as
+   standing, because a ruling that only says "saved" cannot be checked against what was
+   meant — and direction is the thing that goes wrong here. On success the queue is re-read
+   FROM SOURCE rather than patched in memory, so the count on screen is the count in the
+   record. */
+async function ruleConflict(ruling, winner){
+  if(CONF_BUSY) return;
+  const out=document.getElementById("ruleout");
+  if(!CONF_OPEN || !CONF_OPEN.id){ if(out) out.textContent="No pair is open."; return; }
+  if(ruling==="superseded" && !winner){ if(out) out.textContent="Choose which side stands."; return; }
+  CONF_BUSY=true;
+  if(out) out.textContent="Recording…";
+
+  const r=await call(FN,{action:"rule",id:CONF_OPEN.id,ruling:ruling,winner:winner||"",note:""});
+  CONF_BUSY=false;
+
+  if(r.status!==200 || !r.body || r.body.ok===false){
+    if(out) out.innerHTML='<span style="color:var(--red)">Not recorded: '
+      + esc((r.body&&r.body.error)||("failed ("+r.status+")"))+'</span>';
+    return;
+  }
+  const b=r.body;
+  let said;
+  if(ruling==="superseded"){
+    const w=(CONF_OPEN.a && CONF_OPEN.a.id===winner) ? CONF_OPEN.a.doc : (CONF_OPEN.b||{}).doc;
+    said='Recorded: '+esc(w)+' stands. '+esc(b.means||"");
+  } else if(ruling==="not_a_conflict"){ said='Recorded as no conflict. '+esc(b.means||""); }
+  else { said=esc(b.means||"Left open."); }
+  if(out) out.innerHTML='<span style="color:var(--green)">'+said+'</span>';
+
+  CONF_OPEN=null;
+  await loadConflicts(CONF_SCOPE);
+}
+
 async function openRecords(kind){
   const ov=document.getElementById("ov"), drw=document.getElementById("drw");
   if(!ov||!drw) return;
