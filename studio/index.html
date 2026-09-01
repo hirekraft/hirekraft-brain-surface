@@ -525,15 +525,16 @@ function render(){
         + '<span class="ds" style="flex:2">'+esc(g.caveat)+'</span></div>'):"")
   + '</div>'
   + '<nav class="sections" id="nav">'
-  +   ["Front","What we run on","Lab","Parts Bin","The Frame","Principles"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
+  +   ["Front","Contradictions","What we run on","Lab","Parts Bin","The Frame","Principles"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
   + '</nav>'
   + '<main>'
   +   '<section class="view" data-active="true" data-i="0">'+front()+'</section>'
-  +   '<section class="view" data-i="1">'+runsOn()+'</section>'
-  +   '<section class="view" data-i="2">'+lab(ln,srcs)+'</section>'
-  +   '<section class="view" data-i="3">'+parts()+'</section>'
-  +   '<section class="view" data-i="4">'+frame()+'</section>'
-  +   '<section class="view" data-i="5">'+principles()+'</section>'
+  +   '<section class="view" data-i="1">'+conflicts()+'</section>'
+  +   '<section class="view" data-i="2">'+runsOn()+'</section>'
+  +   '<section class="view" data-i="3">'+lab(ln,srcs)+'</section>'
+  +   '<section class="view" data-i="4">'+parts()+'</section>'
+  +   '<section class="view" data-i="5">'+frame()+'</section>'
+  +   '<section class="view" data-i="6">'+principles()+'</section>'
   +   '<div class="foot">'+esc(D.footer)+'<br/>Served by '+esc(D.served_by.fn)+' · the Studio’s own numbers and each customer’s, kept apart · this is the only address that serves the studio · nothing on this page is stored.</div>'
   + '</main></div>'
   + '<div class="ov" id="ov"><div class="dr" id="drw">'+ipdocs()+'</div></div>';
@@ -563,8 +564,9 @@ function render(){
         if(ov) ov.dataset.open="true";
         return;
       }
-      if(w==="principles"){ goTab(5); return; }
-      if(w==="runson"){ goTab(1); return; }
+      if(w==="principles"){ goTab(6); return; }
+      if(w==="runson"){ goTab(2); return; }
+      if(w==="conflicts"){ goTab(1); loadConflicts("cross"); return; }
       if(w.indexOf("records:")===0){ openRecords(w.slice(8)); return; }
     };
   });
@@ -840,6 +842,95 @@ function bindSteps(){
 
    LANGUAGE: every line is in words he would say out loud. Anything needing a word he would
    not use belongs further down. */
+/* THE PLACE ALEX JUDGES CONTRADICTIONS.
+
+   4,589 pairs have sat in the record since June and not one had ever been ruled on by a
+   person. They were visible NOWHERE — written by one path, read by zero, on the instrument
+   built to catch that class. The data layer was proven before this tab existed; this is
+   what makes it reachable.
+
+   CROSS-DOCUMENT FIRST: that is the shape that misdirects builds, because each document
+   reads correct on its own. The intra-document ones stay reachable rather than filtered
+   away — master_spec is canonical product IP, not a narrative where later simply wins.
+
+   THE HUNT'S DIRECTION IS A PROPOSAL, NOT A VERDICT. Direction reproduces at roughly 73-76%
+   forward, so about a quarter point backwards, and the first ruling ever recorded went
+   AGAINST it — the hunt named a passage that annotates itself "TRUE AS HISTORY, STALE AS
+   CURRENT STATE" as the one that stands. It is rendered as a suggestion with that caveat
+   attached, never preselected, and either side can be chosen with one click. */
+let CONF=null, CONF_STATE="idle", CONF_SCOPE="cross", CONF_OPEN=null, CONF_BUSY=false;
+
+function conflicts(){
+  if(CONF_STATE==="idle")
+    return '<div class="lede">Two things in the record that cannot both be true. The hunt finds them; <b>you decide</b>.</div>'
+      + '<div class="lab-note" style="margin-top:10px">Opening the queue…</div>';
+  if(CONF_STATE==="failed")
+    return '<div class="lede">Two things in the record that cannot both be true.</div>'
+      + '<div class="empty">The queue could not be read, so how many are waiting is unknown — not zero. '
+      + esc((CONF&&CONF.error)||"")+'</div>';
+
+  const c=(CONF&&CONF.counts)||{}, items=(CONF&&CONF.items)||[];
+  const tab=function(k,label,n){
+    return '<button class="btn'+(CONF_SCOPE===k?' pri':'')+'" data-cscope="'+k+'">'+label+' ('+esc(n)+')</button>';
+  };
+
+  return '<div class="lede">Two things in the record that cannot both be true. The hunt finds them; <b>you decide</b>.</div>'
+  + '<div class="lab-note">'+esc(CONF.means||"")+'</div>'
+  + '<div class="drow" style="margin-top:12px">'
+  +   tab("cross","Across two documents", c.cross_doc)
+  +   tab("intra","Inside one document", c.intra_doc)
+  +   '<span class="lab-note" style="margin:0">'+esc(c.ever_ruled||0)+' ruled so far</span>'
+  + '</div>'
+  + (CONF_OPEN ? conflictCard() : '')
+  + '<div class="blk">Waiting <span class="ct">'+esc(c.showing)+' of '+esc(c.in_scope)+'</span><span class="ln"></span></div>'
+  + (items.length
+     ? '<div class="rail">'+items.map(function(p){
+         return '<div class="row '+(p.verdict==="SUPERSEDES"?"warn":"bad")+'" data-conf="'+esc(p.id)+'">'
+           + '<span class="edge"></span>'
+           + '<span class="nm">'+esc(p.a_doc)+' vs '+esc(p.b_doc)
+           +   '<small>'+esc(p.a_heading)+' / '+esc(p.b_heading)+'</small></span>'
+           + '<span class="st">'+(p.verdict==="SUPERSEDES"
+               ? "One may have replaced the other" : "They say different things")+'</span>'
+           + '<span class="gg">'+(p.has_direction?"hunt suggests a side":"no suggestion")+'</span>'
+           + '<span class="md">OPEN</span></div>';
+       }).join("")+'</div>'
+     : '<div class="empty">Nothing waiting in this group.</div>');
+}
+
+function conflictCard(){
+  const d=CONF_OPEN;
+  if(d==="loading") return '<div class="pdepth"><div class="gen"><span class="gdt"></span>opening…</div></div>';
+  if(d&&d.error) return '<div class="pdepth"><div class="ds"><p>'+esc(d.error)+'</p></div></div>';
+  if(!d||!d.a) return '';
+
+  const side=function(s,which){
+    /* The hunt's pick is shown ON the side it points at, worded as a suggestion. Nothing is
+       preselected: both buttons look the same, because a quarter of these point backwards. */
+    return '<div class="fc" style="border-left:3px solid '+(s.is_hunt_winner?"var(--amber-line)":"var(--hair)")+'">'
+      + '<h3>'+esc(s.doc)+'</h3>'
+      + '<p style="color:var(--ink-3)">'+esc(s.heading||"")+'</p>'
+      + (s.is_hunt_winner?'<span class="pill" style="color:var(--amber);background:var(--amber-bg)">the hunt suggests this side</span>':'')
+      + '<div class="docbody" style="max-height:34vh;margin-top:10px">'+esc(s.body)+'</div>'
+      + '<button class="btn pri" style="margin-top:10px;width:100%" data-rule="superseded" data-winner="'+esc(s.id)+'">'
+      +   'This one stands — '+esc(s.doc)+'</button>'
+      + '</div>';
+  };
+
+  return '<div class="pdepth" id="confcard">'
+  + '<div class="gen"><span class="gdt"></span>'+(d.cross_doc?"across two documents":"inside one document")+'</div>'
+  + '<h3>'+esc(d.a.doc)+' vs '+esc(d.b.doc)+'</h3>'
+  + '<div class="ds"><b>What the hunt judged</b><div class="ansbody">'+esc(d.reason||"")+'</div></div>'
+  + '<div class="lab-note" style="margin-bottom:12px">'+esc(d.direction||"")+'</div>'
+  + '<div class="fr-grid">'+side(d.a,"a")+side(d.b,"b")+'</div>'
+  + '<div class="drow" style="margin-top:14px">'
+  +   '<button class="btn" data-rule="not_a_conflict">These do not actually conflict</button>'
+  +   '<button class="btn" data-rule="cannot_tell">I can’t tell yet</button>'
+  +   '<button class="btn" data-rule="close">Close</button>'
+  + '</div>'
+  + '<div id="ruleout" class="lab-note"></div>'
+  + '</div>';
+}
+
 function front(){
   const F=(D&&D.front)||null;
   if(!F) return '<div class="empty">The front page could not be read.</div>';
