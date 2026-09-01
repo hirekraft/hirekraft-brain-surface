@@ -1,0 +1,110 @@
+:root {
+  --paper: #ffffff;
+  --ink: #1c1b19;
+  --ink-soft: #6b6862;
+  --rule: #e4e1db;
+  --held: #2f6f68;
+  --measure: 34rem;
+  --step: 1.55rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #161513;
+    --ink: #edeae4;
+    --ink-soft: #a09c94;
+    --rule: #34322d;
+    --held: #7fb5ad;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html {
+  background: var(--paper);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 3.5rem 1.5rem 6rem;
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  font-size: 1.02rem;
+  line-height: 1.62;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+main {
+  max-width: var(--measure);
+  margin: 0 auto;
+}
+
+.eyebrow {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 0.6rem;
+}
+
+h1 {
+  font-size: 1.72rem;
+  line-height: 1.24;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.stamp {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin: 0 0 var(--step);
+  padding-bottom: var(--step);
+  border-bottom: 1px solid var(--rule);
+}
+
+h2 {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: var(--step) 0 0.45rem;
+}
+
+p { margin: 0 0 0.85rem; }
+
+ul { margin: 0 0 0.85rem; padding-left: 1.15rem; }
+li { margin-bottom: 0.35rem; }
+
+a { color: var(--held); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--held); outline-offset: 3px; border-radius: 2px; }
+
+.lede {
+  font-size: 1.1rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.plain {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  border-left: 2px solid var(--rule);
+  padding: 0.15rem 0 0.15rem 0.95rem;
+  margin: 0 0 var(--step);
+}
+
+footer {
+  margin-top: 2.6rem;
+  padding-top: var(--step);
+  border-top: 1px solid var(--rule);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+}
+
+footer a { margin-right: 1rem; display: inline-block; }
