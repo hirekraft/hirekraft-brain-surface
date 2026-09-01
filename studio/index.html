@@ -545,6 +545,11 @@ function render(){
   tabs.forEach(b=>b.onclick=()=>{
     tabs.forEach(x=>x.setAttribute("aria-selected", x===b ? "true":"false"));
     document.querySelectorAll(".view").forEach(v=>v.dataset.active = (v.dataset.i===b.dataset.i)?"true":"false");
+    /* The Contradictions tab has to FETCH on first open. Without this the tab renders its
+       idle state and sits on "Opening the queue…" forever — an affordance with no
+       behaviour, which is the class this surface exists to remove. Fetched once, then the
+       loaded queue is reused until a ruling forces a re-read from source. */
+    if(b.dataset.i==="1" && CONF_STATE==="idle") loadConflicts(CONF_SCOPE);
   });
   const ov=document.getElementById("ov");
   document.getElementById("ipb").onclick=()=>{ ov.dataset.open="true"; };
