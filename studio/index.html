@@ -3,1683 +3,267 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>The Studio Surface</title>
+<title>The studio</title>
 <!--
-  THE ONE STUDIO SURFACE. This address is the only one that serves the studio.
+  THE STUDIO SURFACE — one screen.
 
-  It carries the July layout (Workshops · Lab · Parts Bin · The Frame · Principles)
-  and the IP & Docs reader, ask box and sign-in that were already proven working —
-  reused verbatim, not reimplemented. Reimplementing them is how two surfaces became
-  three.
+  It was twelve sections and seven tabs: legitimate measurements, all of them, and the most
+  pre-AI artifact in the estate. Alex opens it for two things — where do I stand, what needs
+  me — so those are the only things on it. Everything else is still measured and still
+  honest; it is reached by asking rather than by being displayed permanently.
 
-  WHY HERE. An edge function on *.supabase.co/functions/v1 cannot send text/html:
-  four constructions all returned text/plain, with three controls proving it a
-  platform constraint (cache-control passed through, application/json from the same
-  function passed through, and the same fetch path reports text/html for example.com).
-  This repo is writable through Studio MCP, so the deploy path stays tracked and Alex
-  is not in the loop. Retired with proof: studio-surface.netlify.app (tombstoned) and
-  the GET handler on studio-july (now a pointer, not a page).
+  THE QUIET STATE IS NEVER AN ABSENCE. A blank screen on a good day cannot be told apart
+  from a screen whose checkers never ran, which is the estate's own defect class: a monitor
+  going green because nothing is arriving. So the top line always states what was examined,
+  when, and that it holds. Anything failing promotes itself there unasked, so he never has
+  to know to ask. Coverage is always visible: how much of the instrument is actually
+  watching, derived, so it falls on its own as markers land.
 
-  This file holds NO studio values. Every number arrives through a POST carrying a
-  real session, so an unauthenticated read of these bytes discloses nothing and there
-  is nowhere for a stale copy to hide.
+  Design: prose in a text face, measured values in mono, so a reader knows instantly whether
+  they are looking at a fact or an explanation. Colour appears only in the status marks.
+  Space does the grouping; no cards, no rules, no icons, no framework, no animation.
 -->
 <style>
   :root{
-    --bg:#f7f6f3; --raise:#ffffff; --sunk:#f1efea;
-    --hair:#e6e2da; --hair-2:#efece6;
-    --ink:#191a1c; --ink-2:#52545a; --ink-3:#8c8f96; --ink-4:#b8bbc1;
-    --amber:#bd6515; --amber-bg:#f6ead9; --amber-line:#e0a665;
-    --green:#3f7245; --green-bg:#e8f0e8; --green-line:#9bbf9e;
-    --red:#a83f37; --red-bg:#f6e4e1; --red-line:#d98e85;
-    --blue:#36608f; --blue-bg:#e7eef6; --steel:#3b3f47;
-    --sh-1:0 1px 2px rgba(20,18,14,.05);
-    --sh-2:0 1px 3px rgba(20,18,14,.06),0 6px 20px rgba(20,18,14,.05);
-    --sh-3:0 2px 10px rgba(20,18,14,.06),0 16px 50px rgba(20,18,14,.10);
-    --mono:"SF Mono",ui-monospace,"Cascadia Code","Roboto Mono",Menlo,monospace;
-    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --paper:#FCFCFA; --ink:#16181A; --muted:#5C6066; --faint:#8E9298; --hair:#E3E3DF;
+    --holds:#2F6B3F; --fails:#A32D24; --unknown:#8A6A1F;
+    --prose:Georgia,"Iowan Old Style","Times New Roman",serif;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased;letter-spacing:-0.006em}
-  .wrap{max-width:1120px;margin:0 auto;padding:0 32px}
-  @media(max-width:640px){.wrap{padding:0 18px}}
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--paper);color:var(--ink);font-family:var(--prose);
+       font-size:17px;line-height:1.62;padding:5rem 1.5rem 7rem}
+  .wrap{max-width:34rem;margin:0 auto}          /* ~70 characters of prose */
+  .wide{max-width:44rem;margin:0 auto}
 
-  .masthead{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 0;border-bottom:1px solid var(--hair)}
-  .brand{display:flex;align-items:center;gap:13px;min-width:0}
-  .mark{width:26px;height:26px;border-radius:6px;background:var(--steel);position:relative;flex:0 0 auto;overflow:hidden}
-  .mark span{position:absolute;left:6px;width:14px;height:2px;background:var(--amber)}
-  .mark span:nth-child(1){top:7px}
-  .mark span:nth-child(2){top:12px;background:var(--green-line);width:9px}
-  .mark span:nth-child(3){top:17px;background:rgba(255,255,255,.3);width:11px}
-  .brand h1{font-size:17px;font-weight:650;letter-spacing:-0.022em}
-  .brand .sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);white-space:nowrap}
-  @media(max-width:640px){.brand .sub{display:none}}
-  .mhr{display:flex;align-items:center;gap:14px}
-  .ip-btn{font-family:var(--mono);font-size:11px;color:var(--ink-2);background:var(--raise);border:1px solid var(--hair);padding:7px 12px;border-radius:7px;cursor:pointer;transition:.15s}
-  .ip-btn:hover{border-color:var(--ink-4);box-shadow:var(--sh-1)}
-  .who{font-family:var(--mono);font-size:11px;color:var(--ink-3);cursor:pointer}
+  /* the standing line: the one place boldness is spent */
+  .standing{font-size:1.55rem;line-height:1.4;letter-spacing:-0.011em}
+  .standing .mark{font-family:var(--mono);font-size:.95rem;letter-spacing:0}
+  .quiet{color:var(--muted)}
+  .val{font-family:var(--mono);font-size:.92em;font-variant-numeric:tabular-nums}
 
-  .gauges{display:flex;align-items:stretch;margin-top:16px;background:var(--raise);border:1px solid var(--hair);border-radius:9px;overflow:hidden;box-shadow:var(--sh-1);cursor:pointer;width:fit-content;max-width:100%;flex-wrap:wrap}
-  .gauges:hover{box-shadow:var(--sh-2)}
-  .gz{display:flex;align-items:center;gap:8px;padding:9px 15px;border-right:1px solid var(--hair-2)}
-  .gz:last-child{border-right:none;padding:9px 12px}
-  .gz .gdot{width:7px;height:7px;border-radius:50%}
-  .gdot.ok{background:var(--green)}.gdot.warn{background:var(--amber)}.gdot.bad{background:var(--red);box-shadow:0 0 0 3px var(--red-bg)}.gdot.live{background:var(--blue)}
-  .gz .gl{font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
-  .gz .gv{font-family:var(--mono);font-size:11px;color:var(--ink);font-weight:600}
-  .gz.alert .gv{color:var(--red)}
-  .gz .chev{font-size:9px;color:var(--ink-4)}
-  /* SCOPE. Three different things sat unlabelled on one bar: the page, the Studio's own
-     brain, and a customer's brain. A number is unreadable when you cannot tell what it is
-     about, so every group states its subject. */
-  .scopes{display:flex;gap:14px;margin-top:16px;flex-wrap:wrap;align-items:flex-start}
-  .scope{display:flex;flex-direction:column;gap:5px}
-  .scope>.sl{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-4);padding-left:2px}
-  .scope>.sl b{color:var(--ink-3);font-weight:600}
-  .scope .gauges{margin-top:0}
-  .cust-name{font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-line);border-radius:4px;padding:1px 5px;margin-right:2px}
-  .gauges-detail{display:none;margin-top:8px;background:var(--raise);border:1px solid var(--hair);border-radius:9px;padding:6px;box-shadow:var(--sh-2);max-width:620px}
-  .gauges-detail[data-open="true"]{display:block}
-  .gd-row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px}
-  .gd-row:hover{background:var(--hair-2)}
-  .gd-row .ddot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
-  .ddot.ok{background:var(--green)}.ddot.warn{background:var(--amber)}.ddot.bad{background:var(--red)}.ddot.live{background:var(--blue)}
-  .gd-row .dn{font-family:var(--mono);font-size:12px;flex:1}
-  .gd-row .ds{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+  .mark{display:inline-block;width:.5rem;height:.5rem;border-radius:50%;
+        vertical-align:.08em;margin-right:.55rem}
+  .m-holds{background:var(--holds)} .m-fails{background:var(--fails)}
+  .m-unknown{background:var(--unknown)}
 
-  nav.sections{display:flex;gap:2px;margin-top:24px;border-bottom:1px solid var(--hair);overflow-x:auto}
-  .sec{font-size:13.5px;color:var(--ink-3);background:none;border:none;cursor:pointer;padding:11px 15px 14px;position:relative;font-weight:500;letter-spacing:-0.01em;white-space:nowrap;transition:.15s}
-  .sec:hover{color:var(--ink-2)}
-  .sec[aria-selected="true"]{color:var(--ink)}
-  .sec[aria-selected="true"]::after{content:"";position:absolute;left:15px;right:15px;bottom:-1px;height:2px;background:var(--amber);border-radius:2px}
+  section{margin-top:3.25rem}
+  h2{font-size:1rem;font-weight:400;color:var(--faint);letter-spacing:.01em;margin-bottom:.9rem}
+  .item{margin-bottom:1.15rem}
+  .item p{margin-top:.15rem;color:var(--muted);font-size:.95rem}
+  .row{display:flex;gap:.75rem;align-items:baseline;margin-bottom:.5rem}
+  .row .what{flex:1}
+  .row .value{font-family:var(--mono);font-size:.85rem;color:var(--muted);
+              font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 
-  main{padding:34px 0 90px}
-  .view{display:none}.view[data-active="true"]{display:block;animation:fade .28s ease}
-  @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-  .lede{color:var(--ink-2);max-width:650px;margin-bottom:4px;font-size:15px;line-height:1.6}
-  .lede b{color:var(--ink);font-weight:600}
+  a.plain,button.plain{font:inherit;font-size:.95rem;color:var(--ink);background:none;
+    border:0;border-bottom:1px solid var(--hair);padding:0 0 1px;cursor:pointer}
+  a.plain:hover,button.plain:hover{border-bottom-color:var(--ink)}
+  button.plain:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 
-  .blk{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin:36px 0 14px;display:flex;align-items:center;gap:11px}
-  .blk .ct{color:var(--ink-2)}.blk .ln{flex:1;height:1px;background:var(--hair)}
+  form{display:flex;gap:.75rem;margin-top:.6rem}
+  input{flex:1;font:inherit;font-size:1rem;background:transparent;color:var(--ink);
+        border:0;border-bottom:1px solid var(--hair);padding:.35rem 0}
+  input::placeholder{color:var(--faint)}
+  input:focus{border-bottom-color:var(--ink);outline:none}
 
-  /* THE LINE — instrument rail, problems dominate, health recedes */
-  .rail{background:var(--raise);border:1px solid var(--hair);border-radius:10px;overflow:hidden;box-shadow:var(--sh-1)}
-  .row{display:grid;grid-template-columns:3px 260px 1fr auto auto;align-items:center;gap:15px;padding:11px 16px 11px 13px;border-bottom:1px solid var(--hair-2);transition:.12s}
-  .row:last-child{border-bottom:none}
-  .row .edge{width:3px;height:30px;border-radius:2px;background:transparent}
-  .row .nm{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);word-break:break-all}
-  .row .nm small{display:block;color:var(--ink-4);font-size:10.5px;margin-top:1px;font-family:var(--sans)}
-  .row .st{font-size:12.5px;color:var(--ink-3)}
-  .row .gg{font-family:var(--mono);font-size:10.5px;color:var(--ink-4);white-space:nowrap}
-  .row .md{font-family:var(--mono);font-size:9px;letter-spacing:.05em;padding:2px 6px;border-radius:4px;background:var(--sunk);color:var(--ink-4)}
-  .row.ok{opacity:.6}.row.ok:hover{opacity:1;background:var(--hair-2)}.row.ok .edge{background:var(--green-line)}
-  .row.off{opacity:.48}.row.off:hover{opacity:.85;background:var(--hair-2)}.row.off .edge{background:var(--ink-4)}.row.off .nm{color:var(--ink-3)}
-  .row.bad{opacity:1;background:linear-gradient(90deg,var(--red-bg) 0%,transparent 55%)}.row.bad .edge{background:var(--red)}.row.bad .nm{color:var(--ink);font-weight:600}.row.bad .st{color:var(--red);font-weight:500}
-  .row.warn .edge{background:var(--amber-line)}.row.warn .st{color:var(--amber)}
-  @media(max-width:640px){.row{grid-template-columns:3px 1fr auto}.row .st,.row .gg{display:none}}
-
-  /* WORK ORDERS */
-  .orders{background:var(--raise);border:1px solid var(--hair);border-radius:11px;overflow:hidden;box-shadow:var(--sh-2)}
-  .ord{padding:20px 22px;border-bottom:1px solid var(--hair-2);display:grid;grid-template-columns:30px 1fr auto;gap:0 18px;transition:.14s}
-  .ord:last-child{border-bottom:none}
-  .ord:hover{background:#fdfcfa}
-  .ord .seq{font-family:var(--mono);font-size:11px;color:var(--ink-4);grid-row:1/span 4;padding-top:3px}
-  .ord .ti{font-size:15.5px;font-weight:600;letter-spacing:-0.015em;grid-column:2;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .chip{font-family:var(--mono);font-size:8.5px;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:5px;font-weight:600;white-space:nowrap}
-  .chip.high{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-line)}
-  .chip.stale{background:var(--red-bg);color:var(--red);border:1px solid var(--red-line)}
-  .chip.norm{background:var(--sunk);color:var(--ink-3);border:1px solid var(--hair)}
-  .ord .tg{grid-column:2;display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 9px}
-  .tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.02em;padding:2px 7px;border-radius:4px;background:var(--sunk);color:var(--ink-3)}
-  .ord .wy{grid-column:2;color:var(--ink-2);font-size:13.5px;line-height:1.55;max-width:560px}
-  .ord .fx{grid-column:2;font-size:13px;color:var(--ink);margin-top:10px;padding:11px 13px;background:var(--sunk);border-radius:7px;max-width:560px}
-  .ord .fx b{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--amber);display:block;margin-bottom:3px}
-  .ord .act{grid-column:3;grid-row:1/span 4;display:flex;flex-direction:column;gap:7px;align-self:start;padding-top:1px}
-  .btn{font-family:var(--mono);font-size:10.5px;padding:8px 12px;border-radius:6px;border:1px solid var(--hair);background:var(--raise);color:var(--ink-2);cursor:pointer;white-space:nowrap;text-align:left;transition:.14s}
-  .btn:hover{border-color:var(--amber);color:var(--amber)}
-  .btn.pri{background:var(--steel);color:#fff;border-color:var(--steel)}
-  .btn.pri:hover{background:var(--amber);border-color:var(--amber)}
-  .btn:disabled{opacity:.55;cursor:default}
-  @media(max-width:640px){.ord{grid-template-columns:1fr}.ord .seq{display:none}.ord .ti,.ord .tg,.ord .wy,.ord .fx{grid-column:1}.ord .act{grid-column:1;grid-row:auto;flex-direction:row;margin-top:12px}}
-
-  /* PARTS */
-  .stock{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px}
-  .pt{background:var(--raise);border:1px solid var(--hair);border-radius:7px;padding:12px 13px;border-left:3px solid var(--hair);transition:.13s}
-  .pt:hover{box-shadow:var(--sh-1)}
-  .pt.stocked{border-left-color:var(--green-line)}.pt.lab{border-left-color:var(--amber-line)}
-  .pt.sourced{border-left-color:#8fb0d6}.pt.specific{border-left-color:#bd9bb8}
-  .pt .pn{font-family:var(--mono);font-size:12px;color:var(--ink);margin-bottom:5px;line-height:1.3}
-  .pt .pd{font-size:11.5px;color:var(--ink-3);line-height:1.4}
-  .pt .ps{font-family:var(--mono);font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-4);display:block;margin-top:6px}
-
-  /* FRAME */
-  .fr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:10px;overflow:hidden}
-  .fc{background:var(--raise);padding:19px 20px}
-  .fc h3{font-size:14.5px;font-weight:600;letter-spacing:-0.01em;margin-bottom:6px}
-  .fc p{font-size:13px;color:var(--ink-2);line-height:1.5}
-  .fc .pill{display:inline-block;font-family:var(--mono);font-size:9.5px;color:var(--green);background:var(--green-bg);padding:2px 7px;border-radius:4px;margin-top:9px}
-
-  /* PRINCIPLES */
-  .lab-card{background:var(--raise);border:1px solid var(--hair);border-radius:9px;padding:16px 18px;box-shadow:var(--sh-1);margin-bottom:9px;border-left:3px solid var(--amber-line)}
-  .lab-card .lc-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:4px}
-  .lab-card .lc-name{font-weight:600;font-size:14.5px}
-  .lab-card .lc-meta{font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
-  .lab-card .lc-body{color:var(--ink-2);font-size:13.5px;line-height:1.55;white-space:pre-wrap}
-  .lab-note{font-family:var(--mono);font-size:11px;color:var(--ink-3);line-height:1.6;margin-top:6px}
-  /* principle index + composed deep view */
-  .pidx{columns:2;column-gap:14px}
-  @media(max-width:640px){.pidx{columns:1}}
-  .pg{break-inside:avoid;margin-bottom:14px;background:var(--raise);border:1px solid var(--hair);border-radius:9px;padding:15px 17px}
-  .pi{font-size:12.5px;color:var(--ink-2);margin:0 -8px;padding:5px 8px;border-radius:6px;display:flex;gap:9px;cursor:pointer;transition:.12s;line-height:1.4}
-  .pi:hover{background:var(--hair-2);color:var(--ink)}
-  .pi .pn{font-family:var(--mono);color:var(--amber);font-size:10.5px;flex:0 0 auto;width:22px;text-align:right}
-  .pdepth{background:var(--raise);border:1px solid var(--hair);border-left:3px solid var(--amber);border-radius:9px;padding:22px 24px;margin-bottom:20px;box-shadow:var(--sh-2)}
-  .pdepth .gen{font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--amber);margin-bottom:11px;display:flex;align-items:center;gap:7px}
-  .pdepth h3{font-size:17px;font-weight:600;letter-spacing:-0.02em;margin-bottom:8px}
-  .pdepth .ds{margin-bottom:13px}
-  .pdepth .ds b{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);display:block;margin-bottom:3px}
-  .pdepth .ds p{font-size:13.5px;color:var(--ink);line-height:1.55;white-space:pre-wrap}
-  .pdepth .ft{font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-top:14px;padding-top:12px;border-top:1px solid var(--hair-2)}
-  /* evidence collapsed by default; a citation opens the one it supports */
-  .ev{background:var(--raise);border:1px solid var(--hair);border-radius:9px;margin-bottom:7px;overflow:hidden}
-  .ev>summary{cursor:pointer;list-style:none;padding:11px 14px;display:flex;gap:10px;align-items:baseline}
-  .ev>summary::-webkit-details-marker{display:none}
-  .ev>summary:hover{background:var(--hair-2)}
-  .ev .er{font-family:var(--mono);font-size:10.5px;color:var(--amber);flex:0 0 auto;width:26px}
-  .ev .ek{font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);flex:0 0 auto}
-  .ev .en{font-size:12.5px;color:var(--ink-2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .ev .em{font-family:var(--mono);font-size:10px;color:var(--ink-4);flex:0 0 auto}
-  .ev .eb{padding:0 14px 14px 50px;white-space:pre-wrap;font-size:12.5px;line-height:1.6;color:var(--ink-2)}
-  .ev[open]{border-color:var(--amber-line)}
-  .ev.hit{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-bg)}
-  .cite{font-family:var(--mono);font-size:10.5px;color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-line);border-radius:4px;padding:0 4px;cursor:pointer;white-space:nowrap}
-  .cite:hover{background:var(--amber);color:#fff}
-  .ansbody{font-size:15px;line-height:1.62;white-space:pre-wrap}
-  .ansbody p{margin-bottom:11px}
-  /* the path — the only sequencing claim the corpus asserts */
-  .steps{position:relative;margin-top:14px}
-  .step{display:flex;gap:16px;padding-bottom:14px}
-  .step .no{flex:none;width:42px;height:42px;border-radius:50%;background:var(--raise);border:2px solid var(--hair);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;color:var(--ink-2)}
-  .step .sb{flex:1;background:var(--raise);border:1px solid var(--hair);border-radius:11px;padding:13px 16px;min-width:0}
-  .step .ti2{font-weight:600;font-size:14.5px;letter-spacing:-.01em}
-  .step .de{font-size:13px;color:var(--ink-2);margin-top:5px;line-height:1.5}
-  .step .ga{font-size:12.5px;color:var(--ink);margin-top:9px;padding:9px 12px;background:var(--sunk);border-radius:7px}
-  .step .ga b{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--amber);display:block;margin-bottom:3px}
-  .step .ga.none{color:var(--ink-3)}
-  .lab-hd{display:flex;align-items:center;gap:12px;background:var(--raise);border:1px solid var(--hair);border-radius:10px;padding:14px 18px;box-shadow:var(--sh-1);flex-wrap:wrap}
-  .lab-hd .ldot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
-  .lab-hd .lt{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
-  .lab-hd .lt b{color:var(--green)}
-  .lab-hd .lr{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-4)}
-
-  .foot{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:30px;padding-top:15px;border-top:1px solid var(--hair);line-height:1.6}
-
-  /* IP & DOCS — the reader, reused as proven: open in place, download,
-     and the delivered size shown against the claimed size so a truncated
-     body reads as a mismatch instead of passing as the document. */
-  .ov{position:fixed;inset:0;background:rgba(25,26,28,.3);backdrop-filter:blur(2px);display:none;z-index:40}
-  .ov[data-open="true"]{display:block}
-  .dr{position:fixed;top:0;right:0;height:100%;width:720px;max-width:96vw;background:var(--bg);border-left:1px solid var(--hair);transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1);z-index:41;overflow-y:auto;padding:24px 22px 50px;box-shadow:var(--sh-3)}
-  .ov[data-open="true"] .dr{transform:none}
-  .dr h2{font-size:15px;font-weight:600;display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
-  .dr .x{background:none;border:none;color:var(--ink-3);cursor:pointer;font-size:21px;line-height:1}
-  .dr .dl{color:var(--ink-3);font-size:12px;margin-bottom:20px;line-height:1.5}
-  .iprow{display:block;background:var(--raise);border:1px solid var(--hair);border-radius:7px;padding:12px 14px;margin-bottom:7px;transition:.14s;cursor:pointer}
-  .iprow:hover{border-color:var(--amber);box-shadow:var(--sh-1)}
-  .iprow .rt{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-  .iprow .rn{font-family:var(--mono);font-size:12px;color:var(--ink)}
-  .iprow .rw{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);white-space:nowrap}
-  .iprow .rd{font-size:12px;color:var(--ink-3);margin-top:3px}
-  .docbody{white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;line-height:1.62;background:var(--raise);border:1px solid var(--hair);border-radius:9px;padding:16px;max-height:62vh;overflow:auto;margin-top:10px}
-  .drow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
-  .mismatch{color:var(--red);font-weight:600}
-
-  /* SIGN IN — absent from the document until a session verifies */
-  .gate{max-width:360px;margin:16vh auto 0;padding:0 22px}
-  .gate .gm{display:flex;align-items:center;gap:12px;margin-bottom:22px}
-  .gate h1{font-size:17px;font-weight:650;letter-spacing:-0.022em}
-  .gate .gs{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:2px}
-  .gate label{font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);display:block;margin:14px 0 5px}
-  .gate input{width:100%;background:var(--raise);border:1px solid var(--hair);border-radius:7px;padding:10px 12px;font-family:var(--sans);font-size:14px;color:var(--ink);outline:none}
-  .gate input:focus{border-color:var(--amber)}
-  .gate .go{width:100%;margin-top:18px;background:var(--steel);color:#fff;border:1px solid var(--steel);border-radius:7px;padding:11px;font-family:var(--mono);font-size:11.5px;cursor:pointer;transition:.14s}
-  .gate .go:hover{background:var(--amber);border-color:var(--amber)}
-  .gate .go:disabled{opacity:.55;cursor:default}
-  .gate .msg{font-family:var(--mono);font-size:11px;line-height:1.6;margin-top:14px;color:var(--ink-3)}
-  .gate .msg.bad{color:var(--red)}
-  .empty{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);background:var(--sunk);border:1px dashed var(--hair);border-radius:8px;padding:14px 16px;line-height:1.6}
-
-  /* THE SPINE. The path is the frame everything hangs off, so it sits above the tabs
-     and is present whichever tab is open — not a section inside one. */
-  .spine{margin-top:26px;padding:22px 24px;background:var(--raise);border:1px solid var(--hair);border-radius:12px;box-shadow:var(--sh-2)}
-  @media(max-width:640px){.spine{padding:16px 15px}}
-  .sp-hd{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap}
-  .sp-t{font-size:18px;font-weight:650;letter-spacing:-0.022em}
-  .sp-s{font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
-  .sp-note{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);line-height:1.6;margin-top:7px}
-  .sp-here{margin-top:13px;padding:11px 14px;border-radius:8px;background:var(--amber-bg);border:1px solid var(--amber-line);font-size:13px;color:var(--ink);line-height:1.5}
-  .sp-here b{font-weight:650}
-  .step.now .sb{border-color:var(--amber-line);box-shadow:0 0 0 3px var(--amber-bg)}
-  .step .no.now{border-color:var(--amber);color:var(--amber);font-weight:600}
-  .step .cl{font-size:12.5px;color:var(--ink-2);margin-top:8px;padding:8px 11px;background:var(--sunk);border-radius:7px;border-left:2px solid var(--hair)}
-  .step .cl b{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);display:block;margin-bottom:2px}
-  .chip.quiet{background:transparent;color:var(--ink-4);border:1px dashed var(--hair)}
-  .sp-empty{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:10px;padding:9px 12px;background:var(--sunk);border-radius:7px;line-height:1.55}
-  .sp-open{margin-top:11px}
-  .sp-orders{display:none;margin-top:10px;border-top:1px solid var(--hair-2);padding-top:4px}
-  .sp-orders[data-open="true"]{display:block}
-  .ord2{padding:14px 0;border-bottom:1px solid var(--hair-2)}
-  .ord2:last-child{border-bottom:none}
-  .ord2 .ti{font-size:14.5px;font-weight:600;letter-spacing:-0.012em;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .ord2 .tg{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0 8px}
-  .ord2 .wy{color:var(--ink-2);font-size:13px;line-height:1.55;max-width:620px}
-  .ord2 .fx{font-size:12.5px;color:var(--ink);margin-top:9px;padding:10px 12px;background:var(--sunk);border-radius:7px;max-width:620px}
-  .ord2 .fx b{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--amber);display:block;margin-bottom:3px}
-  .nofin{background:var(--raise);border:1px solid var(--hair);border-radius:9px;overflow:hidden}
-  .nf{display:flex;gap:13px;padding:8px 14px;border-bottom:1px solid var(--hair-2);align-items:baseline}
-  .nf:last-child{border-bottom:none}
-  .nf:hover{background:var(--hair-2)}
-  .nfd{font-family:var(--mono);font-size:10px;color:var(--ink-4);flex:0 0 auto;width:74px}
-  .nft{font-size:12.5px;color:var(--ink-2);line-height:1.45}
-  .sp-foot{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);line-height:1.6;margin-top:20px;padding-top:14px;border-top:1px solid var(--hair)}
+  .answer{margin-top:1.25rem;font-size:.98rem}
+  .answer .src{font-family:var(--mono);font-size:.78rem;color:var(--faint);margin-top:.15rem}
+  .note{font-size:.85rem;color:var(--faint);margin-top:.6rem}
+  .fail{color:var(--fails)}
+  details{margin-top:.5rem}
+  summary{cursor:pointer;color:var(--muted);font-size:.92rem}
+  summary::marker{color:var(--faint)}
+  .body{white-space:pre-wrap;font-family:var(--mono);font-size:.8rem;line-height:1.6;
+        color:var(--muted);margin-top:.6rem}
+  hr{border:0;border-top:1px solid var(--hair);margin:2.5rem 0 0}
+  @media (prefers-reduced-motion:no-preference){}
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root" class="wrap"></div>
 <script>
-const FN   = "https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-july";
-const PATH = "https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-path";
-const root = document.getElementById("root");
-const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const tok    = () => { try{ return localStorage.getItem("studio_token")||""; }catch{ return ""; } };
-const setTok = t  => { try{ t?localStorage.setItem("studio_token",t):localStorage.removeItem("studio_token"); }catch{} };
-let D=null, DOCS=[];
-let RUN=null;               // what the studio runs on, filled in whenever it arrives
-let RUN_STATE="loading";
-let CUST=null;              // the customer half, filled in whenever it arrives
-let CUST_STATE="loading";   // loading | done — never inferred from CUST being empty
+const FN="https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-brief";
+const PATH="https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-path";
+const root=document.getElementById("root");
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tok=()=>{try{return localStorage.getItem("studio_token")||""}catch{return""}};
+const setTok=t=>{try{t?localStorage.setItem("studio_token",t):localStorage.removeItem("studio_token")}catch{}};
+let B=null;
 
-/* Every call ends in a stated outcome. A silent form is indistinguishable from
-   never having tried, which is the failure this estate has paid for repeatedly. */
 async function call(url,body,auth){
-  const c=new AbortController(); const t=setTimeout(()=>c.abort(),20000);
+  const c=new AbortController(),t=setTimeout(()=>c.abort(),25000);
   try{
     const r=await fetch(url,{method:"POST",signal:c.signal,
       headers:Object.assign({"content-type":"application/json"},(auth!==false&&tok())?{authorization:"Bearer "+tok()}:{}),
       body:JSON.stringify(body)});
-    const txt=await r.text(); let j={}; try{ j=JSON.parse(txt); }catch{ j={error:txt.slice(0,200)}; }
-    return {status:r.status, body:j};
+    const txt=await r.text(); let j={}; try{j=JSON.parse(txt)}catch{j={error:txt.slice(0,200)}}
+    return {status:r.status,body:j};
   }catch(e){
-    return {status:0, body:{error:(e&&e.name==="AbortError")?"No answer within 20 seconds.":"Could not reach the studio."}};
-  }finally{ clearTimeout(t); }
+    return {status:0,body:{error:(e&&e.name==="AbortError")?"No answer within 25 seconds.":"Could not reach the studio."}};
+  }finally{clearTimeout(t)}
 }
 
-/* The gate. The surface is ABSENT from the document until a session verifies —
-   nothing below is written into the DOM before that, and no value ships in these
-   bytes. Sign-in delegates to studio-path, which already mints and refreshes the
-   session against the same GoTrue identity and the same allowlist. */
+/* Sign-in is the only thing in the document until a session verifies. */
 function gate(msg,bad){
-  root.innerHTML = '<div class="gate">'
-    + '<div class="gm"><div class="mark"><span></span><span></span><span></span></div>'
-    + '<div><h1>The Studio Surface</h1><div class="gs">customer one · the factory floor</div></div></div>'
-    + '<label for="e">email</label><input id="e" type="email" autocomplete="username"/>'
-    + '<label for="p">password</label><input id="p" type="password" autocomplete="current-password"/>'
-    + '<button class="go" id="go">sign in</button>'
-    + '<div class="msg '+(bad?"bad":"")+'" id="m">'+esc(msg||"")+'</div></div>';
-  const go=document.getElementById("go");
-  const submit=async()=>{
-    go.disabled=true; const m=document.getElementById("m");
-    m.className="msg"; m.textContent="checking…";
+  root.innerHTML='<p class="standing">The studio.</p>'
+    +'<form id="f"><input id="e" type="email" placeholder="email" autocomplete="username"/></form>'
+    +'<form id="g"><input id="p" type="password" placeholder="password" autocomplete="current-password"/>'
+    +'<button class="plain" id="go">Sign in</button></form>'
+    +'<p class="note '+(bad?"fail":"")+'" id="m">'+esc(msg||"")+'</p>';
+  const go=()=>submit();
+  document.getElementById("go").onclick=e=>{e.preventDefault();go()};
+  document.getElementById("g").onsubmit=e=>{e.preventDefault();go()};
+  document.getElementById("f").onsubmit=e=>{e.preventDefault();go()};
+  async function submit(){
+    const m=document.getElementById("m"); m.className="note"; m.textContent="Checking…";
     const r=await call(PATH,{action:"signin_password",
       email:document.getElementById("e").value.trim(),
       password:document.getElementById("p").value},false);
-    if(r.status===200 && r.body.ok && r.body.access_token){ setTok(r.body.access_token); return boot(); }
-    gate(r.body.message||r.body.error||("that did not sign in ("+r.status+")"),true);
-  };
-  go.onclick=submit;
-  document.getElementById("p").onkeydown=e=>{ if(e.key==="Enter") submit(); };
-}
-
-/* EACH BRAIN FAILS ON ITS OWN, AND SO DOES THE PAGE.
-
-   The page hung on "reading both brains at source…" forever. Two faults, one visible:
-
-   1. render() referenced a variable no longer in its scope, so it THREW and the loading
-      markup was never replaced. A thrown renderer is indistinguishable from a slow
-      network: a spinner that never resolves looks exactly like one about to. Rendering is
-      now wrapped, and a draw failure SAYS it is a fault in the surface itself rather than
-      sitting on a hopeful message.
-
-   2. The Studio half and the customer half arrived in ONE response, so one customer being
-      unreachable held everything — principles, documents, the corpus, the path, the ask,
-      none of which depend on a customer. Two requests now, rendered independently: the
-      page draws as soon as the Studio half answers, and the customer half fills in when
-      it arrives or reports its own failure, per customer. */
-function paint(){
-  try { render(); }
-  catch(e){
-    root.innerHTML='<div class="wrap"><div class="masthead"><div class="brand">'
-      + '<div class="mark"><span></span><span></span><span></span></div>'
-      + '<div><h1>The Studio Surface</h1><div class="sub">customer one · the factory floor</div></div></div></div>'
-      + '<main><div class="empty">The page failed to draw. That is a fault in this surface, not in either brain: '
-      + esc(String((e&&e.message)||e))+'</div></main></div>';
+    if(r.status===200&&r.body.ok&&r.body.access_token){setTok(r.body.access_token);return boot()}
+    gate(r.body.message||r.body.error||"That did not sign in.",true);
   }
 }
 
 async function boot(){
   if(!tok()) return gate("");
-  root.innerHTML='<div class="gate"><div class="msg">reading the studio…</div></div>';
-
-  const pRun=call(FN,{action:"runson"});
-  pRun.then(r=>{
-    RUN=(r.status===200&&r.body&&r.body.ok)?r.body
-      :{error:(r.body&&r.body.error)||("what the studio runs on could not be read ("+r.status+")")};
-    RUN_STATE="done";
-    if(D) paint();
-  });
-
-  const pStudio=call(FN,{action:"studio"});
-  const pCust  =call(FN,{action:"customers"});
-  const pDocs  =call(FN,{action:"docs"});
-
-  // The customer half never blocks the first paint.
-  pCust.then(c=>{
-    CUST=(c.status===200&&c.body&&c.body.ok)
-      ? c.body
-      : {count:null,customers:[],read_health:null,
-         error:(c.body&&c.body.error)||("the customer read failed ("+c.status+")")};
-    CUST_STATE="done";
-    if(D) paint();
-  });
-  pDocs.then(dl=>{ DOCS=(dl.status===200&&dl.body.ok)?(dl.body.documents||[]):[]; if(D) paint(); });
-
-  const j=await pStudio;
-  if(j.status===401){ setTok(""); return gate("Your session ended. Sign in again.",true); }
-  if(j.status!==200){
-    // The Studio half is the page's backbone, but a customer may still be readable and
-    // worth naming, so report what the other half said rather than declaring nothing known.
-    const c=await pCust;
-    const named=(c.status===200&&c.body&&c.body.customers)?c.body.customers:[];
-    return gate((j.body.error||("the studio's own brain could not be read ("+j.status+")"))
-      +(named.length?(" — customers answered: "+named.map(x=>x.name+(x.seen?" ok":" unreachable")).join(", ")):""),true);
+  root.innerHTML='<p class="standing quiet">Reading the studio…</p>';
+  const r=await call(FN,{action:"brief"});
+  if(r.status===401){setTok("");return gate("Your session ended. Sign in again.",true)}
+  if(r.status!==200||!r.body.ok){
+    root.innerHTML='<p class="standing">The studio could not be read.</p>'
+      +'<p class="note fail">'+esc(r.body.error||("Failed ("+r.status+")"))+'</p>'
+      +'<p class="note">That is a fault in this surface or its connection, not a statement '
+      +'about the studio. Nothing below it should be read as holding.</p>';
+    return;
   }
-  D=j.body;
-  paint();
+  B=r.body; paint();
 }
 
-/* A COUNTER DERIVED FROM A FAILED OR MISSING READ RENDERS UNKNOWN, NEVER ZERO.
+const ago=iso=>{const d=(Date.now()-Date.parse(iso))/86400000;
+  if(!isFinite(d))return"";
+  if(d<1/24)return Math.round(d*1440)+" minutes ago";
+  if(d<1)return Math.round(d*24)+" hours ago";
+  return Math.round(d)+" days ago";};
 
-   The problems gauge showed 0 while the cross-project source read had failed. Zero is a
-   measurement; an empty list from a read that never happened is not. Rendering absence as
-   zero is construction-guaranteed green, and it landed in the one field whose entire job
-   is to show trouble.
+function paint(){
+  const t=new Date(B.as_of), hh=t.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  const fails=B.failing||[], cov=B.coverage||{}, needs=B.needs_you||[];
 
-   The bar had one field failing safe (reading, which said unreachable) beside three
-   failing silent. That asymmetry is worse than either alone: the honest field teaches the
-   reader to trust the bar, and the silent ones then lie with that borrowed credit. Every
-   counter now goes through here. */
-function counter(value, ok){
-  if(ok===false) return {v:"unknown", c:"bad", known:false};
-  if(value===null||value===undefined) return {v:"unknown", c:"bad", known:false};
-  const n=Number(value);
-  if(!isFinite(n)) return {v:"unknown", c:"bad", known:false};
-  return {v:n, c:null, known:true};
-}
-
-/* FRESHNESS IS THE ONE THING THIS SURFACE EXISTS TO DO, so every leg declares what it
-   computes and the worst leg is NAMED. A number that names no population, no window and no
-   grain cannot be traced to the thing producing it when it is wrong — it is only wrong.
-
-   Two faults were in the old computation. 'corpus' measured when the SHARDER last wrote a
-   row: a maintenance event that reads 0.0 the moment a re-shard runs while the doctrine
-   could be weeks stale, and grows while the doctrine is perfectly current. It no longer
-   counts toward the worst. And 'decisions' mixed grain with the rest, so the same evening's
-   work read 5 on one leg and 4.9 on another. Its source is a DATE with no time of day, so
-   it reports whole days and says so, rather than a decimal invented by casting to midnight:
-   UNIFORMITY ACHIEVED BY INVENTING PRECISION IS WORSE THAN THE MIXED GRAIN IT REPLACES. */
-function gaugeBits(){
-  const f=D.freshness||{};
-  const served=f.legs;
-  if(Array.isArray(served)){
-    const legs=served.map(function(l){
-      const n=Number(l.days);
-      return [l.label, isFinite(n)?n:null, l.means, l];
-    });
-    const missing=served.filter(function(l){ return l.counts_toward_worst && !isFinite(Number(l.days)); })
-                        .map(function(l){ return l.label; });
-    const wo=f.worst||{};
-    const worst=(wo.days===null||wo.days===undefined)?null:Number(wo.days);
-    const cls=function(d){ return d===null?"bad":d>3?"bad":d>1.5?"warn":"ok"; };
-    return {legs:legs, worst:isFinite(worst)?worst:null, cls:cls, missing:missing,
-            worstLeg:wo.leg||null, how:f.how||"", corpus:f.corpus_integrity||null,
-            caveat:f.write_timestamp_caveat||""};
+  /* THE POSITIVE ASSERTION. Never an empty screen: what was examined, when, and how it
+     stands. Anything failing is named here rather than waiting to be asked for. */
+  let standing;
+  if(!fails.length){
+    standing='<span class="mark m-holds"></span>'+B.examined+' things checked at '
+      +esc(hh)+', all hold.';
+  }else{
+    standing='<span class="mark m-fails"></span>'+B.examined+' things checked at '+esc(hh)+', '
+      +B.holding+' hold. '+fails.map(f=>esc(f.what)).join(", and ")+'.';
   }
-  /* Older payload shape, kept so a stale response degrades rather than throwing. */
-  const leg=(k,label)=>{
-    const o=f[k]||{};
-    const n=Number(o.days);
-    return [label, isFinite(n)?n:null, o.means||"not measured", null];
-  };
-  const legs=[leg("chats","chats"),leg("snapshots","snapshots"),leg("decisions","decisions"),
-              leg("corpus","corpus"),leg("capture","capture")];
-  /* A missing leg makes the WORST leg unknown, not zero. Previously Number(null)||0
-     scored an unmeasured leg as perfectly fresh and could show "current" in green while
-     a source of the freshness figure had not been read at all. */
-  const missing=legs.filter(l=>l[1]===null).map(l=>l[0]);
-  const known=legs.map(l=>l[1]).filter(n=>n!==null);
-  const worst=missing.length?null:(known.length?Math.max.apply(null,known):null);
-  const cls=d=>d===null?"bad":d>3?"bad":d>1.5?"warn":"ok";
-  return {legs,worst,cls,missing,worstLeg:null,how:"",corpus:null,caveat:""};
-}
-
-function render(){
-  /* CUSTOMERS, PLURAL. The Tool is one product with many customers; the surface says
-     customers, currently one. The payload carries a LIST, so a second customer is a row
-     rather than a rewrite — and no multi-customer machinery exists beyond reading it. */
-  const cust=(CUST&&CUST.customers)||[];
-  const ln=cust[0]||{};
-  /* srcs was dropped from this scope when the problems counter moved into custScopes, and
-     render() still referenced it — that ReferenceError is what hung the page. Defined
-     here, once, for the sections that render one customer's line. */
-  const srcs=(ln.seen?(ln.sources||[]):[]).concat(D.absent_sources||[]);
-  const g=gaugeBits(), ig=D.integrity||{};
-  const seats=counter(ig.seats&&ig.seats.closed_total, !!(ig.seats));
 
   root.innerHTML=
-  '<div class="wrap">'
-  + '<div class="masthead">'
-  +   '<div class="brand"><div class="mark"><span></span><span></span><span></span></div>'
-  +     '<div><h1>The Studio Surface</h1><div class="sub">customer one · the factory floor</div></div></div>'
-  +   '<div class="mhr"><button class="ip-btn" id="ipb">IP &amp; Docs</button>'
-  +     '<span class="who" id="out" title="sign out">'+esc((D.visitor||"").split("@")[0])+'</span></div>'
-  + '</div>'
-  + '<div class="scopes">'
-  +   '<div class="scope"><div class="sl">this <b>page</b></div><div class="gauges">'
-  +     '<div class="gz"><span class="gdot live"></span><span class="gl">clock</span><span class="gv" id="clk">—</span></div>'
-  +     '<div class="gz"><span class="gdot live"></span><span class="gl">generated</span><span class="gv" id="genage">—</span></div>'
-  +   '</div></div>'
-  +   '<div class="scope"><div class="sl">the <b>studio</b> brain</div><div class="gauges" id="gz">'
-  +     '<div class="gz '+(g.worst!==null&&g.worst>3?"alert":"")+'" title="'+esc(g.missing.length?("not measured: "+g.missing.join(", ")):(g.how||""))+'"><span class="gdot '+g.cls(g.worst)+'"></span><span class="gl">freshness'+(g.worstLeg?(" · "+esc(g.worstLeg)):"")+'</span><span class="gv">'
-  +       (g.worst===null?"unknown":(g.worst<=1?"current":g.worst+"d behind"))+'</span></div>'
-  +     '<div class="gz"><span class="gdot '+(seats.known?"live":"bad")+'"></span><span class="gl">seats closed</span><span class="gv">'+esc(seats.v)+'</span></div>'
-  +     '<div class="gz"><span class="chev">▾</span></div>'
-  +   '</div></div>'
-  +   custScopes(cust)
-  + '</div>'
-  + '<div class="gauges-detail" id="gzd">'
-  /* Each leg shows its population, window, grain and source column, so a wrong number is
-     diagnosable rather than merely wrong. Legs excluded from the worst say so. */
-  +   g.legs.map(function(l){
-        const d=l[3];
-        return '<div class="gd-row" style="align-items:flex-start">'
-          + '<span class="ddot '+g.cls(l[1])+'" style="margin-top:5px"></span>'
-          + '<span class="dn">'+esc(l[0])+(d&&!d.counts_toward_worst?' <span style="color:var(--ink-4)">(not counted)</span>':'')+'</span>'
-          + '<span class="ds" style="flex:2">'+(l[1]===null?"not measured":esc(l[1])+"d")
-          + (d?('<br/>population: '+esc(d.population)+'<br/>window: '+esc(d.window)+'<br/>grain: '+esc(d.grain)+'<br/>source: '+esc(d.source)+'<br/>'+esc(d.means)):(' · '+esc(l[2])))
-          + '</span></div>';
-      }).join("")
-  +   (g.corpus?('<div class="gd-row" style="align-items:flex-start"><span class="ddot '+(g.corpus.docs_behind>0?"bad":"ok")+'" style="margin-top:5px"></span>'
-        + '<span class="dn">corpus</span><span class="ds" style="flex:2">'+esc(g.corpus.docs_behind)+' of '+esc(g.corpus.docs)+' documents sharded behind their live version'
-        + '<br/>'+esc(g.corpus.means)+'</span></div>'):"")
-  +   (g.caveat?('<div class="gd-row" style="align-items:flex-start"><span class="ddot warn" style="margin-top:5px"></span><span class="dn">write times</span>'
-        + '<span class="ds" style="flex:2">'+esc(g.caveat)+'</span></div>'):"")
-  + '</div>'
-  + '<nav class="sections" id="nav">'
-  +   ["Front","Contradictions","What we run on","Lab","Parts Bin","The Frame","Principles"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
-  + '</nav>'
-  + '<main>'
-  +   '<section class="view" data-active="true" data-i="0">'+front()+'</section>'
-  +   '<section class="view" data-i="1">'+conflicts()+'</section>'
-  +   '<section class="view" data-i="2">'+runsOn()+'</section>'
-  +   '<section class="view" data-i="3">'+lab(ln,srcs)+'</section>'
-  +   '<section class="view" data-i="4">'+parts()+'</section>'
-  +   '<section class="view" data-i="5">'+frame()+'</section>'
-  +   '<section class="view" data-i="6">'+principles()+'</section>'
-  +   '<div class="foot">'+esc(D.footer)+'<br/>Served by '+esc(D.served_by.fn)+' · the Studio’s own numbers and each customer’s, kept apart · this is the only address that serves the studio · nothing on this page is stored.</div>'
-  + '</main></div>'
-  + '<div class="ov" id="ov"><div class="dr" id="drw">'+ipdocs()+'</div></div>';
+    '<p class="standing">'+standing+'</p>'
+  + '<p class="note">'+esc(cov.says||"")+'</p>'
 
-  document.getElementById("gz").onclick=()=>{ const d=document.getElementById("gzd");
-    d.dataset.open = d.dataset.open==="true"?"false":"true"; };
-  const tabs=document.querySelectorAll("#nav .sec");
-  tabs.forEach(b=>b.onclick=()=>{
-    tabs.forEach(x=>x.setAttribute("aria-selected", x===b ? "true":"false"));
-    document.querySelectorAll(".view").forEach(v=>v.dataset.active = (v.dataset.i===b.dataset.i)?"true":"false");
-    /* The Contradictions tab has to FETCH on first open. Without this the tab renders its
-       idle state and sits on "Opening the queue…" forever — an affordance with no
-       behaviour, which is the class this surface exists to remove. Fetched once, then the
-       loaded queue is reused until a ruling forces a re-read from source. */
-    if(b.dataset.i==="1" && CONF_STATE==="idle") loadConflicts(CONF_SCOPE);
-  });
-  const ov=document.getElementById("ov");
-  document.getElementById("ipb").onclick=()=>{ ov.dataset.open="true"; };
-  ov.onclick=e=>{ if(e.target===ov) ov.dataset.open="false"; };
-  document.getElementById("out").onclick=()=>{ setTok(""); location.reload(); };
-  /* The front page's lines are the way in to everything that came off it. */
-  const tabs2=document.querySelectorAll("#nav .sec");
-  const goTab=function(i){ if(tabs2[i]) tabs2[i].click(); };
-  document.querySelectorAll("[data-goto]").forEach(function(el){
-    el.onclick=function(){
-      const w=el.dataset.goto;
-      /* The drawer is shared with the record lists, so documents must RE-RENDER it rather
-         than just opening it — otherwise it shows whatever was opened last. */
-      if(w==="docs"){
-        const ov=document.getElementById("ov"), drw=document.getElementById("drw");
-        if(drw){ drw.innerHTML=ipdocs(); bindDocs(); bindDrawer(); }
-        if(ov) ov.dataset.open="true";
-        return;
-      }
-      if(w==="principles"){ goTab(6); return; }
-      if(w==="runson"){ goTab(2); return; }
-      if(w==="conflicts"){ goTab(1); loadConflicts("cross"); return; }
-      if(w.indexOf("records:")===0){ openRecords(w.slice(8)); return; }
-    };
-  });
-  /* The queue, the pair, and the ruling. Every click ends in a stated outcome: a silent
-     button is indistinguishable from one that never fired, which is the class this whole
-     surface exists to remove — and nobody has ever clicked a ruling. */
-  document.querySelectorAll("[data-cscope]").forEach(function(el){
-    el.onclick=function(){ loadConflicts(el.dataset.cscope); };
-  });
-  document.querySelectorAll("[data-conf]").forEach(function(el){
-    el.onclick=function(){ openConflict(el.dataset.conf); };
-  });
-  document.querySelectorAll("[data-rule]").forEach(function(el){
-    el.onclick=function(){
-      const r=el.dataset.rule;
-      if(r==="close"){ CONF_OPEN=null; paint(); return; }
-      ruleConflict(r, el.dataset.winner||"");
-    };
-  });
-  document.querySelectorAll("[data-tool]").forEach(function(el){
-    el.onclick=function(){ window.open(TOOL_SURFACE,"_blank","noopener"); };
-  });
-  const wwa=document.getElementById("wwa");
-  if(wwa) wwa.onclick=function(){
-    const m=document.getElementById("wwaMore");
-    if(m) m.style.display = (m.style.display==="none") ? "block" : "none";
-  };
-  bindDocs();
-  const ask=document.getElementById("askb"); if(ask) ask.onclick=doAsk;
-  bindPrinciples();
-  bindSteps();
-  startClock();
-}
-
-/* THE CLOCK, two facts side by side. The wall clock is for orientation only: a stale
-   page shows a perfectly live one, which is exactly what the old surface did with a
-   hardcoded "live · America/Los_Angeles · Jun 19". What actually answers "is this page
-   being generated now" is the age of the server's as_of stamp, so both are shown and
-   only the second is load-bearing. */
-function startClock(){
-  if(window.__clk) clearInterval(window.__clk);
-  const tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||"local";
-  const gen=Date.parse(D.as_of);
-  const tick=()=>{
-    const c=document.getElementById("clk"), a=document.getElementById("genage");
-    if(!c||!a){ clearInterval(window.__clk); return; }
-    const now=new Date();
-    c.textContent=now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})
-      +" · "+tz+" · "+now.toLocaleDateString([],{month:"short",day:"numeric"});
-    if(!isFinite(gen)){ a.textContent="unknown"; a.style.color="var(--red)"; return; }
-    const s=Math.max(0,Math.round((Date.now()-gen)/1000));
-    a.textContent = s<90 ? s+"s ago" : s<5400 ? Math.round(s/60)+"m ago" : Math.round(s/3600)+"h ago";
-    a.style.color = s>900 ? "var(--red)" : "";
-  };
-  tick(); window.__clk=setInterval(tick,1000);
-}
-
-/* One gauge group per customer, each NAMING the customer it is about. An unreachable
-   read names who is unreachable: cosmetic with one customer, the whole message with three. */
-/* read_health, rendered at last. It was returned in the payload and displayed NOWHERE for
-   two seats — written-by-one-path-read-by-zero, committed by the seat that keeps naming
-   it — and it is precisely the field that would have shown the customer read failing. */
-function readHealthBlock(){
-  const h=CUST&&CUST.read_health;
-  if(CUST_STATE==="loading")
-    return '<div class="blk">Cross-brain reads<span class="ln"></span></div><div class="lab-note">reading…</div>';
-  if(!h)
-    return '<div class="blk">Cross-brain reads<span class="ln"></span></div>'
-      + '<div class="empty">The read log could not be read, so the health of these reads is unknown.</div>';
-  const f=Number(h.failures_24h), t=Number(h.reads_24h);
-  return '<div class="blk">Cross-brain reads <span class="ct">last 24 hours</span><span class="ln"></span></div>'
-    + '<div class="fr-grid">'
-    + '<div class="fc"><h3>'+esc(isFinite(t)?t:"unknown")+'</h3><p>reads logged</p></div>'
-    + '<div class="fc"><h3 style="color:'+(f>0?"var(--red)":"inherit")+'">'+esc(isFinite(f)?f:"unknown")+'</h3><p>failed</p></div>'
-    + '<div class="fc"><h3>Last failure</h3><p>'+(h.last_failure
-        ? esc(String(h.last_failure.at).slice(0,16))+' — '+esc(h.last_failure.leg)+(h.last_failure.status?(" "+esc(h.last_failure.status)):"")
-        : "None recorded.")+'</p></div>'
-    + '</div>'
-    + '<div class="lab-note">'+esc(h.note||"")+'</div>';
-}
-
-function custScopes(cust){
-  /* STILL LOADING IS NOT UNKNOWN, AND NEITHER IS ZERO. The customer half is fetched
-     separately, so this state is real and is shown as itself. */
-  if(CUST_STATE==="loading")
-    return '<div class="scope"><div class="sl">customers</div><div class="gauges">'
-      + '<div class="gz"><span class="gdot warn"></span><span class="gl">customers</span><span class="gv">reading…</span></div>'
-      + '</div></div>';
-  if(CUST&&CUST.error)
-    return '<div class="scope"><div class="sl">customers</div><div class="gauges">'
-      + '<div class="gz" title="'+esc(CUST.error)+'"><span class="gdot bad"></span><span class="gl">customers</span><span class="gv">unreachable</span></div>'
-      + '</div></div>';
-  if(!cust.length)
-    return '<div class="scope"><div class="sl">customers</div><div class="gauges">'
-      + '<div class="gz"><span class="gdot bad"></span><span class="gl">customers</span><span class="gv">unknown</span></div>'
-      + '</div></div>';
-  /* THE BARE NUMBERS ARE GONE FROM THE BAR. "reading 4 of 28" and "problems 17" could not
-     be clicked and could not be acted on, and they describe A CUSTOMER'S BRAIN — faults
-     that belong on the Tool surface, which already resolves them into groups by cause.
-     The studio does not get to be a second place to fix them.
-
-     What stays here is only the thing that must be visible at a glance and has no home
-     elsewhere: a customer brain we cannot reach at all. When it IS reachable, the one
-     plain line on the front page carries it and points at the Tool. */
-  const down=cust.filter(function(c){ return !c.seen; });
-  if(!down.length) return "";
-  return down.map(function(c){
-    return '<div class="scope"><div class="sl"><b>'+esc(c.name||c.id||"customer")+'</b>’s brain</div><div class="gauges">'
-      + '<div class="gz" title="'+esc(c.why||"unreachable")+'"><span class="gdot bad"></span>'
-      + '<span class="gl">'+esc(c.name||"customer")+'</span><span class="gv">unreachable</span></div>'
-      + '</div></div>';
-  }).join("");
-}
-
-/* THE SOURCE RAIL. It is about a customer's brain, not about the studio, so it lives
-   under the customer heading in the Lab rather than in a workshop of its own. The
-   Workshops tab held three unrelated things; each has gone where it belongs, and the
-   tab is gone rather than left as an empty label. */
-function sourceRail(ln,srcs){
-  return '<div class="blk"><span class="cust-name">'+esc(ln.name||"customer")+'</span> the line — sources <span class="ct">'+(ln.seen?(ln.reading+" of "+ln.total+" reading"):"")+'</span><span class="ln"></span></div>'
-  + '<div class="lab-note" style="margin-bottom:10px">Connected and actually reading are different facts, kept apart. Problems dominate; healthy sources recede.</div>'
-  + (ln.seen
-     ? '<div class="rail">'+srcs.map(s=>'<div class="row '+esc(s.c==="warn ok"?"warn":s.c)+'">'
-       + '<span class="edge"></span>'
-       + '<span class="nm">'+esc(s.n)+'<small>'+esc(s.sub)+'</small></span>'
-       + '<span class="st">'+esc(s.st)+'</span>'
-       + '<span class="gg">'+esc(s.g)+'</span>'
-       + '<span class="md">'+esc(s.m)+'</span></div>').join("")+'</div>'
-       + '<div class="lab-note">'+esc(ln.reading_means?("Reading means: "+ln.reading_means+"."):"")+' '+esc(ln.how||"")+'</div>'
-     : '<div class="empty">'+esc(ln.why||((ln.name||"That customer")+"’s brain could not be reached from this screen."))+'</div>')
-  ;
-}
-
-/* THE SPINE. The path was a section inside a tab; it is the convergence lens — the end
-   goal held as reference, how close the assembly is, and the gap that matters most now —
-   so it is the frame everything else hangs off, above the tabs and present whichever tab
-   is open.
-
-   Principle 90 is the only sequencing claim the record makes, parsed from the principle
-   itself: rewrite the principle and this follows. Steps that state no gate say so rather
-   than being given one, and a lettered clause like 5b sits inside the step it qualifies
-   rather than being counted as a step — splitting on the word STEP had been showing eight
-   where the principle states seven.
-
-   WORK ORDERS HANG UNDER THE STEP THEY WOULD CLOSE. Grouped by subsystem the list was
-   only usable by someone who already knew which subsystem served which step. The step is
-   derived server-side by matching each order's subsystem against the step's own words;
-   an order that matches nothing is reported as unplaced rather than forced somewhere. */
-function spine(){
-  const p=(D.doctrine&&D.doctrine.path)||null;
-  const w=D.work_orders||null;
-  if(!p||!p.steps||!p.steps.length)
-    return '<div class="spine"><div class="sp-hd"><div class="sp-t">The path to a sellable Tool</div></div>'
-      + '<div class="empty" style="margin-top:12px">The path could not be read from the corpus just now. Nothing is claimed about the order of work.</div></div>';
-
-  const byStep={}; ((w&&w.by_step)||[]).forEach(s=>{ byStep[s.n]=s; });
-  const t=(w&&w.totals)||{};
-  /* WHERE WE ARE, DERIVED AND LABELLED AS DERIVED. Nothing in either brain marks a
-     current step, so this is the earliest step carrying open work — stated as that and
-     not as a claim that the steps before it are finished. */
-  const counts=p.steps.map(s=>Number((byStep[s.n]||{}).count)||0);
-  let here=-1;
-  for(let i=0;i<p.steps.length;i++){ if(counts[i]>0){ here=i; break; } }
-
-  return '<div class="spine">'
-  + '<div class="sp-hd"><div class="sp-t">The path to a sellable Tool</div>'
-  +   '<div class="sp-s">'+esc(p.step_count||p.steps.length)+' steps · '+esc(p.source)+'</div></div>'
-  + '<div class="sp-note">'+esc(p.ordering)+'</div>'
-  + (p.clause_note?'<div class="sp-note">'+esc(p.clause_note)+'</div>':'')
-  + (here>=0
-     ? '<div class="sp-here">Where we are — <b>step '+esc(p.steps[here].n)+', '+esc(p.steps[here].title)+'</b>. '
-       + 'That is the earliest step with open work recorded against it, worked out just now. Nothing in either brain marks a current step, so this is derived rather than declared.</div>'
-     : '<div class="sp-here">No step has open work recorded against it. That is not evidence the path is finished — it means nothing in the promise ledger or the backlog names a step.</div>')
-  + '<div class="steps" style="margin-top:18px">'+p.steps.map((s,i)=>{
-      const g=byStep[s.n]||{count:0,orders:[]};
-      const n=Number(g.count)||0;
-      const label=n+' work order'+(n===1?'':'s')+' — what would close this';
-      return '<div class="step'+(i===here?' now':'')+'">'
-      + '<div class="no'+(i===here?' now':'')+'">'+esc(s.n)+'</div><div class="sb">'
-      + '<div class="ti2">'+esc(s.title)
-      +   (i===here?'<span class="chip high">where we are</span>':'')
-      +   '<span class="chip '+(n?'norm':'quiet')+'">'+(n?esc(n)+' open':'nothing open')+'</span></div>'
-      + '<div class="de">'+esc(s.detail)+'</div>'
-      + ((s.clauses||[]).map(c=>'<div class="cl"><b>'+esc(c.label)+'</b>'+esc(c.text)+'</div>').join(''))
-      + (s.gate?'<div class="ga"><b>Gate — a proof, not a milestone</b>'+esc(s.gate)+'</div>'
-              :'<div class="ga none"><b>Gate</b>The principle states no gate for this step.</div>')
-      + (n
-         ? '<button class="btn sp-open" data-step="'+esc(s.n)+'" data-label="'+esc(label)+'">'+esc(label)+' ▾</button>'
-           + '<div class="sp-orders" id="so-'+esc(s.n)+'">'+(g.orders||[]).map(orderCard).join('')+'</div>'
-         : '<div class="sp-empty">No open work order names this step. That is not evidence it is closed — it means nothing in the promise ledger or the backlog maps here.</div>')
-      + '</div></div>';
-    }).join('')+'</div>'
-  /* The two work-order walls moved to What we run on. They are real findings and Alex does
-     not read them on the way to knowing where we are. */
-  + (t.orders
-     ? '<div class="sp-foot">'+esc(t.orders)+' open items in total · '+esc(t.with_finish_condition)
-       + ' carry a finish condition ('+esc(t.placed_on_a_step)+' on a step, '+esc(t.unplaced)+' not on the path) · '
-       + esc(t.without_finish_condition)+' cannot say what would close them · '
-       + esc(t.from_promise_ledger)+' from the promise ledger, '+esc(t.from_backlog)+' from the backlog.<br/>'
-       + esc((w&&w.how)||'')+'</div>'
+  + (fails.length
+     ? '<section><h2>What is failing</h2>'
+       + fails.map(f=>'<div class="item"><div class="row"><span class="what">'+esc(f.what)+'</span>'
+           +'<span class="value">'+esc(f.value)+'</span></div>'
+           +'<p>'+esc(f.means)+'</p></div>').join("")
+       + '</section>'
      : '')
-  + '</div>';
+
+  + '<section><h2>What needs you</h2>'
+  + (needs.length
+     ? needs.map(n=>'<div class="item"><div class="row"><span class="what">'+esc(n.item)+'</span>'
+         +'<span class="value">'+esc(n.since)+'</span></div>'
+         + (n.fix?'<p>'+esc(n.fix)+'</p>':'<p>No next step recorded, which is why it is here.</p>')
+         +'</div>').join("")
+     : '<p class="quiet">Nothing is waiting on you.</p>')
+  + '<p class="note">'+esc(B.needs_you_rule||"")+'</p>'
+  + '</section>'
+
+  + '<section><h2>Ask the record</h2>'
+  + '<form id="askf"><input id="q" placeholder="Ask anything about the studio"/>'
+  +   '<button class="plain" id="askb">Ask</button></form>'
+  + '<p class="note">The twelve things this screen used to show are all still measured. '
+  +   'Ask for any of them: what is stale, what the machinery is doing, what is in the '
+  +   'parts bin, what contradicts what.</p>'
+  + '<div id="out"></div>'
+  + '</section>'
+
+  + '<hr/>'
+  + '<section><h2>Everything examined</h2>'
+  + (B.all_checks||[]).map(c=>'<div class="item"><div class="row">'
+      +'<span class="what"><span class="mark '+(c.holds?"m-holds":"m-fails")+'"></span>'+esc(c.what)+'</span>'
+      +'<span class="value">'+esc(c.value)+'</span></div>'
+      +'<p>'+esc(c.means)+'</p></div>').join("")
+  + '<p class="note">Checked when this page was drawn, '+esc(hh)+'. Nothing here is stored; '
+  +   'each line is read from source every time the screen loads.</p>'
+  + '</section>';
+
+  const f=document.getElementById("askf");
+  f.onsubmit=e=>{e.preventDefault();ask()};
+  document.getElementById("askb").onclick=e=>{e.preventDefault();ask()};
 }
 
-function orderCard(o){
-  return '<div class="ord2">'
-  + '<div class="ti">'+esc(wordTrim(o.ti,120))+'<span class="chip '+esc(o.pl)+'">'+esc(o.pl)+'</span></div>'
-  + '<div class="tg">'+(o.tg||[]).map(x=>'<span class="tag">'+esc(x)+'</span>').join('')
-  +   '<span class="tag">'+esc(o.src)+'</span></div>'
-  + '<div class="wy">'+esc(wordTrim(o.wy,420))+'</div>'
-  + '<div class="fx"><b>Finish</b>'+esc(o.fx)+'</div></div>';
-}
+/* Two shortcuts that are workflows rather than readouts, so they open rather than answer. */
+async function ask(){
+  const q=document.getElementById("q").value.trim(); if(!q) return;
+  const out=document.getElementById("out");
+  out.innerHTML='<p class="note">Reading…</p>';
 
-/* AN UNPLACEABLE ITEM IS A FINDING, NOT A FILING PROBLEM. These carry a finish
-   condition, so they are real work; their subsystem simply matches no step in the
-   principle. Forcing them under a step would hide that. */
-function unplacedBlock(w){
-  const u=w&&w.unplaced;
-  if(!u||!Number(u.count)) return '';
-  /* COLLAPSED TO A COUNT WITH A SAMPLE AND THE REASON. A wall of Bench-era items does not
-     reflect where the project is; the finding survives, the wall does not. */
-  const sample=(u.orders||[]).slice(0,3);
-  return '<div class="blk">Not on the path <span class="ct">'+esc(u.count)+'</span><span class="ln"></span></div>'
-  + '<div class="sp-note" style="margin-bottom:8px">'+esc(u.why)+'</div>'
-  + '<div class="sp-note" style="margin-bottom:10px">Subsystems the path does not name: '+esc((u.subsystems||[]).join(', '))+'.</div>'
-  + '<div class="nofin">'+sample.map(function(x){ return '<div class="nf">'
-      + '<span class="nfd">sample</span><span class="nft">'+esc(wordTrim(x.ti,140))+'</span></div>'; }).join('')
-  + '</div>'
-  + (Number(u.count)>sample.length
-     ? ('<div class="sp-note" style="margin-top:8px">'+esc(Number(u.count)-sample.length)+' more, not listed. They are a count and a reason, not a wall.</div>')
-     : '');
-}
+  if(/\bpart|parts bin\b/i.test(q)) return showParts(out);
+  if(/\bcontradic|conflict\b/i.test(q)) return showConflicts(out);
 
-/* THE BACKLOG-AS-DEPOSIT PROBLEM, VISIBLE. Kept and counted rather than deleted, and
-   no target invented for any of them. They are separated from the real work orders
-   because a row that cannot say what would close it cannot be worked. */
-function noFinishBlock(w){
-  const f=w&&w.no_finish_condition;
-  if(!f) return '';
-  if(!Number(f.count))
-    return '<div class="blk">Raised, never given a finish condition<span class="ln"></span></div>'
-      + '<div class="empty">None. Every open item can say what would close it.</div>';
-  return '<div class="blk">Raised, never given a finish condition <span class="ct">'+esc(f.count)+'</span><span class="ln"></span></div>'
-  + '<div class="sp-note" style="margin-bottom:12px">'+esc(f.why)
-  +   (f.oldest?(' Raised between '+esc(String(f.oldest).slice(0,10))+' and '+esc(String(f.newest).slice(0,10))+'.'):'')+'</div>'
-  /* Same treatment: a count, a sample, and the stated reason. */
-  + '<div class="nofin">'+(f.items||[]).slice(0,3).map(function(x){ return '<div class="nf">'
-    + '<span class="nfd">'+esc(String(x.raised||'').slice(0,10)||'undated')+'</span>'
-    + '<span class="nft">'+esc(wordTrim(x.ti,140))+'</span></div>'; }).join('')+'</div>'
-  + (Number(f.count)>3
-     ? ('<div class="sp-note" style="margin-top:8px">'+esc(Number(f.count)-3)+' more, not listed.</div>')
-     : '');
-}
-
-function bindSteps(){
-  document.querySelectorAll('.sp-open').forEach(b=>{
-    b.onclick=()=>{
-      const d=document.getElementById('so-'+b.dataset.step);
-      if(!d) return;
-      const open=d.dataset.open==='true';
-      d.dataset.open=open?'false':'true';
-      b.textContent=b.dataset.label+(open?' ▾':' ▴');
-    };
-  });
-}
-
-/* THE LAB IS A PART BEING FORGED RIGHT NOW. Everything about a customer's sources — the
-   drives, the mailboxes, connected versus reading — belonged to the Tool surface, which
-   watches a customer. It is REMOVED, not hidden, and says where it went. The customer
-   group stays in the status bar so an unreachable customer brain is still visible at a
-   glance. The Lab will be thin until Tool work produces parts, and that is correct. */
-/* WHAT THE STUDIO RUNS ON. None of this machinery was on the map, which is how the comp
-   scanner died for a week unnoticed, how the mail cap locked Alex out with no warning, and
-   how a retired host served a stale page for two months.
-
-   THREE STATES, and the third is a feature. Proven means something exercised it and the
-   outcome was recorded, with when. Assumed means we depend on it and nothing checks it —
-   never green. Yours to check means no credential exists, and the row carries the actual
-   procedure rather than the word "check". A fourth appears only on evidence: failing. */
-/* THE FRONT PAGE. Fourth attempt at this instrument; the three before it each ADDED, so
-   this pass only cuts. Four answers on one screen: is the brain current (the freshness
-   panel above, untouched), what is in the brain, where we are, does anything need me —
-   plus one line for is anything broken.
-
-   Everything that used to be here is still on the surface, one click across: the machinery
-   list, the ceilings, the guard that does not exist, scheduled work, the unplaced work
-   orders and the studio's own rail all live under What we run on. Nothing was deleted from
-   the estate; it was taken off the page Alex opens.
-
-   LANGUAGE: every line is in words he would say out loud. Anything needing a word he would
-   not use belongs further down. */
-/* THE PLACE ALEX JUDGES CONTRADICTIONS.
-
-   4,589 pairs have sat in the record since June and not one had ever been ruled on by a
-   person. They were visible NOWHERE — written by one path, read by zero, on the instrument
-   built to catch that class. The data layer was proven before this tab existed; this is
-   what makes it reachable.
-
-   CROSS-DOCUMENT FIRST: that is the shape that misdirects builds, because each document
-   reads correct on its own. The intra-document ones stay reachable rather than filtered
-   away — master_spec is canonical product IP, not a narrative where later simply wins.
-
-   THE HUNT'S DIRECTION IS A PROPOSAL, NOT A VERDICT. Direction reproduces at roughly 73-76%
-   forward, so about a quarter point backwards, and the first ruling ever recorded went
-   AGAINST it — the hunt named a passage that annotates itself "TRUE AS HISTORY, STALE AS
-   CURRENT STATE" as the one that stands. It is rendered as a suggestion with that caveat
-   attached, never preselected, and either side can be chosen with one click. */
-let CONF=null, CONF_STATE="idle", CONF_SCOPE="cross", CONF_OPEN=null, CONF_BUSY=false;
-
-function conflicts(){
-  if(CONF_STATE==="idle")
-    return '<div class="lede">Two things in the record that cannot both be true. The hunt finds them; <b>you decide</b>.</div>'
-      + '<div class="lab-note" style="margin-top:10px">Opening the queue…</div>';
-  if(CONF_STATE==="failed")
-    return '<div class="lede">Two things in the record that cannot both be true.</div>'
-      + '<div class="empty">The queue could not be read, so how many are waiting is unknown — not zero. '
-      + esc((CONF&&CONF.error)||"")+'</div>';
-
-  const c=(CONF&&CONF.counts)||{}, items=(CONF&&CONF.items)||[];
-  const tab=function(k,label,n){
-    return '<button class="btn'+(CONF_SCOPE===k?' pri':'')+'" data-cscope="'+k+'">'+label+' ('+esc(n)+')</button>';
-  };
-
-  return '<div class="lede">Two things in the record that cannot both be true. The hunt finds them; <b>you decide</b>.</div>'
-  + '<div class="lab-note">'+esc(CONF.means||"")+'</div>'
-  + '<div class="drow" style="margin-top:12px">'
-  +   tab("cross","Across two documents", c.cross_doc)
-  +   tab("intra","Inside one document", c.intra_doc)
-  +   '<span class="lab-note" style="margin:0">'+esc(c.ever_ruled||0)+' ruled so far</span>'
-  + '</div>'
-  + (CONF_OPEN ? conflictCard() : '')
-  + '<div class="blk">Waiting <span class="ct">'+esc(c.showing)+' of '+esc(c.in_scope)+'</span><span class="ln"></span></div>'
-  + (items.length
-     ? '<div class="rail">'+items.map(function(p){
-         return '<div class="row '+(p.verdict==="SUPERSEDES"?"warn":"bad")+'" data-conf="'+esc(p.id)+'">'
-           + '<span class="edge"></span>'
-           + '<span class="nm">'+esc(p.a_doc)+' vs '+esc(p.b_doc)
-           +   '<small>'+esc(p.a_heading)+' / '+esc(p.b_heading)+'</small></span>'
-           + '<span class="st">'+(p.verdict==="SUPERSEDES"
-               ? "One may have replaced the other" : "They say different things")+'</span>'
-           + '<span class="gg">'+(p.has_direction?"hunt suggests a side":"no suggestion")+'</span>'
-           + '<span class="md">OPEN</span></div>';
-       }).join("")+'</div>'
-     : '<div class="empty">Nothing waiting in this group.</div>');
-}
-
-function conflictCard(){
-  const d=CONF_OPEN;
-  if(d==="loading") return '<div class="pdepth"><div class="gen"><span class="gdt"></span>opening…</div></div>';
-  if(d&&d.error) return '<div class="pdepth"><div class="ds"><p>'+esc(d.error)+'</p></div></div>';
-  if(!d||!d.a) return '';
-
-  const side=function(s,which){
-    /* The hunt's pick is shown ON the side it points at, worded as a suggestion. Nothing is
-       preselected: both buttons look the same, because a quarter of these point backwards. */
-    return '<div class="fc" style="border-left:3px solid '+(s.is_hunt_winner?"var(--amber-line)":"var(--hair)")+'">'
-      + '<h3>'+esc(s.doc)+'</h3>'
-      + '<p style="color:var(--ink-3)">'+esc(s.heading||"")+'</p>'
-      + (s.is_hunt_winner?'<span class="pill" style="color:var(--amber);background:var(--amber-bg)">the hunt suggests this side</span>':'')
-      + '<div class="docbody" style="max-height:34vh;margin-top:10px">'+esc(s.body)+'</div>'
-      + '<button class="btn pri" style="margin-top:10px;width:100%" data-rule="superseded" data-winner="'+esc(s.id)+'">'
-      +   'This one stands — '+esc(s.doc)+'</button>'
-      + '</div>';
-  };
-
-  return '<div class="pdepth" id="confcard">'
-  + '<div class="gen"><span class="gdt"></span>'+(d.cross_doc?"across two documents":"inside one document")+'</div>'
-  + '<h3>'+esc(d.a.doc)+' vs '+esc(d.b.doc)+'</h3>'
-  + '<div class="ds"><b>What the hunt judged</b><div class="ansbody">'+esc(d.reason||"")+'</div></div>'
-  + '<div class="lab-note" style="margin-bottom:12px">'+esc(d.direction||"")+'</div>'
-  + '<div class="fr-grid">'+side(d.a,"a")+side(d.b,"b")+'</div>'
-  + '<div class="drow" style="margin-top:14px">'
-  +   '<button class="btn" data-rule="not_a_conflict">These do not actually conflict</button>'
-  +   '<button class="btn" data-rule="cannot_tell">I can’t tell yet</button>'
-  +   '<button class="btn" data-rule="close">Close</button>'
-  + '</div>'
-  + '<div id="ruleout" class="lab-note"></div>'
-  + '</div>';
-}
-
-function front(){
-  const F=(D&&D.front)||null;
-  if(!F) return '<div class="empty">The front page could not be read.</div>';
-
-  /* AN AFFORDANCE WITH NO BEHAVIOUR IS THE CLASS THIS SURFACE REMOVES. Every one of these
-     lines showed a chevron; none of them opened anything.
-
-     Two had destinations and are wired: documents to IP & Docs, principles to the
-     Principles tab. Two had no view anywhere, so one was built — decisions and write-ups
-     now open an index, newest first, and a row opens the body. The last is a TOTAL, not a
-     place: 1,319 searchable pieces is what the brain can answer from, there is nowhere to
-     go, and it carries no chevron. */
-  /* Keyed on the values the server actually emits — 'documents' and 'seat reports', not
-     'docs' and 'reports'. The first version guessed the keys and silently dropped the
-     chevron from two lines that DO have destinations, which is the same defect in the
-     opposite direction: a destination with no affordance. Caught by asserting every line's
-     chevron against its destination rather than by looking at the page. */
-  const dest={'documents':'docs', 'principles':'principles',
-              'decisions':'records:decisions', 'seat reports':'records:reports'};
-  const brain=(F.in_the_brain||[]).map(function(x){
-    const to=dest[x.what]||null;
-    if(!to) return '<div class="pi" style="cursor:default"><span class="pn" style="color:var(--ink-4)">·</span>'
-      + '<span style="color:var(--ink-2)">'+esc(x.line)+'</span></div>';
-    return '<div class="pi" data-goto="'+esc(to)+'"><span class="pn">›</span><span>'+esc(x.line)+'</span></div>';
-  }).join("");
-
-  const needs=(F.needs_you||[]);
-  const needsBlock = needs.length
-    ? needs.map(function(n){
-        return '<div class="row bad"><span class="edge"></span>'
-          + '<span class="nm">'+esc(n.line)+(n.since?('<small>waiting since '+esc(String(n.since).slice(0,10))+'</small>'):'')+'</span>'
-          + '<span class="st">'+esc(n.fix||"")+'</span><span class="gg"></span><span class="md">YOU</span></div>';
-      }).join("")
-    : '<div class="empty">Nothing is waiting on you.</div>';
-
-  /* Composed here because this is where the workflow outcomes are. The database cannot see
-     GitHub Actions, so a count taken there read zero failing while the daily check had
-     failed five days running. */
-  let brokenLine, brokenBad=false;
-  if(RUN_STATE==="loading"){ brokenLine="checking…"; }
-  else if(!RUN||RUN.error){ brokenLine="Could not check — so whether anything is broken is unknown, not fine."; brokenBad=true; }
-  else {
-    const acts=(RUN.actions&&RUN.actions.workflows)||[];
-    const deps=(RUN.dependencies||[]).filter(function(d){ return d.name.indexOf("GitHub Actions")<0; });
-    const failing=acts.filter(function(w){ return w.conclusion==="failure"; });
-    const systems=deps.length+acts.length;
-    if(failing.length===0){ brokenLine=systems+" systems, nothing failing."; }
-    else {
-      brokenBad=true;
-      /* THE COUNT IS RUNS, AND THE LABEL SAID DAYS. Estate Harvest was created today by a
-         live seat and failed three times in three hours; the page reported "failed 3 days
-         running", which is impossible for a workflow that has existed for hours. A count
-         of consecutive failing RUNS cannot be spoken as DAYS, and a window of recent runs
-         silently assumes the workflow existed for the whole window.
-
-         Days are now derived from the distinct dates those failures actually fall on, so a
-         workflow younger than the window can never be described as failing for longer than
-         it has existed. Repeated manual retries read as retries, not as a daily failure. */
-      const names=failing.map(function(w){
-        const nm=/contradiction/i.test(w.name)?"the daily contradiction check":w.name;
-        const runs=Number(w.consecutive_failures)||1;
-        const days=Number(w.consecutive_failure_days)||0;
-        let how;
-        if(days>1)      how=" — failed on "+days+" separate days";
-        else if(runs>1) how=" — failed "+runs+" times today";
-        else            how=" — failed on its last run";
-        return nm+how;
-      });
-      brokenLine=systems+" systems, "+failing.length+" failing: "+names.join("; ")+".";
-    }
-  }
-
-  return '<div class="blk">What is in the brain<span class="ln"></span></div>'
-  + '<div class="pg">'+brain+'</div>'
-
-  + '<div class="blk">Where we are<span class="ln"></span></div>'
-  + '<div class="pi" id="wwa"><span class="pn">›</span><span><b>'+esc((F.where_we_are||{}).line||"")+'</b></span></div>'
-  + '<div id="wwaMore" style="display:none">'+spine()+'</div>'
-
-  + '<div class="blk">What needs you <span class="ct">'+needs.length+'</span><span class="ln"></span></div>'
-  + (needs.length?('<div class="rail">'+needsBlock+'</div>'):needsBlock)
-
-  + '<div class="blk">Is anything broken<span class="ln"></span></div>'
-  + '<div class="pi" data-goto="runson"><span class="pn">'+(brokenBad?"!":"›")+'</span>'
-  +   '<span'+(brokenBad?' style="color:var(--red)"':'')+'>'+esc(brokenLine)+'</span></div>'
-  + customerLine();
-}
-
-/* ONE PLAIN LINE FOR A CUSTOMER, AND IT OPENS THE PLACE THE FAULTS ARE FIXED.
-
-   Which of the two offered options is right was established from the record rather than
-   picked: /fill/ is called "the fresh Tool surface" in the 17 July decision, it is on the
-   canonical host, and it is backed by fill_attention(), which groups unresolved faults BY
-   BUCKET — by cause — separating what needs the customer from what is our side and what is
-   benign. That is the grouping Alex is describing, so a destination genuinely exists and
-   the line can link rather than dead-end.
-
-   THE TWO NUMBERS ARE NOT THE SAME POPULATION and the line must not imply they are: the
-   studio counts SOURCES in trouble (17 of 28), while the Tool groups FAILED ITEMS (1,982
-   in 4 buckets). The line therefore says sources, and sends him to the Tool for the faults
-   themselves rather than promising the same figure there. */
-const TOOL_SURFACE="https://hirekraft.github.io/hirekraft-brain-surface/fill/";
-function customerLine(){
-  if(CUST_STATE==="loading") return "";
-  const cust=(CUST&&CUST.customers)||[];
-  if(!cust.length) return "";
-  return cust.map(function(c){
-    if(!c.seen) return '<div class="pi"><span class="pn">!</span><span style="color:var(--red)">'
-      + esc(c.name)+'’s brain cannot be read right now, so nothing about it is known.</span></div>';
-    /* A problems figure counted from an ABSENT source list is zero by construction, which
-       is the defect this surface exists to remove — caught in my own line by rendering it
-       against a payload that had no sources. Say the list is missing instead. */
-    const srcs=c.sources;
-    const problems=Array.isArray(srcs)
-      ? (srcs.filter(function(s){ return s.c==="bad"; }).length + ' with problems')
-      : 'problems not counted — the source list was not returned';
-    return '<div class="pi" data-tool="1"><span class="pn">›</span><span>'
-      + esc(c.name)+': '+esc(c.reading)+' of '+esc(c.total)+' sources reading, '
-      + esc(problems)+' — fixed on the Tool</span></div>';
-  }).join("");
-}
-
-function runsOn(){
-  if(RUN_STATE==="loading")
-    return '<div class="lede">What the studio runs on.</div><div class="lab-note">reading…</div>';
-  if(!RUN||RUN.error)
-    return '<div class="lede">What the studio runs on.</div>'
-      + '<div class="empty">This could not be read, so the state of the machinery is unknown — not healthy. '
-      + esc((RUN&&RUN.error)||"")+'</div>';
-
-  const deps=RUN.dependencies||[];
-  const acts=RUN.actions||{}, pages=RUN.pages||{};
-  const extra=[];
-  if(acts.seen){
-    (acts.workflows||[]).forEach(function(w){
-      const failed = w.conclusion==="failure";
-      /* Runs, spoken as runs. The count is of consecutive failing RUNS; days are derived
-         separately from the dates those runs fall on, because three failures in one
-         afternoon is not three days of failure. */
-      const runs=Number(w.consecutive_failures)||0;
-      const fdays=Number(w.consecutive_failure_days)||0;
-      const alsoBefore = (runs>1)
-        ? (" — and the "+(runs-1)+" before it"+(fdays>1?(", across "+fdays+" separate days"):", all today"))
-        : "";
-      extra.push({ group:"code", name:"GitHub Actions — "+w.name,
-        state: failed ? "failing" : "proven",
-        evidence: failed ? ("Its last run FAILED"+alsoBefore+".") : ("Its last run succeeded ("+w.event+")."),
-        first_seen: w.first_seen, consecutive_failure_days: w.consecutive_failure_days,
-        last_at: w.at });
-    });
-  } else {
-    extra.push({group:"code",name:"GitHub Actions",state:"assumed",
-      evidence:(acts.why||"Workflow outcomes could not be read.")});
-  }
-  extra.push(pages.seen
-    ? {group:"hosting",name:"GitHub Pages",state:(pages.status===200?"proven":"failing"),
-       evidence:"The served address was loaded just now: "+pages.status+", "+pages.bytes+" bytes."}
-    : {group:"hosting",name:"GitHub Pages",state:"assumed",evidence:(pages.why||"could not be loaded")});
-
-  const all=deps.filter(function(d){ return d.name.indexOf("GitHub Actions")<0 && d.name.indexOf("GitHub Pages")<0; }).concat(extra);
-  const rank={failing:0,yours_to_check:1,assumed:2,proven:3};
-  all.sort(function(a,b){ return (rank[a.state]-rank[b.state])||(a.name<b.name?-1:1); });
-  const cls={failing:"bad",yours_to_check:"warn",assumed:"warn",proven:"ok"};
-  const label={failing:"FAILING",yours_to_check:"YOURS TO CHECK",assumed:"ASSUMED",proven:"PROVEN"};
-  const nFail=all.filter(function(d){ return d.state==="failing"; }).length;
-
-  /* OURS OR YOURS, ON EVERY LINE. Alex should not have to work out which of twenty-five
-     problems he is meant to act on. The rule is derived, not assigned: a line is YOURS only
-     when no credential for it exists anywhere in the studio, so nothing here can act on it.
-     That is exactly the yours_to_check state, and today it is one line — Netlify. Everything
-     else is ours, and it is listed so he can see we know.
-
-     AND THE FAILING THING CARRIES ITS FIX, NOT ITS STATUS. "Its last run FAILED — and the
-     21 before it" is a status; the page's own law is no problem without its solution. The
-     fix comes from the open-work registry, because a seat registers at CLOSE and one that
-     is working right now leaves no trace to derive from. A failing line with no row there
-     says nobody is on it yet, which is the honest default and the more useful signal. */
-  const work=(RUN.open_work)||[];
-  const workFor=function(name){
-    const n=String(name).toLowerCase();
-    for(let i=0;i<work.length;i++){ if(n.indexOf(String(work[i].matches).toLowerCase())>=0) return work[i]; }
-    return null;
-  };
-  /* THE SURFACE AND THE EMAIL WERE EXACTLY INVERTED: the surface carried liveness and no
-     findings, the email carried findings and no liveness, and each was loud about precisely
-     what the other should have covered. Liveness now derives from the last run's outcome,
-     so the findings sit beside it — ON EVERY STATE, not only on failure, because they are a
-     different question. A check that ran perfectly can still be sitting on hundreds of
-     unjudged contradictions, and a green row saying nothing about that is the inversion
-     rebuilt in one place. */
-  const hf=RUN.hunt_findings||null;
-  const findingsFor=function(name){
-    if(!hf||!hf.matches) return "";
-    if(String(name).toLowerCase().indexOf(String(hf.matches).toLowerCase())<0) return "";
-    const rs=(hf.reasons||[]);
-    if(hf.ok && !rs.length) return '<br/><b>Found:</b> nothing outstanding.';
-    if(!rs.length) return '<br/><b>Found:</b> not reported.';
-    return '<br/><b>Found:</b> '+rs.map(function(r){ return esc(r); }).join('; ')+'.';
-  };
-  const rows=all.map(function(d){
-    const yours=(d.state==="yours_to_check");
-    const w=workFor(d.name);
-    let body;
-    if(d.state==="failing"){
-      body = w
-        ? (esc(w.what)+'<br/><b>Being done:</b> '+esc(w.being_done))
-        : (esc(d.evidence)+'<br/><b>Being done:</b> nothing yet — no one is on this.');
-    } else {
-      body = esc(d.evidence)+(d.procedure?('<br/><b>Do this:</b> '+esc(d.procedure)):"");
-    }
-    body += findingsFor(d.name);
-    return '<div class="row '+cls[d.state]+'"><span class="edge"></span>'
-      + '<span class="nm">'+esc(d.name)+'<small>'+esc(d.group)+'</small></span>'
-      + '<span class="st">'+body+'</span>'
-      + '<span class="gg">'+(yours?'<b style="color:var(--amber)">YOURS</b>':'ours')+'</span>'
-      + '<span class="md">'+label[d.state]+'</span></div>';
-  }).join("");
-
-  const lims=(RUN.limits||[]).filter(function(l){ return l.known; });
-  const unk=RUN.unknown_ceilings||[];
-  const ph=RUN.phantom_watcher;
-
-  const limRows=lims.map(function(l){
-    const urgent=(l.days_left!==null&&l.days_left!==undefined&&l.days_left<60);
-    return '<div class="row '+(urgent?"bad":"warn")+'"><span class="edge"></span>'
-      + '<span class="nm">'+esc(l.vendor)+'<small>'+esc(l.what)+'</small></span>'
-      + '<span class="st">'+esc(l.ceiling||(l.expires_on?("Expires "+l.expires_on):""))
-      + ((l.days_left===null||l.days_left===undefined)?"":(' · '+esc(l.days_left)+' days left'))
-      + '<br/>'+esc(l.consequence)+'</span>'
-      + '<span class="gg">'+(l.watcher_exists?"watched":"no watcher")+'</span>'
-      + '<span class="md">LIMIT</span></div>';
-  }).join("");
-
-  const unkCards=unk.map(function(u){
-    return '<div class="fc"><h3>'+esc(u.vendor)+'</h3><p>'+esc(u.what)+'</p>'
-      + '<p style="color:var(--red);margin-top:6px">'+esc(u.consequence)+'</p>'
-      + '<span class="pill" style="color:var(--ink-3);background:var(--sunk)">'+esc(u.source_note)+'</span></div>';
-  }).join("");
-
-  return '<div class="lede">What the studio runs on. The state of each is <b>what last exercised it</b>, not what we believe about it.</div>'
-  + '<div class="lab-note">'+esc(RUN.how||"")+'</div>'
-  + '<div class="blk">The machinery <span class="ct">'+all.length+(nFail?(" · "+nFail+" failing"):"")
-  +   ' · '+all.filter(function(d){ return d.state==="yours_to_check"; }).length+' for you'+'</span><span class="ln"></span></div>'
-  + '<div class="lab-note" style="margin-bottom:10px">'+esc(RUN.ownership_rule||"")+'</div>'
-  + '<div class="rail">'+rows+'</div>'
-  + '<div class="blk">Limits <span class="ct">a ceiling we can see</span><span class="ln"></span></div>'
-  + (lims.length?('<div class="rail">'+limRows+'</div>'):'<div class="empty">No ceiling is recorded with a number.</div>')
-  + ((ph&&ph.named_watcher_found===false)
-     ? ('<div class="blk">A guard that does not exist<span class="ln"></span></div>'
-        + '<div class="empty" style="border-color:var(--red-line);color:var(--ink)">'
-        + 'In production text right now, '+esc(ph.claimed_in)+' reads: “'+esc(ph.claim)+'”.<br/><br/><b>'
-        + esc(ph.verdict)+'</b><br/><br/>Everything actually scheduled: '+esc(ph.active_jobs)+'.</div>')
-     : "")
-  + '<div class="blk">Ceilings we cannot see <span class="ct">'+unk.length+'</span><span class="ln"></span></div>'
-  + '<div class="lab-note" style="margin-bottom:10px">These are not alarms and they are not healthy. A limit exists, nothing here can read how close we are, and it stops the work at the moment it is hit.</div>'
-  + (unk.length?('<div class="fr-grid">'+unkCards+'</div>'):'<div class="empty">None recorded.</div>')
-  + studioRail()
-  + unplacedBlock(D.work_orders)
-  + noFinishBlock(D.work_orders)
-  + '<div class="blk">Scheduled work<span class="ln"></span></div>'
-  + '<div class="fr-grid">'
-  + '<div class="fc"><h3>'+esc((RUN.crons||{}).active)+'</h3><p>jobs scheduled on the studio’s database</p></div>'
-  + '<div class="fc"><h3 style="color:'+((((RUN.crons||{}).not_succeeded)||0)>0?"var(--red)":"inherit")+'">'+esc((RUN.crons||{}).not_succeeded)+'</h3><p>whose last run did not succeed</p></div>'
-  + '<div class="fc"><h3>'+esc((RUN.volumes||{}).anthropic_24h)+' / '+esc((RUN.volumes||{}).openai_24h)+'</h3><p>model calls in 24h — answering / embedding</p></div>'
-  + '<div class="fc"><h3>'+esc((RUN.volumes||{}).sync_24h)+'</h3><p>mirror syncs in 24h</p></div>'
-  + '</div>';
-}
-
-/* THE STUDIO'S OWN SOURCE RAIL — same shape as a customer's. Rows describing a running
-   process derive from that process's LAST RUN, never from the fact that it is scheduled. */
-function studioRail(){
-  const r=RUN&&RUN.rail;
-  if(!r||!r.sources)
-    return '<div class="blk">The studio’s own sources<span class="ln"></span></div>'
-      + '<div class="empty">The studio’s inputs could not be read.</div>';
-  const reading=r.sources.filter(function(s){ return s.reading; }).length;
-  const rows=r.sources.map(function(s){
-    return '<div class="row '+esc(s.c==="warn ok"?"warn":s.c)+'"><span class="edge"></span>'
-      + '<span class="nm">'+esc(s.n)+'<small>'+esc(s.sub)+'</small></span>'
-      + '<span class="st">'+esc(s.st)+'</span>'
-      + '<span class="gg">'+esc(s.g)+'</span>'
-      + '<span class="md">'+esc(s.m)+'</span></div>';
-  }).join("");
-  return '<div class="blk">The studio’s own sources <span class="ct">'+reading+' of '+r.sources.length+' reading</span><span class="ln"></span></div>'
-    + '<div class="rail">'+rows+'</div>'
-    + '<div class="lab-note">'+esc(r.how||"")+'</div>';
-}
-
-function lab(ln,srcs){
-  return '<div class="lede">The forge — <b>a part being made right now</b>. One pipeline: forged here, graduated to the Parts Bin when it is finished and reusable.</div>'
-  + '<div class="blk">On the bench <span class="ct">nothing recorded</span><span class="ln"></span></div>'
-  + '<div class="empty">Nothing in the estate records a part as being in the making, so this is empty rather than filled with something else. It fills as Tool work produces parts.</div>'
-  + '<div class="blk">A customer’s sources moved<span class="ln"></span></div>'
-  + '<div class="empty">Every source — drives, mailboxes, connected versus actually reading — belongs to <b>a customer</b>, and now lives on the Tool surface, which watches one. This surface watches the studio. The customer group in the bar above still shows an unreachable customer brain at a glance.</div>'
-  + readHealthBlock()
-  + '<div class="blk">Whose brain is whose <span class="ct">'+((CUST&&CUST.count)||0)+' customer'+(((CUST&&CUST.count)||0)===1?"":"s")+'</span><span class="ln"></span></div>'
-  + '<div class="lab-note" style="margin-bottom:12px">'+esc((CUST&&CUST.note)||"")+'</div>'
-  + '<div class="fr-grid">'
-  + '<div class="fc"><h3>The Studio’s own brain</h3><p>Doctrine, decisions, parts, promises, seat record. '+esc(D.principles.sections)+' corpus sections, '+esc(D.principles.decisions)+' decisions, '+esc(D.principles.seat_reports)+' seat reports. Nothing here belongs to a customer.</p><span class="pill">the record</span></div>'
-  + ((CUST&&CUST.customers)||[]).map(c=>'<div class="fc"><h3>'+esc(c.name)+'’s brain</h3><p>'
-    + (c.seen?("What is connected and reading: "+esc(c.total)+" sources, "+esc(c.reading)+" reading, "+esc(c.chunks_total)+" pieces of content.")
-            :("Unreachable right now, so nothing about "+esc(c.name)+" is known from here."))
-    + ' Customer since '+esc(String(c.since||"").slice(0,10))+'.</p><span class="pill">'+(c.seen?"the lab":"unreachable")+'</span></div>').join("")
-  + '</div>';
-}
-
-function parts(){
-  const p=D.parts;
-  const bin=(items,cls,label,desc)=>'<div class="blk">'+label+' <span class="ct">'+(items?items.length:0)+'</span><span class="ln"></span></div>'
-    + '<div class="lab-note" style="margin-bottom:12px">'+desc+'</div>'
-    + (items&&items.length
-      ? '<div class="stock">'+items.map(x=>'<div class="pt '+cls+'"><div class="pn">'+esc(wordTrim(x.name,90))+'</div><div class="pd">'+esc(x.sub||"")+'</div><span class="ps">'+esc(x.id)+'</span></div>').join("")+'</div>'
-      : '<div class="empty">Nothing in this bin.</div>');
-  /* A PART IS SOMETHING WE BUILT — the walker substrate, identity-aware retrieval, the
-     universal schema. What was in this bin were MARKETING CLAIMS carrying verdicts:
-     "leak by construction is impossible", "we parse them, 99.1% of the time cleanly".
-     Those are promises about the product, not parts of it.
-
-     Nothing in the estate records parts as such, which is exactly why the promise ledger
-     got substituted for one. The bin stays near-empty and says so, rather than being
-     filled with the wrong thing. It fills as Tool work produces parts. */
-  const total=(p.stocked||[]).length+(p.in_lab||[]).length+(p.open_slots||[]).length;
-  return '<div class="lede">Finished, reusable things the studio has built — <b>parts</b>. Forged in the Lab, graduated here.</div>'
-  + '<div class="blk">Stocked <span class="ct">nothing recorded</span><span class="ln"></span></div>'
-  + '<div class="empty">Nothing in the estate records a part as a part, so this bin is empty rather than filled with something else.<br/><br/>'
-  + 'It held '+total+' rows from the promise ledger until now. Those are <b>claims about the product with verdicts attached</b> — how far we are from what we have promised — which is worth seeing and is not a parts list. It has moved to The Frame.<br/><br/>'
-  + 'This fills as Tool work produces parts. Until then it is thin, and that is correct.</div>'
-  + '<div class="blk">Product-specific — never a part<span class="ln"></span></div>'
-  + '<div class="empty">'+esc(p.never_a_part.why)+'</div>';
-}
-
-/* Derived from the hunt's LAST RUN, not from its schedule. A run still in flight after a
-   day has not finished; saying it "continues on its own" is the failure this catches. */
-function huntBlock(ig){
-  const r=(RUN&&RUN.rail&&RUN.rail.hunt_run)||null;
-  const c=ig.contradictions||{};
-  let head='Contradictions', state='', note='';
-  if(!r){ head='Contradictions — the hunt has never run'; state='bad';
-    note='No run of the contradiction hunt is recorded at all.'; }
-  else if(!r.finished_at){
-    const days=Math.max(0,Math.round((Date.now()-Date.parse(r.started_at))/86400000));
-    head='Contradictions — THE HUNT IS NOT RUNNING'; state='bad';
-    note='Its last run started '+days+' day'+(days===1?"":"s")+' ago and never finished — '
-       + r.pairs_done+' of '+r.pairs_queued+' pairs judged, then it stopped. '
-       + 'The counts below are therefore frozen at that point, not current. '
-       + 'This panel previously read “growing daily, unattended”, which described what the hunt was for rather than what it last did.';
-  } else { head='Contradictions'; state='ok'; note='Its last run finished cleanly.'; }
-  return '<div class="blk">'+esc(head)+'<span class="ln"></span></div>'
-    + (state==="bad"?('<div class="empty" style="border-color:var(--red-line);color:var(--ink);margin-bottom:12px">'+esc(note)+'</div>')
-                    :('<div class="lab-note" style="margin-bottom:12px">'+esc(note)+'</div>'))
-    + '<div class="fr-grid">'
-    + '<div class="fc"><h3>'+esc(c.disagrees)+'</h3><p>pairs judged to disagree, out of '+esc(c.pairs)+' scanned</p></div>'
-    + '<div class="fc"><h3>'+esc(c.unadjudicated)+'</h3><p>never judged'+(state==="bad"?" — and nothing is judging them":"")+'</p></div>'
-    + '<div class="fc"><h3>'+esc(c.promise_conflicts)+'</h3><p>open promise conflicts</p></div>'
-    + '</div>';
-}
-
-function frame(){
-  const d=D.ip_docs||[], drift=D.shard_drift_note, ig=D.integrity;
-  return '<div class="lede">What Studio is. The apparatus is the product; the Tool is the first thing manufactured. The frame below is <b>the corpus as it actually stands</b>, not a description of it.</div>'
-  + '<div class="blk">The corpus<span class="ln"></span></div>'
-  + '<div class="fr-grid">'+d.map(x=>'<div class="fc"><h3>'+esc(String(x.doc).replace(/_/g," "))+'</h3>'
-    + '<p>v'+esc(x.version)+' · '+esc(x.sections)+' sections · '+esc(Math.round(x.chars/1000))+'k chars · written '+esc(String(x.written).slice(0,10))+'</p>'
-    + (x.shard_drift
-       ? '<span class="pill" style="color:var(--red);background:var(--red-bg)">sharded at v'+esc(x.sharded_at)+' — recall reads the older text</span>'
-       : '<span class="pill">sharded current</span>')+'</div>').join("")+'</div>'
-  + (drift?'<div class="blk">What that costs<span class="ln"></span></div><div class="empty">'+esc(drift)+'</div>':"")
-  + '<div class="blk">What nothing has re-examined<span class="ln"></span></div>'
-  + '<div class="empty">'+esc(ig.examination.note)+'</div>'
-  + '<div class="blk">The seat record<span class="ln"></span></div>'
-  + '<div class="fr-grid">'
-  + '<div class="fc"><h3>Closed</h3><p>'+esc(ig.seats.closed_total)+' seats have closed, '+esc(ig.seats.closed_21d)+' in the last 21 days.</p></div>'
-  + '<div class="fc"><h3>Traced to a promise</h3><p>'+esc(ig.seats.traced_21d)+' of '+esc(ig.seats.closed_21d)+' named a real promise_ledger id. '+esc(ig.seats.untraced_21d)+' did not.</p></div>'
-  + '<div class="fc"><h3>Running now</h3><p>'+esc(ig.seats.running_why)+'</p></div>'
-  + '</div>'
-  /* THIS PANEL IS WHY THE RULE EXISTS. It read "growing daily, unattended" and "the hunt
-     continues on its own" while the hunt had not finished a run since 17 August. The
-     control built to catch silent failure failed silently, because it described what the
-     hunt was FOR rather than what it last DID. It now derives from the last run's outcome,
-     and every panel on this surface describing a running process must do the same. */
-  + huntBlock(ig)
-  + '<div class="blk">How far from what we have promised <span class="ct">the promise ledger</span><span class="ln"></span></div>'
-  + '<div class="lab-note" style="margin-bottom:12px">Claims about the product, each with a verdict. These are not parts, which is why they are no longer in the Parts Bin.</div>'
-  + '<div class="fr-grid">'
-  + '<div class="fc"><h3>'+esc((D.parts.counts||{}).TRUE||0)+'</h3><p>verified against the live system</p></div>'
-  + '<div class="fc"><h3>'+esc((D.parts.counts||{}).PARTIAL||0)+'</h3><p>real, incomplete</p></div>'
-  + '<div class="fc"><h3 style="color:var(--red)">'+esc((D.parts.counts||{}).FALSE||0)+'</h3><p>claimed, not standing up</p></div>'
-  + '<div class="fc"><h3>'+esc((D.parts.counts||{}).UNVERIFIABLE||0)+'</h3><p>no way to tell either way</p></div>'
-  + '</div>'
-  + '<div class="blk">Dissolved<span class="ln"></span></div>'
-  + '<div class="fr-grid"><div class="fc"><h3>'+esc(D.dissolved.records)+'</h3><p>records — work that left the queue without being built</p></div></div>';
-}
-
-function principles(){
-  const p=D.principles, dc=D.doctrine||{};
-  const groups=dc.principle_groups||[];
-  const idx=[].concat.apply([], groups.map(g=>g.items||[]));
-  return '<div class="lede">The doctrine — <b>'+esc(dc.numbered_principles||idx.length)+' numbered principles</b> across '+esc(dc.doctrine_sections||"—")+' current sections of the operating principles. Click any one and the brain composes it now, from its current text and the decisions that produced it.</div>'
-  + '<div class="lab-note">'+esc(dc.count_note||"")+'</div>'
-  + '<div class="blk">The principles <span class="ct">'+idx.length+'</span><span class="ln"></span></div>'
-  + '<div id="pdepth"></div>'
-  + (groups.length
-     ? '<div class="pidx">'+groups.map(g=>'<div class="pg"><h4>'+esc(g.group)+' <span style="color:var(--ink-4)">'+(g.items||[]).length+'</span></h4>'
-         + (g.items||[]).map(x=>'<div class="pi" data-n="'+esc(x.n)+'"><span class="pn">'+esc(x.n)+'</span><span>'+esc(x.name)+'</span></div>').join("")
-         + '</div>').join("")+'</div>'
-     : '<div class="empty">The principle index could not be read from the corpus just now.</div>')
-  + '<div class="blk">Composed from<span class="ln"></span></div>'
-  + '<div class="fr-grid">'
-  + '<div class="fc"><h3>'+esc(p.sections)+'</h3><p>corpus sections, current</p></div>'
-  + '<div class="fc"><h3>'+esc(p.decisions)+'</h3><p>decisions on the record</p></div>'
-  + '<div class="fc"><h3>'+esc(p.seat_reports)+'</h3><p>seat reports</p></div>'
-  + '<div class="fc"><h3>'+esc(D.sweep.open_backlog)+'</h3><p>open backlog items</p></div>'
-  + '</div>'
-  + '<div class="blk">Ask the brain<span class="ln"></span></div>'
-  + '<div class="lab-note">Retrieves by meaning across doctrine, decisions, seat reports and chats, then answers from what it retrieved and cites it. The label above each answer says which of those actually happened.</div>'
-  + '<div style="display:flex;gap:8px;margin-top:12px;max-width:660px">'
-  + '<input id="q" placeholder="Ask anything about the studio" style="flex:1;background:var(--raise);border:1px solid var(--hair);border-radius:7px;padding:10px 12px;font-family:var(--sans);font-size:14px;outline:none"/>'
-  + '<button class="btn pri" id="askb">Ask</button></div>'
-  + '<div id="ans" style="margin-top:14px"></div>';
-}
-
-/* THE PRINCIPLE DEEP VIEW. The old surface printed "brain composed this view ·
-   generated from memory" over a hardcoded map of four fields per principle. This one
-   actually composes: the principle's current text, the decisions citing it oldest
-   first, and the other sections enforcing it. Where the record has nothing it says so
-   — 26 of the 95 principles are cited by number, and the rest are honestly empty. */
-/* Citations are markers in the composed text. Turn them into controls that OPEN the
-   evidence they support, so a reader never hunts for [E9] down a page of passages. */
-/* Truncation cuts at a WORD BOUNDARY. Fixed-count slicing produced "vertical in the
-   attachmen" and "not a foundatio". Applied at render, where truncation belongs. */
-/* An earlier seat removed the shared `ago` helper while this seat was writing against it.
-   Caught by running render() in a harness before Alex loaded the page, not by him
-   finding a blank screen. Defined here rather than assumed to exist elsewhere. */
-function ago(iso){
-  const t=Date.parse(iso);
-  if(!isFinite(t)) return "—";
-  const d=(Date.now()-t)/86400000;
-  if(d<1/1440) return "just now";
-  if(d<1/24) return Math.round(d*1440)+"m ago";
-  if(d<1) return Math.round(d*24)+"h ago";
-  return Math.round(d)+"d ago";
-}
-function wordTrim(t,n){
-  const s=String(t||"").trim();
-  if(s.length<=n) return s;
-  return s.slice(0,n).replace(/\s+\S*$/,"")+"…";
-}
-function firstLine(t){
-  const s=String(t||"").replace(/\s+/g," ").trim();
-  return s.length>90 ? s.slice(0,90).replace(/\s+\S*$/,"")+"…" : s;
-}
-function citeHTML(text){
-  return esc(String(text||"")).replace(/\[(E|D)(\d+)\]/g,
-    (m,k,i)=>'<span class="cite" data-cite="'+k+i+'">['+k+i+']</span>');
-}
-function bindCites(scope){
-  (scope||document).querySelectorAll(".cite").forEach(el=>{
-    el.onclick=()=>{
-      const t=document.getElementById("cite-"+el.dataset.cite);
-      if(!t) return;
-      t.open=true;
-      t.classList.add("hit");
-      t.scrollIntoView({behavior:"smooth",block:"center"});
-      setTimeout(()=>t.classList.remove("hit"),1600);
-    };
-  });
-}
-
-/* SCOPED TO PRINCIPLE ROWS ONLY. This bound EVERY .pi on the page, and the front page's
-   "What is in the brain" lines use the same class — so it ran after the goto binding and
-   overwrote each of their handlers with openPrinciple(NaN), which the server rejects. The
-   chevrons were wired, then silently unwired by a second binder competing for the same
-   selector. The markup was right, the deploy was right, and the behaviour was still gone.
-
-   Two binders sharing a class selector, the later one winning silently: the last writer
-   leaves no trace of what it displaced, so the symptom looks like the FIRST binding never
-   happened. Requiring data-n makes the selector say who it is for. */
-function bindPrinciples(){
-  document.querySelectorAll(".pi[data-n]").forEach(el=>{
-    el.onclick=()=>openPrinciple(Number(el.dataset.n));
-  });
-}
-
-/* The point first, in plain words. The exact wording and the decisions behind it sit
-   underneath, collapsed — reachable, never poured into the middle of the explanation. */
-async function openPrinciple(n){
-  const el=document.getElementById("pdepth"); if(!el) return;
-  el.innerHTML='<div class="pdepth"><div class="gen"><span class="gdt"></span>reading the record…</div></div>';
-  el.scrollIntoView({behavior:"smooth",block:"nearest"});
-  const r=await call(FN,{action:"principle",n:n});
-  if(r.status!==200||!r.body||r.body.ok===false){
-    el.innerHTML='<div class="pdepth"><div class="ds"><p>'+esc((r.body&&r.body.error)||("Failed ("+r.status+")"))+'</p></div></div>';
-    return;
-  }
-  const d=r.body;
-  const dec=d.decisions||[];
-  const decBlocks=dec.map(t=>'<details class="ev" id="cite-'+esc(t.ref)+'"><summary>'
-      + '<span class="er">['+esc(t.ref)+']</span><span class="ek">decision</span>'
-      + '<span class="en">'+esc(firstLine(t.why))+'</span>'
-      + '<span class="em">'+esc(String(t.on||"").slice(0,10))+'</span></summary>'
-      + '<div class="eb">'+esc(t.why)+'</div></details>').join("");
-
-  el.innerHTML='<div class="pdepth">'
-    + '<div class="gen"><span class="gdt"></span>'+(d.mode==="explained"?"in plain words · the exact wording is below":"shown as written")+'</div>'
-    + '<h3>'+esc(d.n)+' — '+esc(d.name)+'</h3>'
-    + (d.mode==="explained"
-        ? '<div class="ds"><b>What it says</b><div class="ansbody">'+citeHTML(d.plain)+'</div></div>'
-        + (d.why?'<div class="ds"><b>Why it exists</b><div class="ansbody">'+citeHTML(d.why)+'</div></div>':'')
-      : '')
-    + '<details class="ev" style="margin-top:10px"><summary><span class="er">§</span><span class="ek">verbatim</span>'
-    +   '<span class="en">The principle exactly as written</span></summary>'
-    +   '<div class="eb">'+esc(d.text)+'</div></details>'
-    + (dec.length
-       ? '<div class="ds" style="margin-top:14px"><b>The decisions behind it</b>'+decBlocks+'</div>'
-       : '<div class="ds" style="margin-top:14px"><b>The decisions behind it</b><p style="color:var(--ink-3);font-size:13px">'+esc(d.trail_note||"No decision in the record cites this principle by number.")+'</p></div>')
-    + '<div class="ft">'+esc(d.how||"")+'</div>'
-    + '</div>';
-  bindCites(el);
-}
-
-async function doAsk(){
-  const qi=document.getElementById("q"); const q=qi.value.trim(); if(!q) return;
-  const b=document.getElementById("askb"); const a=document.getElementById("ans");
-  b.disabled=true; b.textContent="Reading…";
-  a.innerHTML='<div class="lab-note">Reading decisions, seat reports and doctrine…</div>';
   const r=await call(FN,{action:"ask",q:q});
-  b.disabled=false; b.textContent="Ask";
-  if(r.status!==200){ a.innerHTML='<div class="empty">'+esc(r.body.error||("Failed ("+r.status+")"))+'</div>'; return; }
-  /* Rendered against the shape the DEPLOYED function returns, read from
-     pg_get_functiondef rather than guessed from one call. This renderer was wrong twice:
-     first written for {trail}, then still wrong because surface_ask actually returns four
-     arrays. It is now keyed on `mode`, which the server sets to what genuinely happened,
-     so the screen cannot call retrieval an answer. Any unrecognised mode says so instead
-     of dumping the object. */
-  const d=r.body||{};
-  const note = d.how ? '<div class="lab-note" style="margin-bottom:10px">'+esc(d.how)+'</div>' : '';
-  /* Collapsed by default. Twelve open passages bury a four-paragraph answer, and by
-     [E9] the reader has lost which claim it supported. Each carries an id its citation
-     opens directly. */
-  const cites = (d.passages||[]).map(p=>'<details class="ev" id="cite-'+esc(p.ref)+'"><summary>'
-      + '<span class="er">['+esc(p.ref)+']</span>'
-      + '<span class="ek">'+esc(p.kind)+'</span>'
-      + '<span class="en">'+esc(p.name)+'</span>'
-      + '<span class="em">'+esc(p.date)+'</span></summary>'
-      + '<div class="eb">'+esc(p.text)+'</div></details>').join("");
-
-  if(d.mode==="answered"){
-    a.innerHTML='<div class="pdepth"><div class="gen"><span class="gdt"></span>answered from the record</div>'
-      + '<div class="ansbody">'+citeHTML(d.answer)+'</div>'
-      + '<div class="ft">'+esc(d.how)+'</div></div>'
-      + '<div class="blk">The evidence <span class="ct">'+(d.passages||[]).length+' · click a citation to open one</span><span class="ln"></span></div>'+cites;
-    bindCites(a);
-    return;
-  }
-  if(d.mode==="retrieved"){
-    a.innerHTML='<div class="blk">What the record says about this <span class="ct">'+(d.passages||[]).length+'</span><span class="ln"></span></div>'
-      + note + cites;
-    return;
-  }
-  if(d.mode==="nothing_retrieved"){ a.innerHTML='<div class="empty">'+esc(d.how)+'</div>'; return; }
-  if(d.mode==="text_search_fallback"){
-    const f=d.fallback||{};
-    const rows=[].concat(
-      (f.decisions||[]).map(x=>({k:"decision",   on:x.on,     t:x.what})),
-      (f.open_items||[]).map(x=>({k:"open item", on:x.raised, t:x.item})),
-      (f.promises||[]).map(x=>({k:"promise "+(x.verdict||""), on:"", t:x.promise})),
-      (f.dissolved||[]).map(x=>({k:"dissolved",  on:"",        t:x.stands})));
-    a.innerHTML='<div class="empty" style="margin-bottom:10px">'+esc(d.how)+'</div>'
-      + (rows.length ? rows.map(x=>'<div class="lab-card"><div class="lc-top"><span class="lc-name">'+esc(x.k)+'</span>'
-          + '<span class="lc-meta">'+esc(String(x.on||"").slice(0,10))+'</span></div>'
-          + '<div class="lc-body">'+esc(x.t)+'</div></div>').join("")
-        : '<div class="empty">No word match either.</div>');
-    return;
-  }
-  a.innerHTML='<div class="empty">The ask returned a shape this screen does not recognise'
-    + (d.mode?' (mode: '+esc(d.mode)+')':'')+'. Nothing is claimed about it.</div>';
-}
-
-/* IP & Docs — listing is not opening. The list carries the claimed size; opening
-   shows the delivered size beside it, and flags a mismatch rather than letting a
-   truncated body pass as the document. */
-function ipdocs(){
-  return '<h2>IP &amp; Docs <button class="x" id="drx">×</button></h2>'
-  + '<div class="dl">Everything Studio owns, served from the brain. Version, size and shard state read at this moment — never from a list.</div>'
-  + '<div id="doclist">'+(DOCS.length
-      ? DOCS.map((d,i)=>'<div class="iprow" data-i="'+i+'"><div class="rt">'
-        + '<span class="rn">'+esc(String(d.doc_type).replace(/_/g," "))+'</span>'
-        + '<span class="rw">v'+esc(d.version)+'</span></div>'
-        + '<div class="rd">'+Number(d.chars).toLocaleString()+' characters · written '+esc(String(d.updated_at||"").slice(0,10))+' · click to read</div></div>').join("")
-      : '<div class="empty">The document list did not load. Nothing is claimed about it.</div>')
-  + '</div><div id="reader"></div>';
-}
-
-function bindDocs(){
-  const x=document.getElementById("drx");
-  if(x) x.onclick=()=>{ document.getElementById("ov").dataset.open="false"; };
-  document.querySelectorAll("#doclist .iprow").forEach(el=>{
-    el.onclick=()=>openDoc(DOCS[Number(el.dataset.i)]);
-  });
-}
-
-/* THE LIST THAT DID NOT EXIST. Newest first, opening the body. Bodies are fetched one at a
-   time because the twenty newest write-ups alone are 135KB and this must not weigh on the
-   page Alex opens daily. */
-async function loadConflicts(scope){
-  CONF_SCOPE=scope||"cross"; CONF_STATE="loading"; CONF_OPEN=null;
-  const r=await call(FN,{action:"conflicts",scope:CONF_SCOPE,n:40});
-  if(r.status===200 && r.body && r.body.ok!==false){ CONF=r.body; CONF_STATE="done"; }
-  else { CONF={error:(r.body&&r.body.error)||("failed ("+r.status+")")}; CONF_STATE="failed"; }
-  paint();
-}
-
-async function openConflict(id){
-  CONF_OPEN="loading"; paint();
-  const r=await call(FN,{action:"conflict",id:id});
-  CONF_OPEN=(r.status===200 && r.body && r.body.ok!==false)
-    ? r.body
-    : {error:(r.body&&r.body.error)||("could not open it ("+r.status+")")};
-  paint();
-}
-
-/* THE RULING. It reports what actually happened, including WHICH SIDE it recorded as
-   standing, because a ruling that only says "saved" cannot be checked against what was
-   meant — and direction is the thing that goes wrong here. On success the queue is re-read
-   FROM SOURCE rather than patched in memory, so the count on screen is the count in the
-   record. */
-async function ruleConflict(ruling, winner){
-  if(CONF_BUSY) return;
-  const out=document.getElementById("ruleout");
-  if(!CONF_OPEN || !CONF_OPEN.id){ if(out) out.textContent="No pair is open."; return; }
-  if(ruling==="superseded" && !winner){ if(out) out.textContent="Choose which side stands."; return; }
-  CONF_BUSY=true;
-  if(out) out.textContent="Recording…";
-
-  const r=await call(FN,{action:"rule",id:CONF_OPEN.id,ruling:ruling,winner:winner||"",note:""});
-  CONF_BUSY=false;
-
-  if(r.status!==200 || !r.body || r.body.ok===false){
-    if(out) out.innerHTML='<span style="color:var(--red)">Not recorded: '
-      + esc((r.body&&r.body.error)||("failed ("+r.status+")"))+'</span>';
-    return;
-  }
-  const b=r.body;
-  let said;
-  if(ruling==="superseded"){
-    const w=(CONF_OPEN.a && CONF_OPEN.a.id===winner) ? CONF_OPEN.a.doc : (CONF_OPEN.b||{}).doc;
-    said='Recorded: '+esc(w)+' stands. '+esc(b.means||"");
-  } else if(ruling==="not_a_conflict"){ said='Recorded as no conflict. '+esc(b.means||""); }
-  else { said=esc(b.means||"Left open."); }
-  if(out) out.innerHTML='<span style="color:var(--green)">'+said+'</span>';
-
-  CONF_OPEN=null;
-  await loadConflicts(CONF_SCOPE);
-}
-
-async function openRecords(kind){
-  const ov=document.getElementById("ov"), drw=document.getElementById("drw");
-  if(!ov||!drw) return;
-  ov.dataset.open="true";
-  drw.innerHTML='<h2>Loading <button class="x" id="drx">×</button></h2>';
-  const r=await call(FN,{action:"records",kind:kind,n:60});
-  if(r.status!==200||!r.body||r.body.ok===false){
-    drw.innerHTML='<h2>Could not open <button class="x" id="drx">×</button></h2>'
-      + '<div class="empty">'+esc((r.body&&r.body.error)||("failed ("+r.status+")"))+'</div>';
-    bindDrawer(); return;
-  }
-  const d=r.body;
-  drw.innerHTML='<h2>'+esc(d.title)+' <button class="x" id="drx">×</button></h2>'
-    + '<div class="dl">'+esc(d.means)+' Showing the '+((d.items||[]).length)+' newest of '+esc(d.total)+'.</div>'
-    + '<div id="reclist">'+(d.items||[]).map(function(it){
-        return '<div class="iprow" data-rec="'+esc(it.id)+'" data-kind="'+esc(d.kind)+'"><div class="rt">'
-          + '<span class="rn">'+esc(String(it.when||"").slice(0,10))+'</span>'
-          + '<span class="rw">'+esc(it.chars)+' chars</span></div>'
-          + '<div class="rd">'+esc(it.line||"(no first line)")+'</div></div>';
-      }).join("")+'</div><div id="recbody"></div>';
-  bindDrawer();
-  drw.querySelectorAll("#reclist .iprow").forEach(function(el){
-    el.onclick=function(){ openRecord(el.dataset.kind, el.dataset.rec); };
-  });
-}
-
-async function openRecord(kind,id){
-  const box=document.getElementById("recbody"); if(!box) return;
-  box.innerHTML='<div class="lab-note">opening…</div>';
-  const r=await call(FN,{action:"record",kind:kind,id:id});
-  if(r.status!==200||!r.body||r.body.ok===false){
-    box.innerHTML='<div class="empty">'+esc((r.body&&r.body.error)||("failed ("+r.status+")"))+'</div>'; return;
-  }
-  const d=r.body;
-  box.innerHTML='<div class="drow"><b>'+esc(d.title)+'</b>'
-    + '<span class="lab-note" style="margin:0">'+esc(String(d.when||"").slice(0,10))+' · '+esc(d.chars)+' characters</span>'
-    + '<button class="btn" id="recclose">Close</button></div>'
-    + '<div class="docbody">'+esc(d.body)+'</div>';
-  const c=document.getElementById("recclose");
-  if(c) c.onclick=function(){ box.innerHTML=""; };
-  box.scrollIntoView({behavior:"smooth",block:"nearest"});
-}
-
-function bindDrawer(){
-  const x=document.getElementById("drx");
-  if(x) x.onclick=function(){ document.getElementById("ov").dataset.open="false"; };
-}
-
-async function openDoc(d){
-  const rd=document.getElementById("reader");
-  rd.innerHTML='<div class="lab-note">Fetching '+esc(d.doc_type)+'…</div>';
-  const r=await call(FN,{action:"doc",doc_type:d.doc_type});
   if(r.status!==200||!r.body.ok){
-    rd.innerHTML='<div class="empty">Could not open it: '+esc(r.body.error||r.status)+'</div>'; return;
+    out.innerHTML='<p class="note fail">'+esc((r.body&&r.body.error)||("Failed ("+r.status+")"))+'</p>';
+    return;
   }
-  const doc=r.body.doc;
-  const claimed=Number(d.chars), delivered=Number(doc.chars);
-  const mism = claimed!==delivered;
-  rd.innerHTML='<div class="drow"><b>'+esc(doc.doc_type)+' v'+esc(doc.version)+'</b>'
-    + '<span class="lab-note" style="margin:0">'+delivered.toLocaleString()+' characters delivered'
-    + (mism?' <span class="mismatch">· listed '+claimed.toLocaleString()+' — MISMATCH</span>':' · matches the listed size')+'</span>'
-    + '<button class="btn" id="dl">Download .md</button>'
-    + '<button class="btn" id="dclose">Close</button></div>'
-    + '<div class="docbody">'+esc(doc.body)+'</div>';
-  document.getElementById("dclose").onclick=()=>{ rd.innerHTML=""; };
-  document.getElementById("dl").onclick=()=>{
-    const blob=new Blob([doc.body],{type:"text/markdown;charset=utf-8"});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);
-    a.download=doc.doc_type+"-v"+doc.version+".md";
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-  };
+  const d=r.body, groups=[["decisions",d.decisions],["open items",d.open_items],
+                          ["promises",d.promises],["dissolved",d.dissolved]];
+  const any=groups.some(g=>(g[1]||[]).length);
+  out.innerHTML = any
+    ? groups.filter(g=>(g[1]||[]).length).map(g=>
+        '<div class="answer"><h2>'+esc(g[0])+'</h2>'
+        + g[1].slice(0,6).map(x=>'<div class="item">'+esc(x.what||x.item||x.promise||x.stands||"")
+            +'<div class="src">'+esc(x.on||x.raised||x.verdict||"")+'</div></div>').join("")
+        +'</div>').join("")
+    : '<p class="note">Nothing in the record matches that. '+esc(d.how||"")+'</p>';
+}
+
+async function showParts(out){
+  const r=await call(FN,{action:"parts"});
+  if(r.status!==200||!r.body.ok){out.innerHTML='<p class="note fail">Could not read the parts.</p>';return}
+  const d=r.body;
+  out.innerHTML='<div class="answer"><p>'+esc(d.total)+' parts, grouped as they were built.</p>'
+    +'<p class="note">'+esc(d.empty_state)+'</p>'
+    + (d.lenses||[]).map(l=>'<h2>'+esc(String(l.lens).replace(/_/g," "))+'</h2>'
+        + (l.parts||[]).map(p=>'<div class="item"><div class="row">'
+            +'<span class="what">'+esc(p.name)+'</span>'
+            +'<span class="value">'+esc(p.aliveness)+'</span></div>'
+            +'<p>'+esc(p.one_liner||p.what_it_is||"")+'</p>'
+            +'<details><summary>Why it matters</summary><p>'+esc(p.why_it_matters||"")+'</p>'
+            +'<p class="note">'+esc(p.aliveness_means)+'</p></details>'
+            +'</div>').join("")).join("")
+    +'<p class="note">'+esc((d.product_specific||{}).why||"")+'</p></div>';
+}
+
+async function showConflicts(out){
+  const r=await call(FN,{action:"conflicts",scope:"cross"});
+  if(r.status!==200||!r.body.ok){out.innerHTML='<p class="note fail">Could not read the queue.</p>';return}
+  const d=r.body,c=d.counts||{};
+  out.innerHTML='<div class="answer"><p>'+esc(c.in_scope)+' pairs across two documents are waiting on a ruling, '
+    +esc(c.intra_doc)+' more inside a single document.</p>'
+    +'<p class="note">'+esc(d.means||"")+'</p>'
+    + (d.items||[]).slice(0,8).map(p=>'<div class="item"><div class="row">'
+        +'<span class="what">'+esc(p.a_doc)+' against '+esc(p.b_doc)+'</span>'
+        +'<span class="value">'+(p.has_direction?"a side suggested":"no suggestion")+'</span></div>'
+        +'<p>'+esc(p.a_heading)+'</p></div>').join("")
+    +'<p class="note">Ruling on these needs the full text of both passages, which is a page '
+    +'of its own rather than an answer here.</p></div>';
 }
 
 boot();
