@@ -5,80 +5,99 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The studio</title>
 <!--
-  THE STUDIO SURFACE — one screen.
+  THE STUDIO SURFACE — one screen with an obvious order of reading.
+  Restraint was right; architecture was omitted. "No boxes, no rules, no cards" produced one
+  undifferentiated column where a failure read with the same weight as a passing check. An
+  instrument has structure: panels, groupings, and a hierarchy you can feel while scrolling.
 
-  It was twelve sections and seven tabs: legitimate measurements, all of them, and the most
-  pre-AI artifact in the estate. Alex opens it for two things — where do I stand, what needs
-  me — so those are the only things on it. Everything else is still measured and still
-  honest; it is reached by asking rather than by being displayed permanently.
+  Four things carry that structure, and nothing else does:
+    headings outrank their content — ink, real size, a hairline above
+    the standing block is one unit and the largest thing on screen
+    values sit in their own right-aligned column the eye runs down
+    failing outranks holding — stronger ink, more weight, more room
+  Colour still appears only in the status marks. Georgia for prose, mono for values, so a
+  fact never looks like an explanation.
 
-  THE QUIET STATE IS NEVER AN ABSENCE. A blank screen on a good day cannot be told apart
-  from a screen whose checkers never ran, which is the estate's own defect class: a monitor
-  going green because nothing is arriving. So the top line always states what was examined,
-  when, and that it holds. Anything failing promotes itself there unasked, so he never has
-  to know to ask. Coverage is always visible: how much of the instrument is actually
-  watching, derived, so it falls on its own as markers land.
-
-  Design: prose in a text face, measured values in mono, so a reader knows instantly whether
-  they are looking at a fact or an explanation. Colour appears only in the status marks.
-  Space does the grouping; no cards, no rules, no icons, no framework, no animation.
+  THE ASK BOX WAS UNDISCOVERABLE, WHICH IS THE FAILURE MODE OF THIS SHAPE. A free-text input
+  advertises nothing, so the twelve things that used to be sections became invisible — Alex
+  asked where the parts bin had gone and the honest answer was that the shape hid it. The
+  askable things are now tappable questions in plain English, which also carries the
+  explanation the old tab labels needed: a label you must decode is worse than a question
+  you can read.
 -->
 <style>
   :root{
-    --paper:#FCFCFA; --ink:#16181A; --muted:#5C6066; --faint:#8E9298; --hair:#E3E3DF;
-    --holds:#2F6B3F; --fails:#A32D24; --unknown:#8A6A1F;
+    --paper:#FCFCFA; --panel:#F4F3EF; --ink:#16181A; --muted:#5C6066; --faint:#8E9298;
+    --hair:#E3E3DF; --holds:#2F6B3F; --fails:#A32D24; --unknown:#8A6A1F;
     --prose:Georgia,"Iowan Old Style","Times New Roman",serif;
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{-webkit-text-size-adjust:100%}
   body{background:var(--paper);color:var(--ink);font-family:var(--prose);
-       font-size:17px;line-height:1.62;padding:5rem 1.5rem 7rem}
-  .wrap{max-width:34rem;margin:0 auto}          /* ~70 characters of prose */
-  .wide{max-width:44rem;margin:0 auto}
+       font-size:17px;line-height:1.6;padding:3.5rem 1.5rem 8rem}
+  .wrap{max-width:40rem;margin:0 auto}
+  p,li{max-width:34rem}                      /* prose stays inside ~70 characters */
 
-  /* the standing line: the one place boldness is spent */
-  .standing{font-size:1.55rem;line-height:1.4;letter-spacing:-0.011em}
-  .standing .mark{font-family:var(--mono);font-size:.95rem;letter-spacing:0}
-  .quiet{color:var(--muted)}
-  .val{font-family:var(--mono);font-size:.92em;font-variant-numeric:tabular-nums}
+  /* the standing block: one unit, the largest thing on screen */
+  .standing{background:var(--panel);border-radius:3px;padding:1.6rem 1.5rem;margin-bottom:1rem}
+  .standing .head{font-size:1.5rem;line-height:1.35;letter-spacing:-0.012em}
+  .standing .cov{margin-top:.7rem;font-size:.95rem;color:var(--muted)}
+  .standing .cov b{font-weight:400;font-family:var(--mono);font-size:.85rem}
+
+  h2{font-size:1.12rem;font-weight:700;color:var(--ink);letter-spacing:-0.008em;
+     padding-top:1.1rem;border-top:1px solid var(--hair);margin-bottom:1rem}
+  section{margin-top:2.9rem}
+  .lede{color:var(--muted);font-size:.95rem;margin-bottom:1.1rem}
+
+  /* label left, value right, in a column the eye can run down */
+  .item{display:grid;grid-template-columns:1fr 9rem;gap:.35rem 1.25rem;
+        align-items:baseline;margin-bottom:1.05rem}
+  .item .what{grid-column:1;font-size:1rem}
+  .item .value{grid-column:2;justify-self:end;text-align:right;font-family:var(--mono);
+        font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums;
+        line-height:1.45;overflow-wrap:anywhere}
+  .item .why{grid-column:1/-1;color:var(--muted);font-size:.9rem;margin-top:.1rem}
+  @media (max-width:34rem){
+    .item{grid-template-columns:1fr}
+    .item .value{grid-column:1;justify-self:start;text-align:left}
+  }
+
+  /* failing outranks holding */
+  .fail .what{font-weight:700}
+  .fail .value{color:var(--fails)}
+  .fail{margin-bottom:1.6rem}
+  .holding .what{color:var(--muted)}
 
   .mark{display:inline-block;width:.5rem;height:.5rem;border-radius:50%;
-        vertical-align:.08em;margin-right:.55rem}
-  .m-holds{background:var(--holds)} .m-fails{background:var(--fails)}
-  .m-unknown{background:var(--unknown)}
+        margin-right:.6rem;vertical-align:.09em}
+  .m-holds{background:var(--holds)} .m-fails{background:var(--fails)} .m-unknown{background:var(--unknown)}
 
-  section{margin-top:3.25rem}
-  h2{font-size:1rem;font-weight:400;color:var(--faint);letter-spacing:.01em;margin-bottom:.9rem}
-  .item{margin-bottom:1.15rem}
-  .item p{margin-top:.15rem;color:var(--muted);font-size:.95rem}
-  .row{display:flex;gap:.75rem;align-items:baseline;margin-bottom:.5rem}
-  .row .what{flex:1}
-  .row .value{font-family:var(--mono);font-size:.85rem;color:var(--muted);
-              font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+  .untitled{color:var(--faint);font-style:italic}
 
-  a.plain,button.plain{font:inherit;font-size:.95rem;color:var(--ink);background:none;
-    border:0;border-bottom:1px solid var(--hair);padding:0 0 1px;cursor:pointer}
-  a.plain:hover,button.plain:hover{border-bottom-color:var(--ink)}
-  button.plain:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+  /* the questions: the askable things, visible */
+  .qs{display:flex;flex-wrap:wrap;gap:.5rem;margin:.9rem 0 0}
+  .qs button{font:inherit;font-size:.9rem;color:var(--ink);background:var(--panel);
+    border:1px solid var(--hair);border-radius:2rem;padding:.4rem .85rem;cursor:pointer;
+    text-align:left;max-width:100%}
+  .qs button:hover{border-color:var(--muted)}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 
-  form{display:flex;gap:.75rem;margin-top:.6rem}
+  form{display:flex;gap:.75rem;align-items:baseline}
   input{flex:1;font:inherit;font-size:1rem;background:transparent;color:var(--ink);
         border:0;border-bottom:1px solid var(--hair);padding:.35rem 0}
   input::placeholder{color:var(--faint)}
   input:focus{border-bottom-color:var(--ink);outline:none}
+  .go{font:inherit;font-size:.95rem;background:none;border:0;border-bottom:1px solid var(--hair);
+      padding:0 0 1px;cursor:pointer;color:var(--ink)}
 
-  .answer{margin-top:1.25rem;font-size:.98rem}
-  .answer .src{font-family:var(--mono);font-size:.78rem;color:var(--faint);margin-top:.15rem}
-  .note{font-size:.85rem;color:var(--faint);margin-top:.6rem}
-  .fail{color:var(--fails)}
-  details{margin-top:.5rem}
-  summary{cursor:pointer;color:var(--muted);font-size:.92rem}
-  summary::marker{color:var(--faint)}
-  .body{white-space:pre-wrap;font-family:var(--mono);font-size:.8rem;line-height:1.6;
-        color:var(--muted);margin-top:.6rem}
-  hr{border:0;border-top:1px solid var(--hair);margin:2.5rem 0 0}
-  @media (prefers-reduced-motion:no-preference){}
+  .out{margin-top:1.4rem}
+  .out h3{font-size:1rem;font-weight:700;margin:1.4rem 0 .6rem}
+  .src{font-family:var(--mono);font-size:.75rem;color:var(--faint)}
+  .note{font-size:.86rem;color:var(--faint);margin-top:.7rem}
+  .err{color:var(--fails)}
+  details{margin-top:.35rem}
+  summary{cursor:pointer;color:var(--muted);font-size:.9rem}
 </style>
 </head>
 <body>
@@ -105,17 +124,16 @@ async function call(url,body,auth){
   }finally{clearTimeout(t)}
 }
 
-/* Sign-in is the only thing in the document until a session verifies. */
 function gate(msg,bad){
-  root.innerHTML='<p class="standing">The studio.</p>'
-    +'<form id="f"><input id="e" type="email" placeholder="email" autocomplete="username"/></form>'
-    +'<form id="g"><input id="p" type="password" placeholder="password" autocomplete="current-password"/>'
-    +'<button class="plain" id="go">Sign in</button></form>'
-    +'<p class="note '+(bad?"fail":"")+'" id="m">'+esc(msg||"")+'</p>';
-  const go=()=>submit();
-  document.getElementById("go").onclick=e=>{e.preventDefault();go()};
-  document.getElementById("g").onsubmit=e=>{e.preventDefault();go()};
-  document.getElementById("f").onsubmit=e=>{e.preventDefault();go()};
+  root.innerHTML='<div class="standing"><div class="head">The studio.</div></div>'
+    +'<form id="g"><input id="e" type="email" placeholder="email" autocomplete="username"/></form>'
+    +'<form id="h" style="margin-top:.8rem"><input id="p" type="password" placeholder="password" autocomplete="current-password"/>'
+    +'<button class="go" id="go">Sign in</button></form>'
+    +'<p class="note '+(bad?"err":"")+'" id="m">'+esc(msg||"")+'</p>';
+  const run=e=>{if(e)e.preventDefault();submit()};
+  document.getElementById("go").onclick=run;
+  document.getElementById("g").onsubmit=run;
+  document.getElementById("h").onsubmit=run;
   async function submit(){
     const m=document.getElementById("m"); m.className="note"; m.textContent="Checking…";
     const r=await call(PATH,{action:"signin_password",
@@ -128,142 +146,146 @@ function gate(msg,bad){
 
 async function boot(){
   if(!tok()) return gate("");
-  root.innerHTML='<p class="standing quiet">Reading the studio…</p>';
+  root.innerHTML='<div class="standing"><div class="head">Reading the studio…</div></div>';
   const r=await call(FN,{action:"brief"});
   if(r.status===401){setTok("");return gate("Your session ended. Sign in again.",true)}
   if(r.status!==200||!r.body.ok){
-    root.innerHTML='<p class="standing">The studio could not be read.</p>'
-      +'<p class="note fail">'+esc(r.body.error||("Failed ("+r.status+")"))+'</p>'
-      +'<p class="note">That is a fault in this surface or its connection, not a statement '
-      +'about the studio. Nothing below it should be read as holding.</p>';
+    root.innerHTML='<div class="standing"><div class="head">The studio could not be read.</div>'
+      +'<div class="cov err">'+esc(r.body.error||("Failed ("+r.status+")"))+'</div></div>'
+      +'<p class="note">That is a fault in this surface or its connection, not a statement about '
+      +'the studio. Nothing below should be read as holding.</p>';
     return;
   }
   B=r.body; paint();
 }
 
-const ago=iso=>{const d=(Date.now()-Date.parse(iso))/86400000;
-  if(!isFinite(d))return"";
-  if(d<1/24)return Math.round(d*1440)+" minutes ago";
-  if(d<1)return Math.round(d*24)+" hours ago";
-  return Math.round(d)+" days ago";};
+/* The twelve former sections, as questions rather than internal labels. The question text
+   carries the explanation the old tab names needed. */
+const QUESTIONS=[
+  ["What have we built that gets reused?","parts"],
+  ["What does the studio run on, and is it up?","runs"],
+  ["Where does the record contradict itself?","conflicts"],
+  ["What is being built right now?","building"],
+  ["What is going stale?","stale"],
+  ["What have we promised that is not true yet?","promises"],
+  ["What did we decide recently?","decisions"],
+  ["What have we learned the hard way?","learned"]
+];
 
 function paint(){
   const t=new Date(B.as_of), hh=t.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
-  const fails=B.failing||[], cov=B.coverage||{}, needs=B.needs_you||[];
+  const fails=B.failing||[], cov=B.coverage||{}, needs=B.needs_you||[], checks=B.all_checks||[];
 
-  /* THE POSITIVE ASSERTION. Never an empty screen: what was examined, when, and how it
-     stands. Anything failing is named here rather than waiting to be asked for. */
-  let standing;
-  if(!fails.length){
-    standing='<span class="mark m-holds"></span>'+B.examined+' things checked at '
-      +esc(hh)+', all hold.';
-  }else{
-    standing='<span class="mark m-fails"></span>'+B.examined+' things checked at '+esc(hh)+', '
-      +B.holding+' hold. '+fails.map(f=>esc(f.what)).join(", and ")+'.';
-  }
+  const head = !fails.length
+    ? '<span class="mark m-holds"></span>'+B.examined+' things checked at '+esc(hh)+', all hold.'
+    : '<span class="mark m-fails"></span>'+B.examined+' things checked at '+esc(hh)+', '+B.holding+' hold.';
 
   root.innerHTML=
-    '<p class="standing">'+standing+'</p>'
-  + '<p class="note">'+esc(cov.says||"")+'</p>'
+    '<div class="standing"><div class="head">'+head+'</div>'
+  + '<div class="cov"><b>'+esc(cov.checkers||0)+'</b> checker'+((cov.checkers||0)===1?"":"s")
+  +   ' watching, against <b>'+esc(cov.decisions_unmarked||0)+'</b> decisions that carry no '
+  +   'record of whether they were carried out.</div></div>'
 
   + (fails.length
      ? '<section><h2>What is failing</h2>'
-       + fails.map(f=>'<div class="item"><div class="row"><span class="what">'+esc(f.what)+'</span>'
-           +'<span class="value">'+esc(f.value)+'</span></div>'
-           +'<p>'+esc(f.means)+'</p></div>').join("")
+       + fails.map(f=>'<div class="item fail"><div class="what">'
+           +'<span class="mark m-fails"></span>'+esc(f.what)+'</div>'
+           +'<div class="value">'+esc(f.value)+'</div>'
+           +'<div class="why">'+esc(f.means)+'</div></div>').join("")
        + '</section>'
      : '')
 
   + '<section><h2>What needs you</h2>'
+  + '<p class="lede">'+esc(B.needs_you_rule||"")+'</p>'
   + (needs.length
-     ? needs.map(n=>'<div class="item"><div class="row"><span class="what">'+esc(n.item)+'</span>'
-         +'<span class="value">'+esc(n.since)+'</span></div>'
-         + (n.fix?'<p>'+esc(n.fix)+'</p>':'<p>No next step recorded, which is why it is here.</p>')
-         +'</div>').join("")
-     : '<p class="quiet">Nothing is waiting on you.</p>')
-  + '<p class="note">'+esc(B.needs_you_rule||"")+'</p>'
+     ? needs.map(n=>'<div class="item"><div class="what">'
+         + (n.title ? esc(n.title) : '<span class="untitled">Untitled finding</span>')
+         + '</div><div class="value">'+esc(n.since)+'</div>'
+         + '<div class="why">'+esc(n.line)+'</div></div>').join("")
+     : '<p>Nothing is waiting on you.</p>')
   + '</section>'
 
   + '<section><h2>Ask the record</h2>'
-  + '<form id="askf"><input id="q" placeholder="Ask anything about the studio"/>'
-  +   '<button class="plain" id="askb">Ask</button></form>'
-  + '<p class="note">The twelve things this screen used to show are all still measured. '
-  +   'Ask for any of them: what is stale, what the machinery is doing, what is in the '
-  +   'parts bin, what contradicts what.</p>'
-  + '<div id="out"></div>'
+  + '<p class="lede">Everything this screen used to show is still measured. Tap a question, '
+  +   'or type your own.</p>'
+  + '<div class="qs">'+QUESTIONS.map((q,i)=>'<button data-q="'+i+'">'+esc(q[0])+'</button>').join("")+'</div>'
+  + '<form id="askf" style="margin-top:1.1rem"><input id="q" placeholder="Ask anything about the studio"/>'
+  +   '<button class="go" id="askb">Ask</button></form>'
+  + '<div class="out" id="out"></div>'
   + '</section>'
 
-  + '<hr/>'
   + '<section><h2>Everything examined</h2>'
-  + (B.all_checks||[]).map(c=>'<div class="item"><div class="row">'
-      +'<span class="what"><span class="mark '+(c.holds?"m-holds":"m-fails")+'"></span>'+esc(c.what)+'</span>'
-      +'<span class="value">'+esc(c.value)+'</span></div>'
-      +'<p>'+esc(c.means)+'</p></div>').join("")
-  + '<p class="note">Checked when this page was drawn, '+esc(hh)+'. Nothing here is stored; '
-  +   'each line is read from source every time the screen loads.</p>'
+  + '<p class="lede">Read from source when this page was drawn, at '+esc(hh)+'. Nothing here is stored.</p>'
+  + checks.map(c=>'<div class="item '+(c.holds?"holding":"fail")+'"><div class="what">'
+      +'<span class="mark '+(c.holds?"m-holds":"m-fails")+'"></span>'+esc(c.what)+'</div>'
+      +'<div class="value">'+esc(c.value)+'</div>'
+      +'<div class="why">'+esc(c.means)+'</div></div>').join("")
   + '</section>';
 
+  document.querySelectorAll("[data-q]").forEach(b=>{
+    b.onclick=()=>{const q=QUESTIONS[+b.dataset.q];
+      document.getElementById("q").value=q[0]; runQuestion(q[1],q[0]);};
+  });
   const f=document.getElementById("askf");
-  f.onsubmit=e=>{e.preventDefault();ask()};
-  document.getElementById("askb").onclick=e=>{e.preventDefault();ask()};
+  f.onsubmit=e=>{e.preventDefault();typed()};
+  document.getElementById("askb").onclick=e=>{e.preventDefault();typed()};
 }
 
-/* Two shortcuts that are workflows rather than readouts, so they open rather than answer. */
-async function ask(){
+function typed(){
   const q=document.getElementById("q").value.trim(); if(!q) return;
+  if(/\bpart\b|parts bin|reuse/i.test(q)) return runQuestion("parts",q);
+  if(/contradic|conflict/i.test(q))       return runQuestion("conflicts",q);
+  return runQuestion("ask",q);
+}
+
+async function runQuestion(kind,label){
   const out=document.getElementById("out");
   out.innerHTML='<p class="note">Reading…</p>';
-
-  if(/\bpart|parts bin\b/i.test(q)) return showParts(out);
-  if(/\bcontradic|conflict\b/i.test(q)) return showConflicts(out);
-
-  const r=await call(FN,{action:"ask",q:q});
+  if(kind==="parts")     return showParts(out);
+  if(kind==="conflicts") return showConflicts(out);
+  const r=await call(FN,{action:"ask",q:label});
   if(r.status!==200||!r.body.ok){
-    out.innerHTML='<p class="note fail">'+esc((r.body&&r.body.error)||("Failed ("+r.status+")"))+'</p>';
-    return;
+    out.innerHTML='<p class="note err">'+esc((r.body&&r.body.error)||("Failed ("+r.status+")"))+'</p>';return;
   }
-  const d=r.body, groups=[["decisions",d.decisions],["open items",d.open_items],
-                          ["promises",d.promises],["dissolved",d.dissolved]];
+  const d=r.body, groups=[["Decisions",d.decisions],["Open items",d.open_items],
+                          ["Promises",d.promises],["Dissolved",d.dissolved]];
   const any=groups.some(g=>(g[1]||[]).length);
   out.innerHTML = any
-    ? groups.filter(g=>(g[1]||[]).length).map(g=>
-        '<div class="answer"><h2>'+esc(g[0])+'</h2>'
-        + g[1].slice(0,6).map(x=>'<div class="item">'+esc(x.what||x.item||x.promise||x.stands||"")
-            +'<div class="src">'+esc(x.on||x.raised||x.verdict||"")+'</div></div>').join("")
-        +'</div>').join("")
+    ? groups.filter(g=>(g[1]||[]).length).map(g=>'<h3>'+esc(g[0])+'</h3>'
+        + g[1].slice(0,6).map(x=>'<div class="item"><div class="what">'
+            + esc(x.what||x.item||x.promise||x.stands||"")+'</div>'
+            + '<div class="value">'+esc(x.on||x.raised||x.verdict||"")+'</div></div>').join("")).join("")
     : '<p class="note">Nothing in the record matches that. '+esc(d.how||"")+'</p>';
 }
 
 async function showParts(out){
   const r=await call(FN,{action:"parts"});
-  if(r.status!==200||!r.body.ok){out.innerHTML='<p class="note fail">Could not read the parts.</p>';return}
+  if(r.status!==200||!r.body.ok){out.innerHTML='<p class="note err">Could not read the parts.</p>';return}
   const d=r.body;
-  out.innerHTML='<div class="answer"><p>'+esc(d.total)+' parts, grouped as they were built.</p>'
+  out.innerHTML='<p>'+esc(d.total)+' parts, grouped as they were built.</p>'
     +'<p class="note">'+esc(d.empty_state)+'</p>'
-    + (d.lenses||[]).map(l=>'<h2>'+esc(String(l.lens).replace(/_/g," "))+'</h2>'
-        + (l.parts||[]).map(p=>'<div class="item"><div class="row">'
-            +'<span class="what">'+esc(p.name)+'</span>'
-            +'<span class="value">'+esc(p.aliveness)+'</span></div>'
-            +'<p>'+esc(p.one_liner||p.what_it_is||"")+'</p>'
-            +'<details><summary>Why it matters</summary><p>'+esc(p.why_it_matters||"")+'</p>'
-            +'<p class="note">'+esc(p.aliveness_means)+'</p></details>'
-            +'</div>').join("")).join("")
-    +'<p class="note">'+esc((d.product_specific||{}).why||"")+'</p></div>';
+    +(d.lenses||[]).map(l=>'<h3>'+esc(String(l.lens).replace(/_/g," "))+'</h3>'
+      +(l.parts||[]).map(p=>'<div class="item"><div class="what">'+esc(p.name)+'</div>'
+        +'<div class="value">'+esc(p.aliveness)+'</div>'
+        +'<div class="why">'+esc(p.one_liner||p.what_it_is||"")
+        +'<details><summary>Why it matters</summary><p>'+esc(p.why_it_matters||"")+'</p>'
+        +'<p class="note">'+esc(p.aliveness_means)+'</p></details></div></div>').join("")).join("")
+    +'<p class="note">'+esc((d.product_specific||{}).why||"")+'</p>';
 }
 
 async function showConflicts(out){
   const r=await call(FN,{action:"conflicts",scope:"cross"});
-  if(r.status!==200||!r.body.ok){out.innerHTML='<p class="note fail">Could not read the queue.</p>';return}
+  if(r.status!==200||!r.body.ok){out.innerHTML='<p class="note err">Could not read the queue.</p>';return}
   const d=r.body,c=d.counts||{};
-  out.innerHTML='<div class="answer"><p>'+esc(c.in_scope)+' pairs across two documents are waiting on a ruling, '
+  out.innerHTML='<p>'+esc(c.in_scope)+' pairs across two documents are waiting on a ruling, and '
     +esc(c.intra_doc)+' more inside a single document.</p>'
     +'<p class="note">'+esc(d.means||"")+'</p>'
-    + (d.items||[]).slice(0,8).map(p=>'<div class="item"><div class="row">'
-        +'<span class="what">'+esc(p.a_doc)+' against '+esc(p.b_doc)+'</span>'
-        +'<span class="value">'+(p.has_direction?"a side suggested":"no suggestion")+'</span></div>'
-        +'<p>'+esc(p.a_heading)+'</p></div>').join("")
-    +'<p class="note">Ruling on these needs the full text of both passages, which is a page '
-    +'of its own rather than an answer here.</p></div>';
+    +(d.items||[]).slice(0,8).map(p=>'<div class="item"><div class="what">'
+      +esc(p.a_doc)+' against '+esc(p.b_doc)+'</div>'
+      +'<div class="value">'+(p.has_direction?"a side suggested":"no suggestion")+'</div>'
+      +'<div class="why">'+esc(p.a_heading)+'</div></div>').join("")
+    +'<p class="note">Ruling on these needs the full text of both passages, which is a page of '
+    +'its own rather than an answer here.</p>';
 }
 
 boot();
