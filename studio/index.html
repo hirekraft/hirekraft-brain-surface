@@ -5,138 +5,141 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The studio</title>
 <!--
-  THE STUDIO SURFACE. Read on a desktop, for four things: is anything broken, what needs a
-  decision from me, look something specific up, and are we making progress.
+  THE STUDIO SURFACE, rebuilt as an instrument.
 
-  TABS ARE BACK because a text box advertises nothing — looking something specific up needs
-  named sections that are always visible. The eight questions stay on the front tab as an
-  addition; they are not the navigation.
+  THE FAULT WAS CONTENT SHAPE, NOT STYLING. This page rendered database rows verbatim —
+  decision bodies of two thousand characters, stacked. Four briefs treated that as a layout
+  problem and each was executed correctly; the page stayed unreadable because nothing ever
+  changed what a row IS. So: one line per item, always. Headline, date, status, in aligned
+  columns the eye runs down. The body is fetched only when a row is opened, and it opens in
+  a panel beside the list rather than pushing the page down.
 
-  TYPE SIZES ARE SPECIFIED HERE rather than left to a hierarchy: body 18, headings 26,
-  the standing line 32, coverage 18, values 16, and nothing below 15. Earlier briefs gave
-  typefaces and rank and never a size, which is why it read small.
+  THE HEADER NEVER SCROLLS AWAY: what was checked, what holds, and the coverage at the same
+  size as the count. An alert band appears beneath it only when something fails. Its absence
+  is meaningful precisely because the line above always states what was examined — a blank
+  space would be ambiguous, a stated count is not.
 
-  CONTRAST: near-black ink on warm off-white, panels a perceptible step darker, rules you
-  can see. No meaningful text in light grey — if it matters enough to render, it matters
-  enough to read.
-
-  TAB NAMES ARE PROPOSALS. Parts Bin is internal shorthand and The Frame tells a reader
-  nothing, so these are plain-language stand-ins for Alex to accept or change; none of them
-  is renamed unilaterally beyond this pass.
+  Four tabs named for why you came, each opening with a fixed explanation box that is always
+  visible rather than a hover.
 -->
 <style>
   :root{
     --paper:#FAF9F6; --panel:#F0EDE6; --ink:#1A1A18; --second:#4A4D52;
-    --rule:#D5D1C7; --holds:#2E6B3C; --fails:#A32219; --unknown:#8A6A1F;
+    --rule:#D5D1C7; --holds:#2E6B3C; --fails:#A32219; --alert:#FBEBE9; --unknown:#8A6A1F;
     --prose:Georgia,"Iowan Old Style","Times New Roman",serif;
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{-webkit-text-size-adjust:100%}
-  body{background:var(--paper);color:var(--ink);font-family:var(--prose);
-       font-size:18px;line-height:1.6;padding:2.5rem 1.5rem 8rem}
-  .wrap{max-width:44rem;margin:0 auto}
-  p,li,.why{max-width:34rem}
+  body{background:var(--paper);color:var(--ink);font-family:var(--prose);font-size:18px;line-height:1.6}
 
-  nav{display:flex;flex-wrap:wrap;gap:.3rem;border-bottom:2px solid var(--rule);
-      margin-bottom:2.2rem;padding-bottom:.1rem}
-  nav button{font:inherit;font-size:17px;color:var(--second);background:none;border:0;
-    border-bottom:3px solid transparent;padding:.55rem .85rem;cursor:pointer;margin-bottom:-2px}
+  /* the header never scrolls away */
+  header{position:sticky;top:0;z-index:10;background:var(--panel);
+         border-bottom:1px solid var(--rule)}
+  .hbar{max-width:76rem;margin:0 auto;padding:.9rem 1.5rem;display:flex;flex-wrap:wrap;
+        gap:.4rem 2rem;align-items:baseline}
+  .gauge{font-size:20px;font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .cov{font-size:20px;color:var(--ink)}
+  .cov b{font-family:var(--mono);font-weight:400}
+  .alert{background:var(--alert);border-bottom:1px solid var(--fails)}
+  .alert div{max-width:76rem;margin:0 auto;padding:.7rem 1.5rem;color:var(--fails);font-size:18px}
+  .alert p{margin:.15rem 0;max-width:none}
+
+  nav{max-width:76rem;margin:0 auto;padding:0 1.5rem;display:flex;gap:.3rem;
+      border-bottom:2px solid var(--rule)}
+  nav button{font:inherit;font-size:18px;color:var(--second);background:none;border:0;
+    border-bottom:3px solid transparent;padding:.7rem 1rem;cursor:pointer;margin-bottom:-2px}
   nav button:hover{color:var(--ink)}
   nav button[aria-selected="true"]{color:var(--ink);font-weight:700;border-bottom-color:var(--ink)}
-  button:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
-  .standing{background:var(--panel);border:1px solid var(--rule);border-radius:3px;
-            padding:1.7rem 1.6rem;margin-bottom:2.4rem}
-  .standing .head{font-size:32px;line-height:1.28;letter-spacing:-0.014em}
-  .standing .cov{margin-top:.85rem;font-size:18px;color:var(--ink)}
-  .standing .cov b{font-family:var(--mono);font-size:16px;font-weight:400}
+  main{max-width:76rem;margin:0 auto;padding:2rem 1.5rem 6rem;
+       display:grid;grid-template-columns:minmax(0,1fr) 26rem;gap:2.5rem;align-items:start}
+  @media (max-width:64rem){main{grid-template-columns:1fr}.detail{position:static!important}}
 
-  h2{font-size:26px;font-weight:700;letter-spacing:-0.01em;color:var(--ink);
-     padding-top:1.3rem;border-top:1px solid var(--rule);margin-bottom:1rem}
-  section{margin-top:3rem}
-  section:first-of-type{margin-top:0}
-  .lede{color:var(--second);font-size:17px;margin-bottom:1.2rem}
+  .explain{background:var(--panel);border:1px solid var(--rule);border-radius:3px;
+           padding:1.1rem 1.3rem;margin-bottom:2rem}
+  .explain h2{font-size:26px;font-weight:700;margin-bottom:.4rem;border:0;padding:0}
+  .explain p{font-size:17px;color:var(--ink);max-width:38rem;margin-top:.35rem}
 
-  .item{display:grid;grid-template-columns:1fr 10rem;gap:.3rem 1.4rem;
-        align-items:baseline;margin-bottom:1.15rem}
-  .item .what{grid-column:1;font-size:18px}
-  .item .value{grid-column:2;justify-self:end;text-align:right;font-family:var(--mono);
-        font-size:16px;color:var(--second);font-variant-numeric:tabular-nums;
-        line-height:1.4;overflow-wrap:anywhere}
-  .item .why{grid-column:1/-1;color:var(--second);font-size:16px;margin-top:.15rem}
-  @media (max-width:36rem){
-    .item{grid-template-columns:1fr}
-    .item .value{grid-column:1;justify-self:start;text-align:left}
-  }
-  .fail{margin-bottom:1.7rem}
-  .fail .what{font-weight:700}
-  .fail .value{color:var(--fails)}
-  .holding .what{color:var(--second)}
+  h2{font-size:26px;font-weight:700;padding-top:1.2rem;border-top:1px solid var(--rule);margin-bottom:.9rem}
+  section{margin-top:2.4rem}
+  .lede{color:var(--second);font-size:17px;margin-bottom:1rem;max-width:38rem}
 
-  .mark{display:inline-block;width:.55rem;height:.55rem;border-radius:50%;
-        margin-right:.6rem;vertical-align:.08em}
-  .m-holds{background:var(--holds)} .m-fails{background:var(--fails)} .m-unknown{background:var(--unknown)}
+  /* one line per item */
+  .rows{border-top:1px solid var(--rule)}
+  .r{display:grid;grid-template-columns:1fr 7rem 8rem;gap:1.2rem;align-items:baseline;
+     padding:.65rem .3rem;border-bottom:1px solid var(--rule);cursor:pointer;
+     background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left;font:inherit}
+  .r:hover{background:var(--panel)}
+  .r[aria-current="true"]{background:var(--panel);font-weight:700}
+  .r .h{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .r .d,.r .s{font-family:var(--mono);font-size:16px;color:var(--second);
+              text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;
+              overflow:hidden;text-overflow:ellipsis}
+  .r .act{grid-column:1/-1;font-size:16px;color:var(--second);margin-top:.15rem;
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .r .none{grid-column:1/-1;font-size:16px;color:var(--fails);margin-top:.15rem}
+  @media (max-width:44rem){.r{grid-template-columns:1fr 7rem}.r .s{display:none}}
 
-  .qs{display:flex;flex-wrap:wrap;gap:.55rem;margin:1rem 0 0}
-  .qs button{font:inherit;font-size:16px;color:var(--ink);background:var(--panel);
-    border:1px solid var(--rule);border-radius:2rem;padding:.45rem .95rem;cursor:pointer;text-align:left}
-  .qs button:hover{border-color:var(--second)}
-  form{display:flex;gap:.8rem;align-items:baseline;margin-top:1.2rem}
-  input{flex:1;font:inherit;font-size:18px;background:transparent;color:var(--ink);
-        border:0;border-bottom:1px solid var(--rule);padding:.4rem 0}
-  input::placeholder{color:var(--second)}
-  input:focus{border-bottom-color:var(--ink);outline:none}
+  .detail{position:sticky;top:7rem;background:var(--panel);border:1px solid var(--rule);
+          border-radius:3px;padding:1.3rem;max-height:calc(100vh - 9rem);overflow:auto}
+  .detail h3{font-size:20px;font-weight:700;margin-bottom:.5rem}
+  .detail .meta{font-family:var(--mono);font-size:16px;color:var(--second);margin-bottom:.9rem}
+  .detail .body{white-space:pre-wrap;font-size:17px;line-height:1.62}
+  .detail .close{font:inherit;font-size:16px;background:none;border:0;border-bottom:1px solid var(--rule);
+                 cursor:pointer;color:var(--ink);margin-top:1rem;padding:0 0 2px}
+
+  .tools{display:flex;flex-wrap:wrap;gap:.7rem;align-items:baseline;margin-bottom:1.1rem}
+  input,select{font:inherit;font-size:17px;background:var(--paper);color:var(--ink);
+    border:1px solid var(--rule);border-radius:2px;padding:.4rem .6rem}
+  input[type=search]{min-width:16rem}
   .go{font:inherit;font-size:17px;background:none;border:0;border-bottom:1px solid var(--rule);
       padding:0 0 2px;cursor:pointer;color:var(--ink)}
-  .out{margin-top:1.6rem}
-  .out h3{font-size:20px;font-weight:700;margin:1.6rem 0 .7rem}
-  .note{font-size:16px;color:var(--second);margin-top:.8rem}
+  .note{font-size:16px;color:var(--second);margin-top:.8rem;max-width:38rem}
   .err{color:var(--fails)}
-  details{margin-top:.4rem}
-  summary{cursor:pointer;color:var(--second);font-size:16px}
-  .view{display:none} .view[data-on="true"]{display:block}
+  .mark{display:inline-block;width:.55rem;height:.55rem;border-radius:50%;margin-right:.55rem;vertical-align:.08em}
+  .m-holds{background:var(--holds)} .m-fails{background:var(--fails)}
+  .gate{max-width:26rem;margin:6rem auto;padding:0 1.5rem}
+  .gate form{display:flex;gap:.7rem;margin-top:.8rem}
 </style>
 </head>
 <body>
-<div id="root" class="wrap"></div>
+<div id="app"></div>
 <script>
 const FN="https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-brief";
 const PATH="https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-path";
-const root=document.getElementById("root");
+const app=document.getElementById("app");
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const tok=()=>{try{return localStorage.getItem("studio_token")||""}catch{return""}};
 const setTok=t=>{try{t?localStorage.setItem("studio_token",t):localStorage.removeItem("studio_token")}catch{}};
-let B=null,PARTS=null,TAB=0;
+let B=null,TAB=0,ROWS=null,OPEN=null,KIND="decisions",Q="",SINCE="",UNTIL="";
 
-async function call(url,body,auth){
+async function call(body,auth,url){
   const c=new AbortController(),t=setTimeout(()=>c.abort(),25000);
   try{
-    const r=await fetch(url,{method:"POST",signal:c.signal,
+    const r=await fetch(url||FN,{method:"POST",signal:c.signal,
       headers:Object.assign({"content-type":"application/json"},(auth!==false&&tok())?{authorization:"Bearer "+tok()}:{}),
       body:JSON.stringify(body)});
-    const txt=await r.text(); let j={}; try{j=JSON.parse(txt)}catch{j={error:txt.slice(0,200)}}
-    return {status:r.status,body:j};
+    const txt=await r.text();let j={};try{j=JSON.parse(txt)}catch{j={error:txt.slice(0,200)}}
+    return{status:r.status,body:j};
   }catch(e){
-    return {status:0,body:{error:(e&&e.name==="AbortError")?"No answer within 25 seconds.":"Could not reach the studio."}};
+    return{status:0,body:{error:(e&&e.name==="AbortError")?"No answer within 25 seconds.":"Could not reach the studio."}};
   }finally{clearTimeout(t)}
 }
 
 function gate(msg,bad){
-  root.innerHTML='<div class="standing"><div class="head">The studio.</div></div>'
-    +'<form id="g"><input id="e" type="email" placeholder="email" autocomplete="username"/></form>'
-    +'<form id="h"><input id="p" type="password" placeholder="password" autocomplete="current-password"/>'
-    +'<button class="go" id="go">Sign in</button></form>'
-    +'<p class="note '+(bad?"err":"")+'" id="m">'+esc(msg||"")+'</p>';
-  const run=e=>{if(e)e.preventDefault();submit()};
-  document.getElementById("go").onclick=run;
-  document.getElementById("g").onsubmit=run;
-  document.getElementById("h").onsubmit=run;
+  app.innerHTML='<div class="gate"><h2 style="border:0;padding:0">The studio</h2>'
+    +'<form id="g"><input id="e" type="email" placeholder="email" autocomplete="username" style="flex:1"/></form>'
+    +'<form id="h"><input id="p" type="password" placeholder="password" autocomplete="current-password" style="flex:1"/>'
+    +'<button class="go">Sign in</button></form>'
+    +'<p class="note '+(bad?"err":"")+'" id="m">'+esc(msg||"")+'</p></div>';
+  const run=e=>{e.preventDefault();submit()};
+  document.getElementById("g").onsubmit=run; document.getElementById("h").onsubmit=run;
   async function submit(){
-    const m=document.getElementById("m"); m.className="note"; m.textContent="Checking…";
-    const r=await call(PATH,{action:"signin_password",
-      email:document.getElementById("e").value.trim(),
-      password:document.getElementById("p").value},false);
+    const m=document.getElementById("m");m.className="note";m.textContent="Checking…";
+    const r=await call({action:"signin_password",email:document.getElementById("e").value.trim(),
+      password:document.getElementById("p").value},false,PATH);
     if(r.status===200&&r.body.ok&&r.body.access_token){setTok(r.body.access_token);return boot()}
     gate(r.body.message||r.body.error||"That did not sign in.",true);
   }
@@ -144,190 +147,163 @@ function gate(msg,bad){
 
 async function boot(){
   if(!tok()) return gate("");
-  root.innerHTML='<div class="standing"><div class="head">Reading the studio…</div></div>';
-  const r=await call(FN,{action:"brief"});
+  app.innerHTML='<div class="gate"><p>Reading the studio…</p></div>';
+  const r=await call({action:"brief"});
   if(r.status===401){setTok("");return gate("Your session ended. Sign in again.",true)}
   if(r.status!==200||!r.body.ok){
-    root.innerHTML='<div class="standing"><div class="head">The studio could not be read.</div>'
-      +'<div class="cov err">'+esc(r.body.error||("Failed ("+r.status+")"))+'</div></div>'
+    app.innerHTML='<div class="gate"><h2 style="border:0;padding:0">The studio could not be read.</h2>'
+      +'<p class="note err">'+esc(r.body.error||("Failed ("+r.status+")"))+'</p>'
       +'<p class="note">That is a fault in this surface or its connection, not a statement about '
-      +'the studio. Nothing below should be read as holding.</p>';
-    return;
+      +'the studio. Nothing here should be read as holding.</p></div>';return;
   }
-  B=r.body; paint();
+  B=r.body; paint(); if(TAB===1||TAB===2) load();
 }
 
-/* Tab names are PROPOSALS in plain language; the hover says what is inside and when you
-   would open it, cause first. */
 const TABS=[
-  ["Today","Whether anything is broken, what is waiting on you, and what has changed since you were last here."],
-  ["What we've built","Parts that already exist and get reused, so you can see what is on the shelf before anyone builds it again."],
-  ["Everything checked","Every reading this page took, with how each one was obtained, when you want to see the workings rather than the summary."]
+  ["Now","What is failing and what is waiting on you. The daily read; it should be short.",
+   "If the red band at the top is absent, nothing is failing — the header always says what was checked, so silence here is a reading rather than a gap."],
+  ["Work","Everything still open, each with what to do about it where anything recorded a next step.",
+   "Where a row shows no next step, that absence is the reason it needs you: nobody has decided what would resolve it."],
+  ["Record","Decisions, promises, parts and contradictions — searchable.",
+   "Nothing loads until you search or pick a type; the newest twenty are shown by default because 741 decisions are not browsable."],
+  ["Movement","What changed since you were last here.",
+   "Measured against your own last visit, not a fixed window. If nothing moved it says so, which is itself worth knowing."]
 ];
 
-const QUESTIONS=[
-  ["What have we built that gets reused?","parts"],
-  ["What does the studio run on, and is it up?","runs"],
-  ["Where does the record contradict itself?","conflicts"],
-  ["What is being built right now?","building"],
-  ["What is going stale?","stale"],
-  ["What have we promised that is not true yet?","promises"],
-  ["What did we decide recently?","decisions"],
-  ["What have we learned the hard way?","learned"]
-];
+function header(){
+  const t=new Date(B.as_of),hh=t.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  const f=B.failing||[],cov=B.coverage||{};
+  return '<header><div class="hbar">'
+    + '<span class="gauge"><span class="mark '+(f.length?"m-fails":"m-holds")+'"></span>'
+    +   esc(B.examined)+' checked · '+esc(B.holding)+' hold · '+esc(hh)+'</span>'
+    + '<span class="cov"><b>'+esc(cov.checkers||0)+'</b> checker'+((cov.checkers||0)===1?"":"s")
+    +   ' watching · <b>'+esc(cov.decisions_unmarked||0)+'</b> decisions unmarked</span>'
+    + '</div>'
+    + (f.length ? '<div class="alert"><div>'
+        + f.map(x=>'<p>'+esc(x.what)+' — '+esc(x.value)+'</p>').join("")+'</div></div>' : '')
+    + '<nav>'+TABS.map((t,i)=>'<button data-tab="'+i+'" role="tab" aria-selected="'+(i===TAB)+'">'
+        +esc(t[0])+'</button>').join("")+'</nav></header>';
+}
+
+function explain(i){
+  return '<div class="explain"><h2>'+esc(TABS[i][0])+'</h2><p>'+esc(TABS[i][1])+'</p>'
+    +'<p>'+esc(TABS[i][2])+'</p></div>';
+}
+
+function rowsHtml(d){
+  if(!d) return '<p class="note">Loading…</p>';
+  if(d.error) return '<p class="note err">'+esc(d.error)+'</p>';
+  if(!(d.rows||[]).length) return '<p class="note">Nothing matches.</p>';
+  return (d.untitled>0?'<p class="note">'+esc(d.untitled)+' of these were recorded without a headline; '
+          +'their first line is shown as written.</p>':'')
+    + '<div class="rows">'+d.rows.map(r=>'<button class="r" data-open="'+esc(r.kind)+'|'+esc(r.id)+'"'
+      + (OPEN&&OPEN.id===r.id?' aria-current="true"':'')+'>'
+      + '<span class="h">'+esc(r.headline)+'</span>'
+      + '<span class="d">'+esc(r.on||"")+'</span>'
+      + '<span class="s">'+esc(r.status||"")+'</span>'
+      + (r.next_action?'<span class="act">Next: '+esc(r.next_action)+'</span>'
+         :(d.kind==='work'?'<span class="none">No next step recorded — that is why it needs you.</span>':''))
+      + '</button>').join("")+'</div>'
+    + '<p class="note">Showing '+esc(d.showing)+' of '+esc(d.total)+'.</p>';
+}
+
+function detail(){
+  if(!OPEN) return '<aside class="detail"><h3>Nothing open</h3>'
+    +'<p class="note">Click any row and its full text opens here, beside the list.</p></aside>';
+  if(OPEN==="loading") return '<aside class="detail"><p class="note">Opening…</p></aside>';
+  if(OPEN.error) return '<aside class="detail"><p class="note err">'+esc(OPEN.error)+'</p></aside>';
+  return '<aside class="detail"><h3>'+esc(OPEN.kind)+'</h3>'
+    +'<div class="meta">'+esc(String(OPEN.on||"").slice(0,10))+(OPEN.origin?' · '+esc(OPEN.origin):'')+'</div>'
+    +'<div class="body">'+esc(OPEN.body||"")+'</div>'
+    +'<button class="close" id="closed">Close</button></aside>';
+}
 
 function paint(){
-  const t=new Date(B.as_of), hh=t.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
-  const fails=B.failing||[], cov=B.coverage||{}, needs=B.needs_you||[], checks=B.all_checks||[];
-  const mv=B.moved||{};
-
-  const head = !fails.length
-    ? '<span class="mark m-holds"></span>'+B.examined+' things checked at '+esc(hh)+', all hold.'
-    : '<span class="mark m-fails"></span>'+B.examined+' things checked at '+esc(hh)+', '+B.holding+' hold.';
-
-  const movedBlock = mv.error
-    ? '<p class="note err">What has changed could not be read, so this is unknown rather than nothing.</p>'
-    : (mv.nothing_moved
-        ? '<p>'+esc(mv.says)+'</p>'
-        : (mv.moved||[]).map(m=>'<div class="item"><div class="what">'+esc(m.what)+'</div>'
-            +'<div class="value">'+esc(m.n)+'</div>'
-            + (m.grain?'<div class="why">'+esc(m.grain)+'</div>':'')+'</div>').join(""))
-      + '<div class="item"><div class="what">Decisions with no record of being carried out</div>'
-      + '<div class="value">'+esc(mv.debt_now)+'</div>'
-      + '<div class="why">'+esc(mv.debt_note||"")+'</div></div>';
-
-  const since = mv.since
-    ? (mv.since_is_real_visit ? 'Since you were last here, '+esc(new Date(mv.since).toLocaleDateString([], {weekday:"long", day:"numeric", month:"long"}))+'.'
-                              : 'Over the last seven days. This is your first recorded visit, so there is no last-visit mark to measure from yet.')
-    : '';
-
-  root.innerHTML=
-    '<nav>'+TABS.map((t,i)=>'<button data-tab="'+i+'" role="tab" title="'+esc(t[1])+'" '
-      +'aria-selected="'+(i===TAB)+'">'+esc(t[0])+'</button>').join("")+'</nav>'
-
-  + '<div class="view" data-on="'+(TAB===0)+'">'
-  +   '<div class="standing"><div class="head">'+head+'</div>'
-  +     '<div class="cov"><b>'+esc(cov.checkers||0)+'</b> checker'+((cov.checkers||0)===1?"":"s")
-  +       ' watching, against <b>'+esc(cov.decisions_unmarked||0)+'</b> decisions that carry no '
-  +       'record of whether they were carried out.</div></div>'
-
-  +   (fails.length
-       ? '<section><h2>What is failing</h2>'
-         + fails.map(f=>'<div class="item fail"><div class="what">'
-             +'<span class="mark m-fails"></span>'+esc(f.what)+'</div>'
-             +'<div class="value">'+esc(f.value)+'</div>'
-             +'<div class="why">'+esc(f.means)+'</div></div>').join("")+'</section>'
-       : '<section><h2>What is failing</h2><p>Nothing is failing right now, out of '
-         + esc(B.examined)+' things checked.</p></section>')
-
-  +   '<section><h2>What needs you</h2>'
-  +   '<p class="lede">'+esc(B.needs_you_rule||"")+'</p>'
-  +   (B.needs_you_note?'<p class="lede">'+esc(B.needs_you_note)+'</p>':'')
-  +   (needs.length
-       ? needs.map(n=>'<div class="item"><div class="what">'
-           + (n.title ? esc(n.title) : esc(n.line))+'</div>'
-           + '<div class="value">'+esc(n.since)+'</div>'
-           + (n.title?'<div class="why">'+esc(n.line)+'</div>':'')+'</div>').join("")
-       : '<p>Nothing is waiting on you.</p>')
-  +   '</section>'
-
-  +   '<section><h2>What has moved</h2>'
-  +   '<p class="lede">'+since+'</p>'+movedBlock+'</section>'
-
-  +   '<section><h2>Ask the record</h2>'
-  +   '<p class="lede">Anything measured but not shown here. Tap a question, or type your own.</p>'
-  +   '<div class="qs">'+QUESTIONS.map((q,i)=>'<button data-q="'+i+'">'+esc(q[0])+'</button>').join("")+'</div>'
-  +   '<form id="askf"><input id="q" placeholder="Ask anything about the studio"/>'
-  +     '<button class="go" id="askb">Ask</button></form>'
-  +   '<div class="out" id="out"></div></section>'
-  + '</div>'
-
-  + '<div class="view" data-on="'+(TAB===1)+'" id="partsview">'
-  +   '<h2>What we have built</h2><p class="lede">Loading the shelf…</p></div>'
-
-  + '<div class="view" data-on="'+(TAB===2)+'">'
-  +   '<h2>Everything checked</h2>'
-  +   '<p class="lede">Read from source when this page was drawn, at '+esc(hh)+'. Nothing here is stored; '
-  +     'each line is taken again every time the page loads.</p>'
-  +   checks.map(c=>'<div class="item '+(c.holds?"holding":"fail")+'"><div class="what">'
-      +'<span class="mark '+(c.holds?"m-holds":"m-fails")+'"></span>'+esc(c.what)+'</div>'
-      +'<div class="value">'+esc(c.value)+'</div>'
-      +'<div class="why">'+esc(c.means)+'</div></div>').join("")
-  + '</div>';
-
-  document.querySelectorAll("[data-tab]").forEach(b=>{
-    b.onclick=()=>{TAB=+b.dataset.tab;paint();if(TAB===1)loadParts();};
-  });
-  document.querySelectorAll("[data-q]").forEach(b=>{
-    b.onclick=()=>{const q=QUESTIONS[+b.dataset.q];
-      document.getElementById("q").value=q[0];runQuestion(q[1],q[0]);};
-  });
-  const f=document.getElementById("askf");
-  if(f){f.onsubmit=e=>{e.preventDefault();typed()};
-        document.getElementById("askb").onclick=e=>{e.preventDefault();typed()};}
-  if(TAB===1) renderParts();
-}
-
-function typed(){
-  const q=document.getElementById("q").value.trim(); if(!q) return;
-  if(/\bpart\b|parts bin|reuse|built/i.test(q)){TAB=1;paint();return loadParts()}
-  if(/contradic|conflict/i.test(q)) return runQuestion("conflicts",q);
-  return runQuestion("ask",q);
-}
-
-async function loadParts(){ if(PARTS) return renderParts();
-  const r=await call(FN,{action:"parts"});
-  PARTS=(r.status===200&&r.body.ok)?r.body:{error:(r.body&&r.body.error)||("Failed ("+r.status+")")};
-  renderParts();
-}
-function renderParts(){
-  const el=document.getElementById("partsview"); if(!el) return;
-  if(!PARTS){el.innerHTML='<h2>What we have built</h2><p class="lede">Loading the shelf…</p>';return}
-  if(PARTS.error){el.innerHTML='<h2>What we have built</h2><p class="note err">'+esc(PARTS.error)+'</p>';return}
-  el.innerHTML='<h2>What we have built</h2>'
-    +'<p class="lede">'+esc(PARTS.total)+' parts, grouped as they were built. '+esc(PARTS.empty_state)+'</p>'
-    +(PARTS.lenses||[]).map(l=>'<h3 style="font-size:20px;font-weight:700;margin:1.8rem 0 .8rem">'
-        +esc(String(l.lens).replace(/_/g," "))+'</h3>'
-      +(l.parts||[]).map(p=>'<div class="item"><div class="what">'+esc(p.name)+'</div>'
-        +'<div class="value">'+esc(p.aliveness)+'</div>'
-        +'<div class="why">'+esc(p.one_liner||p.what_it_is||"")
-        +'<details><summary>Why it matters</summary><p>'+esc(p.why_it_matters||"")+'</p>'
-        +'<p class="note">'+esc(p.aliveness_means)+'</p></details></div></div>').join("")).join("")
-    +'<p class="note">'+esc((PARTS.product_specific||{}).why||"")+'</p>';
-}
-
-async function runQuestion(kind,label){
-  const out=document.getElementById("out"); if(!out) return;
-  out.innerHTML='<p class="note">Reading…</p>';
-  if(kind==="parts"){TAB=1;paint();return loadParts()}
-  if(kind==="conflicts") return showConflicts(out);
-  const r=await call(FN,{action:"ask",q:label});
-  if(r.status!==200||!r.body.ok){
-    out.innerHTML='<p class="note err">'+esc((r.body&&r.body.error)||("Failed ("+r.status+")"))+'</p>';return;
+  const mv=B.moved||{},needs=B.needs_you||[],cov=B.coverage||{};
+  let left="";
+  if(TAB===0){
+    const f=B.failing||[];
+    left=explain(0)
+      +'<section style="margin-top:0"><h2>What is failing</h2>'
+      +(f.length?'<div class="rows">'+f.map(x=>'<div class="r" style="cursor:default">'
+          +'<span class="h">'+esc(x.what)+'</span><span class="d">'+esc(x.value)+'</span>'
+          +'<span class="s">failing</span><span class="act">'+esc(x.means)+'</span></div>').join("")+'</div>'
+        :'<p>Nothing is failing, out of '+esc(B.examined)+' things checked.</p>')
+      +'</section>'
+      +'<section><h2>What needs you</h2>'
+      +(B.needs_you_note?'<p class="note">'+esc(B.needs_you_note)+'</p>':'')
+      +(needs.length?'<div class="rows">'+needs.map(n=>'<div class="r" style="cursor:default">'
+          +'<span class="h">'+esc(n.title||n.line)+'</span>'
+          +'<span class="d">'+esc(n.since)+'</span><span class="s">'+esc(n.kind||"")+'</span>'
+          +(n.title?'<span class="act">'+esc(n.line)+'</span>':'')+'</div>').join("")+'</div>'
+        :'<p>Nothing is waiting on you.</p>')
+      +'</section>';
+  } else if(TAB===1){
+    left=explain(1)+'<div class="tools">'
+      +'<input type="search" id="wq" placeholder="Search open work" value="'+esc(Q)+'"/>'
+      +'<button class="go" id="wgo">Search</button></div>'+rowsHtml(ROWS);
+  } else if(TAB===2){
+    left=explain(2)+'<div class="tools">'
+      +'<select id="kind">'+["decisions","promises","parts","contradictions"].map(k=>
+          '<option value="'+k+'"'+(KIND===k?' selected':'')+'>'+k+'</option>').join("")+'</select>'
+      +'<input type="search" id="q" placeholder="Search text" value="'+esc(Q)+'"/>'
+      +'<input type="date" id="since" value="'+esc(SINCE)+'" aria-label="from"/>'
+      +'<input type="date" id="until" value="'+esc(UNTIL)+'" aria-label="to"/>'
+      +'<button class="go" id="qgo">Search</button></div>'+rowsHtml(ROWS);
+  } else {
+    const since=mv.since?(mv.since_is_real_visit
+        ?'Since you were last here, '+new Date(mv.since).toLocaleDateString([],{weekday:"long",day:"numeric",month:"long"})+'.'
+        :'Over the last seven days — this is your first recorded visit, so there is no last-visit mark yet.'):'';
+    left=explain(3)+'<p class="lede">'+esc(since)+'</p>'
+      +(mv.error?'<p class="note err">This could not be read, so it is unknown rather than nothing.</p>'
+        :(mv.nothing_moved?'<p>'+esc(mv.says)+'</p>'
+          :'<div class="rows">'+(mv.moved||[]).map(m=>'<div class="r" style="cursor:default">'
+              +'<span class="h">'+esc(m.what)+'</span><span class="d">'+esc(m.n)+'</span><span class="s"></span>'
+              +(m.grain?'<span class="act">'+esc(m.grain)+'</span>':'')+'</div>').join("")+'</div>'))
+      +'<section><h2>The debt</h2><div class="rows"><div class="r" style="cursor:default">'
+      +'<span class="h">Decisions with no record of being carried out</span>'
+      +'<span class="d">'+esc(mv.debt_now!=null?mv.debt_now:cov.decisions_unmarked)+'</span><span class="s"></span>'
+      +'<span class="act">'+esc(mv.debt_note||"")+'</span></div></div></section>';
   }
-  const d=r.body,groups=[["Decisions",d.decisions],["Open items",d.open_items],
-                         ["Promises",d.promises],["Dissolved",d.dissolved]];
-  const any=groups.some(g=>(g[1]||[]).length);
-  out.innerHTML=any
-    ? groups.filter(g=>(g[1]||[]).length).map(g=>'<h3>'+esc(g[0])+'</h3>'
-        +g[1].slice(0,6).map(x=>'<div class="item"><div class="what">'
-          +esc(x.what||x.item||x.promise||x.stands||"")+'</div>'
-          +'<div class="value">'+esc(x.on||x.raised||x.verdict||"")+'</div></div>').join("")).join("")
-    : '<p class="note">Nothing in the record matches that. '+esc(d.how||"")+'</p>';
+  app.innerHTML=header()+'<main><div>'+left+'</div>'+detail()+'</main>';
+  bind();
 }
 
-async function showConflicts(out){
-  const r=await call(FN,{action:"conflicts",scope:"cross"});
-  if(r.status!==200||!r.body.ok){out.innerHTML='<p class="note err">Could not read the queue.</p>';return}
-  const d=r.body,c=d.counts||{};
-  out.innerHTML='<p>'+esc(c.in_scope)+' pairs across two documents are waiting on a ruling, and '
-    +esc(c.intra_doc)+' more inside a single document.</p>'
-    +(d.items||[]).slice(0,8).map(p=>'<div class="item"><div class="what">'
-      +esc(p.a_doc)+' against '+esc(p.b_doc)+'</div>'
-      +'<div class="value">'+(p.has_direction?"a side suggested":"no suggestion")+'</div>'
-      +'<div class="why">'+esc(p.a_heading)+'</div></div>').join("")
-    +'<p class="note">Ruling on these needs the full text of both passages, which is a page of '
-    +'its own rather than an answer here.</p>';
+function bind(){
+  document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{
+    TAB=+b.dataset.tab;ROWS=null;OPEN=null;
+    if(TAB===1){KIND="work";Q="";}
+    if(TAB===2){KIND="decisions";Q="";}
+    paint(); if(TAB===1||TAB===2) load();
+  });
+  document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{
+    const [k,id]=b.dataset.open.split("|");openRow(k,id);
+  });
+  const c=document.getElementById("closed"); if(c) c.onclick=()=>{OPEN=null;paint()};
+  const wgo=document.getElementById("wgo");
+  if(wgo) wgo.onclick=()=>{Q=document.getElementById("wq").value.trim();ROWS=null;paint();load()};
+  const qgo=document.getElementById("qgo");
+  if(qgo) qgo.onclick=()=>{
+    KIND=document.getElementById("kind").value;
+    Q=document.getElementById("q").value.trim();
+    SINCE=document.getElementById("since").value;
+    UNTIL=document.getElementById("until").value;
+    ROWS=null;paint();load();
+  };
+}
+
+async function load(){
+  const r=await call({action:"rows",kind:KIND,q:Q,since:SINCE||null,until:UNTIL||null,limit:20});
+  ROWS=(r.status===200&&r.body.ok)?r.body:{error:(r.body&&r.body.error)||("Failed ("+r.status+")")};
+  paint();
+}
+
+async function openRow(kind,id){
+  OPEN="loading";paint();
+  const r=await call({action:"row",kind:kind,id:id});
+  OPEN=(r.status===200&&r.body&&r.body.ok!==false)?r.body
+     :{error:(r.body&&r.body.error)||("Could not open it ("+r.status+")")};
+  paint();
 }
 
 boot();
