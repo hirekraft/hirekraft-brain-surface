@@ -5,99 +5,97 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The studio</title>
 <!--
-  THE STUDIO SURFACE — one screen with an obvious order of reading.
-  Restraint was right; architecture was omitted. "No boxes, no rules, no cards" produced one
-  undifferentiated column where a failure read with the same weight as a passing check. An
-  instrument has structure: panels, groupings, and a hierarchy you can feel while scrolling.
+  THE STUDIO SURFACE. Read on a desktop, for four things: is anything broken, what needs a
+  decision from me, look something specific up, and are we making progress.
 
-  Four things carry that structure, and nothing else does:
-    headings outrank their content — ink, real size, a hairline above
-    the standing block is one unit and the largest thing on screen
-    values sit in their own right-aligned column the eye runs down
-    failing outranks holding — stronger ink, more weight, more room
-  Colour still appears only in the status marks. Georgia for prose, mono for values, so a
-  fact never looks like an explanation.
+  TABS ARE BACK because a text box advertises nothing — looking something specific up needs
+  named sections that are always visible. The eight questions stay on the front tab as an
+  addition; they are not the navigation.
 
-  THE ASK BOX WAS UNDISCOVERABLE, WHICH IS THE FAILURE MODE OF THIS SHAPE. A free-text input
-  advertises nothing, so the twelve things that used to be sections became invisible — Alex
-  asked where the parts bin had gone and the honest answer was that the shape hid it. The
-  askable things are now tappable questions in plain English, which also carries the
-  explanation the old tab labels needed: a label you must decode is worse than a question
-  you can read.
+  TYPE SIZES ARE SPECIFIED HERE rather than left to a hierarchy: body 18, headings 26,
+  the standing line 32, coverage 18, values 16, and nothing below 15. Earlier briefs gave
+  typefaces and rank and never a size, which is why it read small.
+
+  CONTRAST: near-black ink on warm off-white, panels a perceptible step darker, rules you
+  can see. No meaningful text in light grey — if it matters enough to render, it matters
+  enough to read.
+
+  TAB NAMES ARE PROPOSALS. Parts Bin is internal shorthand and The Frame tells a reader
+  nothing, so these are plain-language stand-ins for Alex to accept or change; none of them
+  is renamed unilaterally beyond this pass.
 -->
 <style>
   :root{
-    --paper:#FCFCFA; --panel:#F4F3EF; --ink:#16181A; --muted:#5C6066; --faint:#8E9298;
-    --hair:#E3E3DF; --holds:#2F6B3F; --fails:#A32D24; --unknown:#8A6A1F;
+    --paper:#FAF9F6; --panel:#F0EDE6; --ink:#1A1A18; --second:#4A4D52;
+    --rule:#D5D1C7; --holds:#2E6B3C; --fails:#A32219; --unknown:#8A6A1F;
     --prose:Georgia,"Iowan Old Style","Times New Roman",serif;
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{-webkit-text-size-adjust:100%}
   body{background:var(--paper);color:var(--ink);font-family:var(--prose);
-       font-size:17px;line-height:1.6;padding:3.5rem 1.5rem 8rem}
-  .wrap{max-width:40rem;margin:0 auto}
-  p,li{max-width:34rem}                      /* prose stays inside ~70 characters */
+       font-size:18px;line-height:1.6;padding:2.5rem 1.5rem 8rem}
+  .wrap{max-width:44rem;margin:0 auto}
+  p,li,.why{max-width:34rem}
 
-  /* the standing block: one unit, the largest thing on screen */
-  .standing{background:var(--panel);border-radius:3px;padding:1.6rem 1.5rem;margin-bottom:1rem}
-  .standing .head{font-size:1.5rem;line-height:1.35;letter-spacing:-0.012em}
-  .standing .cov{margin-top:.7rem;font-size:.95rem;color:var(--muted)}
-  .standing .cov b{font-weight:400;font-family:var(--mono);font-size:.85rem}
+  nav{display:flex;flex-wrap:wrap;gap:.3rem;border-bottom:2px solid var(--rule);
+      margin-bottom:2.2rem;padding-bottom:.1rem}
+  nav button{font:inherit;font-size:17px;color:var(--second);background:none;border:0;
+    border-bottom:3px solid transparent;padding:.55rem .85rem;cursor:pointer;margin-bottom:-2px}
+  nav button:hover{color:var(--ink)}
+  nav button[aria-selected="true"]{color:var(--ink);font-weight:700;border-bottom-color:var(--ink)}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 
-  h2{font-size:1.12rem;font-weight:700;color:var(--ink);letter-spacing:-0.008em;
-     padding-top:1.1rem;border-top:1px solid var(--hair);margin-bottom:1rem}
-  section{margin-top:2.9rem}
-  .lede{color:var(--muted);font-size:.95rem;margin-bottom:1.1rem}
+  .standing{background:var(--panel);border:1px solid var(--rule);border-radius:3px;
+            padding:1.7rem 1.6rem;margin-bottom:2.4rem}
+  .standing .head{font-size:32px;line-height:1.28;letter-spacing:-0.014em}
+  .standing .cov{margin-top:.85rem;font-size:18px;color:var(--ink)}
+  .standing .cov b{font-family:var(--mono);font-size:16px;font-weight:400}
 
-  /* label left, value right, in a column the eye can run down */
-  .item{display:grid;grid-template-columns:1fr 9rem;gap:.35rem 1.25rem;
-        align-items:baseline;margin-bottom:1.05rem}
-  .item .what{grid-column:1;font-size:1rem}
+  h2{font-size:26px;font-weight:700;letter-spacing:-0.01em;color:var(--ink);
+     padding-top:1.3rem;border-top:1px solid var(--rule);margin-bottom:1rem}
+  section{margin-top:3rem}
+  section:first-of-type{margin-top:0}
+  .lede{color:var(--second);font-size:17px;margin-bottom:1.2rem}
+
+  .item{display:grid;grid-template-columns:1fr 10rem;gap:.3rem 1.4rem;
+        align-items:baseline;margin-bottom:1.15rem}
+  .item .what{grid-column:1;font-size:18px}
   .item .value{grid-column:2;justify-self:end;text-align:right;font-family:var(--mono);
-        font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums;
-        line-height:1.45;overflow-wrap:anywhere}
-  .item .why{grid-column:1/-1;color:var(--muted);font-size:.9rem;margin-top:.1rem}
-  @media (max-width:34rem){
+        font-size:16px;color:var(--second);font-variant-numeric:tabular-nums;
+        line-height:1.4;overflow-wrap:anywhere}
+  .item .why{grid-column:1/-1;color:var(--second);font-size:16px;margin-top:.15rem}
+  @media (max-width:36rem){
     .item{grid-template-columns:1fr}
     .item .value{grid-column:1;justify-self:start;text-align:left}
   }
-
-  /* failing outranks holding */
+  .fail{margin-bottom:1.7rem}
   .fail .what{font-weight:700}
   .fail .value{color:var(--fails)}
-  .fail{margin-bottom:1.6rem}
-  .holding .what{color:var(--muted)}
+  .holding .what{color:var(--second)}
 
-  .mark{display:inline-block;width:.5rem;height:.5rem;border-radius:50%;
-        margin-right:.6rem;vertical-align:.09em}
+  .mark{display:inline-block;width:.55rem;height:.55rem;border-radius:50%;
+        margin-right:.6rem;vertical-align:.08em}
   .m-holds{background:var(--holds)} .m-fails{background:var(--fails)} .m-unknown{background:var(--unknown)}
 
-  .untitled{color:var(--faint);font-style:italic}
-
-  /* the questions: the askable things, visible */
-  .qs{display:flex;flex-wrap:wrap;gap:.5rem;margin:.9rem 0 0}
-  .qs button{font:inherit;font-size:.9rem;color:var(--ink);background:var(--panel);
-    border:1px solid var(--hair);border-radius:2rem;padding:.4rem .85rem;cursor:pointer;
-    text-align:left;max-width:100%}
-  .qs button:hover{border-color:var(--muted)}
-  button:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
-
-  form{display:flex;gap:.75rem;align-items:baseline}
-  input{flex:1;font:inherit;font-size:1rem;background:transparent;color:var(--ink);
-        border:0;border-bottom:1px solid var(--hair);padding:.35rem 0}
-  input::placeholder{color:var(--faint)}
+  .qs{display:flex;flex-wrap:wrap;gap:.55rem;margin:1rem 0 0}
+  .qs button{font:inherit;font-size:16px;color:var(--ink);background:var(--panel);
+    border:1px solid var(--rule);border-radius:2rem;padding:.45rem .95rem;cursor:pointer;text-align:left}
+  .qs button:hover{border-color:var(--second)}
+  form{display:flex;gap:.8rem;align-items:baseline;margin-top:1.2rem}
+  input{flex:1;font:inherit;font-size:18px;background:transparent;color:var(--ink);
+        border:0;border-bottom:1px solid var(--rule);padding:.4rem 0}
+  input::placeholder{color:var(--second)}
   input:focus{border-bottom-color:var(--ink);outline:none}
-  .go{font:inherit;font-size:.95rem;background:none;border:0;border-bottom:1px solid var(--hair);
-      padding:0 0 1px;cursor:pointer;color:var(--ink)}
-
-  .out{margin-top:1.4rem}
-  .out h3{font-size:1rem;font-weight:700;margin:1.4rem 0 .6rem}
-  .src{font-family:var(--mono);font-size:.75rem;color:var(--faint)}
-  .note{font-size:.86rem;color:var(--faint);margin-top:.7rem}
+  .go{font:inherit;font-size:17px;background:none;border:0;border-bottom:1px solid var(--rule);
+      padding:0 0 2px;cursor:pointer;color:var(--ink)}
+  .out{margin-top:1.6rem}
+  .out h3{font-size:20px;font-weight:700;margin:1.6rem 0 .7rem}
+  .note{font-size:16px;color:var(--second);margin-top:.8rem}
   .err{color:var(--fails)}
-  details{margin-top:.35rem}
-  summary{cursor:pointer;color:var(--muted);font-size:.9rem}
+  details{margin-top:.4rem}
+  summary{cursor:pointer;color:var(--second);font-size:16px}
+  .view{display:none} .view[data-on="true"]{display:block}
 </style>
 </head>
 <body>
@@ -109,7 +107,7 @@ const root=document.getElementById("root");
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const tok=()=>{try{return localStorage.getItem("studio_token")||""}catch{return""}};
 const setTok=t=>{try{t?localStorage.setItem("studio_token",t):localStorage.removeItem("studio_token")}catch{}};
-let B=null;
+let B=null,PARTS=null,TAB=0;
 
 async function call(url,body,auth){
   const c=new AbortController(),t=setTimeout(()=>c.abort(),25000);
@@ -127,7 +125,7 @@ async function call(url,body,auth){
 function gate(msg,bad){
   root.innerHTML='<div class="standing"><div class="head">The studio.</div></div>'
     +'<form id="g"><input id="e" type="email" placeholder="email" autocomplete="username"/></form>'
-    +'<form id="h" style="margin-top:.8rem"><input id="p" type="password" placeholder="password" autocomplete="current-password"/>'
+    +'<form id="h"><input id="p" type="password" placeholder="password" autocomplete="current-password"/>'
     +'<button class="go" id="go">Sign in</button></form>'
     +'<p class="note '+(bad?"err":"")+'" id="m">'+esc(msg||"")+'</p>';
   const run=e=>{if(e)e.preventDefault();submit()};
@@ -159,8 +157,14 @@ async function boot(){
   B=r.body; paint();
 }
 
-/* The twelve former sections, as questions rather than internal labels. The question text
-   carries the explanation the old tab names needed. */
+/* Tab names are PROPOSALS in plain language; the hover says what is inside and when you
+   would open it, cause first. */
+const TABS=[
+  ["Today","Whether anything is broken, what is waiting on you, and what has changed since you were last here."],
+  ["What we've built","Parts that already exist and get reused, so you can see what is on the shelf before anyone builds it again."],
+  ["Everything checked","Every reading this page took, with how each one was obtained, when you want to see the workings rather than the summary."]
+];
+
 const QUESTIONS=[
   ["What have we built that gets reused?","parts"],
   ["What does the studio run on, and is it up?","runs"],
@@ -175,102 +179,141 @@ const QUESTIONS=[
 function paint(){
   const t=new Date(B.as_of), hh=t.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
   const fails=B.failing||[], cov=B.coverage||{}, needs=B.needs_you||[], checks=B.all_checks||[];
+  const mv=B.moved||{};
 
   const head = !fails.length
     ? '<span class="mark m-holds"></span>'+B.examined+' things checked at '+esc(hh)+', all hold.'
     : '<span class="mark m-fails"></span>'+B.examined+' things checked at '+esc(hh)+', '+B.holding+' hold.';
 
+  const movedBlock = mv.error
+    ? '<p class="note err">What has changed could not be read, so this is unknown rather than nothing.</p>'
+    : (mv.nothing_moved
+        ? '<p>'+esc(mv.says)+'</p>'
+        : (mv.moved||[]).map(m=>'<div class="item"><div class="what">'+esc(m.what)+'</div>'
+            +'<div class="value">'+esc(m.n)+'</div>'
+            + (m.grain?'<div class="why">'+esc(m.grain)+'</div>':'')+'</div>').join(""))
+      + '<div class="item"><div class="what">Decisions with no record of being carried out</div>'
+      + '<div class="value">'+esc(mv.debt_now)+'</div>'
+      + '<div class="why">'+esc(mv.debt_note||"")+'</div></div>';
+
+  const since = mv.since
+    ? (mv.since_is_real_visit ? 'Since you were last here, '+esc(new Date(mv.since).toLocaleDateString([], {weekday:"long", day:"numeric", month:"long"}))+'.'
+                              : 'Over the last seven days. This is your first recorded visit, so there is no last-visit mark to measure from yet.')
+    : '';
+
   root.innerHTML=
-    '<div class="standing"><div class="head">'+head+'</div>'
-  + '<div class="cov"><b>'+esc(cov.checkers||0)+'</b> checker'+((cov.checkers||0)===1?"":"s")
-  +   ' watching, against <b>'+esc(cov.decisions_unmarked||0)+'</b> decisions that carry no '
-  +   'record of whether they were carried out.</div></div>'
+    '<nav>'+TABS.map((t,i)=>'<button data-tab="'+i+'" role="tab" title="'+esc(t[1])+'" '
+      +'aria-selected="'+(i===TAB)+'">'+esc(t[0])+'</button>').join("")+'</nav>'
 
-  + (fails.length
-     ? '<section><h2>What is failing</h2>'
-       + fails.map(f=>'<div class="item fail"><div class="what">'
-           +'<span class="mark m-fails"></span>'+esc(f.what)+'</div>'
-           +'<div class="value">'+esc(f.value)+'</div>'
-           +'<div class="why">'+esc(f.means)+'</div></div>').join("")
-       + '</section>'
-     : '')
+  + '<div class="view" data-on="'+(TAB===0)+'">'
+  +   '<div class="standing"><div class="head">'+head+'</div>'
+  +     '<div class="cov"><b>'+esc(cov.checkers||0)+'</b> checker'+((cov.checkers||0)===1?"":"s")
+  +       ' watching, against <b>'+esc(cov.decisions_unmarked||0)+'</b> decisions that carry no '
+  +       'record of whether they were carried out.</div></div>'
 
-  + '<section><h2>What needs you</h2>'
-  + '<p class="lede">'+esc(B.needs_you_rule||"")+'</p>'
-  + (needs.length
-     ? needs.map(n=>'<div class="item"><div class="what">'
-         + (n.title ? esc(n.title) : '<span class="untitled">Untitled finding</span>')
-         + '</div><div class="value">'+esc(n.since)+'</div>'
-         + '<div class="why">'+esc(n.line)+'</div></div>').join("")
-     : '<p>Nothing is waiting on you.</p>')
-  + '</section>'
+  +   (fails.length
+       ? '<section><h2>What is failing</h2>'
+         + fails.map(f=>'<div class="item fail"><div class="what">'
+             +'<span class="mark m-fails"></span>'+esc(f.what)+'</div>'
+             +'<div class="value">'+esc(f.value)+'</div>'
+             +'<div class="why">'+esc(f.means)+'</div></div>').join("")+'</section>'
+       : '<section><h2>What is failing</h2><p>Nothing is failing right now, out of '
+         + esc(B.examined)+' things checked.</p></section>')
 
-  + '<section><h2>Ask the record</h2>'
-  + '<p class="lede">Everything this screen used to show is still measured. Tap a question, '
-  +   'or type your own.</p>'
-  + '<div class="qs">'+QUESTIONS.map((q,i)=>'<button data-q="'+i+'">'+esc(q[0])+'</button>').join("")+'</div>'
-  + '<form id="askf" style="margin-top:1.1rem"><input id="q" placeholder="Ask anything about the studio"/>'
-  +   '<button class="go" id="askb">Ask</button></form>'
-  + '<div class="out" id="out"></div>'
-  + '</section>'
+  +   '<section><h2>What needs you</h2>'
+  +   '<p class="lede">'+esc(B.needs_you_rule||"")+'</p>'
+  +   (B.needs_you_note?'<p class="lede">'+esc(B.needs_you_note)+'</p>':'')
+  +   (needs.length
+       ? needs.map(n=>'<div class="item"><div class="what">'
+           + (n.title ? esc(n.title) : esc(n.line))+'</div>'
+           + '<div class="value">'+esc(n.since)+'</div>'
+           + (n.title?'<div class="why">'+esc(n.line)+'</div>':'')+'</div>').join("")
+       : '<p>Nothing is waiting on you.</p>')
+  +   '</section>'
 
-  + '<section><h2>Everything examined</h2>'
-  + '<p class="lede">Read from source when this page was drawn, at '+esc(hh)+'. Nothing here is stored.</p>'
-  + checks.map(c=>'<div class="item '+(c.holds?"holding":"fail")+'"><div class="what">'
+  +   '<section><h2>What has moved</h2>'
+  +   '<p class="lede">'+since+'</p>'+movedBlock+'</section>'
+
+  +   '<section><h2>Ask the record</h2>'
+  +   '<p class="lede">Anything measured but not shown here. Tap a question, or type your own.</p>'
+  +   '<div class="qs">'+QUESTIONS.map((q,i)=>'<button data-q="'+i+'">'+esc(q[0])+'</button>').join("")+'</div>'
+  +   '<form id="askf"><input id="q" placeholder="Ask anything about the studio"/>'
+  +     '<button class="go" id="askb">Ask</button></form>'
+  +   '<div class="out" id="out"></div></section>'
+  + '</div>'
+
+  + '<div class="view" data-on="'+(TAB===1)+'" id="partsview">'
+  +   '<h2>What we have built</h2><p class="lede">Loading the shelf…</p></div>'
+
+  + '<div class="view" data-on="'+(TAB===2)+'">'
+  +   '<h2>Everything checked</h2>'
+  +   '<p class="lede">Read from source when this page was drawn, at '+esc(hh)+'. Nothing here is stored; '
+  +     'each line is taken again every time the page loads.</p>'
+  +   checks.map(c=>'<div class="item '+(c.holds?"holding":"fail")+'"><div class="what">'
       +'<span class="mark '+(c.holds?"m-holds":"m-fails")+'"></span>'+esc(c.what)+'</div>'
       +'<div class="value">'+esc(c.value)+'</div>'
       +'<div class="why">'+esc(c.means)+'</div></div>').join("")
-  + '</section>';
+  + '</div>';
 
+  document.querySelectorAll("[data-tab]").forEach(b=>{
+    b.onclick=()=>{TAB=+b.dataset.tab;paint();if(TAB===1)loadParts();};
+  });
   document.querySelectorAll("[data-q]").forEach(b=>{
     b.onclick=()=>{const q=QUESTIONS[+b.dataset.q];
-      document.getElementById("q").value=q[0]; runQuestion(q[1],q[0]);};
+      document.getElementById("q").value=q[0];runQuestion(q[1],q[0]);};
   });
   const f=document.getElementById("askf");
-  f.onsubmit=e=>{e.preventDefault();typed()};
-  document.getElementById("askb").onclick=e=>{e.preventDefault();typed()};
+  if(f){f.onsubmit=e=>{e.preventDefault();typed()};
+        document.getElementById("askb").onclick=e=>{e.preventDefault();typed()};}
+  if(TAB===1) renderParts();
 }
 
 function typed(){
   const q=document.getElementById("q").value.trim(); if(!q) return;
-  if(/\bpart\b|parts bin|reuse/i.test(q)) return runQuestion("parts",q);
-  if(/contradic|conflict/i.test(q))       return runQuestion("conflicts",q);
+  if(/\bpart\b|parts bin|reuse|built/i.test(q)){TAB=1;paint();return loadParts()}
+  if(/contradic|conflict/i.test(q)) return runQuestion("conflicts",q);
   return runQuestion("ask",q);
 }
 
-async function runQuestion(kind,label){
-  const out=document.getElementById("out");
-  out.innerHTML='<p class="note">Reading…</p>';
-  if(kind==="parts")     return showParts(out);
-  if(kind==="conflicts") return showConflicts(out);
-  const r=await call(FN,{action:"ask",q:label});
-  if(r.status!==200||!r.body.ok){
-    out.innerHTML='<p class="note err">'+esc((r.body&&r.body.error)||("Failed ("+r.status+")"))+'</p>';return;
-  }
-  const d=r.body, groups=[["Decisions",d.decisions],["Open items",d.open_items],
-                          ["Promises",d.promises],["Dissolved",d.dissolved]];
-  const any=groups.some(g=>(g[1]||[]).length);
-  out.innerHTML = any
-    ? groups.filter(g=>(g[1]||[]).length).map(g=>'<h3>'+esc(g[0])+'</h3>'
-        + g[1].slice(0,6).map(x=>'<div class="item"><div class="what">'
-            + esc(x.what||x.item||x.promise||x.stands||"")+'</div>'
-            + '<div class="value">'+esc(x.on||x.raised||x.verdict||"")+'</div></div>').join("")).join("")
-    : '<p class="note">Nothing in the record matches that. '+esc(d.how||"")+'</p>';
-}
-
-async function showParts(out){
+async function loadParts(){ if(PARTS) return renderParts();
   const r=await call(FN,{action:"parts"});
-  if(r.status!==200||!r.body.ok){out.innerHTML='<p class="note err">Could not read the parts.</p>';return}
-  const d=r.body;
-  out.innerHTML='<p>'+esc(d.total)+' parts, grouped as they were built.</p>'
-    +'<p class="note">'+esc(d.empty_state)+'</p>'
-    +(d.lenses||[]).map(l=>'<h3>'+esc(String(l.lens).replace(/_/g," "))+'</h3>'
+  PARTS=(r.status===200&&r.body.ok)?r.body:{error:(r.body&&r.body.error)||("Failed ("+r.status+")")};
+  renderParts();
+}
+function renderParts(){
+  const el=document.getElementById("partsview"); if(!el) return;
+  if(!PARTS){el.innerHTML='<h2>What we have built</h2><p class="lede">Loading the shelf…</p>';return}
+  if(PARTS.error){el.innerHTML='<h2>What we have built</h2><p class="note err">'+esc(PARTS.error)+'</p>';return}
+  el.innerHTML='<h2>What we have built</h2>'
+    +'<p class="lede">'+esc(PARTS.total)+' parts, grouped as they were built. '+esc(PARTS.empty_state)+'</p>'
+    +(PARTS.lenses||[]).map(l=>'<h3 style="font-size:20px;font-weight:700;margin:1.8rem 0 .8rem">'
+        +esc(String(l.lens).replace(/_/g," "))+'</h3>'
       +(l.parts||[]).map(p=>'<div class="item"><div class="what">'+esc(p.name)+'</div>'
         +'<div class="value">'+esc(p.aliveness)+'</div>'
         +'<div class="why">'+esc(p.one_liner||p.what_it_is||"")
         +'<details><summary>Why it matters</summary><p>'+esc(p.why_it_matters||"")+'</p>'
         +'<p class="note">'+esc(p.aliveness_means)+'</p></details></div></div>').join("")).join("")
-    +'<p class="note">'+esc((d.product_specific||{}).why||"")+'</p>';
+    +'<p class="note">'+esc((PARTS.product_specific||{}).why||"")+'</p>';
+}
+
+async function runQuestion(kind,label){
+  const out=document.getElementById("out"); if(!out) return;
+  out.innerHTML='<p class="note">Reading…</p>';
+  if(kind==="parts"){TAB=1;paint();return loadParts()}
+  if(kind==="conflicts") return showConflicts(out);
+  const r=await call(FN,{action:"ask",q:label});
+  if(r.status!==200||!r.body.ok){
+    out.innerHTML='<p class="note err">'+esc((r.body&&r.body.error)||("Failed ("+r.status+")"))+'</p>';return;
+  }
+  const d=r.body,groups=[["Decisions",d.decisions],["Open items",d.open_items],
+                         ["Promises",d.promises],["Dissolved",d.dissolved]];
+  const any=groups.some(g=>(g[1]||[]).length);
+  out.innerHTML=any
+    ? groups.filter(g=>(g[1]||[]).length).map(g=>'<h3>'+esc(g[0])+'</h3>'
+        +g[1].slice(0,6).map(x=>'<div class="item"><div class="what">'
+          +esc(x.what||x.item||x.promise||x.stands||"")+'</div>'
+          +'<div class="value">'+esc(x.on||x.raised||x.verdict||"")+'</div></div>').join("")).join("")
+    : '<p class="note">Nothing in the record matches that. '+esc(d.how||"")+'</p>';
 }
 
 async function showConflicts(out){
@@ -279,7 +322,6 @@ async function showConflicts(out){
   const d=r.body,c=d.counts||{};
   out.innerHTML='<p>'+esc(c.in_scope)+' pairs across two documents are waiting on a ruling, and '
     +esc(c.intra_doc)+' more inside a single document.</p>'
-    +'<p class="note">'+esc(d.means||"")+'</p>'
     +(d.items||[]).slice(0,8).map(p=>'<div class="item"><div class="what">'
       +esc(p.a_doc)+' against '+esc(p.b_doc)+'</div>'
       +'<div class="value">'+(p.has_direction?"a side suggested":"no suggestion")+'</div>'
