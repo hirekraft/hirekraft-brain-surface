@@ -1259,28 +1259,62 @@ function lab(ln,srcs){
 }
 
 function parts(){
-  const p=D.parts;
-  const bin=(items,cls,label,desc)=>'<div class="blk">'+label+' <span class="ct">'+(items?items.length:0)+'</span><span class="ln"></span></div>'
-    + '<div class="lab-note" style="margin-bottom:12px">'+desc+'</div>'
-    + (items&&items.length
-      ? '<div class="stock">'+items.map(x=>'<div class="pt '+cls+'"><div class="pn">'+esc(wordTrim(x.name,90))+'</div><div class="pd">'+esc(x.sub||"")+'</div><span class="ps">'+esc(x.id)+'</span></div>').join("")+'</div>'
-      : '<div class="empty">Nothing in this bin.</div>');
-  /* A PART IS SOMETHING WE BUILT — the walker substrate, identity-aware retrieval, the
-     universal schema. What was in this bin were MARKETING CLAIMS carrying verdicts:
-     "leak by construction is impossible", "we parse them, 99.1% of the time cleanly".
-     Those are promises about the product, not parts of it.
-
-     Nothing in the estate records parts as such, which is exactly why the promise ledger
-     got substituted for one. The bin stays near-empty and says so, rather than being
-     filled with the wrong thing. It fills as Tool work produces parts. */
-  const total=(p.stocked||[]).length+(p.in_lab||[]).length+(p.open_slots||[]).length;
-  return '<div class="lede">Finished, reusable things the studio has built — <b>parts</b>. Forged in the Lab, graduated here.</div>'
-  + '<div class="blk">Stocked <span class="ct">nothing recorded</span><span class="ln"></span></div>'
-  + '<div class="empty">Nothing in the estate records a part as a part, so this bin is empty rather than filled with something else.<br/><br/>'
-  + 'It held '+total+' rows from the promise ledger until now. Those are <b>claims about the product with verdicts attached</b> — how far we are from what we have promised — which is worth seeing and is not a parts list. It has moved to The Frame.<br/><br/>'
-  + 'This fills as Tool work produces parts. Until then it is thin, and that is correct.</div>'
-  + '<div class="blk">Product-specific — never a part<span class="ln"></span></div>'
-  + '<div class="empty">'+esc(p.never_a_part.why)+'</div>';
+  const g=D.parts_gauge||null;
+  const lede='<div class="lede">Every part the estate holds, with what the record says about <b>why it exists</b> and whether anything uses it. Read live from the judgment pass and the story pass.</div>';
+  if(!g) return lede+'<div class="empty">The parts gauge did not arrive in this read. Nothing below is known, and that is a failure of the read rather than a finding that the estate holds no parts.</div>';
+  const s=g.stories||{}, gr=s.grounding||{}, us=s.usage||{}, jf=g.judgment_flagged||{};
+  const pop=g.population||{}, jd=g.judged||{}, uj=g.unjudged||{};
+  const n=v=>(v===null||v===undefined)?'unknown':esc(v);
+  const cards=(items,fn)=>(items&&items.length)?'<div class="stock">'+items.map(fn).join("")+'</div>':'<div class="empty">Nothing in this list.</div>';
+  const sbiu=s.should_be_in_use||[], thin=s.thin||[];
+  const claims=jf.resting_on_overturned_claim||[], gone=jf.absent_but_judged||[];
+  /* SHOULD BE IN USE LEADS THE TAB. Nothing calls these and the record says the thing they
+     exist for is running. check_drain_escapes() sat proven and unread for four weeks and was
+     found by accident; finding the next one BY LOOKING is what this screen is for. The
+     caveat rides the list rather than the record, because the list is what gets acted on. */
+  return lede
+  + '<div class="blk">Should be in use <span class="ct">'+n(us.should_be_in_use)+'</span><span class="ln"></span></div>'
+  + '<div class="empty" style="border-color:var(--amber-line);color:var(--ink);margin-bottom:12px">'+esc(s.caveat||"")+'</div>'
+  + cards(sbiu,x=>'<div class="pt lab"><div class="pn">'+esc(wordTrim(x.name,90))+'</div><div class="pd">'+esc(wordTrim(x.reason||"",320))+'</div><span class="ps">'+esc(x.project)+' &middot; '+esc(x.kind)+' &middot; '+esc(x.grounding||"no story")+'</span></div>')
+  + '<div class="blk">What the record says about why each part exists<span class="ln"></span></div>'
+  + '<div class="lab-note" style="margin-bottom:12px">'+esc(s.grounding_note||"")+'</div>'
+  + '<div class="fr-grid">'
+  + '<div class="fc"><h3>'+n(gr.grounded)+'</h3><p>grounded, with a traceable id</p></div>'
+  + '<div class="fc"><h3>'+n(gr.thin)+'</h3><p>thin: discussed, never explained</p></div>'
+  + '<div class="fc"><h3>'+n(gr.absent)+'</h3><p>absent: the record says nothing</p></div>'
+  + '</div>'
+  + '<div class="lab-note" style="margin-top:12px">Counted over '+n(s.counted_over)+' parts that have a composed story.</div>'
+  /* THIN GETS ITS OWN LINE. Discussed and never explained is a different finding from never
+     written about, it needs a different repair, and it is the more common of the two. */
+  + '<div class="blk">Thin <span class="ct">'+n(gr.thin)+'</span><span class="ln"></span></div>'
+  + '<div class="lab-note" style="margin-bottom:12px">'+esc(s.thin_note||"")+'</div>'
+  + cards(thin,x=>'<div class="pt"><div class="pn">'+esc(wordTrim(x.name,90))+'</div><span class="ps">'+esc(x.project)+' &middot; '+esc(x.kind)+' &middot; '+esc(x.usage_state)+'</span></div>')
+  /* UNSET IS NOT IN USE. The state judgement only ran over parts the caller graph read as
+     not-called with a grounded or thin story. Everything else is unjudged on this axis and
+     says so; reading it as in-use would be a claim nothing measured. */
+  + '<div class="blk">Whether anything uses it<span class="ln"></span></div>'
+  + '<div class="fr-grid">'
+  + '<div class="fc"><h3>'+n(us.should_be_in_use)+'</h3><p>should be in use</p></div>'
+  + '<div class="fc"><h3>'+n(us.superseded)+'</h3><p>superseded</p></div>'
+  + '<div class="fc"><h3>'+n(us.unclear)+'</h3><p>unclear</p></div>'
+  + '<div class="fc"><h3>'+n(us.dormant)+'</h3><p>dormant</p></div>'
+  + '<div class="fc"><h3>'+n(us.unset)+'</h3><p>unset: no usage judgement was made</p></div>'
+  + '</div>'
+  + '<div class="empty" style="margin-top:12px">'+esc(s.unset_note||"")+'</div>'
+  + '<div class="blk">Resting on a claim the corpus overturned <span class="ct">'+esc(claims.length)+'</span><span class="ln"></span></div>'
+  + '<div class="lab-note" style="margin-bottom:12px">'+esc(jf.claim_note||"")+'</div>'
+  + cards(claims,x=>'<div class="pt"><div class="pn">'+esc(wordTrim(x.name,90))+'</div><div class="pd">'+esc(x.claim||"")+'</div><span class="ps">verdict '+esc(x.verdict)+'</span></div>')
+  + '<div class="blk">Judged, then gone <span class="ct">'+esc(gone.length)+'</span><span class="ln"></span></div>'
+  + '<div class="lab-note" style="margin-bottom:12px">'+esc(jf.absent_note||"")+'</div>'
+  + cards(gone,x=>'<div class="pt"><div class="pn">'+esc(wordTrim(x.name,90))+'</div><span class="ps">verdict '+esc(x.verdict)+' &middot; absent since '+esc(String(x.absent_since||"").slice(0,10))+'</span></div>')
+  + '<div class="blk">The population<span class="ln"></span></div>'
+  + '<div class="fr-grid">'
+  + '<div class="fc"><h3>'+n(pop.judgeable)+'</h3><p>judgeable parts, after '+n(pop.vendor_excluded)+' vendor rows are set aside</p></div>'
+  + '<div class="fc"><h3>'+n(jd.count)+'</h3><p>carry a judgment</p></div>'
+  + '<div class="fc"><h3>'+n(uj.count)+'</h3><p>do not</p></div>'
+  + '<div class="fc"><h3>'+n(uj.no_authored_source)+'</h3><p>have no authored source anywhere</p></div>'
+  + '</div>'
+  + '<div class="empty" style="margin-top:12px">'+esc(uj.blocked_on||"")+'</div>';
 }
 
 /* Derived from the hunt's LAST RUN, not from its schedule. A run still in flight after a
