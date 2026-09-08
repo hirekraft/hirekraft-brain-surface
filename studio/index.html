@@ -166,6 +166,10 @@
   .lab-card .lc-meta{font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
   .lab-card .lc-body{color:var(--ink-2);font-size:13.5px;line-height:1.55;white-space:pre-wrap}
   .lab-note{font-family:var(--mono);font-size:11px;color:var(--ink-3);line-height:1.6;margin-top:6px}
+  /* EVERY TAB SAYS WHAT IT IS. Fixed and always visible, never a hover: a hover is a
+     thing you have to already suspect is there. */
+  .xbox{border-left:2px solid var(--line);padding:10px 0 10px 14px;margin:0 0 18px;font-size:13px;line-height:1.65;color:var(--ink-2)}
+  .xnote{font-size:12px;line-height:1.6;color:var(--ink-2);margin:0 0 12px}
   /* principle index + composed deep view */
   .pidx{columns:2;column-gap:14px}
   @media(max-width:640px){.pidx{columns:1}}
@@ -525,16 +529,16 @@ function render(){
         + '<span class="ds" style="flex:2">'+esc(g.caveat)+'</span></div>'):"")
   + '</div>'
   + '<nav class="sections" id="nav">'
-  +   ["Front","Contradictions","What we run on","Lab","Parts Bin","The Frame","Principles"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
+  +   ["Front","Contradictions","What we run on","Being built now","What we have built","The Frame","Principles"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
   + '</nav>'
   + '<main>'
-  +   '<section class="view" data-active="true" data-i="0">'+front()+'</section>'
-  +   '<section class="view" data-i="1">'+conflicts()+'</section>'
-  +   '<section class="view" data-i="2">'+runsOn()+'</section>'
-  +   '<section class="view" data-i="3">'+lab(ln,srcs)+'</section>'
-  +   '<section class="view" data-i="4">'+parts()+'</section>'
-  +   '<section class="view" data-i="5">'+frame()+'</section>'
-  +   '<section class="view" data-i="6">'+principles()+'</section>'
+  +   '<section class="view" data-active="true" data-i="0">'+xbox(0)+front()+'</section>'
+  +   '<section class="view" data-i="1">'+xbox(1)+conflicts()+'</section>'
+  +   '<section class="view" data-i="2">'+xbox(2)+runsOn()+'</section>'
+  +   '<section class="view" data-i="3">'+xbox(3)+lab(ln,srcs)+'</section>'
+  +   '<section class="view" data-i="4">'+xbox(4)+parts()+'</section>'
+  +   '<section class="view" data-i="5">'+xbox(5)+frame()+'</section>'
+  +   '<section class="view" data-i="6">'+xbox(6)+principles()+'</section>'
   +   '<div class="foot">'+esc(D.footer)+'<br/>Served by '+esc(D.served_by.fn)+' · the Studio’s own numbers and each customer’s, kept apart · this is the only address that serves the studio · nothing on this page is stored.</div>'
   + '</main></div>'
   + '<div class="ov" id="ov"><div class="dr" id="drw">'+ipdocs()+'</div></div>';
@@ -1242,8 +1246,14 @@ function studioRail(){
 
 function lab(ln,srcs){
   return '<div class="lede">The forge — <b>a part being made right now</b>. One pipeline: forged here, graduated to the Parts Bin when it is finished and reusable.</div>'
-  + '<div class="blk">On the bench <span class="ct">nothing recorded</span><span class="ln"></span></div>'
-  + '<div class="empty">Nothing in the estate records a part as being in the making, so this is empty rather than filled with something else. It fills as Tool work produces parts.</div>'
+  /* WAS: a hard-coded "nothing recorded" and a sentence saying the estate records no part as
+     being in the making. The estate does record them, in D.lab.in_lab, and had been doing so
+     while this block said otherwise. Derived now, so it cannot go stale silently again. */
+  + '<div class="blk">On the bench <span class="ct">'+esc(((D.lab&&D.lab.in_lab&&D.lab.in_lab.count)||0))+'</span><span class="ln"></span></div>'
+  + '<div class="xnote">'+esc((D.lab&&D.lab.in_lab&&D.lab.in_lab.means)||"")+'</div>'
+  + ((((D.lab&&D.lab.in_lab&&D.lab.in_lab.parts)||[]).length)
+      ? '<div class="stock">'+D.lab.in_lab.parts.map(p=>'<div class="pt lab"><div class="pn">'+esc(wordTrim(p.name,150))+'</div><div class="pd">'+esc(wordTrim(p.gap||"",300))+'</div><span class="ps">'+esc(p.sub)+' &middot; graduates when '+esc(p.graduates_when)+'</span></div>').join("")+'</div>'
+      : '<div class="empty">Nothing is recorded as being in the making right now.</div>')
   + '<div class="blk">A customer’s sources moved<span class="ln"></span></div>'
   + '<div class="empty">Every source — drives, mailboxes, connected versus actually reading — belongs to <b>a customer</b>, and now lives on the Tool surface, which watches one. This surface watches the studio. The customer group in the bar above still shows an unreachable customer brain at a glance.</div>'
   + readHealthBlock()
@@ -1274,9 +1284,29 @@ function parts(){
      caveat rides the list rather than the record, because the list is what gets acted on. */
   return lede
   + '<div class="blk">Should be in use <span class="ct">'+n(us.should_be_in_use)+'</span><span class="ln"></span></div>'
+  + '<div class="xnote">'+esc(s.usage_plain||"")+'</div>'
+  /* THE AS-OF IS ON THE SCREEN, NOT IN THE RECORD UNDERNEATH IT. The count is read live; the
+     reasons were written at a moment that has since passed under them. A correct number with
+     an unstated as-of is how a stale reading starts. */
+  + (s.usage_as_of?('<div class="xnote">Reasons written '+esc(String(s.usage_as_of).slice(0,16).replace("T"," "))+'. '+esc(s.usage_as_of_note||"")+'</div>'):"")
   + '<div class="empty" style="border-color:var(--amber-line);color:var(--ink);margin-bottom:12px">'+esc(s.caveat||"")+'</div>'
   + cards(sbiu,x=>'<div class="pt lab"><div class="pn">'+esc(wordTrim(x.name,90))+'</div><div class="pd">'+esc(wordTrim(x.reason||"",320))+'</div><span class="ps">'+esc(x.project)+' &middot; '+esc(x.kind)+' &middot; '+esc(x.grounding||"no story")+'</span></div>')
+  /* EVERY GROUNDED PART GETS A CARD, LED BY A NAME IN WORDS. Where no plain sentence has been
+     written yet the card says exactly that: the record holds a reason, nobody has put it in
+     plain words, and an invented sentence would read exactly like a real one. */
+  + '<div class="blk">Every part with a story <span class="ct">'+esc(((s.grounded||[]).length))+'</span><span class="ln"></span></div>'
+  + '<div class="xnote">'+esc(s.grounded_note||"")+'</div>'
+  + cards(s.grounded||[],x=>'<div class="pt"><div class="pn">'+esc(x.plain_name||wordTrim(x.name,90))+'</div>'
+      + (x.does?('<div class="pd">'+esc(x.does)+'</div>'):"")
+      + (x.why?('<div class="pd"><b>'+esc(x.why)+'</b></div>'):"")
+      + (x.plain_name?"":'<div class="pd">The record says why this was built. Nobody has written the plain sentence for it yet, so none is shown.</div>')
+      + '<details><summary>the technical record</summary>'
+      + '<div class="pd">'+esc(x.name)+'</div>'
+      + '<span class="ps">'+esc(x.project)+' &middot; '+esc(x.kind)+' &middot; '+esc(x.usage_state)+(x.story_source_id?(' &middot; story '+esc(String(x.story_source_id).slice(0,8))):"")+'</span>'
+      + '</details></div>')
+  + '<div class="xnote">'+esc(s.derivation_note||"")+'</div>'
   + '<div class="blk">What the record says about why each part exists<span class="ln"></span></div>'
+  + '<div class="xnote">'+esc(s.grounding_plain||"")+'</div>'
   + '<div class="lab-note" style="margin-bottom:12px">'+esc(s.grounding_note||"")+'</div>'
   + '<div class="fr-grid">'
   + '<div class="fc"><h3>'+n(gr.grounded)+'</h3><p>grounded, with a traceable id</p></div>'
@@ -1288,7 +1318,16 @@ function parts(){
      written about, it needs a different repair, and it is the more common of the two. */
   + '<div class="blk">Thin <span class="ct">'+n(gr.thin)+'</span><span class="ln"></span></div>'
   + '<div class="lab-note" style="margin-bottom:12px">'+esc(s.thin_note||"")+'</div>'
+  /* THIN AND ABSENT ARE COUNTS WITH NAMES BEHIND A CLICK. A part with no story has no
+     sentence to write, and writing one anyway is invention. */
+  + '<details><summary>show the '+esc(thin.length)+' names</summary>'
   + cards(thin,x=>'<div class="pt"><div class="pn">'+esc(wordTrim(x.name,90))+'</div><span class="ps">'+esc(x.project)+' &middot; '+esc(x.kind)+' &middot; '+esc(x.usage_state)+'</span></div>')
+  + '</details>'
+  + '<div class="blk">Absent <span class="ct">'+esc(((s.absent||[]).length))+'</span><span class="ln"></span></div>'
+  + '<div class="xnote">'+esc(s.absent_note||"")+'</div>'
+  + '<details><summary>show the '+esc(((s.absent||[]).length))+' names</summary><div class="stock">'
+  + (s.absent||[]).map(nm=>'<div class="pt"><div class="pn">'+esc(wordTrim(String(nm),90))+'</div></div>').join("")
+  + '</div></details>'
   /* UNSET IS NOT IN USE. The state judgement only ran over parts the caller graph read as
      not-called with a grounded or thin story. Everything else is unjudged on this axis and
      says so; reading it as in-use would be a claim nothing measured. */
@@ -1308,6 +1347,7 @@ function parts(){
   + '<div class="lab-note" style="margin-bottom:12px">'+esc(jf.absent_note||"")+'</div>'
   + cards(gone,x=>'<div class="pt"><div class="pn">'+esc(wordTrim(x.name,90))+'</div><span class="ps">verdict '+esc(x.verdict)+' &middot; absent since '+esc(String(x.absent_since||"").slice(0,10))+'</span></div>')
   + '<div class="blk">The population<span class="ln"></span></div>'
+  + '<div class="xnote">'+esc(pop.plain||"")+' '+esc(jd.plain||"")+' '+esc(uj.plain||"")+'</div>'
   + '<div class="fr-grid">'
   + '<div class="fc"><h3>'+n(pop.judgeable)+'</h3><p>judgeable parts, after '+n(pop.vendor_excluded)+' vendor rows are set aside</p></div>'
   + '<div class="fc"><h3>'+n(jd.count)+'</h3><p>carry a judgment</p></div>'
@@ -1342,6 +1382,20 @@ function huntBlock(ig){
     + '<div class="fc"><h3>'+esc(c.promise_conflicts)+'</h3><p>open promise conflicts</p></div>'
     + '</div>';
 }
+
+/* EVERY TAB SAYS WHAT IT IS, IN THE REGISTER OF THE HAND-WRITTEN JULY ROWS: what is in
+   here, when you would open it, how to read it. Fixed and always visible rather than a
+   hover, because a hover only helps someone who already suspects it is there. */
+const TABBOX=[
+  "What is in here. The short version of where the studio stands right now: what is working, what is broken, and what is waiting on you. Open this one first, and open only this one if you have two minutes. Anything it flags as wrong has its detail on one of the other tabs.",
+  "What is in here. Places where two things the record says cannot both be true, found by a job that reads the whole corpus and pairs statements against each other. Open it when you want to know whether something you were told has since been contradicted. A pair sitting here has been flagged and not ruled on; nothing is settled until you rule.",
+  "What is in here. The machinery underneath everything: the scheduled jobs, the connected sources, and how fresh each one is. Open it when a number looks stale or out of date, because the cause is usually a job that stopped without saying so. Every age here states what it measures, since when a job last ran and when its content last changed are different questions.",
+  "What is in here. Work actually in progress: promises the record says are only partly kept, and the seats that have opened to close them. Open it to see what is being worked on rather than what is finished. A part leaves this tab when its promise is judged fully kept, and whether anything ever leaves is the real test of whether the studio produces.",
+  "What is in here. Every part the estate holds, with what the record says about why it exists and whether anything uses it. Open it before building something new, to find out whether it already exists, or to find a finished part that nothing is calling. Start at the top: those are the parts that work and that nothing uses.",
+  "What is in here. The studio's own paperwork: the governance documents and their versions, what nothing has re-examined, and the record of every seat that has opened and closed. Open it to check the record itself rather than what the record says. A document shown as behind its live version means recall is reading older text than what you last wrote.",
+  "What is in here. The numbered rules the whole build is judged against, and the decisions that produced them. Open it to check a choice against what was already ruled, or to find the principle a piece of work would violate. Each one is meant to be testable, so if you cannot tell whether something passes it, the rule needs sharpening rather than the work.",
+];
+function xbox(i){ return '<div class="xbox">'+esc(TABBOX[i]||"")+'</div>'; }
 
 function frame(){
   const d=D.ip_docs||[], drift=D.shard_drift_note, ig=D.integrity;
