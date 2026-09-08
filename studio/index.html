@@ -1246,9 +1246,10 @@ function studioRail(){
 
 function lab(ln,srcs){
   return '<div class="lede">The forge — <b>a part being made right now</b>. One pipeline: forged here, graduated to the Parts Bin when it is finished and reusable.</div>'
-  /* WAS: a hard-coded "nothing recorded" and a sentence saying the estate records no part as
-     being in the making. The estate does record them, in D.lab.in_lab, and had been doing so
-     while this block said otherwise. Derived now, so it cannot go stale silently again. */
+  /* WAS: a hard-coded empty count and a sentence asserting the estate held no such record.
+     It did hold them, in D.lab.in_lab, and had been doing so while this block said otherwise.
+     Derived now, so it cannot go stale silently again. The replaced wording is deliberately
+     not quoted here: a comment carrying it would answer a grep for the fault it fixed. */
   + '<div class="blk">On the bench <span class="ct">'+esc(((D.lab&&D.lab.in_lab&&D.lab.in_lab.count)||0))+'</span><span class="ln"></span></div>'
   + '<div class="xnote">'+esc((D.lab&&D.lab.in_lab&&D.lab.in_lab.means)||"")+'</div>'
   + ((((D.lab&&D.lab.in_lab&&D.lab.in_lab.parts)||[]).length)
