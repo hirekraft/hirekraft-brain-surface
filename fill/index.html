@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-08-28-1">
+<link rel="stylesheet" href="skin.css?v=2026-09-09-1">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -28,7 +28,6 @@
     <symbol id="i-loose" viewBox="0 0 22 22"><path d="M5 3h8l4 4v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M13 3v4h4" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
     <symbol id="i-lock" viewBox="0 0 22 22"><rect x="4.5" y="9.5" width="13" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 9.5V7a3.5 3.5 0 017 0v2.5" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
     <symbol id="i-person" viewBox="0 0 22 22"><circle cx="11" cy="7.5" r="3.4" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 19c0-3.4 2.9-5.5 6.5-5.5s6.5 2.1 6.5 5.5" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
-    <symbol id="i-ask" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M6.8 7a2.2 2.2 0 114.4.3c0 1.5-2.2 1.7-2.2 3.1" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="9" cy="13" r=".8" fill="currentColor"/></symbol>
   </defs>
 </svg>
 
@@ -193,18 +192,33 @@
 
 </main>
 
-<!-- ── The consultant. Persistent, always askable, docked so it takes one line
-     until it is needed. Professional register; it answers from what is on this
-     screen and in the live reading, and says so when it cannot. ── -->
+<!-- ── The dock. It reports what this surface DOES - a source resumed, a mailbox
+     adopted, a sign-in declined - and nothing else.
+
+     THE QUESTION BOX WAS REMOVED ON 2026-09-09 AND THIS IS ITS SLOT.
+     It accepted questions about the business and answered from a list of canned
+     client-side replies. It called nothing: no retrieval, no embedding, no
+     composition, no citations. Nothing on screen said it was decoration, and it
+     was found by reading the code rather than by anyone watching it fail - which
+     is the worst way for it to have been found, because it means it had been
+     read as working.
+
+     WHEN THE REAL ASK ARRIVES IT TAKES EXACTLY THIS SLOT: the fixed bar, present
+     on every screen, one line high, reachable on a phone without hunting. The
+     placement is already right and is not the thing that needs redesigning. Two
+     rules ride with it:
+       - Nothing may open a paragraph in the log above the bar on load. That is
+         what pushed the bar under an explanation and made it read as chrome.
+       - Offered questions are built from what is actually connected, and NEVER
+         include a question the system cannot answer. One failure teaches the
+         customer the box is decoration, permanently - and this surface has now
+         spent that credit once already. ── -->
 <div class="dock" id="dock">
   <div class="dock-in">
     <div class="dock-log" id="dock-log"><div class="dock-log-in" id="dock-turns"></div></div>
     <div class="dock-bar">
-      <svg class="ask-mark" width="18" height="18" aria-hidden="true"><use href="#i-ask"/></svg>
-      <label for="ask" class="skip">Ask about this screen</label>
-      <input id="ask" type="text" autocomplete="off"
-             placeholder="Ask about what is connected, or how any of this works">
-      <button class="send" id="ask-send">Ask</button>
+      <p class="dock-note">Questions about your mail and documents are not answerable here yet.
+        This bar reports what happens on this screen.</p>
     </div>
   </div>
 </div>
@@ -214,6 +228,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-08-31-2"></script>
+<script type="module" src="lens.js?v=2026-09-09-1"></script>
 </body>
 </html>
