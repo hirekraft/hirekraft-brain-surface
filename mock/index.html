@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tool shell — mockups (throwaway)</title>
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   THROWAWAY MOCKUPS. No data, no wiring, nothing connected. Every number and
+   every sentence below is invented to show a shape.
+
+   TYPE. System sans only, nothing downloaded, so nothing can flash or jump.
+   Two weights, 400 and 600, no exceptions.
+     room title      27px / 600 / -0.01em
+     section head    15px / 600
+     body            15px / 400 / 1.55
+     list primary    15px / 400   (600 only when unread)
+     secondary       13px / 400
+     micro           12px / 400   freshness, labels, rail
+   PALETTE. Near-monochrome. ONE accent, and it has ONE meaning: this needs a
+   person. Nothing else may use it — not headings, not links, not the ask.
+   ───────────────────────────────────────────────────────────────────────── */
+:root{
+  --paper:#fcfcfc; --pane:#ffffff; --rail:#f7f7f8;
+  --ink:#16181c; --ink-2:#4a4f57; --ink-3:#767c85; --ink-4:#9aa0a8;
+  --line:#e4e5e8; --line-2:#efeff1;
+  --accent:#1d6b5f;            /* needs a person. Nothing else. */
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --t-title:27px; --t-body:15px; --t-sec:13px; --t-micro:12px;
+  --u:4px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font:400 var(--t-body)/1.55 var(--sans);
+     -webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+/* ── mock scaffolding. NOT part of the product. Deliberately ugly so it can
+      never be mistaken for a design decision. ───────────────────────────── */
+#scaffold{position:sticky;top:0;z-index:50;background:#2b2b2e;color:#e8e8ea;
+  padding:8px 12px;font-size:var(--t-micro);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+#scaffold b{font-weight:600;letter-spacing:.02em;margin-right:6px}
+#scaffold button{border:1px solid #4a4a4f;padding:4px 9px;border-radius:3px;color:#c9c9cd}
+#scaffold button[aria-pressed="true"]{background:#e8e8ea;color:#2b2b2e;border-color:#e8e8ea}
+#tally{margin-left:auto;color:#9a9aa0}
+#tally s{text-decoration:none;color:#e8e8ea}
+
+/* ── the shell ────────────────────────────────────────────────────────── */
+.shell{display:grid;grid-template-columns:212px minmax(0,1fr) 0;min-height:calc(100vh - 37px)}
+.shell.ev{grid-template-columns:212px minmax(0,1fr) 320px}
+
+/* left rail — the customer's own world, their words */
+.rail{background:var(--rail);border-right:1px solid var(--line);padding:22px 0 16px;
+      display:flex;flex-direction:column}
+.brandline{font-size:var(--t-micro);color:var(--ink-4);padding:0 18px 18px}
+.rail nav{display:flex;flex-direction:column}
+.rail a{display:flex;align-items:baseline;gap:8px;padding:7px 18px;font-size:14px;
+        color:var(--ink-2);text-decoration:none}
+.rail a[aria-current="true"]{color:var(--ink);font-weight:600;
+        box-shadow:inset 2px 0 0 var(--ink)}
+.rail a .n{margin-left:auto;font-size:var(--t-micro);color:var(--ink-4)}
+.rail a .needs{margin-left:auto;font-size:var(--t-micro);color:var(--accent)}
+.railfoot{margin-top:auto;padding:14px 18px 0;border-top:1px solid var(--line)}
+.railfoot a{padding:6px 0;font-size:var(--t-micro);color:var(--ink-3)}
+.provisional{font-size:11px;color:var(--ink-4);padding:10px 18px 0;line-height:1.4}
+
+/* work pane — the room. list, item, item's context. Same everywhere. */
+.work{padding:26px 30px 60px;max-width:none;background:var(--pane);min-width:0}
+h1{font-size:var(--t-title);font-weight:600;letter-spacing:-.01em;line-height:1.2}
+.freshline{font-size:var(--t-micro);color:var(--ink-3);margin-top:6px}
+.sec{font-size:var(--t-body);font-weight:600;margin:30px 0 10px}
+p{max-width:62ch}
+.muted{color:var(--ink-2)}
+.small{font-size:var(--t-sec);color:var(--ink-3)}
+
+/* the ask — same place, every room, widen control ALWAYS beside it */
+.ask{margin-top:22px;border:1px solid var(--line);border-radius:4px;background:#fff}
+.ask .row{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.ask input{flex:1;border:0;outline:0;font:400 var(--t-body) var(--sans);color:var(--ink);min-width:0}
+.ask input::placeholder{color:var(--ink-4)}
+.scope{display:flex;align-items:center;gap:2px;border:1px solid var(--line);border-radius:3px;
+       font-size:var(--t-micro);overflow:hidden;flex:none}
+.scope button{padding:4px 9px;color:var(--ink-3);white-space:nowrap}
+.scope button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.askhint{font-size:11px;color:var(--ink-4);padding:0 12px 9px}
+
+/* lists — a list looks like a list */
+ul.list{list-style:none;border-top:1px solid var(--line-2)}
+ul.list li{border-bottom:1px solid var(--line-2);padding:11px 0;display:flex;gap:14px;align-items:baseline}
+.who{width:150px;flex:none;color:var(--ink-2);font-size:var(--t-body)}
+.unread .who,.unread .subj{font-weight:600;color:var(--ink)}
+.subj{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.at{font-size:var(--t-micro);color:var(--ink-4);flex:none}
+
+/* answer, landing beside the thing it is about — never a chat log */
+.answer{border-left:2px solid var(--ink);padding:2px 0 2px 14px;margin:18px 0 6px}
+.answer .a-q{font-size:var(--t-sec);color:var(--ink-3);margin-bottom:6px}
+.rests{font-size:var(--t-sec);color:var(--ink-3);margin-top:10px}
+.rests button{text-decoration:underline;text-underline-offset:2px}
+
+/* right pane — one promise, two states, collapsed by default */
+.ev{border-left:1px solid var(--line);background:var(--rail);padding:22px 18px;font-size:var(--t-sec)}
+.ev h2{font-size:var(--t-micro);font-weight:600;text-transform:uppercase;letter-spacing:.07em;
+       color:var(--ink-3);margin-bottom:12px}
+.ev li{list-style:none;padding:9px 0;border-bottom:1px solid var(--line);color:var(--ink-2)}
+.ev .src{display:block;font-size:11px;color:var(--ink-4);margin-top:2px}
+
+/* needs-a-person. The only place the accent appears. */
+.needs{border-left:2px solid var(--accent);padding-left:14px;margin:14px 0}
+.needs .t{font-weight:600}
+.ours{border-left:2px solid var(--line);padding-left:14px;margin:14px 0;color:var(--ink-2)}
+
+.card{border:1px solid var(--line);border-radius:4px;padding:16px 18px;margin:12px 0;background:#fff}
+.btn{border:1px solid var(--ink);border-radius:3px;padding:7px 14px;font-size:var(--t-sec)}
+.btn.q{border-color:var(--line);color:var(--ink-2)}
+.kv{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--line-2);font-size:var(--t-sec)}
+.kv b{font-weight:600;width:132px;flex:none}
+.gap{color:var(--ink-3)}
+
+/* MOBILE — Alex works on a phone. Rail collapses to a bar; evidence goes full-width. */
+@media (max-width:760px){
+  .shell,.shell.ev{grid-template-columns:1fr}
+  .rail{flex-direction:row;overflow-x:auto;padding:0;border-right:0;border-bottom:1px solid var(--line);
+        align-items:center;gap:0}
+  .brandline,.railfoot,.provisional{display:none}
+  .rail nav{flex-direction:row}
+  .rail a{padding:12px 13px;white-space:nowrap;font-size:var(--t-sec)}
+  .rail a[aria-current="true"]{box-shadow:inset 0 -2px 0 var(--ink)}
+  .rail a .n,.rail a .needs{display:none}
+  .railfoot.m{display:block;margin:0;padding:12px 13px;border:0;border-left:1px solid var(--line)}
+  .work{padding:20px 16px 50px}
+  h1{font-size:22px}
+  .who{width:104px}
+  .ev{border-left:0;border-top:1px solid var(--line)}
+  .ask .row{flex-wrap:wrap}
+  .scope{order:3;width:100%}
+  .scope button{flex:1}
+}
+</style>
+</head>
+<body>
+
+<div id="scaffold">
+  <b>MOCK</b>
+  <button data-m="cold-a" aria-pressed="true">1a cold · connect</button>
+  <button data-m="cold-b">1b cold · sample</button>
+  <button data-m="handoff">2 setup handoff</button>
+  <button data-m="verify">3 first weeks</button>
+  <button data-m="steady">4 steady state</button>
+  <button data-m="add">5a add a source</button>
+  <button data-m="remove">5b remove a source</button>
+  <button data-m="who">6 who sees what</button>
+  <span id="tally">rooms opened: <s id="tallytext">none yet</s></span>
+</div>
+
+<div id="app"></div>
+
+<script>
+/* Every string is invented. Nothing here reads anything. */
+
+const VISITS = {};
+function countVisit(room){
+  if(!room) return;
+  VISITS[room] = (VISITS[room]||0) + 1;
+  const parts = Object.keys(VISITS).sort((a,b)=>VISITS[b]-VISITS[a])
+    .map(k=>k+" "+VISITS[k]);
+  document.getElementById("tallytext").textContent = parts.join("  ·  ") || "none yet";
+}
+
+/* The rail. A room appears only when its source is connected, and it names the
+   KIND of thing, never the vendor: "Mail" not "Gmail", "Books" not "QuickBooks". */
+const ROOMS = [
+  {k:"mail",     label:"Mail",     n:"14 new"},
+  {k:"drive",    label:"Drive",    n:""},
+  {k:"calendar", label:"Calendar", n:"", soft:true},
+  {k:"people",   label:"People",   n:"", soft:true},
+  {k:"books",    label:"Books",    n:""},
+];
+
+function rail(active, opts={}){
+  const items = (opts.rooms||ROOMS).map(r=>
+    `<a href="#" data-room="${r.k}" aria-current="${r.k===active}">${r.label}`+
+    (r.n?`<span class="n">${r.n}</span>`:"")+`</a>`).join("");
+  return `<aside class="rail">
+    <div class="brandline">Verrandi</div>
+    <nav>${items}</nav>
+    <div class="railfoot">
+      <a href="#" data-room="sources" aria-current="${active==='sources'}">Sources and coverage</a>
+      <a href="#" data-room="who" aria-current="${active==='who'}">Who sees what</a>
+    </div>
+    <div class="provisional">Mock note, not product copy: Calendar and People are
+      provisional rooms. The counter in the black bar records which rooms you actually
+      open, so the answer comes from use rather than argument.</div>
+  </aside>`;
+}
+
+/* The ask. Identical markup in every room, always with the widen control beside
+   it — the ONLY thing that shows the rooms are one thing. */
+function ask(scopeLabel, opts={}){
+  return `<div class="ask">
+    <div class="row">
+      <input placeholder="${opts.placeholder||('Ask about '+scopeLabel.toLowerCase()+'…')}" />
+      <span class="scope">
+        <button aria-pressed="${!opts.wide}">${scopeLabel}</button>
+        <button aria-pressed="${!!opts.wide}">Everything</button>
+      </span>
+    </div>
+    ${opts.hint?`<div class="askhint">${opts.hint}</div>`:""}
+  </div>`;
+}
+
+function evidence(title, rows){
+  return `<aside class="ev"><h2>Where this comes from</h2>
+    <ul>${rows.map(r=>`<li>${r.t}<span class="src">${r.s}</span></li>`).join("")}</ul>
+  </aside>`;
+}
+
+/* ── the moments ──────────────────────────────────────────────────────── */
+const M = {};
+
+/* 1a — cold start, straight to connecting. */
+M["cold-a"] = () => `<div class="shell">
+  ${rail(null,{rooms:[]})}
+  <main class="work">
+    <h1>Nothing is connected yet.</h1>
+    <p class="muted" style="margin-top:10px">This is a working memory of your business.
+      It reads what you already run on and answers questions about it. It holds nothing
+      until you connect something, so right now it holds nothing.</p>
+    <div class="sec">Start with one</div>
+    <p class="small">Most people start with mail, because it is where the answers usually are.
+      You can add the rest later, and remove any of it at any time.</p>
+    <div class="card"><b>Mail</b><div class="small" style="margin-top:4px">
+      Your inbox, read as you. We never send anything.</div>
+      <div style="margin-top:12px"><button class="btn">Connect mail</button></div></div>
+    <div class="card"><b>Drive</b><div class="small" style="margin-top:4px">
+      Documents and folders you already keep.</div>
+      <div style="margin-top:12px"><button class="btn q">Connect drive</button></div></div>
+    <div class="card"><b>Books</b><div class="small" style="margin-top:4px">
+      Invoices, bills and what has been paid.</div>
+      <div style="margin-top:12px"><button class="btn q">Connect books</button></div></div>
+    <p class="small" style="margin-top:24px">Rooms appear here as you connect them.
+      Nothing appears for a source you have not connected.</p>
+  </main><div></div></div>`;
+
+/* 1b — cold start, ask a sample business first. Ordinary, with visible gaps. */
+M["cold-b"] = () => `<div class="shell ev">
+  ${rail("mail",{rooms:[{k:"mail",label:"Mail",n:""},{k:"drive",label:"Drive",n:""},{k:"books",label:"Books",n:""}]})}
+  <main class="work">
+    <div class="small" style="border:1px solid var(--line);border-radius:4px;padding:9px 12px;margin-bottom:18px">
+      You are looking at <b>Ridgeway Print Co</b>, a sample business, not yours.
+      Nothing here is connected to you. <button style="text-decoration:underline;text-underline-offset:2px">Connect my own instead</button>
+    </div>
+    <h1>Mail</h1>
+    <div class="freshline">Read their mail 6 minutes ago · back to March 2024 ·
+      nothing before March 2024, because that is when the mailbox was opened</div>
+
+    ${ask("This room",{placeholder:"Ask about their mail…",
+      hint:"Try: who owes us money · what did we quote Fenwick · what happened with the Riso order"})}
+
+    <div class="answer">
+      <div class="a-q">what did we quote Fenwick</div>
+      <p>Two quotes went to Fenwick Interiors. £2,180 on 14 August for the brochure run,
+        then a revised £1,940 on 22 August after the paper stock changed. The second one
+        is the live figure. Neither has been accepted in writing.</p>
+      <div class="rests">Rests on 3 emails and 1 document.
+        <button>Show me</button></div>
+    </div>
+
+    <div class="answer">
+      <div class="a-q">what happened with the Riso order</div>
+      <p class="gap">I cannot answer that one. The Riso thread refers to a call on
+        3 September and a decision taken on it, and there is no record of the call here —
+        their calendar is not connected and nobody wrote it up afterwards. What I can see
+        is the order was placed and not yet delivered.</p>
+      <div class="rests">This is a real gap in the sample, left in on purpose.</div>
+    </div>
+
+    <ul class="list">
+      <li class="unread"><span class="who">Fenwick Interiors</span><span class="subj">Re: revised quote — paper stock</span><span class="at">22 Aug</span></li>
+      <li><span class="who">Riso UK</span><span class="subj">Order RSO-4471 confirmed</span><span class="at">3 Sep</span></li>
+      <li><span class="who">Dana Whitfield</span><span class="subj">Invoice 2231 — chasing</span><span class="at">1 Sep</span></li>
+      <li><span class="who">Halton Council</span><span class="subj">Framework renewal paperwork</span><span class="at">28 Aug</span></li>
+    </ul>
+    <p class="small" style="margin-top:18px">This sample is an ordinary business, not a
+      polished one. Two of its five sources are not connected, one mailbox has a gap in
+      2024, and some questions have no answer here. Yours will look like this too.</p>
+  </main>
+  ${evidence("",[
+    {t:"Re: revised quote — paper stock",s:"Mail · Fenwick Interiors · 22 Aug"},
+    {t:"Quote 4419 (revised).pdf",s:"Drive · Quotes 2026 · 22 Aug"},
+    {t:"Original quote — brochure run",s:"Mail · Fenwick Interiors · 14 Aug"},
+  ])}
+</div>`;
+
+/* 2 — where the locked setup flow hands off into the shell. */
+M["handoff"] = () => `<div class="shell">
+  ${rail("mail",{rooms:[{k:"mail",label:"Mail",n:""}]})}
+  <main class="work">
+    <h1>Your mail is in.</h1>
+    <div class="freshline">Read your mail 4 minutes ago · back to March 2024</div>
+    <p class="muted" style="margin-top:14px">This is the room it lives in. Every room
+      works the same way: the list, one item, and where that item comes from.</p>
+
+    ${ask("This room",{wide:true,
+      hint:"This one is set to <b>Everything</b> on purpose. The rooms are separate places to look, but one memory underneath — switching this is how you ask across all of them at once. It is here in every room."})}
+
+    <div class="answer">
+      <div class="a-q">what came in while we were setting up</div>
+      <p>Fourteen threads, of which three look like they want an answer. Nothing else
+        is connected yet, so this is mail only — with Drive connected I would also be
+        able to tell you which of these has a document behind it.</p>
+      <div class="rests">Rests on 14 emails. <button>Show me</button></div>
+    </div>
+
+    <div class="sec">Add another room</div>
+    <p class="small">Each one you add makes more questions answerable. Adding Drive would
+      let you ask what a quote actually said, not just that one was sent.</p>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn q">Drive</button><button class="btn q">Calendar</button>
+      <button class="btn q">Books</button><button class="btn q">People</button>
+    </div>
+  </main><div></div></div>`;
+
+/* 3 — first weeks. The verification beat. */
+M["verify"] = () => `<div class="shell">
+  ${rail("mail")}
+  <main class="work">
+    <h1>Check me on three things.</h1>
+    <p class="muted" style="margin-top:12px">You know this business and I have just read it.
+      Here are three questions I think I can answer. Ask any of them and see whether the
+      answer matches what you already know. If one is wrong, that is worth more to me than
+      if all three are right.</p>
+
+    ${ask("This room",{wide:true})}
+
+    <div class="card"><b>Who has owed us money the longest?</b>
+      <div class="small" style="margin-top:5px">I can see this from your mail and your books.</div>
+      <div style="margin-top:12px"><button class="btn">Ask it</button></div></div>
+    <div class="card"><b>What did we last send Diconium, and when?</b>
+      <div class="small" style="margin-top:5px">Mail only. I do not have the attachment contents yet.</div>
+      <div style="margin-top:12px"><button class="btn">Ask it</button></div></div>
+    <div class="card"><b>Which supplier do we buy from most often?</b>
+      <div class="small" style="margin-top:5px">From your books. It counts invoices, not amounts.</div>
+      <div style="margin-top:12px"><button class="btn">Ask it</button></div></div>
+
+    <p class="small" style="margin-top:22px">I picked these three because they are the ones
+      I am most confident about. That is also why they are the weakest test. If you want a
+      harder one, ask something you think I will get wrong.</p>
+  </main><div></div></div>`;
+
+/* 4 — steady state, a return visit. */
+M["steady"] = () => `<div class="shell ev">
+  ${rail("mail")}
+  <main class="work">
+    <h1>Mail</h1>
+    <div class="freshline">Read your mail 4 minutes ago · read your Drive this morning ·
+      read your books yesterday evening</div>
+
+    <div class="card" style="margin-top:18px">
+      <b>Since you were last here, on Sunday evening</b>
+      <div class="small" style="margin-top:7px">
+        Read 41 new emails and 6 new documents. Two documents in Quotes 2026 changed.<br>
+        Your calendar stopped being read on Friday — the permission expired.
+        Nothing else stopped.
+      </div>
+      <div class="needs" style="margin-top:12px">
+        <div class="t">Your calendar needs you</div>
+        <div class="small" style="color:var(--ink-2)">Reconnecting it takes a moment.
+          Until then I can still see meetings mentioned in mail, but not what is actually
+          in the diary.</div>
+        <div style="margin-top:10px"><button class="btn">Reconnect calendar</button></div>
+      </div>
+    </div>
+
+    ${ask("This room")}
+
+    <ul class="list">
+      <li class="unread"><span class="who">Anders Hag</span><span class="subj">SOW amendment — signature needed</span><span class="at">08:41</span></li>
+      <li class="unread"><span class="who">accounting@</span><span class="subj">Invoice 2318 paid</span><span class="at">07:12</span></li>
+      <li><span class="who">Shivangi Thanky</span><span class="subj">Re: approver change for October</span><span class="at">Yest</span></li>
+      <li><span class="who">Kamil Dmitrowski</span><span class="subj">Availability from November</span><span class="at">Yest</span></li>
+      <li><span class="who">Halton Council</span><span class="subj">Framework renewal paperwork</span><span class="at">Fri</span></li>
+    </ul>
+  </main>
+  ${evidence("",[
+    {t:"What has been read here",s:"Mail · alex@ · back to March 2024"},
+    {t:"Last read 4 minutes ago",s:"Reading every few minutes"},
+    {t:"Nothing before March 2024",s:"The mailbox did not exist before then"},
+    {t:"Spam is not read",s:"Everything else in the inbox is"},
+  ])}
+</div>`;
+
+/* 5a — adding a source. Capability change in one sentence, never item counts. */
+M["add"] = () => `<div class="shell">
+  ${rail("sources")}
+  <main class="work">
+    <h1>Add Books</h1>
+    <p class="muted" style="margin-top:12px">Books is your invoices, bills and payments.</p>
+    ${ask("Sources",{placeholder:"Ask about what is connected…"})}
+    <div class="card">
+      <b>What changes if you add it</b>
+      <p style="margin-top:7px">You will be able to ask who owes you money and what you
+        have already paid, and I will be able to match an invoice in your mail to the
+        payment against it.</p>
+      <p class="small" style="margin-top:9px">What does not change: I still only read.
+        I do not raise invoices, send chasers or move money.</p>
+      <div style="margin-top:14px"><button class="btn">Connect books</button>
+        <button class="btn q" style="margin-left:6px">Not now</button></div>
+    </div>
+    <div class="sec">After it connects</div>
+    <p class="small">A Books room appears in the list on the left. It will say
+      <i>connected, not read yet</i> until the first read finishes — those are two
+      different things and it will not say one when it means the other.</p>
+  </main><div></div></div>`;
+
+/* 5b — removing a source. First-class, legible, states what stops. */
+M["remove"] = () => `<div class="shell">
+  ${rail("sources")}
+  <main class="work">
+    <h1>Remove Drive</h1>
+    <p class="muted" style="margin-top:12px">You can do this at any time and you do not
+      have to say why.</p>
+    ${ask("Sources",{placeholder:"Ask about what is connected…"})}
+
+    <div class="card">
+      <b>What stops being answerable</b>
+      <p style="margin-top:7px">Questions about what a document actually said. Quotes,
+        signed agreements, anything whose answer is inside a file rather than an email
+        about the file.</p>
+      <div class="small" style="margin-top:9px">In practice: <i>what did we quote Fenwick</i>
+        would still find the email saying a quote was sent, but not the figure inside the PDF.</div>
+    </div>
+
+    <div class="card">
+      <b>What does not move</b>
+      <p style="margin-top:7px">Your files. They are yours and they stay exactly where they
+        are, untouched. Removing Drive here stops me reading them; it does not delete,
+        move or change anything in your Drive.</p>
+      <p class="small" style="margin-top:9px">Your mail, books and everything already
+        answerable from them is unaffected.</p>
+    </div>
+
+    <div class="card">
+      <b>What I discard</b>
+      <p style="margin-top:7px">Everything I read from Drive, at the moment you confirm.
+        Not archived, not kept for thirty days.</p>
+      <div style="margin-top:14px"><button class="btn">Remove Drive</button>
+        <button class="btn q" style="margin-left:6px">Keep it</button></div>
+    </div>
+  </main><div></div></div>`;
+
+/* 6 — who sees what. One screen, plain words. */
+M["who"] = () => `<div class="shell">
+  ${rail("who")}
+  <main class="work">
+    <h1>Who sees what</h1>
+    <p class="muted" style="margin-top:12px">Two people use this. Each of you sees what
+      your own accounts already reach, and nothing else. This is not a setting I apply —
+      it is the same permission your mail and files already have.</p>
+
+    <div class="sec">You — Alex</div>
+    <div class="kv"><b>Mail</b><span>Your own mailbox, and the four the firm shares.</span></div>
+    <div class="kv"><b>Drive</b><span>Every shared drive you are a member of. Not your personal files.</span></div>
+    <div class="kv"><b>Books</b><span>Yes. You are the owner on the account.</span></div>
+
+    <div class="sec">Erin — operations</div>
+    <div class="kv"><b>Mail</b><span>Her own mailbox only.</span></div>
+    <div class="kv"><b>Drive</b><span>The two shared drives she is a member of.</span></div>
+    <div class="kv"><b>Books</b><span class="gap">No. Books connects at owner level and has no
+      per-person boundary, so it is not hers to see.</span></div>
+
+    <div class="sec">What this means in practice</div>
+    <p class="small">If Erin asks a question whose answer sits in a mailbox she cannot
+      reach, she does not get a filtered answer or an empty one — she is told the answer
+      exists somewhere she cannot see. A silent gap would be worse than a refusal.</p>
+  </main><div></div></div>`;
+
+/* ── render ───────────────────────────────────────────────────────────── */
+let current = "cold-a";
+function render(m){
+  current = m;
+  document.getElementById("app").innerHTML = M[m]();
+  document.querySelectorAll("#scaffold button[data-m]").forEach(b=>
+    b.setAttribute("aria-pressed", String(b.dataset.m===m)));
+  window.scrollTo(0,0);
+}
+document.addEventListener("click",(e)=>{
+  const s = e.target.closest("#scaffold button[data-m]");
+  if(s){ render(s.dataset.m); return; }
+  const r = e.target.closest("[data-room]");
+  if(r){ e.preventDefault(); countVisit(r.dataset.room); }
+});
+render("cold-a");
+</script>
+</body>
+</html>
