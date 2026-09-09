@@ -1316,9 +1316,10 @@ function stageLoose(stage) {
   stage.appendChild(back);
 }
 
-// ── the consultant ──────────────────────────────────────────────────────────
-// Answers from the live reading and from what is on this screen. When it does not
-// know, it says which kind of not-knowing it is rather than improvising.
+// ── the dock ────────────────────────────────────────────────────────────────
+// It reports what this surface DID. It does not answer questions, and as of
+// 2026-09-09 it no longer offers to: the question box called nothing and replied
+// from a fixed list of client-side strings.
 
 function say(text, asked) {
   const log = $("#dock-turns");
@@ -1451,18 +1452,8 @@ document.addEventListener("click", (e) => {
   }
 });
 
-$("#ask-send").addEventListener("click", ask);
-$("#ask").addEventListener("keydown", (e) => { if (e.key === "Enter") ask(); });
-
-function ask() {
-  const v = $("#ask").value.trim();
-  if (!v) { $("#dock").classList.toggle("open"); return; }
-  $("#ask").value = "";
-  say(answer(v), v);
-}
-
-say("I am here the whole way through. Ask about anything on this screen — what is connected, how far "
-  + "back it reads, or what any of it means.");
+// Nothing opens the log on load. A paragraph here pushed the bar underneath an
+// explanation, which is what made it read as chrome rather than as a control.
 
 readBrain();                     // then the live reading lands into the frame
 
