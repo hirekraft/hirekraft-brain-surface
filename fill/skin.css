@@ -335,6 +335,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .dock-bar .send { font-size: var(--t-small); color: var(--ink-3); }
 .dock-bar .send:hover { color: var(--ink); }
 .dock-bar .ask-mark { color: var(--ink-4); flex: none; }
+/* The slot where the ask will go. Plain text, no input affordance, nothing that
+   invites a question the surface cannot answer. */
+.dock-bar .dock-note {
+  font-size: var(--t-small); color: var(--ink-3); margin: 0; max-width: none;
+}
 
 /* ── honesty-of-state banner ─────────────────────────────────────────── */
 
