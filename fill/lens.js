@@ -1331,6 +1331,204 @@ function say(text, asked) {
   $("#dock-log").scrollTop = $("#dock-log").scrollHeight;
 }
 
+// -- the ask ----------------------------------------------------------------
+// THE SERVER SETS THE STATE AND THIS FILE MAY NOT. lens-ask returns one of four
+// states and carries an `answer` field in exactly ONE of them. So nothing below
+// needs a rule saying "do not present retrieval as an answer": in the other three
+// states there is no field here to present. The code reads `state` and never
+// infers one by counting records.
+//
+// The answer lands in the BODY, above the dock. The dock is where you type; the
+// body is where you read, alongside the records the answer came from.
+
+const ASK_URL = `${SUPABASE_URL}/functions/v1/lens-ask`;
+let asking = false;
+
+const ASK_HEAD = {
+  answered:        "Answer",
+  records_only:    "What the record says",
+  word_match_only: "A word match, not an answer",
+  nothing_close:   "Nothing close to this",
+};
+
+function yearOf(iso) { return iso ? String(iso).slice(0, 4) : ""; }
+
+// The model's text is never written as markup. [3] becomes a link to record 3 and
+// everything else stays a text node.
+function proseWithCitations(text) {
+  const wrap = el("div", "answer-prose");
+  for (const block of String(text).split(/\n{2,}/)) {
+    const p = el("p");
+    for (const part of block.split(/(\[\d+\])/)) {
+      const m = /^\[(\d+)\]$/.exec(part);
+      if (m) {
+        const a = el("a", "cite");
+        a.href = "#rec-" + m[1];
+        a.textContent = m[1];
+        p.appendChild(a);
+      } else if (part) {
+        p.appendChild(document.createTextNode(part));
+      }
+    }
+    wrap.appendChild(p);
+  }
+  return wrap;
+}
+
+// A record carries what the payload actually holds: which document, which source,
+// and the passage itself. It does NOT carry a link, because lens-ask returns no
+// record id to link to and a constructed one would be a guess.
+function recordList(evidence) {
+  const ul = el("ul", "records");
+  for (const e of evidence) {
+    const li = el("li", "record");
+    li.id = "rec-" + e.n;
+    const head = el("p", "record-head");
+    const n = el("span", "record-n"); n.textContent = e.n;
+    const doc = el("span", "record-doc"); doc.textContent = e.doc || "Untitled";
+    const src = el("span", "record-src"); src.textContent = e.source ?? "";
+    head.append(n, doc, src);
+    const snip = el("p", "record-snip"); snip.textContent = e.snippet ?? "";
+    li.append(head, snip);
+    ul.appendChild(li);
+  }
+  return ul;
+}
+
+function askProblem(slot, msg) {
+  slot.innerHTML = "";
+  const h = el("h3", "answer-head"); h.textContent = "That did not get an answer";
+  const p = el("p", "answer-why"); p.textContent = msg;
+  slot.append(h, p);
+}
+
+function renderAsk(slot, body) {
+  slot.innerHTML = "";
+  const state = body.state;
+  const h = el("h3", "answer-head");
+  h.textContent = ASK_HEAD[state] ?? "Nothing to show";
+  const why = el("p", "answer-why");
+  why.textContent = body.state_reason ?? "";
+  slot.append(h, why);
+
+  // The one place prose appears, and only when the server composed it.
+  if (state === "answered" && typeof body.answer === "string" && body.answer) {
+    slot.appendChild(proseWithCitations(body.answer));
+  }
+  if (state === "records_only" && body.not_composed_because) {
+    const n = el("p", "answer-why");
+    n.textContent = "Not composed because " + body.not_composed_because + ".";
+    slot.appendChild(n);
+  }
+
+  const ev = (Array.isArray(body.citations) && body.citations.length)
+    ? body.citations
+    : (Array.isArray(body.evidence) ? body.evidence : []);
+  if (ev.length) {
+    const lab = el("p", "records-lab");
+    lab.textContent = state === "answered" ? "The records this came from" : "What came back";
+    slot.append(lab, recordList(ev));
+  }
+
+  // Honesty-of-state, in the small type: what was searched, how much of it this
+  // person can open, and the closeness against the line the server will not
+  // compose below. Auditable rather than decorative.
+  const r = body.retrieval;
+  if (r) {
+    const foot = el("p", "answer-foot");
+    foot.textContent = `Looked at ${r.rows_returned} records; ${r.rows_you_can_see} are ones you can open. `
+      + `Closeness ${r.strength}, and it will not compose below ${r.floor_answerable}.`;
+    slot.appendChild(foot);
+  }
+}
+
+async function ask(question) {
+  const q = (question ?? "").trim();
+  if (!q || asking) return;
+  asking = true;
+
+  const sec = $("#s-answer");
+  const mount = $("#answer-in");
+  sec.hidden = false;
+  mount.innerHTML = "";
+  const asked = el("p", "answer-asked"); asked.textContent = q;
+  const slot = el("div", "answer-slot");
+  const wait = el("p", "answer-wait"); wait.textContent = "Reading your records.";
+  slot.appendChild(wait);
+  mount.append(asked, slot);
+  window.scrollTo({ top: 0 });
+
+  try {
+    const { data } = await sb.auth.getSession();
+    const jwt = data?.session?.access_token;
+    if (!jwt) {
+      askProblem(slot, "You are not signed in on this browser, so there is nobody for the brain "
+        + "to answer as. Sign in and ask again.");
+      return;
+    }
+    const r = await fetch(ASK_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${jwt}`, apikey: PUBLISHABLE_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ question: q }),
+    });
+    const body = await r.json().catch(() => null);
+    if (!body) { askProblem(slot, `The brain did not answer (${r.status}). Nothing was changed.`); return; }
+    if (body.ok !== true) { askProblem(slot, body.error ?? `The brain refused this (${r.status}).`); return; }
+    renderAsk(slot, body);
+  } catch (e) {
+    askProblem(slot, `The brain could not be reached: ${e?.message ?? e}`);
+  } finally {
+    asking = false;
+  }
+}
+
+// OFFERED QUESTIONS. Not written here. ask_openers() counts THIS person's own
+// readable records and returns only subjects with enough behind them for the
+// answering path to have something to work with. Nothing clears the floor means
+// no chips, which is the correct screen rather than a bad question.
+async function fillOpeners() {
+  const row = $("#dock-openers");
+  if (!row) return;
+  try {
+    const { data: sess } = await sb.auth.getSession();
+    if (!sess?.session) { row.hidden = true; return; }
+    const { data, error } = await sb.rpc("ask_openers");
+    if (error) throw error;
+
+    const input = $("#ask-input");
+    const spans = [];
+    for (const s of data?.sources ?? []) {
+      if (!s.records) continue;
+      if (s.group === "mail") spans.push(`mail back to ${yearOf(s.earliest)}`);
+      if (s.group === "documents") spans.push(`documents back to ${yearOf(s.earliest)}`);
+    }
+    if (spans.length && input) input.placeholder = `Ask about your ${spans.join(" and ")}`;
+
+    const openers = data?.openers ?? [];
+    if (!openers.length) { row.hidden = true; return; }
+    row.innerHTML = "";
+    for (const o of openers.slice(0, 3)) {
+      const b = el("button", "opener");
+      b.type = "button";
+      b.textContent = o.question;
+      b.addEventListener("click", () => { const i = $("#ask-input"); if (i) i.value = ""; ask(o.question); });
+      row.appendChild(b);
+    }
+    row.hidden = false;
+  } catch {
+    row.hidden = true;
+  }
+}
+
+(function wireAsk() {
+  const input = $("#ask-input"), send = $("#ask-send");
+  if (!input || !send) return;
+  const go = () => { const v = input.value; input.value = ""; ask(v); };
+  send.addEventListener("click", go);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
+})();
+fillOpeners();
+
 // The sources tab was a second build of this same lens and is retired. What it
 // derived came across into brain_shape: the credential mechanism, the drill-in
 // labels, the faults grouped by cause, and the count that separates what needs you
