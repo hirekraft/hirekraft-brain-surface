@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-09-09-1">
+<link rel="stylesheet" href="skin.css?v=2026-09-10-ask">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -44,6 +44,14 @@
 </div>
 
 <main id="main" class="shell">
+
+  <!-- THE ANSWER LANDS HERE, IN THE BODY, NOT IN THE DOCK. An answer you can
+       scroll alongside its sources is more useful than one in a drawer, and the
+       records below it are the point: every claim is meant to be checked.
+       Not a .step, so the step router never hides it. -->
+  <section class="answer" id="s-answer" hidden aria-live="polite">
+    <div class="answer-in" id="answer-in"></div>
+  </section>
 
   <!-- ── 0. HOLDING — the default, and it makes no claim about anyone's data ──
        Neither the introduction nor the lens is correct until the reading answers:
@@ -195,30 +203,44 @@
 <!-- ── The dock. It reports what this surface DOES - a source resumed, a mailbox
      adopted, a sign-in declined - and nothing else.
 
-     THE QUESTION BOX WAS REMOVED ON 2026-09-09 AND THIS IS ITS SLOT.
-     It accepted questions about the business and answered from a list of canned
-     client-side replies. It called nothing: no retrieval, no embedding, no
-     composition, no citations. Nothing on screen said it was decoration, and it
-     was found by reading the code rather than by anyone watching it fail - which
-     is the worst way for it to have been found, because it means it had been
-     read as working.
+     THE QUESTION BOX CAME BACK ON 2026-09-10, WIRED THIS TIME.
+     It was removed on 2026-09-09 because it called nothing: it answered from a
+     list of canned client-side strings, and nothing on screen said so. It was
+     found by reading the code rather than by anyone watching it fail, which is
+     the worst way for it to have been found, because it means it had been read
+     as working.
 
-     WHEN THE REAL ASK ARRIVES IT TAKES EXACTLY THIS SLOT: the fixed bar, present
-     on every screen, one line high, reachable on a phone without hunting. The
-     placement is already right and is not the thing that needs redesigning. Two
-     rules ride with it:
+     WHAT IT CALLS NOW: lens-ask, with the signed-in person's own token. That
+     function derives who is asking from the token, refuses an asserted identity,
+     and returns ONE OF FOUR STATES. It carries an `answer` field in exactly one
+     of them. So this screen cannot render retrieval as an answer - not because
+     it is instructed not to, but because in the other three states there is no
+     such field to render.
+
+     THE ANSWER DOES NOT LAND IN THE DOCK. It lands in the page body above it, so
+     it can be read and scrolled alongside the records it came from. The dock is
+     where you type; the body is where you read.
+
+     TWO RULES RIDE WITH THE PLACEMENT, both still in force:
        - Nothing may open a paragraph in the log above the bar on load. That is
          what pushed the bar under an explanation and made it read as chrome.
        - Offered questions are built from what is actually connected, and NEVER
          include a question the system cannot answer. One failure teaches the
          customer the box is decoration, permanently - and this surface has now
-         spent that credit once already. ── -->
+         spent that credit once already. They come from ask_openers(), which
+         counts THIS caller's own readable records and returns nothing when
+         nothing clears the floor. No question on this screen is written here. ── -->
 <div class="dock" id="dock">
   <div class="dock-in">
     <div class="dock-log" id="dock-log"><div class="dock-log-in" id="dock-turns"></div></div>
+    <!-- Derived at the moment of offering. Absent when nothing clears the floor. -->
+    <div class="dock-openers" id="dock-openers" hidden></div>
     <div class="dock-bar">
-      <p class="dock-note">Questions about your mail and documents are not answerable here yet.
-        This bar reports what happens on this screen.</p>
+      <svg class="ask-mark" width="14" height="14" aria-hidden="true"><use href="#i-chev"/></svg>
+      <input id="ask-input" type="text" autocomplete="off" enterkeyhint="send"
+             aria-label="Ask about what is in your brain"
+             placeholder="Ask about what is in your brain">
+      <button class="send" id="ask-send" type="button">Ask</button>
     </div>
   </div>
 </div>
@@ -228,6 +250,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-09-09-1"></script>
+<script type="module" src="lens.js?v=2026-09-10-ask"></script>
 </body>
 </html>
