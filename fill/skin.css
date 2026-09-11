@@ -335,11 +335,54 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .dock-bar .send { font-size: var(--t-small); color: var(--ink-3); }
 .dock-bar .send:hover { color: var(--ink); }
 .dock-bar .ask-mark { color: var(--ink-4); flex: none; }
-/* The slot where the ask will go. Plain text, no input affordance, nothing that
-   invites a question the surface cannot answer. */
-.dock-bar .dock-note {
-  font-size: var(--t-small); color: var(--ink-3); margin: 0; max-width: none;
+
+/* The offered questions. One compact row directly above the line you type on, so
+   they are readable without opening the log. Absent entirely when the brain has
+   nothing it can honestly be asked. */
+.dock-openers {
+  display: flex; gap: var(--u); padding: var(--u) 0 0;
+  overflow-x: auto; scrollbar-width: none;
 }
+.dock-openers::-webkit-scrollbar { display: none; }
+.opener {
+  flex: none; font: inherit; font-size: var(--t-micro); color: var(--ink-3);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--paper-2); padding: calc(var(--u) * 1.25) calc(var(--u) * 2.5);
+  cursor: pointer; white-space: nowrap;
+}
+.opener:hover { color: var(--ink); border-color: var(--ink-4); }
+
+/* The answer, in the body. Structure first: the heading and the reason land
+   before the records, and space is not reserved for prose that may never exist. */
+.answer { margin-bottom: var(--gap-lg); }
+.answer-in { max-width: var(--measure); }
+.answer-asked {
+  font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-4); margin-bottom: var(--u);
+}
+.answer-head { font-size: var(--t-head); color: var(--ink); line-height: var(--lead-tight); }
+.answer-why { font-size: var(--t-small); color: var(--ink-3); margin-top: var(--u); }
+.answer-wait { font-size: var(--t-small); color: var(--ink-4); }
+.answer-prose { margin-top: var(--gap); color: var(--ink-2); }
+.answer-prose p + p { margin-top: var(--gap); }
+.cite {
+  font-size: var(--t-micro); color: var(--accent); text-decoration: none;
+  vertical-align: super; padding: 0 2px;
+}
+.cite:hover { text-decoration: underline; }
+.records-lab {
+  margin-top: var(--gap-lg); font-size: var(--t-micro); letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.records { list-style: none; margin-top: var(--u); }
+.record { padding: var(--gap) 0; border-top: 1px solid var(--line-2); }
+.record:target { background: var(--paper-2); }
+.record-head { display: flex; align-items: baseline; gap: var(--u); font-size: var(--t-small); }
+.record-n { color: var(--ink-4); font-size: var(--t-micro); flex: none; }
+.record-doc { color: var(--ink); font-weight: var(--w-mid); }
+.record-src { color: var(--ink-4); font-size: var(--t-micro); }
+.record-snip { font-size: var(--t-small); color: var(--ink-3); margin-top: calc(var(--u) / 2); }
+.answer-foot { margin-top: var(--gap); font-size: var(--t-micro); color: var(--ink-4); }
 
 /* ── honesty-of-state banner ─────────────────────────────────────────── */
 
