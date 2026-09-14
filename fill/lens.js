@@ -1513,6 +1513,16 @@ async function ask(question) {
 // readable records and returns only subjects with enough behind them for the
 // answering path to have something to work with. Nothing clears the floor means
 // no chips, which is the correct screen rather than a bad question.
+// The row has one job when it has no chips: say why. Written as a text node in the
+// same row the buttons would occupy, so the space never reads as empty-by-accident.
+function openersNote(row, text) {
+  row.innerHTML = "";
+  const p = el("p", "opener-note");
+  p.textContent = text;
+  row.appendChild(p);
+  row.hidden = false;
+}
+
 async function fillOpeners() {
   const row = $("#dock-openers");
   if (!row) return;
