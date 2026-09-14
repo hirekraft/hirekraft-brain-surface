@@ -1375,9 +1375,20 @@ function proseWithCitations(text) {
   return wrap;
 }
 
-// A record carries what the payload actually holds: which document, which source,
-// and the passage itself. It does NOT carry a link, because lens-ask returns no
-// record id to link to and a constructed one would be a guess.
+// A record carries what the payload actually holds: which document, which source, the
+// passage itself, and -- WHERE ONE EXISTS -- a way to open the original.
+//
+// THE LINK IS THE SERVER'S, NOT THIS FILE'S. lens-ask v27 decides whether a record has
+// an addressable original and sends open_url only then. This file renders a link when
+// the field is present and a plain record when it is not. It never builds a url from a
+// source key: that would put connector knowledge on the screen, and it would produce a
+// confident link for the legacy rows that have nothing to open. A dead link in an
+// evidence panel teaches the customer that the citations are decorative -- the same
+// lesson the unwired ask box taught, in a smaller place.
+//
+// The inline [3] stays an IN-PAGE jump rather than an outbound link. The person lands on
+// the record and its passage first and opens the original only if they want it: one click
+// from the claim to the record it rests on, a second from the record to the source.
 function recordList(evidence) {
   const ul = el("ul", "records");
   for (const e of evidence) {
@@ -1385,9 +1396,25 @@ function recordList(evidence) {
     li.id = "rec-" + e.n;
     const head = el("p", "record-head");
     const n = el("span", "record-n"); n.textContent = e.n;
-    const doc = el("span", "record-doc"); doc.textContent = e.doc || "Untitled";
+
+    // Only an https url the server actually sent becomes a link. Anything else is text.
+    const openable = typeof e.open_url === "string" && /^https:\/\//.test(e.open_url);
+    const doc = openable ? el("a", "record-doc record-open") : el("span", "record-doc");
+    if (openable) { doc.href = e.open_url; doc.target = "_blank"; doc.rel = "noopener noreferrer"; }
+    doc.textContent = e.doc || "Untitled";
+
     const src = el("span", "record-src"); src.textContent = e.source ?? "";
     head.append(n, doc, src);
+
+    if (openable) {
+      const go = el("a", "record-go");
+      go.href = e.open_url;
+      go.target = "_blank";
+      go.rel = "noopener noreferrer";
+      go.textContent = "Open in " + (e.open_in || "the source");
+      head.appendChild(go);
+    }
+
     const snip = el("p", "record-snip"); snip.textContent = e.snippet ?? "";
     li.append(head, snip);
     ul.appendChild(li);
