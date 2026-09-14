@@ -388,6 +388,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   text-decoration: none; white-space: nowrap;
 }
 .record-go:hover { text-decoration: underline; }
+.opener-note { font-size: var(--t-micro); color: var(--ink-4); margin: 0; }
 .record-snip { font-size: var(--t-small); color: var(--ink-3); margin-top: calc(var(--u) / 2); }
 .answer-foot { margin-top: var(--gap); font-size: var(--t-micro); color: var(--ink-4); }
 
