@@ -1448,6 +1448,36 @@ function renderAsk(slot, body) {
     slot.appendChild(n);
   }
 
+  // WHAT THIS ANSWER DID NOT SEE. Sits directly under the prose and ABOVE the records,
+  // because it qualifies the answer rather than annotating the list.
+  //
+  // WHY THIS EXISTS AT ALL. On 2026-09-14 this surface stated that a contract had no
+  // storage location while claiming to have searched documents. The contract had been
+  // found, had cleared Google, and had then been cut from the evidence before the
+  // reasoner ever saw it. THREE separate instruments in the payload each held part of
+  // that -- the gate object, retrieval.literal, and the silent evidence cut -- and none
+  // was on the screen, so the only way to know was a devtools panel. Two people
+  // diagnosed it wrongly, twice, in one day, from the same payload.
+  //
+  // The server sends `completeness` EMPTY when nothing was lost, so anything here always
+  // means something. This file does not compute or infer these lines: a screen deciding
+  // for itself what the brain failed to read is the same error as a screen deciding what
+  // counts as an answer.
+  if (Array.isArray(body.completeness) && body.completeness.length) {
+    const box = el("div", "answer-gaps");
+    const lab = el("p", "answer-gaps-lab");
+    lab.textContent = "What this answer did not see";
+    box.appendChild(lab);
+    const ul = el("ul", "answer-gaps-list");
+    for (const line of body.completeness) {
+      const li = el("li");
+      li.textContent = String(line);
+      ul.appendChild(li);
+    }
+    box.appendChild(ul);
+    slot.appendChild(box);
+  }
+
   const ev = (Array.isArray(body.citations) && body.citations.length)
     ? body.citations
     : (Array.isArray(body.evidence) ? body.evidence : []);
@@ -1463,8 +1493,9 @@ function renderAsk(slot, body) {
   const r = body.retrieval;
   if (r) {
     const foot = el("p", "answer-foot");
-    foot.textContent = `Looked at ${r.rows_returned} records; ${r.rows_you_can_see} are ones you can open. `
-      + `Closeness ${r.strength}, and it will not compose below ${r.floor_answerable}.`;
+    foot.textContent = `Looked at ${r.rows_returned} records; ${r.rows_you_can_see} are ones you can open`
+      + (typeof r.rows_shown === "number" ? `; ${r.rows_shown} were read` : "")
+      + `. Closeness ${r.strength}, and it will not compose below ${r.floor_answerable}.`;
     slot.appendChild(foot);
   }
 }
