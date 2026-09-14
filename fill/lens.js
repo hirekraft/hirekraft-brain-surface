@@ -1518,7 +1518,9 @@ async function fillOpeners() {
   if (!row) return;
   try {
     const { data: sess } = await sb.auth.getSession();
-    if (!sess?.session) { row.hidden = true; return; }
+    // SIGNED OUT IS A STATE, NOT A FAILURE, and it still gets said. Hiding the row
+    // left a person looking at a dock with nothing in it and no reason given.
+    if (!sess?.session) { openersNote(row, "Sign in to see what you can ask about."); return; }
     const { data, error } = await sb.rpc("ask_openers");
     if (error) throw error;
 
@@ -1532,7 +1534,12 @@ async function fillOpeners() {
     if (spans.length && input) input.placeholder = `Ask about your ${spans.join(" and ")}`;
 
     const openers = data?.openers ?? [];
-    if (!openers.length) { row.hidden = true; return; }
+    // Nothing clears the floor: the honest screen, and it says which it is rather
+    // than looking identical to a broken one.
+    if (!openers.length) {
+      openersNote(row, "Nothing you can read yet has enough behind it to suggest a question. Ask anything directly.");
+      return;
+    }
     row.innerHTML = "";
     for (const o of openers.slice(0, 3)) {
       const b = el("button", "opener");
@@ -1542,8 +1549,11 @@ async function fillOpeners() {
       row.appendChild(b);
     }
     row.hidden = false;
-  } catch {
-    row.hidden = true;
+  } catch (e) {
+    // A BARE catch THAT HIDES THE ROW IS WHY THIS TOOK A CONSOLE TO FIND. The chips
+    // were unreachable for days and the screen was indistinguishable from a screen
+    // with nothing to suggest. Whatever the fault, the person is told there was one.
+    openersNote(row, `Suggestions could not be loaded: ${e?.message ?? e}`);
   }
 }
 
@@ -1554,7 +1564,20 @@ async function fillOpeners() {
   send.addEventListener("click", go);
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
 })();
-fillOpeners();
+
+// WHEN THIS RUNS IS PART OF WHETHER IT WORKS. ask_openers() is executable by
+// `authenticated` and NOT by `anon` -- so a call issued before the session has
+// hydrated is evaluated as anon and PostgREST answers 404, which is indistinguishable
+// from the function not existing. Every other gated reading on this page (brain_shape)
+// is issued from the boot sequence further down, after the session is in hand; this
+// one was issued during module evaluation, which is the only thing that made it
+// different. Waiting for auth to resolve first costs nothing and removes the race.
+//
+// onAuthStateChange fires with the restored session on load and again on sign-in, so
+// the chips also appear for someone who signs in without reloading -- which the
+// module-evaluation call could never do.
+sb.auth.onAuthStateChange((_event, session) => { if (session) fillOpeners(); });
+sb.auth.getSession().then(({ data }) => { if (!data?.session) fillOpeners(); });
 
 // The sources tab was a second build of this same lens and is retired. What it
 // derived came across into brain_shape: the credential mechanism, the drill-in
