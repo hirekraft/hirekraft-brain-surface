@@ -389,6 +389,13 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .record-go:hover { text-decoration: underline; }
 .opener-note { font-size: var(--t-micro); color: var(--ink-4); margin: 0; }
+
+/* What the answer did not see. Quiet, not alarming: this is usually a completeness
+   note rather than a fault, and a red panel would teach people to dismiss it. */
+.answer-gaps { margin-top: var(--gap); border-left: 2px solid var(--line); padding-left: var(--u); }
+.answer-gaps-lab { font-size: var(--t-micro); color: var(--ink-4); margin: 0; }
+.answer-gaps-list { margin: calc(var(--u) / 2) 0 0; padding-left: var(--u); }
+.answer-gaps-list li { font-size: var(--t-small); color: var(--ink-3); }
 .record-snip { font-size: var(--t-small); color: var(--ink-3); margin-top: calc(var(--u) / 2); }
 .answer-foot { margin-top: var(--gap); font-size: var(--t-micro); color: var(--ink-4); }
 
