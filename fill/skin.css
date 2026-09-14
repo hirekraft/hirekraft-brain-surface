@@ -380,7 +380,14 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .record-head { display: flex; align-items: baseline; gap: var(--u); font-size: var(--t-small); }
 .record-n { color: var(--ink-4); font-size: var(--t-micro); flex: none; }
 .record-doc { color: var(--ink); font-weight: var(--w-mid); }
+.record-open { text-decoration: none; border-bottom: 1px solid var(--line); }
+.record-open:hover { color: var(--accent); border-bottom-color: var(--accent); }
 .record-src { color: var(--ink-4); font-size: var(--t-micro); }
+.record-go {
+  margin-left: auto; flex: none; font-size: var(--t-micro); color: var(--accent);
+  text-decoration: none; white-space: nowrap;
+}
+.record-go:hover { text-decoration: underline; }
 .record-snip { font-size: var(--t-small); color: var(--ink-3); margin-top: calc(var(--u) / 2); }
 .answer-foot { margin-top: var(--gap); font-size: var(--t-micro); color: var(--ink-4); }
 
