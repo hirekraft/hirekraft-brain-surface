@@ -535,7 +535,9 @@ function render(){
   +   '<section class="view" data-active="true" data-i="0">'+xbox(0)+front()+'</section>'
   +   '<section class="view" data-i="1">'+xbox(1)+conflicts()+'</section>'
   +   '<section class="view" data-i="2">'+xbox(2)+runsOn()+'</section>'
-  +   '<section class="view" data-i="3">'+xbox(3)+lab(ln,srcs)+'</section>'
+  /* THE PATH MOVED HERE WHOLE AND UNCHANGED. It is good work and it is not what Front is
+     for: Front is the two-minute tab. spine() is called, not rewritten. */
+  +   '<section class="view" data-i="3">'+xbox(3)+spine()+lab(ln,srcs)+'</section>'
   +   '<section class="view" data-i="4">'+xbox(4)+parts()+'</section>'
   +   '<section class="view" data-i="5">'+xbox(5)+frame()+'</section>'
   +   '<section class="view" data-i="6">'+xbox(6)+principles()+'</section>'
@@ -575,6 +577,7 @@ function render(){
       }
       if(w==="principles"){ goTab(6); return; }
       if(w==="runson"){ goTab(2); return; }
+      if(w==="path"){ goTab(3); return; }
       if(w==="conflicts"){ goTab(1); loadConflicts("cross"); return; }
       if(w.indexOf("records:")===0){ openRecords(w.slice(8)); return; }
     };
@@ -757,7 +760,9 @@ function spine(){
       + '<div class="no'+(i===here?' now':'')+'">'+esc(s.n)+'</div><div class="sb">'
       + '<div class="ti2">'+esc(s.title)
       +   (i===here?'<span class="chip high">where we are</span>':'')
-      +   '<span class="chip '+(n?'norm':'quiet')+'">'+(n?esc(n)+' open':'nothing open')+'</span></div>'
+      /* The badge and its disclaimer contradicted each other and the badge won, because a
+         badge is what a reader takes. It now says what is true: nothing MAPS here. */
+      +   '<span class="chip '+(n?'norm':'quiet')+'">'+(n?esc(n)+' open':'nothing maps here')+'</span></div>'
       + '<div class="de">'+esc(s.detail)+'</div>'
       + ((s.clauses||[]).map(c=>'<div class="cl"><b>'+esc(c.label)+'</b>'+esc(c.text)+'</div>').join(''))
       + (s.gate?'<div class="ga"><b>Gate — a proof, not a milestone</b>'+esc(s.gate)+'</div>'
@@ -778,6 +783,51 @@ function spine(){
        + esc((w&&w.how)||'')+'</div>'
      : '')
   + '</div>';
+}
+
+/* THE DERIVATION, ADMITTED. Derived from an absence, so it says so in plain words and
+   gives the coverage: the mapping that produced it covers a minority of the open items. */
+function whereWeAreBasis(){
+  const t=((D.work_orders||{}).totals)||{};
+  const mapped=Number(t.placed_on_a_step)||0, all=Number(t.orders)||0;
+  const noFinish=Number(t.without_finish_condition)||0;
+  return '<div class="sp-note" style="margin:6px 0 14px">'
+    + 'Nothing in either brain marks a current step. This is worked out from where open work '
+    + 'happens to be mapped, and that mapping covers '+esc(mapped)+' of '+esc(all)+' open items.'
+    + '</div>'
+    /* THE MOST HONEST NUMBER ON THE PAGE, brought up out of the footer. */
+    + (noFinish
+       ? '<div class="pi" data-goto="path" style="border-left:3px solid var(--amber-line)">'
+         + '<span class="pn">!</span><span><b>'+esc(noFinish)+' open items cannot say what would close them.</b> '
+         + 'Nobody has written down what finishing them looks like, so no one can tell when they are done.</span></div>'
+       : '');
+}
+
+/* THE THREE READINGS. Empty until the seats report: not seeded, not estimated, no
+   placeholder computed. "Not measured yet" is a true sentence and the right one to see.
+   Each carries its plain sentence beside its number so the two cannot drift apart, whether
+   it was measured or reported, and which way it moved since the reading before it. */
+function readingsBlock(){
+  const R=(D&&D.readings)||null;
+  if(!R) return '<div class="blk">The three that should fall to nothing<span class="ln"></span></div>'
+    + '<div class="empty">These could not be read just now, so they are unknown rather than zero.</div>';
+  return '<div class="blk">The three that should fall to nothing<span class="ln"></span></div>'
+  + '<div class="sp-note" style="margin-bottom:12px">'+esc(R.how||"")+'</div>'
+  + '<div class="rail">'+(R.readings||[]).map(function(r){
+      const has=r.has_reading;
+      const val=has?esc(r.value):'not measured yet';
+      const cls=!has?'warn':(r.at_target?'ok':'bad');
+      return '<div class="row '+cls+'"><span class="edge"></span>'
+ why        + '<span class="nm">'+esc(r.headline)
+        +   '<small>'+esc(r.plain)+'</small></span>'
+        + '<span class="st">'+esc(r.direction)
+        +   (r.staleness_says?'<br/><b>'+esc(r.staleness_says)+'</b>':'')
+        +   (has&&r.taken_by?'<br/>Counted by '+esc(r.taken_by)+' on '+esc(String(r.taken_at).slice(0,10)):'')
+        +   '</span>'
+        + '<span class="gg">'+val+'</span>'
+        + '<span class="md">'+(r.basis==='reported'?'REPORTED':'MEASURED')+'</span></div>';
+    }).join("")+'</div>'
+  + (R.none_reported_yet?'<div class="sp-note">'+esc(R.empty_says)+'</div>':'');
 }
 
 function orderCard(o){
@@ -1031,9 +1081,15 @@ function front(){
   return '<div class="blk">What is in the brain<span class="ln"></span></div>'
   + '<div class="pg">'+brain+'</div>'
 
+  /* ONE LINE, and the derivation admitted on its own line. A position worked out from where
+     open work happens to be mapped has to say so: nothing in either brain marks a current
+     step, and the mapping covers a minority of the open items. The seven-step path is one
+     click away on "Being built now" rather than sitting on the two-minute tab. */
   + '<div class="blk">Where we are<span class="ln"></span></div>'
-  + '<div class="pi" id="wwa"><span class="pn">›</span><span><b>'+esc((F.where_we_are||{}).line||"")+'</b></span></div>'
-  + '<div id="wwaMore" style="display:none">'+spine()+'</div>'
+  + '<div class="pi" data-goto="path"><span class="pn">›</span><span><b>'
+  +   esc((F.where_we_are||{}).line||"")+'</b> — see the full path</span></div>'
+  + whereWeAreBasis()
+  + readingsBlock()
 
   + '<div class="blk">What needs you <span class="ct">'+needs.length+'</span><span class="ln"></span></div>'
   + (needs.length?('<div class="rail">'+needsBlock+'</div>'):needsBlock)
