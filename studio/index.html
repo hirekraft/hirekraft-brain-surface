@@ -117,6 +117,18 @@
   .row.bad{opacity:1;background:linear-gradient(90deg,var(--red-bg) 0%,transparent 55%)}.row.bad .edge{background:var(--red)}.row.bad .nm{color:var(--ink);font-weight:600}.row.bad .st{color:var(--red);font-weight:500}
   .row.warn .edge{background:var(--amber-line)}.row.warn .st{color:var(--amber)}
   @media(max-width:640px){.row{grid-template-columns:3px 1fr auto}.row .st,.row .gg{display:none}}
+  /* THE READINGS ARE SENTENCES, NOT SLUGS. The shared row breaks names anywhere, which is right for
+     machinery and wrong here: it split words mid-letter. Sizes are stated, not inherited. */
+  .row.rd{grid-template-columns:3px minmax(0,1fr) minmax(0,200px) auto auto;align-items:start}
+  .row.rd .edge{height:auto;align-self:stretch}
+  .row.rd .nm{font-size:14px;line-height:1.35;word-break:normal;overflow-wrap:break-word;hyphens:none}
+  .row.rd .nm small{font-size:13px;line-height:1.45;margin-top:3px}
+  .row.rd .st{font-size:13px;line-height:1.4;word-break:normal;overflow-wrap:break-word}
+  .row.rd .gg{font-size:13px}
+  .row.rd .md{font-size:10px}
+  @media(max-width:640px){.row.rd{grid-template-columns:3px minmax(0,1fr) auto}
+    .row.rd .edge{grid-row:1/span 3}.row.rd .nm,.row.rd .st{grid-column:2/-1}
+    .row.rd .st,.row.rd .gg{display:block}.row.rd .gg{grid-column:2}.row.rd .md{grid-column:3}}
 
   /* WORK ORDERS */
   .orders{background:var(--raise);border:1px solid var(--hair);border-radius:11px;overflow:hidden;box-shadow:var(--sh-2)}
@@ -817,15 +829,17 @@ function readingsBlock(){
       const has=r.has_reading;
       const val=has?esc(r.value):'not measured yet';
       const cls=!has?'warn':(r.at_target?'ok':'bad');
-      return '<div class="row '+cls+'"><span class="edge"></span>'
+      /* NO READING, NO BADGE AND NO SECOND SENTENCE: a tag describing a reading that does not
+         exist is what a reader takes, and "not measured yet" already says the only true thing. */
+      return '<div class="row rd '+cls+'"><span class="edge"></span>'
         + '<span class="nm">'+esc(r.headline)
         +   '<small>'+esc(r.plain)+'</small></span>'
-        + '<span class="st">'+esc(r.direction)
+        + '<span class="st">'+(has?esc(r.direction):'')
         +   (r.staleness_says?'<br/><b>'+esc(r.staleness_says)+'</b>':'')
         +   (has&&r.taken_by?'<br/>Counted by '+esc(r.taken_by)+' on '+esc(String(r.taken_at).slice(0,10)):'')
         +   '</span>'
         + '<span class="gg">'+val+'</span>'
-        + '<span class="md">'+(r.basis==='reported'?'REPORTED':'MEASURED')+'</span></div>';
+        + (has?'<span class="md">'+(r.basis==='reported'?'REPORTED':'MEASURED')+'</span>':'')+'</div>';
     }).join("")+'</div>'
   + (R.none_reported_yet?'<div class="sp-note">'+esc(R.empty_says)+'</div>':'');
 }
