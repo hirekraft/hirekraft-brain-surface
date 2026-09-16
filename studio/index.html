@@ -818,7 +818,7 @@ function readingsBlock(){
       const val=has?esc(r.value):'not measured yet';
       const cls=!has?'warn':(r.at_target?'ok':'bad');
       return '<div class="row '+cls+'"><span class="edge"></span>'
- why        + '<span class="nm">'+esc(r.headline)
+        + '<span class="nm">'+esc(r.headline)
         +   '<small>'+esc(r.plain)+'</small></span>'
         + '<span class="st">'+esc(r.direction)
         +   (r.staleness_says?'<br/><b>'+esc(r.staleness_says)+'</b>':'')
