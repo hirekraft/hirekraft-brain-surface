@@ -553,7 +553,7 @@ function render(){
   +   '<section class="view" data-i="4">'+xbox(4)+parts()+'</section>'
   +   '<section class="view" data-i="5">'+xbox(5)+frame()+'</section>'
   +   '<section class="view" data-i="6">'+xbox(6)+principles()+'</section>'
-  +   '<div class="foot">'+esc(D.footer)+'<br/>Served by '+esc(D.served_by.fn)+' · the Studio’s own numbers and each customer’s, kept apart · this is the only address that serves the studio · nothing on this page is stored.</div>'
+  +   '<div class="foot">'+esc(footerLine())+'<br/>Served by '+esc(D.served_by.fn)+' · the Studio’s own numbers and each customer’s, kept apart · this is the only address that serves the studio · nothing on this page is stored.</div>'
   + '</main></div>'
   + '<div class="ov" id="ov"><div class="dr" id="drw">'+ipdocs()+'</div></div>';
 
@@ -630,6 +630,24 @@ function render(){
    hardcoded "live · America/Los_Angeles · Jun 19". What actually answers "is this page
    being generated now" is the age of the server's as_of stamp, so both are shown and
    only the second is load-bearing. */
+/* THE FOOTER DATE AND THE CLOCK ARE ONE ZONE. surface_july stamps the footer with
+   to_char(now()) on a database whose zone is UTC, while the clock above is the viewer's
+   own zone, so from late afternoon in Los Angeles the footer named tomorrow. The date is
+   now written from as_of, which is the same now() in the same call, in the viewer's zone
+   and the clock's own format. If as_of cannot be read the server's date stays and is
+   labelled UTC, rather than a date being made up. */
+function footerLine(){
+  const f=String(D.footer||"");
+  const m=/^Verified at source \d{4}-\d{2}-\d{2}/;
+  if(!m.test(f)) return f;
+  const t=Date.parse(D.as_of);
+  if(!isFinite(t)) return f.replace(m, function(x){ return x+" UTC"; });
+  const d=new Date(t);
+  const tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||"local";
+  return f.replace(m, "Verified at source "+d.toLocaleDateString([],{month:"short",day:"numeric"})
+    +" "+d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})+" · "+tz);
+}
+
 function startClock(){
   if(window.__clk) clearInterval(window.__clk);
   const tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||"local";
@@ -1071,7 +1089,7 @@ function front(){
   /* Composed here because this is where the workflow outcomes are. The database cannot see
      GitHub Actions, so a count taken there read zero failing while the daily check had
      failed five days running. */
-  let brokenLine, brokenBad=false, brokenNote="";
+  let brokenLine, brokenBad=false, brokenNote="", unknownNote="";
   if(RUN_STATE==="loading"){ brokenLine="checking…"; }
   else if(!RUN||RUN.error){ brokenLine="Could not check — so whether anything is broken is unknown, not fine."; brokenBad=true; }
   else {
@@ -1090,18 +1108,37 @@ function front(){
     const pagesBad=!!(pages.seen && pages.status!==200);
     const systems=deps.length+acts.length+1;
     const hasBasis=deps.some(function(d){ return !!d.basis; });
+    /* A VERDICT OVER 27 THAT WAS ONLY TAKEN OVER 17. "27 systems listed, 2 failing" read
+       as a judgment on all 27 while ten of them were never looked at. The failing count is
+       now stated over what was checked, the listed total rides beside it, and the rest are
+       named unknown in amber so nothing unchecked can read as passing. */
+    let checkedN=null;
     if(!hasBasis){
       brokenNote="Which of these were checked just now was not reported, so the total is not a measure of coverage.";
     } else {
       const checked=deps.filter(function(d){ return d.basis==="live"; }).length+acts.length+(pages.seen?1:0);
+      checkedN=checked;
+      const unchecked=systems-checked;
       const typed=deps.filter(function(d){ return d.basis!=="live"; });
       const unwatched=typed.filter(function(d){ return d.group==="access" && d.state!=="proven"; });
       brokenNote="Checked just now: "+checked+". Typed by hand and checked by nothing: "+typed.length
-        +(unwatched.length?(", among them "+unwatched.map(function(d){ return d.name.toLowerCase(); }).join(", ")+", which nothing watches"):"")+".";
+        +(unwatched.length?(", among them "+unwatched.map(function(d){ return d.name.toLowerCase(); }).join(", ")+", which nothing watches"):"")+"."
+        +(pages.seen?"":" The page load could not be seen.");
+      if(unchecked>0) unknownNote="The "+unchecked+" not checked are unknown, not passing.";
     }
-    const depNames=failingDeps.map(function(d){ return d.name+" — "+String(d.evidence||"failing").split(". ")[0]; })
+    const typedFailDeps=hasBasis?failingDeps.filter(function(d){ return d.basis!=="live"; }):[];
+    const depNames=failingDeps.filter(function(d){ return typedFailDeps.indexOf(d)<0; })
+      .map(function(d){ return d.name+" — "+String(d.evidence||"failing").split(". ")[0]; })
       .concat(pagesBad?["the served page answered "+pages.status]:[]);
-    if(failing.length===0 && depNames.length===0){ brokenLine=systems+" systems listed, nothing failing among those checked."; }
+    const typedTail=typedFailDeps.length?("; written down as failing but not checked: "
+      +typedFailDeps.map(function(d){ return d.name; }).join(", ")):"";
+    if(typedFailDeps.length) brokenBad=true;
+    const scope=checkedN===null?(systems+" systems listed")
+      :("of the "+checkedN+" checked just now ("+systems+" listed)");
+    if(failing.length===0 && depNames.length===0){
+      brokenLine=checkedN===null?(systems+" systems listed, nothing failing among those checked.")
+        :("None failing "+scope+typedTail+".");
+    }
     else {
       brokenBad=true;
       /* THE COUNT IS RUNS, AND THE LABEL SAID DAYS. Estate Harvest was created today by a
@@ -1124,7 +1161,8 @@ function front(){
         return nm+how;
       });
       const all=names.concat(depNames);
-      brokenLine=systems+" systems listed, "+all.length+" failing: "+all.join("; ")+".";
+      brokenLine=checkedN===null?(systems+" systems listed, "+all.length+" failing: "+all.join("; ")+".")
+        :(all.length+" failing "+scope+": "+all.join("; ")+typedTail+".");
     }
   }
 
@@ -1148,7 +1186,8 @@ function front(){
   + '<div class="pi" data-goto="runson"><span class="pn">'+(brokenBad?"!":"›")+'</span>'
   +   '<span'+(brokenBad?' style="color:var(--red)"':'')+'>'+esc(brokenLine)+'</span></div>'
   + (brokenNote?('<div class="pi" style="cursor:default;font-size:13px;line-height:1.45"><span class="pn" style="color:var(--ink-4)">·</span>'
-      +'<span style="color:var(--ink-2)">'+esc(brokenNote)+'</span></div>'):'')
+      +'<span style="color:var(--ink-2)">'+esc(brokenNote)
+      +(unknownNote?(' <span style="color:var(--amber)">'+esc(unknownNote)+'</span>'):'')+'</span></div>'):'')
   + customerLine();
 }
 
