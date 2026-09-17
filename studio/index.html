@@ -1047,26 +1047,61 @@ function front(){
   }).join("");
 
   const needs=(F.needs_you||[]);
+  /* AN ITEM HERE IS A SENTENCE SOMEONE WROTE, NOT A MEASUREMENT. "Erin cannot reach her own
+     files" stayed on this list for an hour after it was fixed, presented as current, because
+     nothing re-checks these rows. Each row now says when it was written, by whom, and that
+     nothing has re-checked it since, so a stale item reads as old rather than as true. An
+     empty list means nothing is RECORDED, and says so. rd rows wrap and keep the fix visible
+     on a phone. */
+  const provenance=function(n){
+    if(!n.written_at) return 'waiting since '+String(n.since||'?').slice(0,10)
+      +'. Who wrote this, and whether anything re-checks it, was not reported.';
+    return 'Written '+String(n.written_at).slice(0,10)+' by '+(n.written_by||'someone unnamed')+'. '
+      +(n.rechecked_by?('Re-checked by '+n.rechecked_by+'.')
+                      :'Nothing has re-checked it since, so it may no longer be true.');
+  };
   const needsBlock = needs.length
     ? needs.map(function(n){
-        return '<div class="row bad"><span class="edge"></span>'
-          + '<span class="nm">'+esc(n.line)+(n.since?('<small>waiting since '+esc(String(n.since).slice(0,10))+'</small>'):'')+'</span>'
+        return '<div class="row rd bad"><span class="edge"></span>'
+          + '<span class="nm">'+esc(n.line)+'<small>'+esc(provenance(n))+'</small></span>'
           + '<span class="st">'+esc(n.fix||"")+'</span><span class="gg"></span><span class="md">YOU</span></div>';
       }).join("")
-    : '<div class="empty">Nothing is waiting on you.</div>';
+    : '<div class="empty">Nothing is recorded as waiting on you. This list holds only what someone wrote down; nothing adds to it on its own.</div>';
 
   /* Composed here because this is where the workflow outcomes are. The database cannot see
      GitHub Actions, so a count taken there read zero failing while the daily check had
      failed five days running. */
-  let brokenLine, brokenBad=false;
+  let brokenLine, brokenBad=false, brokenNote="";
   if(RUN_STATE==="loading"){ brokenLine="checking…"; }
   else if(!RUN||RUN.error){ brokenLine="Could not check — so whether anything is broken is unknown, not fine."; brokenBad=true; }
   else {
+    /* THE LINE COUNTED 26 SYSTEMS AND COULD ONLY EVER FAIL NINE. Dependency states were
+       typed into the database function, so a scheduler whose job had failed seven times
+       read PROVEN and was never counted here. States with a live signal are now derived at
+       source and carry basis "live"; the rest carry "typed". This line counts failures from
+       all of them, and the note beneath says how many were actually checked, so a total can
+       no longer imply coverage it does not have. Same population as the runs-on tab: the two
+       GitHub rows are replaced by the live workflow runs and the live page load. */
     const acts=(RUN.actions&&RUN.actions.workflows)||[];
-    const deps=(RUN.dependencies||[]).filter(function(d){ return d.name.indexOf("GitHub Actions")<0; });
+    const pages=RUN.pages||{};
+    const deps=(RUN.dependencies||[]).filter(function(d){ return d.name.indexOf("GitHub Actions")<0 && d.name.indexOf("GitHub Pages")<0; });
     const failing=acts.filter(function(w){ return w.conclusion==="failure"; });
-    const systems=deps.length+acts.length;
-    if(failing.length===0){ brokenLine=systems+" systems, nothing failing."; }
+    const failingDeps=deps.filter(function(d){ return d.state==="failing"; });
+    const pagesBad=!!(pages.seen && pages.status!==200);
+    const systems=deps.length+acts.length+1;
+    const hasBasis=deps.some(function(d){ return !!d.basis; });
+    if(!hasBasis){
+      brokenNote="Which of these were checked just now was not reported, so the total is not a measure of coverage.";
+    } else {
+      const checked=deps.filter(function(d){ return d.basis==="live"; }).length+acts.length+(pages.seen?1:0);
+      const typed=deps.filter(function(d){ return d.basis!=="live"; });
+      const unwatched=typed.filter(function(d){ return d.group==="access" && d.state!=="proven"; });
+      brokenNote="Checked just now: "+checked+". Typed by hand and checked by nothing: "+typed.length
+        +(unwatched.length?(", among them "+unwatched.map(function(d){ return d.name.toLowerCase(); }).join(", ")+", which nothing watches"):"")+".";
+    }
+    const depNames=failingDeps.map(function(d){ return d.name+" — "+String(d.evidence||"failing").split(". ")[0]; })
+      .concat(pagesBad?["the served page answered "+pages.status]:[]);
+    if(failing.length===0 && depNames.length===0){ brokenLine=systems+" systems listed, nothing failing among those checked."; }
     else {
       brokenBad=true;
       /* THE COUNT IS RUNS, AND THE LABEL SAID DAYS. Estate Harvest was created today by a
@@ -1088,7 +1123,8 @@ function front(){
         else            how=" — failed on its last run";
         return nm+how;
       });
-      brokenLine=systems+" systems, "+failing.length+" failing: "+names.join("; ")+".";
+      const all=names.concat(depNames);
+      brokenLine=systems+" systems listed, "+all.length+" failing: "+all.join("; ")+".";
     }
   }
 
@@ -1111,6 +1147,8 @@ function front(){
   + '<div class="blk">Is anything broken<span class="ln"></span></div>'
   + '<div class="pi" data-goto="runson"><span class="pn">'+(brokenBad?"!":"›")+'</span>'
   +   '<span'+(brokenBad?' style="color:var(--red)"':'')+'>'+esc(brokenLine)+'</span></div>'
+  + (brokenNote?('<div class="pi" style="cursor:default;font-size:13px;line-height:1.45"><span class="pn" style="color:var(--ink-4)">·</span>'
+      +'<span style="color:var(--ink-2)">'+esc(brokenNote)+'</span></div>'):'')
   + customerLine();
 }
 
