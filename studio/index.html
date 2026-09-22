@@ -117,6 +117,21 @@
   .row.bad{opacity:1;background:linear-gradient(90deg,var(--red-bg) 0%,transparent 55%)}.row.bad .edge{background:var(--red)}.row.bad .nm{color:var(--ink);font-weight:600}.row.bad .st{color:var(--red);font-weight:500}
   .row.warn .edge{background:var(--amber-line)}.row.warn .st{color:var(--amber)}
   @media(max-width:640px){.row{grid-template-columns:3px 1fr auto}.row .st,.row .gg{display:none}}
+
+  /* THE SEAT BOARD. Its own class, not .row, for one reason: at 640px .row hides .st and
+     .gg, and the age of a silent seat is the whole signal Alex asked for. A column that
+     disappears on a phone is how that signal would be lost. This stacks instead of hiding,
+     and every size is stated rather than inherited. */
+  .sb{display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:baseline;
+      padding:12px 14px;border-bottom:1px solid var(--hair-2)}
+  .sb .sbt{font-size:17px;line-height:1.4;color:var(--ink);word-break:break-word}
+  .sb .sba{font-family:var(--mono);font-size:15px;color:var(--ink-3);white-space:nowrap;
+           font-variant-numeric:tabular-nums;justify-self:end}
+  .sb .sbw{grid-column:1/-1;font-size:14px;line-height:1.5;color:var(--ink-3)}
+  .sb.warn .sba{color:var(--amber)} .sb.warn .sbt{font-weight:600}
+  .sb.bad  .sba{color:var(--red)}   .sb.bad  .sbt{font-weight:600}
+  .sbnote{font-size:14px;line-height:1.55;color:var(--ink-3);margin:8px 0 0}
+  @media(max-width:640px){.sb{grid-template-columns:1fr}.sb .sba{justify-self:start}}
   /* THE READINGS ARE SENTENCES, NOT SLUGS. The shared row breaks names anywhere, which is right for
      machinery and wrong here: it split words mid-letter. Sizes are stated, not inherited. */
   .row.rd{grid-template-columns:3px minmax(0,1fr) minmax(0,200px) auto auto;align-items:start}
