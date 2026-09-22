@@ -852,6 +852,70 @@ function whereWeAreBasis(){
    placeholder computed. "Not measured yet" is a true sentence and the right one to see.
    Each carries its plain sentence beside its number so the two cannot drift apart, whether
    it was measured or reported, and which way it moved since the reading before it. */
+/* WHAT IS RUNNING AND WHAT FINISHED.
+
+   Alex: "sometimes it's hard to remember what they are for because there are so many things
+   going on", and "I would like that on the studio surface, what's running and what's done".
+   HQ can only answer this by running a query when asked, and HQ has no continuity between
+   chats, so it cannot notice a seat that stopped. The surface runs on its own and can.
+
+   EVERY LINE DERIVES. A seat registers itself when it opens and writes a snapshot when it
+   wraps; running is the first without the second. Nothing here is typed by a person,
+   because the moment a line on this block is hand-maintained it starts lying.
+
+   THE SILENT SEAT IS THE POINT. A seat that stops without wrapping would otherwise read as
+   running forever, which has already happened: four seats hit a permission prompt and lost
+   their snapshots, and one registered under one name and wrapped under another. So silence
+   past a day reads as stopped or unfinished, and a write-up matching no registration is
+   shown rather than dropped. */
+function seatsBlock(){
+  const S=(D&&D.seat_board)||null;
+  if(!S) return '<div class="blk">What is running<span class="ln"></span></div>'
+    + '<div class="empty">The seat board could not be read just now, so what is running is '
+    + 'unknown rather than nothing.</div>';
+
+  const run=S.running||[], stop=S.stopped||[], fin=S.finished||[], un=S.unmatched||[];
+  const when=function(iso){ return esc(String(iso||"").slice(0,16).replace("T"," ")); };
+
+  return '<div class="blk">What is running <span class="ct">'+run.length+'</span><span class="ln"></span></div>'
+  + (run.length
+     ? '<div class="rail">'+run.map(function(s){
+         return '<div class="sb"><span class="sbt">'+esc(s.title)+'</span>'
+           + '<span class="sba">quiet '+esc(s.silent_for)+'</span></div>';
+       }).join("")+'</div>'
+     : '<div class="empty">No seat has opened in the last 7 days without finishing.</div>')
+
+  + (stop.length
+     ? '<div class="blk">Opened and never wrote up <span class="ct">'+stop.length+'</span><span class="ln"></span></div>'
+       + '<div class="rail">'+stop.map(function(s){
+           return '<div class="sb bad"><span class="sbt">'+esc(s.title)+'</span>'
+             + '<span class="sba">silent '+esc(s.silent_for)+'</span>'
+             + '<span class="sbw">'+esc(s.says)+'</span></div>';
+         }).join("")+'</div>'
+     : '')
+
+  + (un.length
+     ? '<div class="blk">Wrote up under a name nothing registered <span class="ct">'+un.length+'</span><span class="ln"></span></div>'
+       + '<div class="rail">'+un.map(function(s){
+           return '<div class="sb warn"><span class="sbt">'+esc(s.title)+'</span>'
+             + '<span class="sba">'+when(s.wrapped)+'</span>'
+             + '<span class="sbw">'+esc(s.says)+'</span></div>';
+         }).join("")+'</div>'
+     : '')
+
+  + '<div class="blk">Finished recently<span class="ln"></span></div>'
+  + (fin.length
+     ? '<div class="rail">'+fin.map(function(s){
+         return '<div class="sb"><span class="sbt">'+esc(s.title)+'</span>'
+           + '<span class="sba">'+when(s.wrapped)+'</span></div>';
+       }).join("")+'</div>'
+     : '<div class="empty">Nothing has finished in the last 7 days.</div>')
+
+  + '<p class="sbnote">'+esc(S.finished_means||"")+'</p>'
+  + '<p class="sbnote">'+esc(S.threshold_says||"")+'</p>'
+  + '<p class="sbnote">'+esc(S.bound_says||"")+'</p>';
+}
+
 function readingsBlock(){
   const R=(D&&D.readings)||null;
   if(!R) return '<div class="blk">The three that should fall to nothing<span class="ln"></span></div>'
@@ -1193,6 +1257,7 @@ function front(){
   +   esc((F.where_we_are||{}).line||"")+'</b> — see the full path</span></div>'
   + whereWeAreBasis()
   + readingsBlock()
+  + seatsBlock()
 
   + '<div class="blk">What needs you <span class="ct">'+needs.length+'</span><span class="ln"></span></div>'
   + (needs.length?('<div class="rail">'+needsBlock+'</div>'):needsBlock)
