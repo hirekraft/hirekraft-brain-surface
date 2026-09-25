@@ -1439,6 +1439,33 @@ function inlineInto(parent, text) {
 // Kept so older call sites and the harness keep working.
 function citedInto(parent, block) { inlineInto(parent, block); }
 
+function splitRow(line) {
+  return line.replace(/^\s*\|/, "").replace(/\|\s*$/, "").split("|").map((s) => s.trim());
+}
+
+// A SET IS A TABLE WHEN THE MODEL SENDS ONE. Each cell carries its column name so the
+// table can restack as labelled rows on a phone rather than scrolling off the side.
+function tableOf(head, rows) {
+  const box = el("div", "ans-table-wrap");
+  const t = el("table", "ans-table");
+  const thead = el("thead"), htr = el("tr");
+  for (const h of head) { const th = el("th"); th.textContent = h; htr.appendChild(th); }
+  thead.appendChild(htr); t.appendChild(thead);
+  const tb = el("tbody");
+  for (const r of rows) {
+    const tr = el("tr");
+    for (let i = 0; i < head.length; i++) {
+      const td = el("td");
+      td.dataset.label = head[i] || "";
+      inlineInto(td, r[i] ?? "");
+      tr.appendChild(td);
+    }
+    tb.appendChild(tr);
+  }
+  t.appendChild(tb); box.appendChild(t);
+  return box;
+}
+
 function proseBlocks(text, cls) {
   const wrap = el("div", cls || "ans-prose");
   for (const block of String(text).split(/\n{2,}/)) {
