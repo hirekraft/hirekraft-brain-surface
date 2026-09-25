@@ -1399,23 +1399,46 @@ function titleFor(e) {
   return src ? "A record from " + src : "A record with no name";
 }
 
-// The model's text is never written as markup. [3] becomes a link to record 3 and
-// everything else stays a text node. A paragraph that is really a set is rendered
-// as a list, because the shape follows the content.
-function citedInto(parent, block) {
-  for (const part of block.split(/(\[\d+\])/)) {
-    const m = /^\[(\d+)\]$/.exec(part);
-    if (m) {
+// THE MODEL WRITES MARKDOWN AND THIS RENDERS IT. Until 2026-09-24 it did not, so a
+// six-column table of contractor agreements arrived on screen as a single run of
+// pipes and dashes, "**Contractor Agreements**" arrived with its asterisks, and
+// "---" arrived as three hyphens. The content was right and unreadable.
+//
+// Markdown is rendered STRUCTURALLY, never by writing the model's text as HTML: the
+// parser emits elements and every scrap of model text lands as a text node. So a
+// table in the answer cannot inject markup, which is the reason the old renderer
+// refused markdown in the first place. Refusing to PARSE it was the wrong fix for a
+// real concern.
+//
+// Supported because the model emits it: headings, GFM tables, bullet and numbered
+// lists, horizontal rules, inline bold, and [n] citations. Anything else stays text.
+
+// Inline: [3] becomes a citation, **text** becomes emphasis, the rest is a text node.
+function inlineInto(parent, text) {
+  for (const part of String(text).split(/(\[\d+\]|\*\*[^*]+\*\*)/)) {
+    if (!part) continue;
+    const c = /^\[(\d+)\]$/.exec(part);
+    if (c) {
       const a = el("a", "cite");
-      a.href = "#rec-" + m[1];
-      a.textContent = m[1];
-      a.dataset.rec = m[1];
+      a.href = "#rec-" + c[1];
+      a.textContent = c[1];
+      a.dataset.rec = c[1];
       parent.appendChild(a);
-    } else if (part) {
-      parent.appendChild(document.createTextNode(part));
+      continue;
     }
+    const b = /^\*\*([^*]+)\*\*$/.exec(part);
+    if (b) {
+      const s = el("strong");
+      s.textContent = b[1];
+      parent.appendChild(s);
+      continue;
+    }
+    parent.appendChild(document.createTextNode(part));
   }
 }
+// Kept so older call sites and the harness keep working.
+function citedInto(parent, block) { inlineInto(parent, block); }
+
 function proseBlocks(text, cls) {
   const wrap = el("div", cls || "ans-prose");
   for (const block of String(text).split(/\n{2,}/)) {
