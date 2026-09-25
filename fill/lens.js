@@ -1353,152 +1353,231 @@ const ASK_HEAD = {
 
 function yearOf(iso) { return iso ? String(iso).slice(0, 4) : ""; }
 
+// THE ANSWER LEADS. Everything else sits under it or behind a click.
+//
+// What this replaced, so it is not reinstated by someone reading only the code:
+// twelve records were dumped down the page, ten of them titled "Untitled" and
+// several showing raw HTML markup; the answer took three paragraphs to say it had
+// found nothing; and "12 of 24 records were not read" - the most important line on
+// the screen - sat at the bottom in grey.
+
+// Markup never reaches the screen. A stored passage that is really an HTML email
+// body is not text a person can read, so it is not shown as if it were.
+function stripMarkup(s) {
+  return String(s ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&[a-z#0-9]+;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+function looksLikeMarkup(s) {
+  const t = String(s ?? "");
+  if (!t) return false;
+  return /<\/?(div|span|p|table|tr|td|th|br|img|a|html|body|head|style|font|meta|o:p)\b/i.test(t)
+    || /style\s*=\s*["']/i.test(t)
+    || (t.match(/&[a-z#0-9]+;/gi) || []).length > 2;
+}
+
+// TITLES CUT AT WORD BOUNDARIES, NEVER MID-WORD. Locked 2026-08-18.
+function cutWords(s, max) {
+  const t = String(s ?? "").trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const sp = cut.lastIndexOf(" ");
+  return (sp > 20 ? cut.slice(0, sp) : cut).replace(/[\s,;:.\-]+$/, "") + "\u2026";
+}
+
+// "Untitled" is not a name, it is the absence of one shown ten times over. A record
+// with no title gets one derived from its own readable text, and failing that from
+// the source it came from.
+function titleFor(e) {
+  const given = String(e.doc ?? "").trim();
+  if (given && !/^untitled$/i.test(given)) return given;
+  const clean = stripMarkup(e.snippet);
+  if (clean.length > 12) return cutWords(clean, 64);
+  const src = String(e.source ?? "").trim();
+  return src ? "A record from " + src : "A record with no name";
+}
+
 // The model's text is never written as markup. [3] becomes a link to record 3 and
-// everything else stays a text node.
-function proseWithCitations(text) {
-  const wrap = el("div", "answer-prose");
-  for (const block of String(text).split(/\n{2,}/)) {
-    const p = el("p");
-    for (const part of block.split(/(\[\d+\])/)) {
-      const m = /^\[(\d+)\]$/.exec(part);
-      if (m) {
-        const a = el("a", "cite");
-        a.href = "#rec-" + m[1];
-        a.textContent = m[1];
-        p.appendChild(a);
-      } else if (part) {
-        p.appendChild(document.createTextNode(part));
-      }
+// everything else stays a text node. A paragraph that is really a set is rendered
+// as a list, because the shape follows the content.
+function citedInto(parent, block) {
+  for (const part of block.split(/(\[\d+\])/)) {
+    const m = /^\[(\d+)\]$/.exec(part);
+    if (m) {
+      const a = el("a", "cite");
+      a.href = "#rec-" + m[1];
+      a.textContent = m[1];
+      a.dataset.rec = m[1];
+      parent.appendChild(a);
+    } else if (part) {
+      parent.appendChild(document.createTextNode(part));
     }
-    wrap.appendChild(p);
+  }
+}
+function proseBlocks(text, cls) {
+  const wrap = el("div", cls || "ans-prose");
+  for (const block of String(text).split(/\n{2,}/)) {
+    const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+    const bullet = lines.length > 1 && lines.every((l) => /^([-*\u2022]|\d+[.)])\s+/.test(l));
+    if (bullet) {
+      const ol = /^\d/.test(lines[0]);
+      const list = el(ol ? "ol" : "ul", "ans-list");
+      for (const l of lines) {
+        const li = el("li");
+        citedInto(li, l.replace(/^([-*\u2022]|\d+[.)])\s+/, ""));
+        list.appendChild(li);
+      }
+      wrap.appendChild(list);
+    } else {
+      const p = el("p");
+      citedInto(p, lines.join(" "));
+      wrap.appendChild(p);
+    }
   }
   return wrap;
 }
 
-// A record carries what the payload actually holds: which document, which source, the
-// passage itself, and -- WHERE ONE EXISTS -- a way to open the original.
-//
-// THE LINK IS THE SERVER'S, NOT THIS FILE'S. lens-ask v27 decides whether a record has
-// an addressable original and sends open_url only then. This file renders a link when
-// the field is present and a plain record when it is not. It never builds a url from a
-// source key: that would put connector knowledge on the screen, and it would produce a
-// confident link for the legacy rows that have nothing to open. A dead link in an
-// evidence panel teaches the customer that the citations are decorative -- the same
-// lesson the unwired ask box taught, in a smaller place.
-//
-// The inline [3] stays an IN-PAGE jump rather than an outbound link. The person lands on
-// the record and its passage first and opens the original only if they want it: one click
-// from the claim to the record it rests on, a second from the record to the source.
-function recordList(evidence) {
+// EVIDENCE IS COLLAPSED BY DEFAULT, ALWAYS. Each record is its own disclosure, so a
+// citation opens THAT passage rather than landing the reader in a wall of twelve.
+function recordList(evidence, summaryText) {
+  const wrap = el("details", "recs");
+  const sum = el("summary", "recs-sum");
+  sum.textContent = `${summaryText} (${evidence.length})`;
+  wrap.appendChild(sum);
+
   const ul = el("ul", "records");
   for (const e of evidence) {
     const li = el("li", "record");
     li.id = "rec-" + e.n;
-    const head = el("p", "record-head");
+
+    const d = el("details", "record-d");
+    const s = el("summary", "record-head");
     const n = el("span", "record-n"); n.textContent = e.n;
-
-    // Only an https url the server actually sent becomes a link. Anything else is text.
-    const openable = typeof e.open_url === "string" && /^https:\/\//.test(e.open_url);
-    const doc = openable ? el("a", "record-doc record-open") : el("span", "record-doc");
-    if (openable) { doc.href = e.open_url; doc.target = "_blank"; doc.rel = "noopener noreferrer"; }
-    doc.textContent = e.doc || "Untitled";
-
+    const doc = el("span", "record-doc"); doc.textContent = titleFor(e);
     const src = el("span", "record-src"); src.textContent = e.source ?? "";
-    head.append(n, doc, src);
+    s.append(n, doc, src);
+    d.appendChild(s);
 
+    // Only an https url the server actually sent becomes a link. Anything else is
+    // text: a dead link in an evidence panel teaches that citations are decorative.
+    const openable = typeof e.open_url === "string" && /^https:\/\//.test(e.open_url);
     if (openable) {
       const go = el("a", "record-go");
-      go.href = e.open_url;
-      go.target = "_blank";
-      go.rel = "noopener noreferrer";
+      go.href = e.open_url; go.target = "_blank"; go.rel = "noopener noreferrer";
       go.textContent = "Open in " + (e.open_in || "the source");
-      head.appendChild(go);
+      d.appendChild(go);
     }
 
-    const snip = el("p", "record-snip"); snip.textContent = e.snippet ?? "";
-    li.append(head, snip);
+    const raw = e.snippet ?? "";
+    if (looksLikeMarkup(raw)) {
+      const note = el("p", "record-note");
+      note.textContent = openable
+        ? "Stored as markup rather than readable text. Open the original to read it."
+        : "Stored as markup rather than readable text.";
+      d.appendChild(note);
+    } else {
+      const clean = stripMarkup(raw);
+      if (clean) {
+        const snip = el("p", "record-snip");
+        snip.textContent = cutWords(clean, 700);
+        d.appendChild(snip);
+      }
+    }
+
+    li.appendChild(d);
     ul.appendChild(li);
   }
-  return ul;
+  wrap.appendChild(ul);
+  return wrap;
 }
 
 function askProblem(slot, msg) {
   slot.innerHTML = "";
-  const h = el("h3", "answer-head"); h.textContent = "That did not get an answer";
-  const p = el("p", "answer-why"); p.textContent = msg;
-  slot.append(h, p);
+  const p = el("p", "ans-lead");
+  p.textContent = msg || "That did not get an answer.";
+  slot.appendChild(p);
 }
 
 function renderAsk(slot, body) {
   slot.innerHTML = "";
   const state = body.state;
-  const h = el("h3", "answer-head");
-  h.textContent = ASK_HEAD[state] ?? "Nothing to show";
-  const why = el("p", "answer-why");
-  why.textContent = body.state_reason ?? "";
-  slot.append(h, why);
+  const answered = state === "answered" && typeof body.answer === "string" && body.answer;
 
-  // The one place prose appears, and only when the server composed it.
-  if (state === "answered" && typeof body.answer === "string" && body.answer) {
-    slot.appendChild(proseWithCitations(body.answer));
+  // 1. THE LEAD. One or two sentences, and nothing above it. When the server
+  //    composed an answer the answer IS the lead; a heading reading "Answer" above
+  //    an answer is the page showing its working.
+  let rest = null;
+  if (answered) {
+    const blocks = String(body.answer).split(/\n{2,}/);
+    slot.appendChild(proseBlocks(blocks[0], "ans-lead-prose"));
+    if (blocks.length > 1) rest = blocks.slice(1).join("\n\n");
+  } else {
+    const lead = el("p", "ans-lead");
+    lead.textContent = body.state_reason || ASK_HEAD[state] || "Nothing to show.";
+    slot.appendChild(lead);
   }
-  if (state === "records_only" && body.not_composed_because) {
-    const n = el("p", "answer-why");
+
+  // 2. WHAT IT DID NOT SEE, DIRECTLY UNDER THE LEAD AND IN FULL INK. This was at the
+  //    bottom in grey while being the line that decided whether the answer could be
+  //    trusted. The server sends `completeness` empty when nothing was lost, so
+  //    anything here always means something. Never computed on this side.
+  if (Array.isArray(body.completeness) && body.completeness.length) {
+    const box = el("div", "ans-gap");
+    const first = el("p", "ans-gap-lead");
+    first.textContent = String(body.completeness[0]);
+    box.appendChild(first);
+    if (body.completeness.length > 1) {
+      const ul = el("ul", "ans-gap-list");
+      for (const line of body.completeness.slice(1)) {
+        const li = el("li"); li.textContent = String(line); ul.appendChild(li);
+      }
+      box.appendChild(ul);
+    }
+    slot.appendChild(box);
+  }
+
+  // 3. THE REST OF THE ANSWER, below the lead.
+  if (rest) slot.appendChild(proseBlocks(rest));
+  if (!answered && state === "records_only" && body.not_composed_because) {
+    const n = el("p", "ans-meta");
     n.textContent = "Not composed because " + body.not_composed_because + ".";
     slot.appendChild(n);
   }
 
-  // WHAT THIS ANSWER DID NOT SEE. Sits directly under the prose and ABOVE the records,
-  // because it qualifies the answer rather than annotating the list.
-  //
-  // WHY THIS EXISTS AT ALL. On 2026-09-14 this surface stated that a contract had no
-  // storage location while claiming to have searched documents. The contract had been
-  // found, had cleared Google, and had then been cut from the evidence before the
-  // reasoner ever saw it. THREE separate instruments in the payload each held part of
-  // that -- the gate object, retrieval.literal, and the silent evidence cut -- and none
-  // was on the screen, so the only way to know was a devtools panel. Two people
-  // diagnosed it wrongly, twice, in one day, from the same payload.
-  //
-  // The server sends `completeness` EMPTY when nothing was lost, so anything here always
-  // means something. This file does not compute or infer these lines: a screen deciding
-  // for itself what the brain failed to read is the same error as a screen deciding what
-  // counts as an answer.
-  if (Array.isArray(body.completeness) && body.completeness.length) {
-    const box = el("div", "answer-gaps");
-    const lab = el("p", "answer-gaps-lab");
-    lab.textContent = "What this answer did not see";
-    box.appendChild(lab);
-    const ul = el("ul", "answer-gaps-list");
-    for (const line of body.completeness) {
-      const li = el("li");
-      li.textContent = String(line);
-      ul.appendChild(li);
-    }
-    box.appendChild(ul);
-    slot.appendChild(box);
-  }
-
+  // 4. SOURCES BEHIND A CLICK, with the audit line inside them rather than on the page.
   const ev = (Array.isArray(body.citations) && body.citations.length)
     ? body.citations
     : (Array.isArray(body.evidence) ? body.evidence : []);
   if (ev.length) {
-    const lab = el("p", "records-lab");
-    lab.textContent = state === "answered" ? "The records this came from" : "What came back";
-    slot.append(lab, recordList(ev));
-  }
-
-  // Honesty-of-state, in the small type: what was searched, how much of it this
-  // person can open, and the closeness against the line the server will not
-  // compose below. Auditable rather than decorative.
-  const r = body.retrieval;
-  if (r) {
-    const foot = el("p", "answer-foot");
-    foot.textContent = `Looked at ${r.rows_returned} records; ${r.rows_you_can_see} are ones you can open`
-      + (typeof r.rows_shown === "number" ? `; ${r.rows_shown} were read` : "")
-      + `. Closeness ${r.strength}, and it will not compose below ${r.floor_answerable}.`;
-    slot.appendChild(foot);
+    const recs = recordList(ev, answered ? "The records this came from" : "What came back");
+    const r = body.retrieval;
+    if (r) {
+      const foot = el("p", "ans-meta");
+      foot.textContent = `Looked at ${r.rows_returned} records; ${r.rows_you_can_see} are ones you can open`
+        + (typeof r.rows_shown === "number" ? `; ${r.rows_shown} were read` : "")
+        + `. Closeness ${r.strength}, and it will not compose below ${r.floor_answerable}.`;
+      recs.appendChild(foot);
+    }
+    slot.appendChild(recs);
   }
 }
+
+// A citation opens the one passage it points at, rather than scrolling the reader
+// into a list and leaving them to find it.
+document.addEventListener("click", (e) => {
+  const a = e.target.closest ? e.target.closest("a.cite") : null;
+  if (!a || !a.dataset.rec) return;
+  const li = document.getElementById("rec-" + a.dataset.rec);
+  if (!li) return;
+  e.preventDefault();
+  const outer = li.closest("details.recs");
+  if (outer) outer.open = true;
+  const inner = li.querySelector("details.record-d");
+  if (inner) inner.open = true;
+  li.scrollIntoView({ block: "center", behavior: "smooth" });
+});
 
 async function ask(question) {
   const q = (question ?? "").trim();
