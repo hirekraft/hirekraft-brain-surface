@@ -360,44 +360,87 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase;
   color: var(--ink-4); margin-bottom: var(--u);
 }
-.answer-head { font-size: var(--t-head); color: var(--ink); line-height: var(--lead-tight); }
-.answer-why { font-size: var(--t-small); color: var(--ink-3); margin-top: var(--u); }
-.answer-wait { font-size: var(--t-small); color: var(--ink-4); }
-.answer-prose { margin-top: var(--gap); color: var(--ink-2); }
-.answer-prose p + p { margin-top: var(--gap); }
+/* THE ANSWER SCREEN. Two sizes only, and no third creeps in: 17px is the answer
+   and the line qualifying it, 13.5px is everything else. The previous version used
+   four sizes in one block, which is what "showing its working" looks like. */
+.answer-wait { font-size: 13.5px; color: var(--ink-4); }
+
+.ans-lead, .ans-lead-prose p, .ans-lead-prose li {
+  font-size: 17px; line-height: 1.5; color: var(--ink); margin: 0;
+}
+.ans-lead-prose p + p { margin-top: var(--gap); }
+
+.ans-prose { margin-top: var(--gap); color: var(--ink-2); }
+.ans-prose p, .ans-prose li { font-size: 17px; line-height: 1.5; }
+.ans-prose p + p, .ans-prose p + ul, .ans-prose p + ol { margin-top: var(--gap); }
+.ans-list { margin: 0; padding-left: 20px; }
+.ans-list li + li { margin-top: calc(var(--u) * 1.5); }
+
+/* A set is a list, a fact is a sentence: both inherit the answer's size, because
+   changing the type size would say the list matters less than the sentence. */
+
 .cite {
-  font-size: var(--t-micro); color: var(--accent); text-decoration: none;
-  vertical-align: super; padding: 0 2px;
+  font-size: 11px; color: var(--accent); text-decoration: none;
+  vertical-align: super; padding: 0 2px; cursor: pointer;
 }
 .cite:hover { text-decoration: underline; }
-.records-lab {
-  margin-top: var(--gap-lg); font-size: var(--t-micro); letter-spacing: .08em;
-  text-transform: uppercase; color: var(--ink-4);
-}
-.records { list-style: none; margin-top: var(--u); }
-.record { padding: var(--gap) 0; border-top: 1px solid var(--line-2); }
-.record:target { background: var(--paper-2); }
-.record-head { display: flex; align-items: baseline; gap: var(--u); font-size: var(--t-small); }
-.record-n { color: var(--ink-4); font-size: var(--t-micro); flex: none; }
-.record-doc { color: var(--ink); font-weight: var(--w-mid); }
-.record-open { text-decoration: none; border-bottom: 1px solid var(--line); }
-.record-open:hover { color: var(--accent); border-bottom-color: var(--accent); }
-.record-src { color: var(--ink-4); font-size: var(--t-micro); }
-.record-go {
-  margin-left: auto; flex: none; font-size: var(--t-micro); color: var(--accent);
-  text-decoration: none; white-space: nowrap;
-}
-.record-go:hover { text-decoration: underline; }
+
+.ans-meta { margin-top: var(--gap); font-size: 13.5px; color: var(--ink-3); }
 .opener-note { font-size: var(--t-micro); color: var(--ink-4); margin: 0; }
 
-/* What the answer did not see. Quiet, not alarming: this is usually a completeness
-   note rather than a fault, and a red panel would teach people to dismiss it. */
-.answer-gaps { margin-top: var(--gap); border-left: 2px solid var(--line); padding-left: var(--u); }
-.answer-gaps-lab { font-size: var(--t-micro); color: var(--ink-4); margin: 0; }
-.answer-gaps-list { margin: calc(var(--u) / 2) 0 0; padding-left: var(--u); }
-.answer-gaps-list li { font-size: var(--t-small); color: var(--ink-3); }
-.record-snip { font-size: var(--t-small); color: var(--ink-3); margin-top: calc(var(--u) / 2); }
-.answer-foot { margin-top: var(--gap); font-size: var(--t-micro); color: var(--ink-4); }
+/* WHAT THE ANSWER DID NOT SEE. Sits with the answer, at the answer's size, in full
+   ink. Quiet rather than alarming - a red panel teaches people to dismiss it - but
+   grey small type at the bottom of the page taught them not to see it at all. */
+.ans-gap {
+  margin-top: var(--gap); border-left: 2px solid var(--ink-4);
+  padding-left: calc(var(--u) * 3);
+}
+.ans-gap-lead { font-size: 17px; line-height: 1.5; color: var(--ink); margin: 0; }
+.ans-gap-list { margin: calc(var(--u) * 1.5) 0 0; padding-left: 20px; }
+.ans-gap-list li { font-size: 13.5px; color: var(--ink-2); }
+.ans-gap-list li + li { margin-top: calc(var(--u)); }
+
+/* EVIDENCE, COLLAPSED BY DEFAULT, ALWAYS. */
+.recs { margin-top: var(--gap-lg); border-top: 1px solid var(--line); }
+.recs-sum {
+  font-size: 13.5px; color: var(--ink-3); cursor: pointer;
+  padding: calc(var(--u) * 3) 0; list-style: none;
+}
+.recs-sum::-webkit-details-marker { display: none; }
+.recs-sum::before { content: "\203A "; display: inline-block; width: 14px; }
+.recs[open] > .recs-sum::before { transform: rotate(90deg); }
+.recs-sum:hover { color: var(--ink); }
+
+.records { list-style: none; margin: 0 0 var(--gap); }
+.record { border-top: 1px solid var(--line-2); }
+.record-d { padding: calc(var(--u) * 2.5) 0; }
+.record-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: calc(var(--u) * 2);
+  font-size: 13.5px; cursor: pointer; list-style: none;
+}
+.record-head::-webkit-details-marker { display: none; }
+.record-n { color: var(--ink-4); flex: none; min-width: 14px; }
+.record-doc { color: var(--ink); font-weight: var(--w-mid); }
+.record-src { color: var(--ink-4); }
+.record-go {
+  display: inline-block; margin-top: calc(var(--u) * 2);
+  font-size: 13.5px; color: var(--accent); text-decoration: none;
+}
+.record-go:hover { text-decoration: underline; }
+.record-snip, .record-note {
+  font-size: 13.5px; line-height: 1.55; color: var(--ink-2);
+  margin-top: calc(var(--u) * 2); max-width: var(--measure);
+}
+.record-note { color: var(--ink-4); }
+
+/* NARROW WIDTHS. The record head is the row that breaks first: title, source and
+   an open link on one flex line. It wraps rather than crushing, and the title is
+   allowed to take the whole width before anything else moves. */
+@media (max-width: 560px) {
+  .record-doc { flex: 1 1 100%; }
+  .record-n { order: -1; }
+  .ans-gap { padding-left: calc(var(--u) * 2.5); }
+}
 
 /* ── honesty-of-state banner ─────────────────────────────────────────── */
 
