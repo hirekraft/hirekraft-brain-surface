@@ -355,7 +355,13 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* The answer, in the body. Structure first: the heading and the reason land
    before the records, and space is not reserved for prose that may never exist. */
 .answer { margin-bottom: var(--gap-lg); }
-.answer-in { max-width: var(--measure); }
+.answer-in { max-width: none; }
+/* THE MEASURE SITS ON THE TEXT, NOT ON THE REGION. Prose stays at a reading width;
+   a table is allowed the full column, because a six-column table squeezed into 62ch
+   is the reason the answer was unreadable even after the markdown was parsed. */
+.ans-lead, .ans-lead-prose p, .ans-prose p, .ans-list, .ans-gap, .ans-meta {
+  max-width: var(--measure);
+}
 .answer-asked {
   font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase;
   color: var(--ink-4); margin-bottom: var(--u);
@@ -386,6 +392,43 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .cite:hover { text-decoration: underline; }
 
 .ans-meta { margin-top: var(--gap); font-size: 13.5px; color: var(--ink-3); }
+
+/* Section labels inside a long answer. 13.5px so they group without competing with
+   the answer itself: one thing emphasised per block, and in a section the emphasis
+   is the content, not the label. */
+.ans-h {
+  font-size: 13.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3); margin: calc(var(--u) * 8) 0 calc(var(--u) * 2);
+}
+.ans-prose > .ans-h:first-child, .ans-lead-prose > .ans-h:first-child { margin-top: var(--gap); }
+.ans-prose strong, .ans-lead-prose strong { font-weight: var(--w-mid); color: var(--ink); }
+
+/* A SET IS A TABLE. Hairlines only, no fill, no zebra: the data is the emphasis. */
+.ans-table-wrap { margin-top: var(--gap); overflow-x: auto; }
+.ans-table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.ans-table th {
+  text-align: left; font-weight: var(--w-mid); color: var(--ink);
+  padding: 0 calc(var(--u) * 5) calc(var(--u) * 2) 0;
+  border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.ans-table td {
+  padding: calc(var(--u) * 2.5) calc(var(--u) * 5) calc(var(--u) * 2.5) 0;
+  border-bottom: 1px solid var(--line-2); color: var(--ink-2);
+  vertical-align: top; line-height: 1.45;
+}
+.ans-table th:last-child, .ans-table td:last-child { padding-right: 0; }
+
+/* NARROW WIDTHS. A table does not scroll sideways on a phone: each row restacks as
+   its own labelled block, which is why every cell carries its column name. */
+@media (max-width: 560px) {
+  .ans-table thead { position: absolute; left: -9999px; }
+  .ans-table tr { display: block; padding: calc(var(--u) * 3) 0; border-bottom: 1px solid var(--line); }
+  .ans-table td { display: block; border: 0; padding: calc(var(--u) / 2) 0; }
+  .ans-table td::before {
+    content: attr(data-label) ": "; color: var(--ink-4);
+  }
+  .ans-table td:empty { display: none; }
+}
 .opener-note { font-size: var(--t-micro); color: var(--ink-4); margin: 0; }
 
 /* WHAT THE ANSWER DID NOT SEE. Sits with the answer, at the answer's size, in full
