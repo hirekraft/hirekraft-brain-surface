@@ -57,6 +57,12 @@ body {
   -webkit-font-smoothing: antialiased;
   padding-bottom: calc(var(--dock-h) + var(--gap-lg));
 }
+/* Reserve the room the dock actually takes. One line when there is no
+   conversation, most of the lower half once there is, so the end of the page
+   is never left underneath it. */
+body:has(#s-answer:not([hidden])) #main {
+  padding-bottom: 62vh;
+}
 
 /* ── shell ───────────────────────────────────────────────────────────── */
 
@@ -310,15 +316,34 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* ── the consultant: a docked line that expands ──────────────────────── */
 
+/* THE CHAT IS THE WORKING HALF, 2026-09-27 at Alex's instruction.
+   It was one line at the bottom while the conversation appeared in the body
+   above it, so the place you type and the place the answer lands were at
+   opposite ends of the page. This SUPERSEDES the note in index.html that the
+   answer belongs in the body rather than the dock; that note is now removed.
+   The dock grows with the conversation and stays one line high when there is
+   none, so it is large when working and not furniture when empty. */
 .dock {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
   background: var(--paper); border-top: 1px solid var(--line);
+  display: flex; flex-direction: column; max-height: 58vh;
 }
-.dock-in { max-width: 860px; margin: 0 auto; padding: 0 var(--gap); }
+.dock-in {
+  max-width: 860px; margin: 0 auto; padding: 0 var(--gap); width: 100%;
+  display: flex; flex-direction: column; min-height: 0;
+}
+/* The conversation scrolls inside the dock; the input never leaves the bottom. */
+.dock .answer {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  margin-bottom: 0; padding: var(--gap) 0;
+}
+.dock .dock-bar { flex: none; border-top: 1px solid var(--line-2); }
+
 .dock-log {
   max-height: 0; overflow-y: auto; transition: max-height .2s var(--ease);
 }
-.dock.open .dock-log { max-height: 42vh; }
+/* The operational log yields to the conversation rather than competing with it. */
+.dock.open .dock-log { max-height: 22vh; flex: none; }
 .dock-log-in { padding: var(--gap) 0; }
 .turn { font-size: var(--t-small); max-width: var(--measure); }
 .turn + .turn { margin-top: var(--gap); }
