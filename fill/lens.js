@@ -1481,28 +1481,87 @@ function tableOf(head, rows) {
   return box;
 }
 
-function proseBlocks(text, cls) {
-  const wrap = el("div", cls || "ans-prose");
-  for (const block of String(text).split(/\n{2,}/)) {
-    const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
-    const bullet = lines.length > 1 && lines.every((l) => /^([-*\u2022]|\d+[.)])\s+/.test(l));
-    if (bullet) {
-      const ol = /^\d/.test(lines[0]);
-      const list = el(ol ? "ol" : "ul", "ans-list");
-      for (const l of lines) {
-        const li = el("li");
-        citedInto(li, l.replace(/^([-*\u2022]|\d+[.)])\s+/, ""));
-        list.appendChild(li);
-      }
-      wrap.appendChild(list);
-    } else {
-      const p = el("p");
-      citedInto(p, lines.join(" "));
-      wrap.appendChild(p);
-    }
+// PATTERNS ARE BUILT, NOT WRITTEN, and that is on purpose.
+// The file-writing tool mangles escaped characters, which is what stopped this
+// function landing for two days. Written as literals it carries backslashes,
+// brace quantifiers and unicode escapes, and the write fails. Assembled from
+// plain strings at runtime it carries none, and the write goes through.
+// If you rewrite these as literal regexes you will not be able to save the file.
+const BS = String.fromCharCode(92);
+const RX = {
+  rule:   new RegExp("^(-{3,}|[*]{3,}|_{3,})$"),
+  head:   new RegExp("^#{1,6}" + BS + "s+(.*)$"),
+  bold:   new RegExp("^[*][*](.+?)[*][*]:?$"),
+  row:    new RegExp("^[|].*[|]" + BS + "s*$"),
+  sep:    new RegExp("^[|][" + BS + "s:|-]+[|]" + BS + "s*$"),
+  bullet: new RegExp("^([-*" + BS + "u2022]|" + BS + "d+[.)])" + BS + "s+"),
+  digit:  new RegExp("^" + BS + "d"),
+  stars:  new RegExp("[*][*]", "g"),
+};
+
+function mdOneBlock(wrap, lines, i, flush) {
+  const t = lines[i].trim();
+
+  // A rule between sections is redundant once the sections are headed.
+  if (RX.rule.test(t)) { flush(); return i + 1; }
+
+  const h = RX.head.exec(t) || RX.bold.exec(t);
+  if (h) {
+    flush();
+    const hd = el("p", "ans-h");
+    hd.textContent = h[1].replace(RX.stars, "").trim();
+    wrap.appendChild(hd);
+    return i + 1;
   }
+
+  if (RX.row.test(t) && i + 1 < lines.length && RX.sep.test(lines[i + 1].trim())) {
+    flush();
+    const head = splitRow(t);
+    let j = i + 2;
+    const rows = [];
+    while (j < lines.length && RX.row.test(lines[j].trim())) { rows.push(splitRow(lines[j].trim())); j++; }
+    wrap.appendChild(tableOf(head, rows));
+    return j;
+  }
+
+  if (RX.bullet.test(t)) {
+    flush();
+    const list = el(RX.digit.test(t) ? "ol" : "ul", "ans-list");
+    let j = i;
+    while (j < lines.length && RX.bullet.test(lines[j].trim())) {
+      const li = el("li");
+      inlineInto(li, lines[j].trim().replace(RX.bullet, ""));
+      list.appendChild(li);
+      j++;
+    }
+    wrap.appendChild(list);
+    return j;
+  }
+
+  return -1;
+}
+
+function mdBlocks(text, cls) {
+  const wrap = el("div", cls || "ans-prose");
+  const lines = String(text).split(String.fromCharCode(10));
+  let para = [];
+  const flush = () => {
+    if (!para.length) return;
+    const p = el("p");
+    inlineInto(p, para.join(" "));
+    wrap.appendChild(p);
+    para = [];
+  };
+  for (let i = 0; i < lines.length; ) {
+    if (!lines[i].trim()) { flush(); i++; continue; }
+    const next = mdOneBlock(wrap, lines, i, flush);
+    if (next < 0) { para.push(lines[i].trim()); i++; continue; }
+    i = next;
+  }
+  flush();
   return wrap;
 }
+function proseBlocks(text, cls) { return mdBlocks(text, cls); }
 
 // EVIDENCE IS COLLAPSED BY DEFAULT, ALWAYS. Each record is its own disclosure, so a
 // citation opens THAT passage rather than landing the reader in a wall of twelve.
