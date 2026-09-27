@@ -121,16 +121,31 @@ const escape = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
 
 // ── reading the brain ────────────────────────────────────────────────────────
 
+// ARRIVAL COSTS ONE ROUND TRIP, NOT TWO. All three readings now start together.
+// brain_shape does not feed readMailboxes or readDriveStates - neither of them
+// touches `shape` - so awaiting it before starting them was a whole extra trip
+// on every arrival, for no dependency.
+//
+// Navigation was never re-reading the brain: goto() only hides and shows
+// sections and stages the connect screen once, openConnect stages a picker
+// without reading, and drawMembers fetches nothing. This function runs twice by
+// design, at boot and when the doorbell says something changed.
+//
+// Both helpers swallow their own errors and never reject, so starting them
+// before the unbound check cannot produce an unhandled rejection. A signed-out
+// caller spends two cheap gated calls whose results are then ignored.
 async function readBrain() {
   const tree = $("#tree");
   try {
+    const mbx = readMailboxes();
+    const drv = readDriveStates();
     const { data, error } = await sb.rpc("brain_shape");
     if (error) throw error;
 
     if (data?.state === "unbound") { renderState("unbound"); routeOnState("unbound"); return; }
 
     shape = data;
-    await Promise.all([readMailboxes(), readDriveStates()]);
+    await Promise.all([mbx, drv]);
     renderWho();
     fillTree();
     fillAttention();
