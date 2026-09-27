@@ -1637,13 +1637,21 @@ async function ask(question) {
   const sec = $("#s-answer");
   const mount = $("#answer-in");
   sec.hidden = false;
-  mount.innerHTML = "";
+
+  // THE CONVERSATION SURVIVES. Each question appends a turn and nothing clears
+  // what came before. Until now every new question ran mount.innerHTML = "", so
+  // asking a second thing destroyed the first answer and its records with it -
+  // which is the one thing a person needs when checking a second answer against
+  // a first. Navigation was never the problem: goto() only hides section.step and
+  // this section is not one.
+  const turn = el("div", "answer-turn");
   const asked = el("p", "answer-asked"); asked.textContent = q;
   const slot = el("div", "answer-slot");
   const wait = el("p", "answer-wait"); wait.textContent = "Reading your records.";
   slot.appendChild(wait);
-  mount.append(asked, slot);
-  window.scrollTo({ top: 0 });
+  turn.append(asked, slot);
+  mount.appendChild(turn);
+  turn.scrollIntoView({ block: "start", behavior: "smooth" });
 
   try {
     const { data } = await sb.auth.getSession();
