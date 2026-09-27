@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-09-27-1">
+<link rel="stylesheet" href="skin.css?v=2026-09-27-2">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -163,6 +163,11 @@
     <!-- Structure renders immediately with space reserved; the reading lands into it. -->
     <div class="tree" id="tree" aria-busy="true"></div>
 
+    <!-- TWO BOXES. "See what is connected" opens the overview; "Needs attention"
+         is written only when there is something, so it can never sit here empty
+         and become furniture. Both are drawn by fillAttention. -->
+    <div class="boxes" id="below-tiles"></div>
+
     <!-- Appears only when there is something to act on. Holding a mailbox's key
          and being allowed to read it here are two different facts, and this is
          where the second one is granted. Empty means nothing is waiting. -->
@@ -170,12 +175,15 @@
 
     <div id="live-state" aria-live="polite"></div>
 
-    <h2 style="margin-top:4rem">Where we could do more
-      <span class="grp-shape" id="attn-count"></span></h2>
-    <p class="quiet">Only what no source can say on its own line &mdash; something true of two
-      connections at once, or of a source with no line of its own. Anything a row states, it
-      states there. Retries, rate limits and our own repairs never appear here.</p>
-    <ul class="attn" id="attn" aria-live="polite"></ul>
+    <!-- The detail sits behind the box rather than beside it. -->
+    <div id="attn-panel" hidden>
+      <h2 style="margin-top:4rem">Where we could do more
+        <span class="grp-shape" id="attn-count"></span></h2>
+      <p class="quiet">Only what no source can say on its own line &mdash; something true of two
+        connections at once, or of a source with no line of its own. Anything a row states, it
+        states there. Retries, rate limits and our own repairs never appear here.</p>
+      <ul class="attn" id="attn" aria-live="polite"></ul>
+    </div>
 
     <div class="actions" style="margin-top:2.5rem">
       <button class="go ghost" data-goto="s-connect">Connect something else</button>
@@ -250,6 +258,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-09-27-1"></script>
+<script type="module" src="lens.js?v=2026-09-27-2"></script>
 </body>
 </html>
