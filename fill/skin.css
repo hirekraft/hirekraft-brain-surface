@@ -614,6 +614,31 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   .holding .stall { animation-duration: 0s; }
 }
 
+/* THE TWO BOXES. Side by side where there is room, stacked on a phone. Plain
+   surfaces, not cards: the accent appears only on the attention box and only
+   when something actually needs a person. */
+.boxes {
+  display: grid; gap: var(--gap); margin-top: var(--gap-lg);
+}
+@media (min-width: 620px) { .boxes { grid-template-columns: 1fr 1fr; } }
+.box {
+  display: block; text-align: left; width: 100%; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: calc(var(--u) * 4) calc(var(--u) * 4.5);
+  background: none;
+}
+.box:hover { border-color: var(--ink-4); }
+.box .box-t {
+  display: block; font-size: 15px; font-weight: var(--w-mid); color: var(--ink);
+}
+.box .box-d {
+  display: block; font-size: 13.5px; color: var(--ink-3);
+  margin-top: calc(var(--u) * 1.5); line-height: 1.45;
+}
+/* Red means a person is needed, never that a count is non-zero. */
+.box.needs { border-left: 2px solid var(--accent); }
+.box.needs .box-d { color: var(--ink-2); }
+
 .skip { position: absolute; left: -9999px; }
 .skip:focus {
   left: var(--gap); top: var(--gap); background: var(--ink); color: var(--paper);
