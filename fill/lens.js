@@ -960,22 +960,64 @@ async function fillAdoptable(justDone) {
   box.appendChild(wrap);
 }
 
+// THE ATTENTION BOX EXISTS ONLY WHEN SOMETHING DOES. It used to be a permanent
+// heading with a permanent "Nothing needs you right now" underneath, which is how
+// a thing stops being read: a box that is always there is furniture, and furniture
+// is invisible on the day it finally says something.
+//
+// It counts what needs ALEX, not what is non-zero. Work that is ours is listed
+// inside so he can see we know about it, and it never makes the box urgent.
 function fillAttention() {
   const ul = $("#attn");
+  const panel = $("#attn-panel");
+  const boxes = $("#below-tiles");
   const head = $("#attn-count");
+  const items = shape.attention ?? [];
+  const mine = shape.needs_you ?? 0;
+  const ours = items.length - mine;
+
+  if (panel) panel.hidden = true;
+
+  if (boxes) {
+    boxes.innerHTML = "";
+
+    const see = el("button", "box");
+    see.type = "button";
+    see.innerHTML = `<span class="box-t">See what is connected</span>`
+      + `<span class="box-d">Every source, whether it is working, and how far back it goes.</span>`;
+    see.addEventListener("click", () => {
+      const t = $("#tree");
+      if (t) t.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+    boxes.appendChild(see);
+
+    // No items, no box. Nothing takes its place and nothing says so.
+    if (items.length) {
+      const b = el("button", mine > 0 ? "box needs" : "box");
+      b.type = "button";
+      const label = mine > 0
+        ? `${mine} need${mine === 1 ? "s" : ""} you`
+        : `${ours} ${ours === 1 ? "is" : "are"} ours, nothing needs you`;
+      b.innerHTML = `<span class="box-t">Needs attention</span>`
+        + `<span class="box-d">${escape(label)}</span>`;
+      b.addEventListener("click", () => {
+        if (!panel) return;
+        panel.hidden = false;
+        panel.scrollIntoView({ block: "start", behavior: "smooth" });
+      });
+      boxes.appendChild(b);
+    }
+  }
+
   if (head) {
-    const n = shape.needs_you ?? 0;
-    const other = (shape.attention?.length ?? 0) - n;
-    head.textContent = n === 0
+    head.textContent = mine === 0
       ? "nothing needs you"
-      : `${n} need${n === 1 ? "s" : ""} you`
-        + (other > 0 ? `, ${other} ${other === 1 ? "is" : "are"} ours` : "");
+      : `${mine} need${mine === 1 ? "s" : ""} you`
+        + (ours > 0 ? `, ${ours} ${ours === 1 ? "is" : "are"} ours` : "");
   }
+  if (!ul) return;
   ul.innerHTML = "";
-  if (!shape.attention?.length) {
-    ul.innerHTML = `<li class="quiet" style="border-left:0">Nothing needs you right now.</li>`;
-    return;
-  }
+  if (!items.length) return;
   for (const a of shape.attention) {
     const li = el("li");
     li.innerHTML = `<div class="a-title">${escape(a.title)}</div>`
