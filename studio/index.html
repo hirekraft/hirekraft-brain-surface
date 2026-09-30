@@ -578,6 +578,8 @@ function render(){
   tabs.forEach(b=>b.onclick=()=>{
     tabs.forEach(x=>x.setAttribute("aria-selected", x===b ? "true":"false"));
     document.querySelectorAll(".view").forEach(v=>v.dataset.active = (v.dataset.i===b.dataset.i)?"true":"false");
+    /* The parts tab fetches its own gauge on first open, for the same reason. */
+    if(b.dataset.i==="4" && PG_STATE==="idle") loadParts();
     /* The Contradictions tab has to FETCH on first open. Without this the tab renders its
        idle state and sits on "Opening the queue…" forever — an affordance with no
        behaviour, which is the class this surface exists to remove. Fetched once, then the
@@ -1496,10 +1498,33 @@ function lab(ln,srcs){
   + '</div>';
 }
 
+/* THE PARTS GAUGE IS FETCHED WHEN THIS TAB OPENS, NOT ON EVERY PAGE LOAD. It was 4.6 of
+   the 6.1 seconds the main read took and 154KB of its 256KB, nearly all of it the story
+   list below, on every load whether or not anyone opened this tab.
+
+   NOT-YET-ASKED AND FAILED-TO-ARRIVE ARE DIFFERENT STATES AND READ DIFFERENTLY. The old
+   single message covered both, which would now be wrong: on a fresh load the gauge is
+   absent because nothing has asked for it yet, and saying "did not arrive" would report a
+   failure that has not happened. */
+let PG=null, PG_STATE="idle";
+async function loadParts(){
+  if(PG_STATE==="loading"||PG_STATE==="done") return;
+  PG_STATE="loading"; paint();
+  const r=await call(FN,{action:"parts"});
+  if(r.status===200 && r.body && r.body.ok!==false && r.body.parts_gauge){
+    PG=r.body.parts_gauge; PG_STATE="done";
+  } else {
+    PG={__error:(r.body&&r.body.error)||("the read failed ("+r.status+")")}; PG_STATE="failed";
+  }
+  paint();
+}
+
 function parts(){
-  const g=D.parts_gauge||null;
+  const g=(PG&&!PG.__error)?PG:null;
   const lede='<div class="lede">Every part the estate holds, with what the record says about <b>why it exists</b> and whether anything uses it. Read live from the judgment pass and the story pass.</div>';
-  if(!g) return lede+'<div class="empty">The parts gauge did not arrive in this read. Nothing below is known, and that is a failure of the read rather than a finding that the estate holds no parts.</div>';
+  if(PG_STATE==="loading") return lede+'<div class="empty">Reading the parts…</div>';
+  if(PG_STATE==="failed") return lede+'<div class="empty">The parts gauge could not be read: '+esc(PG.__error)+'. Nothing below is known, and that is a failure of the read rather than a finding that the estate holds no parts.</div>';
+  if(!g) return lede+'<div class="empty">Not read yet. This tab fetches the parts when you open it, because it is the heaviest thing on the surface and the rest of the page should not wait for it.</div>';
   const s=g.stories||{}, gr=s.grounding||{}, us=s.usage||{}, jf=g.judgment_flagged||{};
   const pop=g.population||{}, jd=g.judged||{}, uj=g.unjudged||{};
   const n=v=>(v===null||v===undefined)?'unknown':esc(v);
