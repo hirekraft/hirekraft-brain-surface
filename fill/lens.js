@@ -1400,6 +1400,7 @@ function say(text, asked) {
 
 const ASK_URL = `${SUPABASE_URL}/functions/v1/lens-ask`;
 let asking = false;
+let lastAsked = "";
 
 const ASK_HEAD = {
   answered:        "Answer",
@@ -1476,6 +1477,10 @@ function inlineInto(parent, text) {
     if (!part) continue;
     const c = /^\[(\d+)\]$/.exec(part);
     if (c) {
+      // SOURCE NUMBERS NEVER TOUCH A NAME OR EACH OTHER (seat show, 2026-10-01): "[15][16]"
+      // after a bold name drew as one run of digits glued to the name.
+      const prev = parent.lastChild;
+      if (prev && !(prev.nodeType === 3 && prev.textContent.endsWith(" "))) parent.appendChild(document.createTextNode(" "));
       const a = el("a", "cite");
       a.href = "#rec-" + c[1];
       a.textContent = c[1];
@@ -1666,8 +1671,87 @@ function askProblem(slot, msg) {
   slot.appendChild(p);
 }
 
+// A SET ANSWER ARRIVES AS DATA AND IS DRAWN AS ONE TABLE (seat show, 2026-10-01).
+// The target Alex agreed on 2026-10-01: the first line answers; one compact table, each
+// name opening the email it came from; a dash where the record does not say; the
+// not-counted rows behind one tap; one line for anything that could not be checked;
+// ONE plain line on what was read. The boundary sits under the table here, not under
+// the lead: that placement is the agreed target and supersedes, for set answers only,
+// the 2026-09-14 rule that put the gap directly under the lead.
+const DASH = String.fromCharCode(8211);
+function tableAnswer(slot, body) {
+  const t = body.table;
+  const lead = el("p", "ans-lead");
+  lead.textContent = String(t.lead || "");
+  slot.appendChild(lead);
+
+  const cols = Array.isArray(t.columns) ? t.columns : [];
+  const rows = Array.isArray(t.rows) ? t.rows : [];
+  if (rows.length) {
+    const head = ["Name", "Via"].concat(cols);
+    const box = el("div", "ans-table-wrap");
+    const tb = el("table", "ans-table");
+    const thead = el("thead"), htr = el("tr");
+    for (const h of head) { const th = el("th"); th.textContent = h; htr.appendChild(th); }
+    thead.appendChild(htr); tb.appendChild(thead);
+    const body2 = el("tbody");
+    for (const r of rows) {
+      const tr = el("tr");
+      const name = el("td"); name.dataset.label = "Name";
+      name.appendChild(openName(r.name, r.open_url));
+      const via = el("td"); via.dataset.label = "Via"; via.textContent = r.via || "direct";
+      tr.append(name, via);
+      for (const c of cols) {
+        const td = el("td"); td.dataset.label = c;
+        const v = r.cells && typeof r.cells[c] === "string" ? r.cells[c] : "";
+        td.textContent = v || DASH;
+        tr.appendChild(td);
+      }
+      body2.appendChild(tr);
+    }
+    tb.appendChild(body2); box.appendChild(tb);
+    slot.appendChild(box);
+  }
+
+  const nc = Array.isArray(t.not_counted) ? t.not_counted : [];
+  if (nc.length) {
+    const fold = el("details", "recs");
+    const sum = el("summary", "recs-sum");
+    sum.textContent = `${nc.length} more ${nc.length === 1 ? "was" : "were"} linked but not counted`;
+    fold.appendChild(sum);
+    const ul = el("ul", "ans-list");
+    for (const r of nc) {
+      const li = el("li");
+      li.appendChild(openName(r.name, r.open_url));
+      if (r.why) li.appendChild(document.createTextNode(": " + r.why));
+      ul.appendChild(li);
+    }
+    fold.appendChild(ul);
+    slot.appendChild(fold);
+  }
+
+  if (t.not_checked) {
+    const p = el("p", "ans-meta"); p.textContent = String(t.not_checked); slot.appendChild(p);
+  }
+  if (t.boundary) {
+    const p = el("p", "ans-gap-lead"); p.textContent = String(t.boundary); slot.appendChild(p);
+  }
+}
+
+// A name opens its source only when the server sent an https link for it.
+function openName(name, url) {
+  if (typeof url === "string" && url.startsWith("https://")) {
+    const a = el("a");
+    a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer";
+    a.textContent = String(name || "");
+    return a;
+  }
+  return document.createTextNode(String(name || ""));
+}
+
 function renderAsk(slot, body) {
   slot.innerHTML = "";
+  if (body.state === "answered" && body.table && typeof body.table === "object") { tableAnswer(slot, body); return; }
   const state = body.state;
   const answered = state === "answered" && typeof body.answer === "string" && body.answer;
 
@@ -1717,16 +1801,10 @@ function renderAsk(slot, body) {
     ? body.citations
     : (Array.isArray(body.evidence) ? body.evidence : []);
   if (ev.length) {
-    const recs = recordList(ev, answered ? "The records this came from" : "What came back");
-    const r = body.retrieval;
-    if (r) {
-      const foot = el("p", "ans-meta");
-      foot.textContent = `Looked at ${r.rows_returned} records; ${r.rows_you_can_see} are ones you can open`
-        + (typeof r.rows_shown === "number" ? `; ${r.rows_shown} were read` : "")
-        + `. Closeness ${r.strength}, and it will not compose below ${r.floor_answerable}.`;
-      recs.appendChild(foot);
-    }
-    slot.appendChild(recs);
+    // The audit line (records looked at, closeness, floor) is gone from the page by
+    // Alex's ruling of 2026-09-25: the reader is not only Alex, and it was the working.
+    // The figures stay in body.retrieval for anyone measuring.
+    slot.appendChild(recordList(ev, answered ? "The records this came from" : "What came back"));
   }
 }
 
@@ -1780,12 +1858,15 @@ async function ask(question) {
     const r = await fetch(ASK_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${jwt}`, apikey: PUBLISHABLE_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ question: q }),
+      // The previous question on this page travels as context, so "i meant the X role"
+      // is answered as the question it continues. lens-ask decides whether it does.
+      body: JSON.stringify(lastAsked ? { question: q, follows: lastAsked } : { question: q }),
     });
     const body = await r.json().catch(() => null);
     if (!body) { askProblem(slot, `The brain did not answer (${r.status}). Nothing was changed.`); return; }
     if (body.ok !== true) { askProblem(slot, body.error ?? `The brain refused this (${r.status}).`); return; }
     renderAsk(slot, body);
+    lastAsked = q;
   } catch (e) {
     askProblem(slot, `The brain could not be reached: ${e?.message ?? e}`);
   } finally {
