@@ -177,7 +177,11 @@ async function readMailboxes() {
   }
 }
 
+// Remembered so a source tab can say whether the reading is still coming, failed,
+// or found nobody signed in, rather than guessing from an empty list.
+let readingState = null;
 function renderState(state, detail) {
+  readingState = state;
   const box = $("#live-state");
   const who = $("#whoami");
   box.innerHTML = "";
@@ -205,6 +209,8 @@ function renderState(state, detail) {
     blankSkeletons("could not reach");
   }
   box.appendChild(b);
+  // Every reading ends here, so an open source tab is redrawn from it (seat tool-tabs).
+  if ($('#s-lens') && !$('#s-lens').hidden) drawLens();
 }
 
 // A placeholder that never resolves would be a spinner that lies. When the read
@@ -2098,17 +2104,91 @@ function routeOnState(mode) {
   goto(connected > 0 ? "s-summary" : "s-intro");
 }
 
-function goto(id) {
-  document.querySelectorAll("section.step").forEach((s) => { s.hidden = s.id !== id; });
+// THE BRAIN TAB SHOWS CONNECTING AND WHAT IS CONNECTED TOGETHER (Alex, 2026-10-02,
+// seat tool-tabs). Either id shows both, so every existing call site still lands on
+// the Brain tab unchanged. This is still the only router: a tab is a goto() call.
+const BRAIN_PAIR = ['s-connect', 's-summary'];
+let lensKey = null;
+function goto(id, key) {
+  const show = BRAIN_PAIR.includes(id) ? BRAIN_PAIR : [id];
+  document.querySelectorAll("section.step").forEach((s) => { s.hidden = !show.includes(s.id); });
   window.scrollTo({ top: 0 });
   if (id === "s-connect" && !$("#connect-stage").children.length) stageTypes();
   if (id === "s-tests") loadTests();
+  if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
+  markTab(id === 's-lens' ? lensKey : 'brain');
+}
+
+// -- tabs (seat tool-tabs, 2026-10-02) --
+// Alex's order and his words. Every tab shows from day one. A source tab shows what
+// the Brain tab's own list shows for that source, drawn by the same drawMembers, or
+// one line saying it is not connected and pointing to Brain. No lens features here:
+// each tab is fleshed out later, one at a time.
+const TABS = [{ key: 'brain', label: 'Brain' },
+  ...GROUPS.map((g) => ({ key: g.key, label: g.key === 'email' ? 'Mail' : g.label }))];
+
+function markTab(key) {
+  document.querySelectorAll('#tabs .tab').forEach((b) => {
+    if (b.dataset.tab === key) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  });
+}
+
+function drawTabs() {
+  const nav = $('#tabs');
+  if (!nav) return;
+  nav.innerHTML = '';
+  for (const t of TABS) {
+    const b = el('button', 'tab');
+    b.type = 'button';
+    b.dataset.tab = t.key;
+    b.textContent = t.label;
+    b.addEventListener('click', () => {
+      userMoved = true;
+      if (t.key === 'brain') goto('s-summary'); else goto('s-lens', t.key);
+    });
+    nav.appendChild(b);
+  }
+  markTab('brain');
+}
+
+function drawLens() {
+  const t = TABS.find((x) => x.key === lensKey);
+  const body = $('#lens-body');
+  if (!t || !body) return;
+  $('#lens-head').textContent = t.label;
+  body.innerHTML = '';
+  const data = groupsFor().find((x) => x.key === lensKey);
+  const line = el('p', 'quiet');
+  if (!data) {
+    line.textContent = readingState === null ? 'Reading your brain. This fills in when the reading lands.'
+      : readingState === 'unbound' ? 'Nobody is signed in on this browser, so there is nothing to show.'
+      : 'Your brain could not be read just now, so nothing here is a claim either way.';
+    body.appendChild(line);
+    return;
+  }
+  if (!data.connected) {
+    line.textContent = 'Nothing connected here yet.';
+    const b = el('button', 'go ghost');
+    b.type = 'button';
+    b.textContent = 'Connect it in Brain';
+    b.addEventListener('click', () => { userMoved = true; openConnect(lensKey); });
+    body.append(line, b);
+    return;
+  }
+  // The same one-line overview the Brain tab's list shows, copied rather than recounted.
+  const cell = $(`#tree [data-group='${lensKey}'] [data-shape]`);
+  line.innerHTML = cell ? cell.innerHTML : '';
+  const list = el('div');
+  body.append(line, list);
+  drawMembers(lensKey, list);
 }
 
 // ── boot ────────────────────────────────────────────────────────────────────
 
 drawTreeFrame();                 // the frame first, instantly, with space reserved
 stageTypes();
+drawTabs();
 
 // Once a person has chosen a screen, a late-arriving reading must not move them
 // off it. Declared before the first read is issued, below.
@@ -2121,6 +2201,8 @@ document.addEventListener("click", (e) => {
     // Arriving at the summary after changing what is read must not show the reading
     // from before the change.
     if (b.dataset.goto === "s-summary") refreshBrain();
+    // The two now sit on one tab, so this button moves down to the list (seat tool-tabs).
+    if (b.dataset.goto === 's-summary' && b.closest('#s-connect')) $('#s-summary').scrollIntoView();
   }
 });
 
