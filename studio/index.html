@@ -313,6 +313,28 @@
   .nfd{font-family:var(--mono);font-size:10px;color:var(--ink-4);flex:0 0 auto;width:74px}
   .nft{font-size:12.5px;color:var(--ink-2);line-height:1.45}
   .sp-foot{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);line-height:1.6;margin-top:20px;padding-top:14px;border-top:1px solid var(--hair)}
+  .ntiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0 6px}
+  @media(max-width:640px){.ntiles{grid-template-columns:1fr}}
+  .nt{background:var(--raise);border:1px solid var(--hair);border-radius:9px;padding:14px 16px;box-shadow:var(--sh-1)}
+  .nt .nb{font-size:30px;font-weight:650;letter-spacing:-0.03em;line-height:1.1}
+  .nt .nb .of{font-size:15px;color:var(--ink-3);font-weight:500}
+  .nt .nl{font-size:13px;color:var(--ink-2);margin-top:2px}
+  .nt .ns{font-size:12px;color:var(--ink-3);margin-top:4px}
+  .nt .nm2{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:8px}
+  details.fold{background:var(--raise);border:1px solid var(--hair);border-radius:8px;margin:6px 0}
+  details.fold>summary{cursor:pointer;padding:9px 13px;font-size:13.5px;list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  details.fold>summary::before{content:"›";color:var(--ink-4);font-size:15px;transition:.15s}
+  details.fold[open]>summary::before{transform:rotate(90deg)}
+  details.fold>.fb{padding:2px 16px 12px 30px;font-size:13px;line-height:1.55;color:var(--ink)}
+  details.fold>.fb p{margin:6px 0}
+  details details>summary{cursor:pointer;font-size:12px;color:var(--ink-3);margin:6px 0}
+  .mdot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto;border:1px solid var(--ink-4)}
+  .mdot.ok{background:var(--green);border-color:var(--green)}.mdot.bad{background:var(--red);border-color:var(--red)}
+  .mdot.warn{background:var(--amber);border-color:var(--amber)}.mdot.none{background:transparent}
+  .mst{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-left:auto}
+  .flag{font-family:var(--mono);font-size:10px;color:var(--amber);background:var(--amber-bg);border-radius:4px;padding:1px 5px}
+  .chip.ok{color:var(--green);background:var(--green-bg)}.chip.bad{color:var(--red);background:var(--red-bg)}
+  .prt{padding:7px 0;border-bottom:1px solid var(--hair-2)}.prt:last-child{border-bottom:none}
 </style>
 </head>
 <body>
@@ -324,7 +346,7 @@ const root = document.getElementById("root");
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const tok    = () => { try{ return localStorage.getItem("studio_token")||""; }catch{ return ""; } };
 const setTok = t  => { try{ t?localStorage.setItem("studio_token",t):localStorage.removeItem("studio_token"); }catch{} };
-let D=null, DOCS=[];
+let D=null, DOCS=[], TAB="0";
 let RUN=null;               // what the studio runs on, filled in whenever it arrives
 let RUN_STATE="loading";
 let CUST=null;              // the customer half, filled in whenever it arrives
@@ -409,6 +431,12 @@ async function boot(){
     if(D) paint();
   });
 
+  const pMap=call(FN,{action:"map"});
+  pMap.then(m=>{
+    MAP=(m.status===200&&m.body&&m.body.ok)?m.body:{error:(m.body&&m.body.error)||("the map could not be read ("+m.status+")")};
+    MAP_STATE=(MAP&&!MAP.error)?"done":"failed";
+    if(D) paint();
+  });
   const pStudio=call(FN,{action:"studio"});
   const pCust  =call(FN,{action:"customers"});
   const pDocs  =call(FN,{action:"docs"});
@@ -556,18 +584,16 @@ function render(){
         + '<span class="ds" style="flex:2">'+esc(g.caveat)+'</span></div>'):"")
   + '</div>'
   + '<nav class="sections" id="nav">'
-  +   ["Front","Contradictions","What we run on","Being built now","What we have built","The written record","Principles"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
+  +   ["Front","Capabilities","Mechanisms","Being built now","Written record","Principles","Archive"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
   + '</nav>'
   + '<main>'
-  +   '<section class="view" data-active="true" data-i="0">'+xbox(0)+front()+'</section>'
-  +   '<section class="view" data-i="1">'+xbox(1)+conflicts()+'</section>'
-  +   '<section class="view" data-i="2">'+xbox(2)+runsOn()+'</section>'
-  /* THE PATH MOVED HERE WHOLE AND UNCHANGED. It is good work and it is not what Front is
-     for: Front is the two-minute tab. spine() is called, not rewritten. */
-  +   '<section class="view" data-i="3">'+xbox(3)+spine()+lab(ln,srcs)+'</section>'
-  +   '<section class="view" data-i="4">'+xbox(4)+parts()+'</section>'
-  +   '<section class="view" data-i="5">'+xbox(5)+frame()+'</section>'
-  +   '<section class="view" data-i="6">'+xbox(6)+principles()+'</section>'
+  +   '<section class="view" data-active="true" data-i="0">'+xbox(0)+frontMap()+'</section>'
+  +   '<section class="view" data-i="1">'+xbox(1)+capsTab()+'</section>'
+  +   '<section class="view" data-i="2">'+xbox(2)+mechsTab()+'</section>'
+  +   '<section class="view" data-i="3">'+xbox(3)+buildTab()+'</section>'
+  +   '<section class="view" data-i="4">'+xbox(4)+writtenTab()+'</section>'
+  +   '<section class="view" data-i="5">'+xbox(5)+principles()+'</section>'
+  +   '<section class="view" data-i="6">'+xbox(6)+archiveTab()+'</section>'
   +   '<div class="foot">'+esc(footerLine())+'<br/>Served by '+esc(D.served_by.fn)+' · the Studio’s own numbers and each customer’s, kept apart · this is the only address that serves the studio · nothing on this page is stored.</div>'
   + '</main></div>'
   + '<div class="ov" id="ov"><div class="dr" id="drw">'+ipdocs()+'</div></div>';
@@ -579,12 +605,12 @@ function render(){
     tabs.forEach(x=>x.setAttribute("aria-selected", x===b ? "true":"false"));
     document.querySelectorAll(".view").forEach(v=>v.dataset.active = (v.dataset.i===b.dataset.i)?"true":"false");
     /* The parts tab fetches its own gauge on first open, for the same reason. */
-    if(b.dataset.i==="4" && PG_STATE==="idle") loadParts();
+    TAB=b.dataset.i;
     /* The Contradictions tab has to FETCH on first open. Without this the tab renders its
        idle state and sits on "Opening the queue…" forever — an affordance with no
        behaviour, which is the class this surface exists to remove. Fetched once, then the
        loaded queue is reused until a ruling forces a re-read from source. */
-    if(b.dataset.i==="1" && CONF_STATE==="idle") loadConflicts(CONF_SCOPE);
+    if(b.dataset.i==="4" && CONF_STATE==="idle") loadConflicts(CONF_SCOPE);
   });
   const ov=document.getElementById("ov");
   document.getElementById("ipb").onclick=()=>{ ov.dataset.open="true"; };
@@ -604,10 +630,11 @@ function render(){
         if(ov) ov.dataset.open="true";
         return;
       }
-      if(w==="principles"){ goTab(6); return; }
-      if(w==="runson"){ goTab(2); return; }
-      if(w==="path"){ goTab(3); return; }
-      if(w==="conflicts"){ goTab(1); loadConflicts("cross"); return; }
+      if(w==="principles"){ goTab(5); return; }
+      if(w==="mechanisms"){ goTab(2); return; }
+      if(w==="building"){ goTab(3); return; }
+      if(w==="written"){ goTab(4); return; }
+      if(w==="conflicts"){ goTab(4); loadConflicts("cross"); return; }
       if(w.indexOf("records:")===0){ openRecords(w.slice(8)); return; }
     };
   });
@@ -639,6 +666,9 @@ function render(){
   const ask=document.getElementById("askb"); if(ask) ask.onclick=doAsk;
   bindPrinciples();
   bindSteps();
+  bindMechs();
+  bindFolds();
+  if(TAB!=="0") goTab(Number(TAB));
   startClock();
 }
 
