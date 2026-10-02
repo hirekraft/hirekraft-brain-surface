@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-09-27-2">
+<link rel="stylesheet" href="skin.css?v=2026-10-02-tests">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -189,6 +189,8 @@
       <button class="go ghost" data-goto="s-connect">Connect something else</button>
       <button class="go ghost" data-goto="s-recognition">Read it back to me</button>
       <button class="go ghost" data-goto="s-intro">What this is</button>
+      <!-- Shown to the owner only; the brain refuses anyone else whatever this says. -->
+      <button class="go ghost" data-goto="s-tests" id="tests-entry" hidden>Tests</button>
     </div>
 
     <p class="sovereign">This brain is yours. It sits in your own database and nothing in it
@@ -197,6 +199,21 @@
       source is still yours.</p>
   </section>
 
+
+  <!-- ── 6. TESTS — the owner's, each in full. Seat testing-tab, 2026-10-02. ── -->
+  <section class="step" id="s-tests" hidden>
+    <p class="eyebrow">Tests</p>
+    <h2>Is the Tool still giving the right answers?</h2>
+    <p class="quiet">Each test is a question you answered once. The Tool is asked it again after
+      every change, as the person the test names; anything that used to pass and now fails
+      shows first.</p>
+    <div class="actions">
+      <button class="go" id="tests-run" type="button" hidden>Run the tests now</button>
+      <button class="go ghost" data-goto="s-summary">Back to your brain</button>
+    </div>
+    <p class="quiet" id="tests-said" aria-live="polite"></p>
+    <div id="tests" aria-live="polite"></div>
+  </section>
 
 </main>
 
@@ -258,6 +275,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-01-show"></script>
+<script type="module" src="lens.js?v=2026-10-02-tests"></script>
 </body>
 </html>
