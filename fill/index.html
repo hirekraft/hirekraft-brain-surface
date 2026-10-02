@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-10-02-tests">
+<link rel="stylesheet" href="skin.css?v=2026-10-02-tabs">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -41,6 +41,9 @@
          Space is reserved so it cannot shift when the reading lands. -->
     <div class="whoami" id="whoami"><span class="skel w-sm"></span></div>
   </header>
+  <!-- THE TABS. Alex's order and words, 2026-10-02. Drawn by lens.js; each one is a
+       goto() call, so there is still one router. Brain is where she lands. -->
+  <nav class='tabs' id='tabs' aria-label='Parts of the Tool'></nav>
 </div>
 
 <main id="main" class="shell">
@@ -152,7 +155,9 @@
     </div>
   </section>
 
-  <!-- ── 5. BRAIN SUMMARY — same surface, settled. The navigation spine. ── -->
+  <!-- 5. BRAIN SUMMARY. What is connected, shown together with the connect section
+       above it on the Brain tab (Alex, 2026-10-02). The tabs are the navigation spine
+       now; this section was it until then. -->
   <section class="step" id="s-summary" hidden>
     <p class="eyebrow">Your brain</p>
     <h2 id="sum-head">What is in it.</h2>
@@ -215,6 +220,14 @@
     <div id="tests" aria-live="polite"></div>
   </section>
 
+  <!-- 7. ONE SOURCE. The tab for Mail, Drives & folders, Calendar, Contacts, Systems
+       or Loose files. Seat tool-tabs, 2026-10-02. Very basic on purpose: what is
+       connected, or one line pointing to Brain. -->
+  <section class='step' id='s-lens' hidden>
+    <h2 id='lens-head'></h2>
+    <div id='lens-body' aria-live='polite'></div>
+  </section>
+
 </main>
 
 <!-- ── The dock. It reports what this surface DOES - a source resumed, a mailbox
@@ -266,6 +279,9 @@
              aria-label="Ask about what is in your brain"
              placeholder="Ask about what is in your brain">
       <button class="send" id="ask-send" type="button">Ask</button>
+      <!-- Says where the question goes, on every tab. Asking one tab only is a later
+           step: the ask has no way to narrow to one source yet (seat tool-tabs). -->
+      <span class='ask-scope' id='ask-scope'>asking across everything</span>
     </div>
   </div>
 </div>
@@ -275,6 +291,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-02-tests"></script>
+<script type="module" src="lens.js?v=2026-10-02-tabs"></script>
 </body>
 </html>
