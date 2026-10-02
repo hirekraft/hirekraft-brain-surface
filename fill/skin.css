@@ -116,6 +116,22 @@ p + p { margin-top: var(--gap); }
 
 section.step { padding: var(--gap-xl) 0; }
 section.step[hidden] { display: none; }
+/* Brain tab: what is connected sits straight under connecting, as one page. */
+#s-connect:not([hidden]) ~ #s-summary { padding-top: 0; }
+
+/* tabs: Brain first, then one per source (seat tool-tabs, 2026-10-02) */
+
+.tabs {
+  display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1.5) var(--gap);
+  margin-top: var(--gap); border-bottom: 1px solid var(--line);
+}
+.tab {
+  font-size: var(--t-small); color: var(--ink-3); padding: calc(var(--u) * 2) 0;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab:hover { color: var(--ink); }
+.tab[aria-current='page'] { color: var(--ink); font-weight: var(--w-mid); border-bottom-color: var(--ink); }
+.dock-bar .ask-scope { font-size: var(--t-micro); color: var(--ink-4); white-space: nowrap; flex: none; }
 
 /* ── fact list: checkable statements, not claims ─────────────────────── */
 
