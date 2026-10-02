@@ -864,6 +864,7 @@ function spine(){
 
 /* THE DERIVATION, ADMITTED. Derived from an absence, so it says so in plain words and
    gives the coverage: the mapping that produced it covers a minority of the open items. */
+/* RETIRED 2026-10-02 (seat surface-map, Alex’s ruling 2026-10-01): no longer called. The tab it drew was replaced by the capabilities and mechanisms tabs; the body is kept only until a cleanup pass deletes it. Do not wire it back. */
 function whereWeAreBasis(){
   const t=((D.work_orders||{}).totals)||{};
   const mapped=Number(t.placed_on_a_step)||0, all=Number(t.orders)||0;
@@ -900,6 +901,7 @@ function whereWeAreBasis(){
    their snapshots, and one registered under one name and wrapped under another. So silence
    past a day reads as stopped or unfinished, and a write-up matching no registration is
    shown rather than dropped. */
+/* RETIRED 2026-10-02 (seat surface-map, Alex’s ruling 2026-10-01): no longer called. The tab it drew was replaced by the capabilities and mechanisms tabs; the body is kept only until a cleanup pass deletes it. Do not wire it back. */
 function seatsBlock(){
   const S=(D&&D.seat_board)||null;
   if(!S) return '<div class="blk">What is running<span class="ln"></span></div>'
@@ -1149,6 +1151,7 @@ function conflictCard(){
   + '</div>';
 }
 
+/* RETIRED 2026-10-02 (seat surface-map, Alex’s ruling 2026-10-01): no longer called. The tab it drew was replaced by the capabilities and mechanisms tabs; the body is kept only until a cleanup pass deletes it. Do not wire it back. */
 function front(){
   const F=(D&&D.front)||null;
   if(!F) return '<div class="empty">The front page could not be read.</div>';
@@ -1317,6 +1320,7 @@ function front(){
    in 4 buckets). The line therefore says sources, and sends him to the Tool for the faults
    themselves rather than promising the same figure there. */
 const TOOL_SURFACE="https://hirekraft.github.io/hirekraft-brain-surface/fill/";
+/* RETIRED 2026-10-02 (seat surface-map, Alex’s ruling 2026-10-01): no longer called. The tab it drew was replaced by the capabilities and mechanisms tabs; the body is kept only until a cleanup pass deletes it. Do not wire it back. */
 function customerLine(){
   if(CUST_STATE==="loading") return "";
   const cust=(CUST&&CUST.customers)||[];
@@ -1503,6 +1507,7 @@ function studioRail(){
     + '<div class="lab-note">'+esc(r.how||"")+'</div>';
 }
 
+/* RETIRED 2026-10-02 (seat surface-map, Alex’s ruling 2026-10-01): no longer called. The tab it drew was replaced by the capabilities and mechanisms tabs; the body is kept only until a cleanup pass deletes it. Do not wire it back. */
 function lab(ln,srcs){
   return '<div class="lede">The forge — <b>a part being made right now</b>. One pipeline: forged here, graduated to the Parts Bin when it is finished and reusable.</div>'
   /* WAS: a hard-coded empty count and a sentence asserting the estate held no such record.
@@ -1537,6 +1542,7 @@ function lab(ln,srcs){
    absent because nothing has asked for it yet, and saying "did not arrive" would report a
    failure that has not happened. */
 let PG=null, PG_STATE="idle";
+/* RETIRED 2026-10-02 (seat surface-map, Alex’s ruling 2026-10-01): no longer called. The tab it drew was replaced by the capabilities and mechanisms tabs; the body is kept only until a cleanup pass deletes it. Do not wire it back. */
 async function loadParts(){
   if(PG_STATE==="loading"||PG_STATE==="done") return;
   PG_STATE="loading"; paint();
@@ -1549,6 +1555,7 @@ async function loadParts(){
   paint();
 }
 
+/* RETIRED 2026-10-02 (seat surface-map, Alex’s ruling 2026-10-01): no longer called. The tab it drew was replaced by the capabilities and mechanisms tabs; the body is kept only until a cleanup pass deletes it. Do not wire it back. */
 function parts(){
   const g=(PG&&!PG.__error)?PG:null;
   const lede='<div class="lede">Every part the estate holds, with what the record says about <b>why it exists</b> and whether anything uses it. Read live from the judgment pass and the story pass.</div>';
@@ -1669,14 +1676,264 @@ function huntBlock(ig){
 /* EVERY TAB SAYS WHAT IT IS, IN THE REGISTER OF THE HAND-WRITTEN JULY ROWS: what is in
    here, when you would open it, how to read it. Fixed and always visible rather than a
    hover, because a hover only helps someone who already suspects it is there. */
+/* THE MAP: CAPABILITIES, MECHANISMS, PARTS (seat surface-map, 2026-10-02).
+
+   Alex's rules for every tab (2026-10-01): plain words, no technical terms; each tab opens
+   with one or two sentences on what it is for; each fits on about one screen; detail sits
+   one click down; everything on the first layer either asks him to act or says something
+   is wrong.
+
+   The map arrives on its own call, beside the studio half, so the first paint never waits
+   on it. A mechanism's parts arrive only when that mechanism is opened. Green is earned:
+   a mechanism is green only when every check it has ran recently and found nothing, as
+   judged by studio-july from the check's own last run. A mechanism with no check says
+   "no check yet", never green. */
+let MAP=null, MAP_STATE="loading";
+const MECH_PARTS={};   // id -> "loading" | {parts:[...]} | {error:"..."}
+
+const OPEN_FOLDS=new Set();   // a repaint must not snap shut what Alex opened
+function fold(summary, body, cls){
+  const k=String(summary).replace(/<[^>]*>/g,"").slice(0,80);
+  return '<details class="fold'+(cls?' '+cls:'')+'" data-k="'+esc(k)+'"'+(OPEN_FOLDS.has(k)?' open':'')+'><summary>'+summary+'</summary><div class="fb">'+body+'</div></details>';
+}
+function bindFolds(){
+  document.querySelectorAll("details[data-k]").forEach(function(d){
+    d.addEventListener("toggle", function(){ if(d.open) OPEN_FOLDS.add(d.dataset.k); else OPEN_FOLDS.delete(d.dataset.k); });
+  });
+}
+function dot(state){
+  const c={green:"ok",red:"bad",amber:"warn",unknown:"bad",none:"none"}[state]||"none";
+  return '<span class="mdot '+c+'"></span>';
+}
+function stateWords(state){
+  return {green:"check passing", red:"check found a problem", amber:"check not current",
+          unknown:"check could not be read", none:"no check yet"}[state]||"no check yet";
+}
+function mapWait(){
+  if(MAP_STATE==="loading") return '<div class="lab-note">Reading the map…</div>';
+  return '<div class="empty">The map could not be read, so nothing below is known: '+esc((MAP&&MAP.error)||"")+'</div>';
+}
+function mapOk(){ return MAP_STATE==="done" && MAP && !MAP.error; }
+function lede(t){ return '<div class="lede">'+t+'</div>'; }
+
+/* ── FRONT ─────────────────────────────────────────────────────────────── */
+function numberTiles(){
+  const ns=(MAP.numbers||[]);
+  const by={}; ns.forEach(function(x){ by[x.key]=x; });
+  const cap=by.map_caps_passing||{}, mec=by.map_mechanisms||{}, dup=by.map_duplicated||{}, hom=by.map_homeless||{};
+  const tile=function(big, label, sub, moved){
+    return '<div class="nt"><div class="nb">'+big+'</div><div class="nl">'+esc(label)+'</div>'
+      + (sub?'<div class="ns">'+esc(sub)+'</div>':'')
+      + '<div class="nm2">'+esc(moved||"")+'</div></div>';
+  };
+  return '<div class="ntiles">'
+    + tile(esc(cap.value)+' <span class="of">of '+esc(cap.total)+'</span>', "capabilities pass your screen test", "", cap.moved)
+    + tile(esc(mec.value), "mechanisms", esc(dup.value)+" of them built more than once ("+(dup.moved||"")+")", mec.moved)
+    + tile(esc(hom.value), "parts that belong to nothing", "should keep falling", hom.moved)
+    + '</div>';
+}
+function nowSteps(){ return (MAP.capabilities||[]).filter(function(c){ return c.step_now && c.step_state && c.step_state!=="passed"; }); }
+function storedLine(){
+  const s=MAP.stored_tests||{};
+  if(!s.ok){
+    const missing=String(s.why||"").indexOf("does not exist")>=0;
+    return missing ? "No stored tests yet. The place that keeps them has not been built on the customer brain."
+                   : "The stored tests could not be read, so how many pass is unknown: "+String(s.why||"");
+  }
+  const t=s.tests||{};
+  const parts=[];
+  ["stored","passing","failing","error","owed"].forEach(function(k){ if(t[k]!==undefined&&t[k]!==null) parts.push(t[k]+" "+(k==="owed"?"answer owed by you":k)); });
+  return "Stored tests: "+(parts.length?parts.join(", "):"counts returned in a shape this page does not recognise")
+    + (s.last_run_at?(" · last run "+String(s.last_run_at).slice(0,16).replace("T"," ")):"");
+}
+function redItems(){
+  const out=[];
+  (MAP.mechanisms||[]).forEach(function(m){
+    if(m.state==="red"||m.state==="unknown"){
+      const why=(m.checks||[]).filter(function(c){ return c.state==="red"||c.state==="unknown"; }).map(function(c){ return c.says; }).join(" ");
+      out.push(m.plain+": "+why);
+    }
+  });
+  const mc=MAP.map_check;
+  if(!mc) out.push("The map's own check has never run.");
+  else if(Number(mc.problems)>0) out.push("The map has gone out of date: "+mc.problems+" pieces we run are not on it.");
+  if(RUN && !RUN.error){
+    ((RUN.actions&&RUN.actions.workflows)||[]).filter(function(w){ return w.conclusion==="failure"; })
+      .forEach(function(w){ out.push("A scheduled job outside the database failed on its last run: "+w.name+"."); });
+    if(RUN.pages&&RUN.pages.seen&&RUN.pages.status!==200) out.push("This page's own address answered "+RUN.pages.status+".");
+  }
+  return out;
+}
+function frontMap(){
+  if(!D) return "";
+  const S=(D.seat_board)||{}, run=S.running||[], stop=S.stopped||[];
+  const pr=D.principles||{};
+  let html="";
+  if(!mapOk()) html+=mapWait();
+  else {
+    html+=numberTiles();
+    const steps=nowSteps();
+    html+='<div class="blk">Where we are<span class="ln"></span></div>'
+      + (steps.length ? steps.map(function(c){
+          return '<div class="pi" data-goto="building"><span class="pn">›</span><span><b>'+esc(c.wording)+'</b> '+esc(c.step_now)+'. <span class="chip '+(c.step_state==="waiting for your test"?"high":"norm")+'">'+esc(c.step_state)+'</span></span></div>';
+        }).join("")
+        : '<div class="empty">No step is recorded as in progress. HQ records the current step; nothing is guessed here.</div>');
+    const owed=steps.filter(function(c){ return c.step_state==="waiting for your test"; });
+    const st=MAP.stored_tests||{}, stOwed=st.ok&&st.tests&&Number(st.tests.owed)>0?Number(st.tests.owed):0;
+    html+='<div class="blk">Needs you <span class="ct">'+(owed.length+(stOwed?1:0))+'</span><span class="ln"></span></div>'
+      + owed.map(function(c){ return fold('<b>Screen test:</b> '+esc(c.step_now), '<p>'+esc(c.step_shows||"")+'</p>'); }).join("")
+      + (stOwed?'<div class="pi" style="cursor:default"><span class="pn">!</span><span>'+stOwed+' stored test'+(stOwed===1?"":"s")+' waiting for your known answer.</span></div>':'')
+      + (!owed.length&&!stOwed?'<div class="empty">Nothing is waiting on you.</div>':'');
+    const reds=redItems();
+    html+='<div class="blk">Anything red <span class="ct">'+reds.length+'</span><span class="ln"></span></div>'
+      + (reds.length?('<div class="pi" data-goto="mechanisms"><span class="pn">!</span><span style="color:var(--red)">'+esc(reds.length)+' thing'+(reds.length===1?"":"s")+' wrong right now</span></div>'
+          + fold('show them', reds.map(function(r){ return '<p>'+esc(r)+'</p>'; }).join("")))
+        :'<div class="empty">Nothing is red among the things that have a check. Mechanisms with no check are not counted as fine.</div>');
+    html+='<div class="blk">Stored tests<span class="ln"></span></div><div class="pi" style="cursor:default"><span class="pn">·</span><span>'+esc(storedLine())+'</span></div>';
+  }
+  html+='<div class="blk">Running now <span class="ct">'+run.length+'</span><span class="ln"></span></div>'
+    + (run.length?run.map(function(s){ return '<div class="pi" style="cursor:default"><span class="pn">·</span><span>'+esc(s.title)+' <span style="color:var(--ink-3)">quiet '+esc(s.silent_for)+'</span></span></div>'; }).join("")
+      :'<div class="empty">No working chat is open.</div>')
+    + (stop.length?fold(esc(stop.length)+' chats opened and never wrote up (mostly old chats the last capture registered)',
+        stop.map(function(s){ return '<p>'+esc(s.title)+' <span style="color:var(--ink-3)">silent '+esc(s.silent_for)+'</span></p>'; }).join("")):'');
+  html+='<div class="blk">In the studio brain<span class="ln"></span></div>'
+    + '<div class="pi" data-goto="written"><span class="pn">›</span><span>'+esc(pr.decisions)+' decisions, '+esc(pr.seat_reports)+' seat reports and '+esc(pr.sections)+' sections of the governing documents.</span></div>';
+  return html;
+}
+
+/* ── CAPABILITIES ──────────────────────────────────────────────────────── */
+function screenChip(c){
+  const k={"passes":"ok","failing":"bad","not tested":"quiet"}[c.screen]||"quiet";
+  return '<span class="chip '+k+'">'+esc(c.screen==="not tested"?"not yet passed on your screen":c.screen==="passes"?"passes on your screen":"fails on your screen")+'</span>';
+}
+function capsTab(){
+  if(!mapOk()) return mapWait();
+  const caps=MAP.capabilities||[], unb=MAP.unbacked_promises||[];
+  return caps.map(function(c){
+      const ms=(c.mechanisms||[]).map(function(m){ return esc(m.plain)+(m.none?' <span class="flag">no single home</span>':m.duplicated?' <span class="flag">built more than once</span>':''); }).join("; ");
+      const prom=(c.promises||[]);
+      return fold(esc(c.wording)+' '+screenChip(c),
+        (c.reach?'<p><b>How far it reaches, level by level:</b> '+esc(c.reach)+'.</p>':'<p>No levels written down yet.</p>')
+        + (c.step_now?'<p><b>Step now:</b> '+esc(c.step_now)+' ('+esc(c.step_state)+').</p>':'')
+        + (c.evidence?'<p><b>Seen so far:</b> '+esc(c.evidence)+'</p>':'')
+        + '<p><b>Built from:</b> '+(ms||"nothing mapped")+'.</p>'
+        + (prom.length?fold(prom.length+' promise'+(prom.length===1?"":"s")+' to customers rest on this',
+            prom.map(function(p){ return '<p>'+esc(p.promise)+' <span class="chip quiet">'+esc(String(p.verdict||"").toLowerCase()||"not judged")+'</span></p>'; }).join("")):''));
+    }).join("")
+    + '<div class="blk">Promised, not yet true<span class="ln"></span></div>'
+    + (unb.length?fold(esc(unb.length)+' promises have no capability behind them yet',
+        unb.map(function(p){ return '<p>'+esc(p.promise)+'</p>'; }).join(""))
+      :'<div class="empty">Every promise has a capability behind it.</div>');
+}
+
+/* ── MECHANISMS ────────────────────────────────────────────────────────── */
+function partsList(id){
+  const p=MECH_PARTS[id];
+  if(!p||p==="loading") return '<div class="lab-note">Reading its parts…</div>';
+  if(p.error) return '<div class="empty">Its parts could not be read: '+esc(p.error)+'</div>';
+  if(!p.parts.length) return '<div class="empty">No parts are placed under this one.</div>';
+  return p.parts.map(function(x){
+    return '<div class="prt"><b>'+esc(x.name)+'</b>'+(x.gone?' <span class="flag">no longer found</span>':'')
+      + (x.does?'<div>'+esc(x.does)+'</div>':'')+(x.why?'<div style="color:var(--ink-2)">'+esc(x.why)+'</div>':'')
+      + '<details><summary>the technical name</summary><div class="lab-note">'+esc(x.tech)+' · '+esc(x.kind)+' · '+esc(x.where)+'</div></details></div>';
+  }).join("");
+}
+function mechRow(m){
+  const used=(m.used_by||[]);
+  const flag=m.implementations>1?' <span class="flag">built '+esc(m.implementations)+' times</span>':(m.implementations===0?' <span class="flag">no single home</span>':'');
+  const k="m-"+m.id;
+  return '<details class="fold mech" data-mech="'+esc(m.id)+'" data-k="'+esc(k)+'"'+(OPEN_FOLDS.has(k)?' open':'')+'><summary>'+dot(m.state)+esc(m.plain)+flag
+    + ' <span class="mst">'+esc(stateWords(m.state))+'</span></summary><div class="fb">'
+    + (m.gives?'<p><b>Gives:</b> '+esc(m.gives)+'</p>':'')
+    + (m.guarantees?'<p><b>Promises:</b> '+esc(m.guarantees)+'</p>':'')
+    + (m.refuses?'<p><b>Refuses:</b> '+esc(m.refuses)+'</p>':'')
+    + '<p><b>Used by:</b> '+(used.length?used.map(esc).join("; "):"no capability yet")+'.</p>'
+    + ((m.checks||[]).length?'<p><b>Its check:</b> '+(m.checks.map(function(c){ return esc(c.says); }).join(" "))+'</p>':'<p><b>Its check:</b> none yet. Nothing would notice if this broke.</p>')
+    + (m.check_note?'<p style="color:var(--amber)">'+esc(m.check_note)+'</p>':'')
+    + (m.duplicate_note?'<details><summary>why it counts as built more than once</summary><div class="lab-note">'+esc(m.duplicate_note)+'</div></details>':'')
+    + '<details class="parts" data-mech="'+esc(m.id)+'"><summary>its '+esc(m.parts)+' parts</summary><div class="pl" id="pl-'+esc(m.id)+'">'+partsList(m.id)+'</div></details>'
+    + '</div></details>';
+}
+function mechsTab(){
+  if(!mapOk()) return mapWait();
+  const ms=MAP.mechanisms||[];
+  const tool=ms.filter(function(m){ return m.scope==="tool"; }), studio=ms.filter(function(m){ return m.scope==="studio"; });
+  const mc=MAP.map_check;
+  const mcLine=!mc?'<span style="color:var(--red)">The map’s own check has never run.</span>'
+    : Number(mc.problems)>0?'<span style="color:var(--red)">The map is out of date: '+esc(mc.problems)+' pieces we run are not on it (checked '+esc(String(mc.run_at).slice(0,16).replace("T"," "))+').</span>'
+    : 'The map is complete: every piece we run is on it (checked '+esc(String(mc.run_at).slice(0,16).replace("T"," "))+'). This is checked every morning.';
+  return '<div class="pi" style="cursor:default"><span class="pn">'+(mc&&!Number(mc.problems)?'·':'!')+'</span><span>'+mcLine+'</span></div>'
+    + (MAP.brain_checks_read?'':'<div class="empty">The checks on '+esc(MAP.customer||"the customer")+'’s brain could not be read, so those show as unknown, not passing.</div>')
+    + '<div class="blk">The product <span class="ct">'+tool.length+'</span><span class="ln"></span></div>'
+    + tool.map(mechRow).join("")
+    + '<div class="blk">More, one click down<span class="ln"></span></div>'
+    + fold('The studio’s own machinery ('+studio.length+')', studio.map(mechRow).join(""))
+    + fold('The three that should fall to nothing', readingsBlock())
+    + fold('Everything the studio depends on', runsOn())
+    + fold('Reads across to the customer brain', readHealthBlock());
+}
+function bindMechs(){
+  document.querySelectorAll("details.parts").forEach(function(d){
+    d.addEventListener("toggle", async function(){
+      const id=d.dataset.mech;
+      if(!d.open || MECH_PARTS[id]) return;
+      MECH_PARTS[id]="loading";
+      const r=await call(FN,{action:"mech", id:id});
+      MECH_PARTS[id]=(r.status===200&&r.body&&r.body.ok)?{parts:r.body.parts||[]}:{error:(r.body&&r.body.error)||("the read failed ("+r.status+")")};
+      const el=document.getElementById("pl-"+id); if(el) el.innerHTML=partsList(id);
+    });
+  });
+}
+
+/* ── BEING BUILT NOW ───────────────────────────────────────────────────── */
+function buildTab(){
+  if(!mapOk()) return mapWait();
+  const steps=nowSteps();
+  return '<div class="blk">Now<span class="ln"></span></div>'
+    + (steps.length?steps.map(function(c){
+        return fold('<b>'+esc(c.wording)+'</b> '+esc(c.step_now)+' <span class="chip '+(c.step_state==="waiting for your test"?"high":"norm")+'">'+esc(c.step_state)+'</span>',
+          (c.step_changed?'<p><b>What changed:</b> '+esc(c.step_changed)+'</p>':'')
+          + (c.step_shows?'<p><b>Your screen test:</b> '+esc(c.step_shows)+'</p>':''));
+      }).join(""):'<div class="empty">Nothing is recorded as being built right now.</div>')
+    + '<div class="blk">Next<span class="ln"></span></div>'
+    + (steps.length&&steps.some(function(c){ return (c.step_next||[]).length; })
+       ? steps.map(function(c){ return (c.step_next||[]).map(function(s,i){
+           return '<div class="pi" style="cursor:default"><span class="pn">'+(i+1)+'</span><span>'+esc(s)+'</span></div>'; }).join(""); }).join("")
+       : '<div class="empty">No next steps are written down yet.</div>');
+}
+
+/* ── WRITTEN RECORD ────────────────────────────────────────────────────── */
+function writtenTab(){
+  const cc=(CUST&&CUST.count)||0;
+  return '<div class="pi" data-goto="records:decisions"><span class="pn">›</span><span>Every decision, newest first</span></div>'
+    + '<div class="pi" data-goto="records:reports"><span class="pn">›</span><span>Every seat write-up, newest first</span></div>'
+    + '<div class="pi" data-goto="docs"><span class="pn">›</span><span>The governing documents, to read in full</span></div>'
+    + '<div class="pi" style="cursor:default"><span class="pn">·</span><span>Whose brain is whose: the studio keeps its own brain, and each customer has its own ('+esc(cc)+' customer'+(cc===1?"":"s")+'). Neither reads into the other’s data.</span></div>'
+    + '<div class="blk">One click down<span class="ln"></span></div>'
+    + '<details class="fold" id="conffold" data-k="conffold"'+(OPEN_FOLDS.has("conffold")?" open":"")+'><summary>Places the record contradicts itself, for you to judge</summary><div class="fb">'+conflicts()+'</div></details>'
+    + fold('The state of the documents and the seat record', frame());
+}
+
+/* ── ARCHIVE ───────────────────────────────────────────────────────────── */
+function archiveTab(){
+  if(!mapOk()) return mapWait();
+  const parts=MAP.archived||[], recs=MAP.archived_records||[];
+  return '<div class="blk">Past work<span class="ln"></span></div>'
+    + recs.map(function(r){ return fold('<b>'+esc(r.title)+'</b> <span style="color:var(--ink-3)">'+esc(r.note)+'</span>', r.opens==="path"?spine():''); }).join("")
+    + '<div class="blk">Archived parts <span class="ct">'+parts.length+'</span><span class="ln"></span></div>'
+    + (parts.length?parts.map(function(p){ return '<div class="pi" style="cursor:default"><span class="pn">·</span><span>'+esc(p.name)+(p.note?' — '+esc(p.note):'')+'</span></div>'; }).join("")
+      :'<div class="empty">Nothing archived yet. The archiving step fills this; until then, parts that belong to nothing are counted on Front.</div>');
+}
+
+/* EVERY TAB SAYS WHAT IT IS (rewritten 2026-10-02 to Alex’s rule: one or two plain sentences on what the tab is for). */
 const TABBOX=[
-  "What is in here. The short version of where the studio stands right now: what is working, what is broken, and what is waiting on you. Open this one first, and open only this one if you have two minutes. Anything it flags as wrong has its detail on one of the other tabs.",
-  "What is in here. Places where two things the record says cannot both be true, found by a job that reads the whole corpus and pairs statements against each other. Open it when you want to know whether something you were told has since been contradicted. A pair sitting here has been flagged and not ruled on; nothing is settled until you rule.",
-  "What is in here. The machinery underneath everything: the scheduled jobs, the connected sources, and how fresh each one is. Open it when a number looks stale or out of date, because the cause is usually a job that stopped without saying so. Every age here states what it measures, since when a job last ran and when its content last changed are different questions.",
-  "What is in here. Work actually in progress: promises the record says are only partly kept, and the seats that have opened to close them. Open it to see what is being worked on rather than what is finished. A part leaves this tab when its promise is judged fully kept, and whether anything ever leaves is the real test of whether the studio produces.",
-  "What is in here. Every part the estate holds, with what the record says about why it exists and whether anything uses it. Open it before building something new, to find out whether it already exists, or to find a finished part that nothing is calling. Start at the top: those are the parts that work and that nothing uses.",
-  "What is in here. The studio's own paperwork: the governance documents and their versions, what nothing has re-examined, and the record of every seat that has opened and closed. Open it to check the record itself rather than what the record says. A document shown as behind its live version means recall is reading older text than what you last wrote.",
-  "What is in here. The numbered rules the whole build is judged against, and the decisions that produced them. Open it to check a choice against what was already ruled, or to find the principle a piece of work would violate. Each one is meant to be testable, so if you cannot tell whether something passes it, the rule needs sharpening rather than the work.",
+  "The short version. How far the build has got, what needs you, and anything wrong. Open this first.",
+  "What a customer can do with the Tool, in her words. Each one says whether it has passed when you tried it, and what it is built from.",
+  "The building blocks everything is made of. Each says whether its check is passing; the ones with no check say so. Open one to see its parts.",
+  "What is being made right now, what you will be asked to test next, and what comes after.",
+  "Decisions, seat write-ups, the governing documents, and the places the record contradicts itself.",
+  "The numbered rules the build is judged against, and the decisions behind each.",
+  "Past work, kept so it can be reused, and out of the running system."
 ];
 function xbox(i){ return '<div class="xbox">'+esc(TABBOX[i]||"")+'</div>'; }
 
