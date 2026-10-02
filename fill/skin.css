@@ -644,3 +644,15 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   left: var(--gap); top: var(--gap); background: var(--ink); color: var(--paper);
   padding: 8px 12px; border-radius: var(--radius); z-index: 20;
 }
+
+/* -- tests (seat testing-tab, 2026-10-02): the owner's answer form ------- */
+.t-form { margin-top: calc(var(--u) * 2.5); max-width: var(--measure); }
+.t-field { display: block; margin-top: calc(var(--u) * 2); font-size: var(--t-small); color: var(--ink-2); }
+.t-field textarea, .t-field input {
+  display: block; width: 100%; margin-top: calc(var(--u) * 1); font: inherit; font-size: var(--t-small);
+  color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: calc(var(--u) * 1.5) calc(var(--u) * 2);
+}
+.t-field input { width: auto; }
+.t-controls { margin-top: var(--gap-lg); }
+.t-controls summary { cursor: pointer; }
