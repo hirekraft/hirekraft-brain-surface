@@ -584,16 +584,17 @@ function render(){
         + '<span class="ds" style="flex:2">'+esc(g.caveat)+'</span></div>'):"")
   + '</div>'
   + '<nav class="sections" id="nav">'
-  +   ["Front","Capabilities","Mechanisms","Being built now","Written record","Principles","Archive"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(i===0)+'" data-i="'+i+'">'+s+'</button>').join("")
+  +   ["Front","Capabilities","Mechanisms","Being built now","Written record","Principles","Archive","Testing"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(String(i)===TAB)+'" data-i="'+i+'">'+s+'</button>').join("")
   + '</nav>'
   + '<main>'
-  +   '<section class="view" data-active="true" data-i="0">'+xbox(0)+frontMap()+'</section>'
-  +   '<section class="view" data-i="1">'+xbox(1)+capsTab()+'</section>'
-  +   '<section class="view" data-i="2">'+xbox(2)+mechsTab()+'</section>'
-  +   '<section class="view" data-i="3">'+xbox(3)+buildTab()+'</section>'
-  +   '<section class="view" data-i="4">'+xbox(4)+writtenTab()+'</section>'
-  +   '<section class="view" data-i="5">'+xbox(5)+principles()+'</section>'
-  +   '<section class="view" data-i="6">'+xbox(6)+archiveTab()+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="0")+'" data-i="0">'+xbox(0)+frontMap()+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="1")+'" data-i="1">'+xbox(1)+capsTab()+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="2")+'" data-i="2">'+xbox(2)+mechsTab()+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="3")+'" data-i="3">'+xbox(3)+buildTab()+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="4")+'" data-i="4">'+xbox(4)+writtenTab()+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="5")+'" data-i="5">'+xbox(5)+principles()+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="6")+'" data-i="6">'+xbox(6)+archiveTab()+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="7")+'" data-i="7">'+xbox(7)+testingTab()+'</section>'
   +   '<div class="foot">'+esc(footerLine())+'<br/>Served by '+esc(D.served_by.fn)+' · the Studio’s own numbers and each customer’s, kept apart · this is the only address that serves the studio · nothing on this page is stored.</div>'
   + '</main></div>'
   + '<div class="ov" id="ov"><div class="dr" id="drw">'+ipdocs()+'</div></div>';
@@ -633,6 +634,7 @@ function render(){
       if(w==="principles"){ goTab(5); return; }
       if(w==="mechanisms"){ goTab(2); return; }
       if(w==="building"){ goTab(3); return; }
+      if(w==="testing"){ goTab(7); return; }
       if(w==="written"){ goTab(4); return; }
       if(w==="conflicts"){ goTab(4); loadConflicts("cross"); return; }
       if(w.indexOf("records:")===0){ openRecords(w.slice(8)); return; }
@@ -1742,7 +1744,7 @@ function storedLine(){
   }
   const t=s.tests||{};
   const parts=[];
-  ["stored","passing","failing","error","owed"].forEach(function(k){ if(t[k]!==undefined&&t[k]!==null) parts.push(t[k]+" "+(k==="owed"?"answer owed by you":k)); });
+  ["stored","passing","failing","error","answer_owed"].forEach(function(k){ if(t[k]!==undefined&&t[k]!==null) parts.push(t[k]+" "+(k==="answer_owed"?"answer owed by you":k)); });
   return "Stored tests: "+(parts.length?parts.join(", "):"counts returned in a shape this page does not recognise")
     + (s.last_run_at?(" · last run "+String(s.last_run_at).slice(0,16).replace("T"," ")):"");
 }
@@ -1779,11 +1781,15 @@ function frontMap(){
         }).join("")
         : '<div class="empty">No step is recorded as in progress. HQ records the current step; nothing is guessed here.</div>');
     const owed=steps.filter(function(c){ return c.step_state==="waiting for your test"; });
-    const st=MAP.stored_tests||{}, stOwed=st.ok&&st.tests&&Number(st.tests.owed)>0?Number(st.tests.owed):0;
-    html+='<div class="blk">Needs you <span class="ct">'+(owed.length+(stOwed?1:0))+'</span><span class="ln"></span></div>'
+    /* FIXED 2026-10-02 (seat testing-tab): this read tests.owed, a field the brain never
+       returns (stored_test_counts() says answer_owed), so an owed test never reached Needs you. */
+    const st=MAP.stored_tests||{}, stOwed=st.ok&&st.tests&&Number(st.tests.answer_owed)>0?Number(st.tests.answer_owed):0;
+    const stBroke=(st.ok&&Array.isArray(st.catalog))?st.catalog.filter(function(x){ return x.newly_broken; }):[];
+    html+='<div class="blk">Needs you <span class="ct">'+(owed.length+(stOwed?1:0)+stBroke.length)+'</span><span class="ln"></span></div>'
       + owed.map(function(c){ return fold('<b>Screen test:</b> '+esc(c.step_now), '<p>'+esc(c.step_shows||"")+'</p>'); }).join("")
-      + (stOwed?'<div class="pi" style="cursor:default"><span class="pn">!</span><span>'+stOwed+' stored test'+(stOwed===1?"":"s")+' waiting for your known answer.</span></div>':'')
-      + (!owed.length&&!stOwed?'<div class="empty">Nothing is waiting on you.</div>':'');
+      + stBroke.map(function(x){ return '<div class="pi" data-goto="testing"><span class="pn">!</span><span style="color:var(--red)">Newly broken: '+esc(x.label)+'</span></div>'; }).join("")
+      + (stOwed?'<div class="pi" data-goto="testing"><span class="pn">!</span><span>'+stOwed+' stored test'+(stOwed===1?"":"s")+' waiting for your right answer, on the Tool screen.</span></div>':'')
+      + (!owed.length&&!stOwed&&!stBroke.length?'<div class="empty">Nothing is waiting on you.</div>':'');
     const reds=redItems();
     html+='<div class="blk">Anything red <span class="ct">'+reds.length+'</span><span class="ln"></span></div>'
       + (reds.length?('<div class="pi" data-goto="mechanisms"><span class="pn">!</span><span style="color:var(--red)">'+esc(reds.length)+' thing'+(reds.length===1?"":"s")+' wrong right now</span></div>'
@@ -1933,9 +1939,61 @@ const TABBOX=[
   "What is being made right now, what you will be asked to test next, and what comes after.",
   "Decisions, seat write-ups, the governing documents, and the places the record contradicts itself.",
   "The numbered rules the build is judged against, and the decisions behind each.",
-  "Past work, kept so it can be reused, and out of the running system."
+  "Past work, kept so it can be reused, and out of the running system.",
+  "Every stored test, and whether a change broke one. Tests are shown here by label only; the question, the right answer and what came back are on the Tool screen, for the owner."
 ];
 function xbox(i){ return '<div class="xbox">'+esc(TABBOX[i]||"")+'</div>'; }
+
+/* ── TESTING (seat testing-tab, 2026-10-02, ruling 903) ───────────────────
+   SEPARATION, BY CONSTRUCTION: what arrives here is stored_test_catalog() on the customer
+   brain, which carries a neutral label, capability, who asks BY ROLE, state and last run, and
+   nothing else. No question, answer or result text exists in this payload to render.
+   Run now lives on the Tool screen: the studio holds no key that can start the runner. */
+const TEST_STATE_CHIP={passing:"ok", failing:"bad", error:"bad", owed:"high", "never run":"norm", "waiting for a run":"norm"};
+function testWhen(x){ return x.last_run_at?String(x.last_run_at).slice(0,16).replace("T"," "):"never"; }
+function testLine(x){
+  const ctl=x.kind!=="test";
+  const chip=ctl?(x.doing_its_job?"ok":(x.state==="never run"?"norm":"bad")):(TEST_STATE_CHIP[x.state]||"norm");
+  const word=ctl?(x.state==="never run"?"never run":(x.doing_its_job?"doing its job":"not doing its job")):x.state;
+  return '<div class="pi" style="cursor:default"><span class="pn">'+(x.newly_broken?"!":"·")+'</span><span>'
+    + esc(x.label)+' <span style="color:var(--ink-3)">· '+esc(x.capability)+' · asked as '+esc(x.asks_as)+' · last run '+esc(testWhen(x))+'</span> '
+    + '<span class="chip '+chip+'">'+esc(x.newly_broken?"newly broken":word)+'</span></span></div>';
+}
+function testingTab(){
+  if(!mapOk()) return mapWait();
+  const st=MAP.stored_tests||{};
+  if(!st.ok) return '<div class="empty">The stored tests could not be read, so nothing below is known: '+esc(st.why||"")+'</div>';
+  const t=st.tests||{}, c=st.controls||{};
+  const num=function(v){ return (v===undefined||v===null)?"?":esc(v); };
+  const failing=(t.failing==null&&t.error==null)?null:(Number(t.failing||0)+Number(t.error||0));
+  let html='<div class="ntiles">'
+    + '<div class="nt"><div class="nb">'+num(t.passing)+'</div><div class="nl">passing</div></div>'
+    + '<div class="nt"><div class="nb">'+num(failing)+'</div><div class="nl">failing</div><div class="ns">including any that could not run</div></div>'
+    + '<div class="nt"><div class="nb">'+num(t.answer_owed)+'</div><div class="nl">waiting for your right answer</div><div class="ns">given on the Tool screen</div></div>'
+    + '</div>';
+  html+='<div class="pi" style="cursor:default"><span class="pn">'+(c.discriminates?"·":"!")+'</span><span>'
+    + (c.discriminates?"The controls are doing their job, so a pass or a fail can be trusted."
+       :'<span style="color:var(--red)">The controls are not doing their job right now, so no result can be trusted until they are.</span>')
+    + (st.last_run_at?' <span style="color:var(--ink-3)">Last run '+esc(String(st.last_run_at).slice(0,16).replace("T"," "))+'.</span>':' <span style="color:var(--ink-3)">Never run.</span>')
+    + '</span></div>';
+  const cat=st.catalog;
+  if(!Array.isArray(cat)) return html+'<div class="empty">One line per test appears once the customer brain is updated. Until then, the counts above are all there is.</div>';
+  const broke=cat.filter(function(x){ return x.newly_broken; });
+  const biz=cat.filter(function(x){ return x.kind==="test" && !x.pair && !x.newly_broken; });
+  const paired=cat.filter(function(x){ return x.kind==="test" && x.pair && !x.newly_broken; });
+  const ctls=cat.filter(function(x){ return x.kind!=="test" && !x.newly_broken; });
+  if(broke.length) html+='<div class="blk">Newly broken <span class="ct">'+broke.length+'</span><span class="ln"></span></div>'+broke.map(testLine).join("");
+  html+='<div class="blk">Business tests <span class="ct">'+biz.length+'</span><span class="ln"></span></div>'
+    + (biz.length?biz.map(testLine).join(""):'<div class="empty">No business tests yet. Each scenario you judge on the Tool screen becomes one.</div>');
+  const pairs={}; paired.forEach(function(x){ (pairs[x.pair]=pairs[x.pair]||[]).push(x); });
+  const pk=Object.keys(pairs);
+  html+='<div class="blk">Security pairs <span class="ct">'+pk.length+'</span><span class="ln"></span></div>'
+    + (pk.length?pk.map(function(k){ return '<div style="border-left:2px solid var(--hair);padding-left:10px;margin:6px 0">'+pairs[k].map(testLine).join("")+'</div>'; }).join("")
+       :'<div class="empty">No security pairs yet. A pair is the same thing asked by a limited person, who must be refused, and by the owner, who must be answered.</div>');
+  html+=fold('Controls ('+ctls.length+'): the checks on the checks, not your tests', ctls.length?ctls.map(testLine).join(""):'<p>None.</p>');
+  html+='<div class="pi" data-tool="1"><span class="pn">›</span><span>Open the Tool screen to see each test in full, give a right answer, or run the tests now</span></div>';
+  return html;
+}
 
 function frame(){
   const d=D.ip_docs||[], drift=D.shard_drift_note, ig=D.integrity;
