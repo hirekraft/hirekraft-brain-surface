@@ -221,6 +221,9 @@ function renderWho() {
   $("#sum-head").textContent = v.all_access
     ? "What is in it."
     : "What is in it, as far as you reach.";
+  // Tests are the owner's. Hiding the way in is courtesy; the brain refuses anyone else.
+  const te = $("#tests-entry");
+  if (te) te.hidden = !v.all_access;
 }
 
 // ── the tree: structure first, then the reading lands into it ────────────────
@@ -1896,6 +1899,182 @@ async function ask(question) {
 // labels, the faults grouped by cause, and the count that separates what needs you
 // from what is ours.
 
+// ── TESTS (seat testing-tab, 2026-10-02, ruling 903) ─────────────────────────
+// THE OWNER SEES EACH TEST IN FULL HERE: the question, the right answer and the date it is
+// true as of, what came back, passed or failed, and when. The studio surface shows the same
+// tests by a neutral label only; questions and answers never leave this brain.
+// OWNER ONLY, ENFORCED IN THE BRAIN: stored_test_owner_view() and stored_test_set_answer()
+// refuse anyone who is not all-access, with a reason. The entry is hidden for everyone else
+// as a courtesy, not as the guard.
+// Run now calls the stored-tests runner with this person's own sign-in; the runner accepts
+// an owner's sign-in or the brain's gate key and nothing else. Results land one by one.
+const TESTS_URL = `${SUPABASE_URL}/functions/v1/stored-tests`;
+const TEST_TONE = { passing: "tone-green", failing: "tone-red", error: "tone-red", owed: "tone-amber",
+                    "never run": "tone-plain", "waiting for a run": "tone-plain" };
+const TEST_WORD = { passing: "passed", failing: "failed", error: "could not run", owed: "waiting for your right answer",
+                    "never run": "never run", "waiting for a run": "answer saved, not run yet" };
+let testsRead = null;
+
+function testWhen(iso) { return iso ? fmtWindow(iso) : "never"; }
+
+function rightAnswerText(t) {
+  const k = t.known_answer;
+  if (!k) return "Not given yet.";
+  const asOf = t.answer_as_of ? ` As of ${fmtDay(t.answer_as_of)}.` : "";
+  if (typeof k.n === "number") return `${k.n}.${asOf}`;
+  if (Array.isArray(k.names)) return `${k.names.length} named: ${k.names.join(", ")}.${asOf}`;
+  if (Array.isArray(k.state_in)) return `The Tool must reply: ${k.state_in.join(" or ")}.`;
+  return "Stored in a shape this screen does not recognise.";
+}
+
+function cameBackText(t) {
+  if (!t.last_run_at) return "Not run yet.";
+  const g = t.last_got || {};
+  const parts = [t.last_reason || ""];
+  if (Array.isArray(g.missing) && g.missing.length) parts.push(`Missing: ${g.missing.join(", ")}.`);
+  if (Array.isArray(g.extra) && g.extra.length) parts.push(`Not expected: ${g.extra.join(", ")}.`);
+  return parts.filter(Boolean).join(" ");
+}
+
+function answerForm(t, li) {
+  const box = el("div", "t-form");
+  box.innerHTML = `
+    <p class="quiet">Give the right answer as it stands on a date. Use a number for "how many",
+      or a list of names, one per line, for "who".</p>
+    <label class="t-field">The right answer
+      <textarea rows="3" class="t-answer" placeholder="A number, or names one per line"></textarea></label>
+    <label class="t-field">True as of
+      <input type="date" class="t-asof"></label>
+    <div class="actions"><button class="go t-save" type="button">Save the answer</button></div>
+    <p class="quiet t-said" aria-live="polite"></p>`;
+  const asof = box.querySelector(".t-asof");
+  asof.value = new Date().toISOString().slice(0, 10);
+  asof.max = asof.value;
+  box.querySelector(".t-save").addEventListener("click", async (e) => {
+    const btn = e.currentTarget, said = box.querySelector(".t-said");
+    const raw = box.querySelector(".t-answer").value.trim();
+    const lines = raw.split(String.fromCharCode(10)).map((s) => s.trim()).filter(Boolean);
+    const isNumber = lines.length === 1 && String(Number(lines[0])) === lines[0] && Number(lines[0]) >= 0;
+    if (!lines.length) { said.textContent = "Type the answer first."; return; }
+    btn.disabled = true; said.textContent = "Saving.";
+    try {
+      const { data, error } = await sb.rpc("stored_test_set_answer", {
+        p_test: t.id,
+        p_judge: isNumber ? "count" : "set",
+        p_known: isNumber ? { n: Number(lines[0]) } : { names: lines },
+        p_as_of: asof.value || null,
+      });
+      if (error) throw error;
+      said.textContent = data?.ok ? `${data.note}` : (data?.note ?? data?.reason ?? "Not saved, and no reason was given.");
+      if (data?.ok) await loadTests();
+    } catch (err) {
+      said.textContent = `Not saved: ${err?.message ?? err}`;
+    } finally { btn.disabled = false; }
+  });
+  li.appendChild(box);
+}
+
+function testItem(t) {
+  const li = el("li");
+  if (t.kind !== "test" || !t.newly_broken) li.className = "ours";
+  const ctl = t.kind !== "test";
+  const word = t.newly_broken ? "newly broken: it passed before and fails now"
+    : ctl ? (t.state === "never run" ? "never run" : (t.doing_its_job ? "doing its job" : "not doing its job"))
+    : (TEST_WORD[t.state] ?? t.state);
+  const tone = t.newly_broken ? "tone-red"
+    : ctl ? (t.doing_its_job ? "tone-green" : (t.state === "never run" ? "tone-plain" : "tone-red"))
+    : (TEST_TONE[t.state] ?? "tone-plain");
+  li.innerHTML = `
+    <p class="a-title">${escape(t.label)}</p>
+    <p class="state ${tone}"><span class="dot"></span>${escape(word)}</p>
+    <p class="a-detail"><b>Asked as:</b> ${escape(t.asks_as === "owner" ? "the owner" : "a person with limited access")}${t.pair ? ` &middot; one half of a security pair` : ""}</p>
+    <p class="a-detail"><b>Question:</b> ${escape(t.question)}</p>
+    <p class="a-detail"><b>Right answer:</b> ${escape(rightAnswerText(t))}</p>
+    <p class="a-detail"><b>What came back:</b> ${escape(cameBackText(t))}</p>
+    <p class="a-detail"><b>When:</b> ${escape(testWhen(t.last_run_at))}${t.last_trigger === "deploy" ? " (after a change)" : ""}</p>`;
+  if (t.kind === "test" && !t.known_answer) answerForm(t, li);
+  return li;
+}
+
+function drawTests(v) {
+  const mount = $("#tests");
+  mount.innerHTML = "";
+  if (!v.ok) {
+    const n = el("p", "notice"); n.textContent = v.note ?? `Refused: ${v.reason ?? "no reason given"}.`;
+    mount.appendChild(n); $("#tests-run").hidden = true; return;
+  }
+  $("#tests-run").hidden = false;
+  const c = v.counts?.tests ?? {}, k = v.counts?.controls ?? {};
+  const failing = Number(c.failing ?? 0) + Number(c.error ?? 0);
+  const head = el("p", "quiet");
+  head.textContent = `${c.passing ?? "?"} passing, ${failing} failing, ${c.answer_owed ?? "?"} waiting for your right answer. `
+    + (k.discriminates ? "The controls are doing their job, so these results can be trusted."
+                       : "The controls are not doing their job, so no result can be trusted until they are.")
+    + ` Read ${fmtWindow(v.read_at)}.`;
+  mount.appendChild(head);
+  const tests = (v.tests ?? []).filter((t) => t.kind === "test");
+  const ctls = (v.tests ?? []).filter((t) => t.kind !== "test");
+  const ul = el("ul", "attn");
+  tests.forEach((t) => ul.appendChild(testItem(t)));
+  if (!tests.length) { const n = el("p", "notice"); n.textContent = "No tests yet. Each scenario you judge here becomes one."; mount.appendChild(n); }
+  else mount.appendChild(ul);
+  if (ctls.length) {
+    const d = el("details", "t-controls");
+    d.innerHTML = `<summary class="quiet">Controls (${ctls.length}): the checks on the checks, not your tests</summary>`;
+    const cu = el("ul", "attn");
+    ctls.forEach((t) => cu.appendChild(testItem(t)));
+    d.appendChild(cu); mount.appendChild(d);
+  }
+}
+
+async function loadTests() {
+  const mount = $("#tests");
+  if (!mount) return;
+  if (!testsRead) mount.innerHTML = `<p class="quiet">Reading your tests.</p>`;
+  try {
+    const { data, error } = await sb.rpc("stored_test_owner_view");
+    if (error) throw error;
+    testsRead = data;
+    drawTests(data);
+  } catch (e) {
+    mount.innerHTML = "";
+    const n = el("p", "notice flagged");
+    n.textContent = `The tests could not be read, so nothing here is known: ${e?.message ?? e}`;
+    mount.appendChild(n);
+  }
+}
+
+(function wireTestsRun() {
+  const btn = $("#tests-run");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const said = $("#tests-said");
+    btn.disabled = true; said.textContent = "Starting.";
+    try {
+      const { data } = await sb.auth.getSession();
+      const jwt = data?.session?.access_token;
+      if (!jwt) { said.textContent = "Not signed in on this browser, so the tests cannot be run."; return; }
+      const r = await fetch(TESTS_URL, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${jwt}`, apikey: PUBLISHABLE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ trigger: "on_demand" }),
+      });
+      const body = await r.json().catch(() => null);
+      if (!body?.ok) { said.textContent = body?.error ?? `The tests did not start (${r.status}).`; return; }
+      said.textContent = "Started. Each test asks the Tool as the person it names; results land one by one. This list refreshes on its own for a few minutes.";
+      const before = testsRead?.counts?.last_run_at ?? null;
+      for (let i = 0; i < 12; i++) {
+        await new Promise((ok) => setTimeout(ok, 15000));
+        await loadTests();
+        const now = testsRead?.counts?.last_run_at ?? null;
+        if (now && now !== before) said.textContent = `Results arriving. Last result ${fmtWindow(now)}.`;
+      }
+    } catch (e) {
+      said.textContent = `The tests did not start: ${e?.message ?? e}`;
+    } finally { btn.disabled = false; }
+  });
+})();
+
 // ── steps ───────────────────────────────────────────────────────────────────
 
 // The page opens on the holding state, so this must ALWAYS land somewhere - a
@@ -1907,6 +2086,7 @@ function routeOnState(mode) {
   if (userMoved) return;                        // never move someone who has chosen
   routed = true;
   if (location.hash === "#sources") { goto("s-summary"); return; }
+  if (location.hash === "#tests" && $("#s-tests")) { goto("s-tests"); return; }
   // Nobody signed in: the introduction is the honest screen, and it claims nothing
   // about data because there is no identity to claim it about.
   if (mode === "unbound") { goto("s-intro"); return; }
@@ -1922,6 +2102,7 @@ function goto(id) {
   document.querySelectorAll("section.step").forEach((s) => { s.hidden = s.id !== id; });
   window.scrollTo({ top: 0 });
   if (id === "s-connect" && !$("#connect-stage").children.length) stageTypes();
+  if (id === "s-tests") loadTests();
 }
 
 // ── boot ────────────────────────────────────────────────────────────────────
