@@ -1875,6 +1875,9 @@ async function ask(question) {
     if (!body) { askProblem(slot, `The brain did not answer (${r.status}). Nothing was changed.`); return; }
     if (body.ok !== true) { askProblem(slot, body.error ?? `The brain refused this (${r.status}).`); return; }
     renderAsk(slot, body);
+    // Save as test sits on every answer, for the owner (seat save-as-test). lastAsked is still the
+    // previous question here, so the form knows when this one was a follow-on.
+    if (shape?.viewer?.all_access) slot.appendChild(saveAsTest(q, lastAsked));
     lastAsked = q;
   } catch (e) {
     askProblem(slot, `The brain could not be reached: ${e?.message ?? e}`);
@@ -1918,7 +1921,7 @@ const TESTS_URL = `${SUPABASE_URL}/functions/v1/stored-tests`;
 const TEST_TONE = { passing: "tone-green", failing: "tone-red", error: "tone-red", owed: "tone-amber",
                     "never run": "tone-plain", "waiting for a run": "tone-plain" };
 const TEST_WORD = { passing: "passed", failing: "failed", error: "could not run", owed: "waiting for your right answer",
-                    "never run": "never run", "waiting for a run": "answer saved, not run yet" };
+                    "never run": "saved, not run yet", "waiting for a run": "answer saved, not run yet" };
 let testsRead = null;
 
 function testWhen(iso) { return iso ? fmtWindow(iso) : "never"; }
@@ -1959,15 +1962,14 @@ function answerForm(t, li) {
   box.querySelector(".t-save").addEventListener("click", async (e) => {
     const btn = e.currentTarget, said = box.querySelector(".t-said");
     const raw = box.querySelector(".t-answer").value.trim();
-    const lines = raw.split(String.fromCharCode(10)).map((s) => s.trim()).filter(Boolean);
-    const isNumber = lines.length === 1 && String(Number(lines[0])) === lines[0] && Number(lines[0]) >= 0;
-    if (!lines.length) { said.textContent = "Type the answer first."; return; }
+    const ans = parseAnswer(raw);
+    if (!ans) { said.textContent = "Type the answer first."; return; }
     btn.disabled = true; said.textContent = "Saving.";
     try {
       const { data, error } = await sb.rpc("stored_test_set_answer", {
         p_test: t.id,
-        p_judge: isNumber ? "count" : "set",
-        p_known: isNumber ? { n: Number(lines[0]) } : { names: lines },
+        p_judge: ans.judge,
+        p_known: ans.known,
         p_as_of: asof.value || null,
       });
       if (error) throw error;
@@ -1978,6 +1980,107 @@ function answerForm(t, li) {
     } finally { btn.disabled = false; }
   });
   li.appendChild(box);
+}
+
+// A number is a count, anything else is a list of names, one per line. One reading of what was
+// typed, used by the answer form on a test and by Save as test (seat save-as-test, 2026-10-02).
+function parseAnswer(raw) {
+  const lines = String(raw ?? "").split(String.fromCharCode(10)).map((s) => s.trim()).filter(Boolean);
+  if (!lines.length) return null;
+  const isNumber = lines.length === 1 && String(Number(lines[0])) === lines[0] && Number(lines[0]) >= 0;
+  return isNumber ? { judge: "count", known: { n: Number(lines[0]) } } : { judge: "set", known: { names: lines } };
+}
+
+// SAVE AS TEST (seat save-as-test, 2026-10-02, Alex's rulings of that day). On every answer, for
+// the owner. The button is shown only to the all-access viewer as a courtesy; stored_test_create()
+// in the brain refuses anyone else with a reason. Alex types the right answer and the date it is
+// true as of. A neutral label is suggested from the QUESTION by the stored-tests runner, which
+// offers it only if the brain's label check passes it; he can change it, and the brain checks it
+// again when he saves. The brain adds "(up to and including <date>)" to the stored question, so
+// later records cannot change its right answer.
+function saveAsTest(q, follows) {
+  const wrap = el("div", "t-save-as");
+  const open = el("button", "go ghost");
+  open.type = "button";
+  open.textContent = "Save as test";
+  open.addEventListener("click", () => { open.hidden = true; wrap.appendChild(saveForm(q, follows)); }, { once: true });
+  wrap.appendChild(open);
+  return wrap;
+}
+
+async function suggestLabelFor(q) {
+  const { data } = await sb.auth.getSession();
+  const jwt = data?.session?.access_token;
+  if (!jwt) return { ok: false, error: "Not signed in on this browser." };
+  const r = await fetch(TESTS_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${jwt}`, apikey: PUBLISHABLE_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "suggest_label", question: q }),
+  });
+  const body = await r.json().catch(() => null);
+  // A runner older than this action reads the call as "run the tests". Say so rather than
+  // presenting a run's reply as a missing label.
+  if (body?.started) return { ok: false, error: "The label suggestion is not switched on yet, so a test run was started instead." };
+  return body ?? { ok: false, error: `No reply (${r.status}).` };
+}
+
+function saveForm(q, follows) {
+  const box = el("div", "t-form");
+  box.innerHTML = `
+    <p class="quiet">Keep this question as a test. Give the right answer as it stands on a date.
+      The question is kept up to that date, so records arriving later do not change it.</p>
+    ${follows ? `<p class="quiet">This question followed an earlier one. Make it stand on its own before saving.</p>` : ""}
+    <label class="t-field">The question
+      <textarea rows="2" class="t-q"></textarea></label>
+    <label class="t-field">The right answer
+      <textarea rows="3" class="t-answer" placeholder="A number, or names one per line"></textarea></label>
+    <label class="t-field">True as of
+      <input type="date" class="t-asof"></label>
+    <label class="t-field">Label. The only part of a test the studio sees: lowercase words, no names, figures or dates.
+      <input type="text" class="t-label" maxlength="120"></label>
+    <p class="quiet t-label-said" aria-live="polite">Suggesting a label.</p>
+    <div class="actions"><button class="go t-save" type="button">Save the test</button></div>
+    <p class="quiet t-said" aria-live="polite"></p>`;
+  box.querySelector(".t-q").value = q;
+  const asof = box.querySelector(".t-asof");
+  asof.value = new Date().toISOString().slice(0, 10);
+  asof.max = asof.value;
+  const label = box.querySelector(".t-label");
+  const labelSaid = box.querySelector(".t-label-said");
+  suggestLabelFor(q).then((s) => {
+    if (s?.ok && s.label) {
+      if (!label.value) label.value = s.label;
+      labelSaid.textContent = "Suggested. Change it if you like.";
+    } else {
+      labelSaid.textContent = `${s?.error ?? "No label was suggested."} Write one.`;
+    }
+  }).catch((e) => { labelSaid.textContent = `No label was suggested (${e?.message ?? e}). Write one.`; });
+
+  box.querySelector(".t-save").addEventListener("click", async (e) => {
+    const btn = e.currentTarget, said = box.querySelector(".t-said");
+    const ans = parseAnswer(box.querySelector(".t-answer").value);
+    if (!ans) { said.textContent = "Type the right answer first."; return; }
+    btn.disabled = true; said.textContent = "Saving.";
+    try {
+      const { data, error } = await sb.rpc("stored_test_create", {
+        p_question: box.querySelector(".t-q").value.trim(),
+        p_judge: ans.judge, p_known: ans.known,
+        p_as_of: asof.value || null, p_label: label.value.trim(),
+      });
+      if (error) throw error;
+      if (!data?.ok) { said.textContent = data?.note ?? data?.reason ?? "Not saved, and no reason was given."; btn.disabled = false; return; }
+      said.textContent = data.note;
+      const go = el("button", "go ghost");
+      go.type = "button"; go.dataset.goto = "s-tests"; go.textContent = "Open Tests";
+      said.after(go);
+      btn.hidden = true;
+      if (testsRead) await loadTests();
+    } catch (err) {
+      said.textContent = `Not saved: ${err?.message ?? err}`;
+      btn.disabled = false;
+    }
+  });
+  return box;
 }
 
 function testItem(t) {
