@@ -196,6 +196,8 @@
       <button class="go ghost" data-goto="s-intro">What this is</button>
       <!-- Shown to the owner only; the brain refuses anyone else whatever this says. -->
       <button class="go ghost" data-goto="s-tests" id="tests-entry" hidden>Tests</button>
+      <!-- Owner only, as a courtesy; the brain refuses anyone else (seat who-sees-what). -->
+      <button class="go ghost" data-goto="s-access" id="access-entry" hidden>Who sees what</button>
     </div>
 
     <p class="sovereign">This brain is yours. It sits in your own database and nothing in it
@@ -218,6 +220,18 @@
     </div>
     <p class="quiet" id="tests-said" aria-live="polite"></p>
     <div id="tests" aria-live="polite"></div>
+  </section>
+
+  <!-- 9. WHO SEES WHAT. The owner's, inside the Brain tab. Seat who-sees-what, 2026-10-06.
+       Every line on it comes from the brain; the brain refuses anyone but the owner. -->
+  <section class="step" id="s-access" hidden>
+    <p class="eyebrow">Your brain</p>
+    <h2>Who sees what.</h2>
+    <p class="quiet">Each person sees what their own Google account already opens, and records
+      about them. You can keep pay and rate figures, or everything, from anyone. Nothing changes
+      until you have seen what it would change.</p>
+    <div id="access" aria-live="polite"></div>
+    <div class="actions"><button class="go ghost" data-goto="s-summary">Back to your brain</button></div>
   </section>
 
   <!-- 8. WORK. Arranged like the Claude chat app (Alex 2026-10-06), not branded like it.
@@ -310,6 +324,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-06-work-layout"></script>
+<script type="module" src="lens.js?v=2026-10-06-who-sees-what"></script>
 </body>
 </html>
