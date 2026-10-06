@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-10-02-tabs">
+<link rel="stylesheet" href="skin.css?v=2026-10-06-work-layout">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -220,6 +220,25 @@
     <div id="tests" aria-live="polite"></div>
   </section>
 
+  <!-- 8. WORK. Arranged like the Claude chat app (Alex 2026-10-06), not branded like it.
+       Seat work-tab. The middle column receives the dock's conversation and question box
+       while this tab is open (workDock in lens.js), so there is still one of each. -->
+  <section class='step work' id='s-work' hidden>
+    <aside class='work-side' aria-label='Your chats'>
+      <button class='go work-newchat' id='work-new' type='button'>New chat</button>
+      <div class='work-head'><h3>Projects</h3>
+        <button class='work-add' id='work-project-new' type='button' aria-label='New project'>New project</button></div>
+      <ul class='work-chats' id='work-projects'></ul>
+      <h3>Recents</h3>
+      <ul class='work-chats' id='work-recents'></ul>
+      <p class='quiet' id='work-said' aria-live='polite'></p>
+    </aside>
+    <div class='work-main'>
+      <div id='work-project-view' hidden></div>
+      <div id='work-convo'></div>
+    </div>
+  </section>
+
   <!-- 7. ONE SOURCE. The tab for Mail, Drives & folders, Calendar, Contacts, Systems
        or Loose files. Seat tool-tabs, 2026-10-02. Very basic on purpose: what is
        connected, or one line pointing to Brain. -->
@@ -291,6 +310,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-06-save-as-test"></script>
+<script type="module" src="lens.js?v=2026-10-06-work-layout"></script>
 </body>
 </html>
