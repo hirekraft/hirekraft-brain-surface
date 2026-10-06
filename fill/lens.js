@@ -385,7 +385,7 @@ function drawMembers(key, body, pfx = "") {
 
     const nav = m.nav ? `<span class="m-nav">${escape(m.nav)}</span>` : "";
     btn.innerHTML =
-      `<span class="m-name${m.named === false ? " unnamed" : ""}">${escape(m.name)}${grants}${nav}</span>` +
+      `<span class="m-name${m.named === false ? " unnamed" : ""}">${escape(m.full ?? m.name)}${grants}${nav}</span>` +
       `<span class="m-win">${win}</span>` +
       `<svg class="chev" width="14" height="14" aria-hidden="true"><use href="#i-chev"/></svg>`;
 
