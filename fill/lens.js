@@ -489,7 +489,7 @@ function resumeControl(s) {
 
 // The states carry no new colour: they land on the skin's existing three.
 const MBX_CLASS = {
-  working: "live", closed_to_you: "stalled", stopped: "stalled",
+  reading: "live", closed_to_you: "live", unread: "unread", stopped: "stalled",
   off: "unread", not_yours: "unread",
 };
 
