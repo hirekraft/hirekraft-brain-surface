@@ -1444,8 +1444,9 @@ function say(text, asked) {
 // states there is no field here to present. The code reads `state` and never
 // infers one by counting records.
 //
-// The answer lands in the BODY, above the dock. The dock is where you type; the
-// body is where you read, alongside the records the answer came from.
+// The answer lands in the conversation, under the question that asked it: in the middle column
+// on Work, in the dock elsewhere. (The older wording here, that it lands in the page body above
+// the dock, was superseded on 2026-09-27 and removed on 2026-10-06 by seat chat-layout.)
 
 const ASK_URL = `${SUPABASE_URL}/functions/v1/lens-ask`;
 let asking = false;
@@ -1911,7 +1912,9 @@ async function ask(question) {
       headers: { Authorization: `Bearer ${jwt}`, apikey: PUBLISHABLE_KEY, "Content-Type": "application/json" },
       // The previous question on this page travels as context, so "i meant the X role"
       // is answered as the question it continues. lens-ask decides whether it does.
-      body: JSON.stringify(lastAsked ? { question: q, follows: lastAsked } : { question: q }),
+      // Her time zone travels with every question so lens-ask resolves 'last month' against her
+      // today, never against the dates in the records (seat chat-layout, 2026-10-06).
+      body: JSON.stringify(Object.assign({ question: q, tz: zone() }, lastAsked ? { follows: lastAsked } : {})),
     });
     const body = await r.json().catch(() => null);
     if (!body) { askProblem(slot, `The brain did not answer (${r.status}). Nothing was changed.`); return; }
@@ -1975,6 +1978,7 @@ function rightAnswerText(t) {
   const asOf = t.answer_as_of ? ` As of ${fmtDay(t.answer_as_of)}.` : "";
   if (typeof k.n === "number") return `${k.n}.${asOf}`;
   if (Array.isArray(k.names)) return `${k.names.length} named: ${k.names.join(", ")}.${asOf}`;
+  if (typeof k.period === 'string') return `The answer says it means ${k.period}.${asOf}`;
   if (Array.isArray(k.state_in)) return `The Tool must reply: ${k.state_in.join(" or ")}.`;
   return "Stored in a shape this screen does not recognise.";
 }
@@ -2678,6 +2682,53 @@ async function loadWork() {
 })();
 
 // ── boot ────────────────────────────────────────────────────────────────────
+
+// TODAY IN THE HEADER (seat chat-layout, 2026-10-06, Alex's ruling that day). The date, time and
+// time zone come from this computer, or from a zone she picks here, kept in this browser. The
+// same zone travels with every question (ask), so the Tool and the header agree on today.
+const TZ_KEY = 'tool.timezone';
+function ownZone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (_) { return 'UTC'; }
+}
+function zone() {
+  try { const z = localStorage.getItem(TZ_KEY); if (z) return z; } catch (_) { /* storage off: the computer's */ }
+  return ownZone();
+}
+function drawClock() {
+  const when = $('#clock-when'), zbtn = $('#clock-zone');
+  if (!when || !zbtn) return;
+  const z = zone(), now = new Date();
+  try {
+    const day = now.toLocaleDateString(undefined, { timeZone: z, weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    const time = now.toLocaleTimeString(undefined, { timeZone: z, hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+    when.textContent = `${day}, ${time}`;
+  } catch (_) { when.textContent = now.toString(); }
+  zbtn.textContent = z.split('_').join(' ') + (z === ownZone() ? '' : ' (your setting)');
+}
+(function wireClock() {
+  const zbtn = $('#clock-zone'), pick = $('#clock-pick');
+  if (!zbtn || !pick) return;
+  zbtn.addEventListener('click', () => {
+    if (!pick.hidden) { pick.hidden = true; return; }
+    pick.innerHTML = '';
+    let set = null; try { set = localStorage.getItem(TZ_KEY); } catch (_) { /* none */ }
+    const own = el('option'); own.value = ''; own.textContent = `This computer's (${ownZone().split('_').join(' ')})`;
+    pick.appendChild(own);
+    let zones = []; try { zones = Intl.supportedValuesOf('timeZone'); } catch (_) { zones = [ownZone()]; }
+    for (const z of zones) {
+      const o = el('option'); o.value = z; o.textContent = z.split('_').join(' ');
+      if (z === set) o.selected = true;
+      pick.appendChild(o);
+    }
+    pick.hidden = false; pick.focus();
+  });
+  pick.addEventListener('change', () => {
+    try { if (pick.value) localStorage.setItem(TZ_KEY, pick.value); else localStorage.removeItem(TZ_KEY); } catch (_) { /* kept for this page only */ }
+    pick.hidden = true; drawClock();
+  });
+  drawClock();
+  setInterval(drawClock, 20000);
+})();
 
 drawTreeFrame();                 // the frame first, instantly, with space reserved
 stageTypes();
