@@ -500,7 +500,9 @@ function mailboxLine(mb) {
   // Same tone vocabulary as a drive. A row that needs a person looks the same
   // whether it is a mailbox or a drive, because that is the whole point of a tone.
   const wrap = el("div", `state tone-${mb.tone ?? MBX_CLASS[mb.state] ?? "plain"}`);
-  wrap.innerHTML = `<span class="dot"></span><span class="s-head">${escape(mb.headline)}</span>`
+  // When it was last read, in the viewer's own time (seat mail-lens, 2026-10-06).
+  const read = mb.last_read_at ? `, last read ${fmtWindow(mb.last_read_at)}` : '';
+  wrap.innerHTML = `<span class="dot"></span><span class="s-head">${escape(mb.headline)}${read}</span>`
     + (mb.detail ? ` &middot; ${escape(mb.detail)}` : "");
   if (!mb.action_label) return wrap;
 
