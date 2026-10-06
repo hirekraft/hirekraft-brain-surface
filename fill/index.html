@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-10-06-work-layout">
+<link rel="stylesheet" href="skin.css?v=2026-10-06-chat-layout">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -39,6 +39,13 @@
        style="text-decoration:none;color:inherit">Tool<span>hirekraft</span></a>
     <!-- Filled from the token, never from anything this page asserts.
          Space is reserved so it cannot shift when the reading lands. -->
+    <!-- TODAY, on every tab (seat chat-layout, Alex 2026-10-06): from this computer, or the zone
+         she picks. The same zone goes with every question, so the Tool knows what today is. -->
+    <div class="clock" id="clock">
+      <span class="clock-when" id="clock-when"></span>
+      <button class="clock-zone" id="clock-zone" type="button" title="Change the time zone"></button>
+      <select id="clock-pick" hidden aria-label="Time zone"></select>
+    </div>
     <div class="whoami" id="whoami"><span class="skel w-sm"></span></div>
   </header>
   <!-- THE TABS. Alex's order and words, 2026-10-02. Drawn by lens.js; each one is a
@@ -280,9 +287,10 @@
      it is instructed not to, but because in the other three states there is no
      such field to render.
 
-     THE ANSWER DOES NOT LAND IN THE DOCK. It lands in the page body above it, so
-     it can be read and scrolled alongside the records it came from. The dock is
-     where you type; the body is where you read.
+     THE ANSWER LANDS IN THE CONVERSATION, under the question that asked it, with the
+     question box at the bottom: the arrangement of the Claude and ChatGPT apps (Alex,
+     2026-10-06). The older note here, that the answer lands in the page body and not
+     the dock, was superseded on 2026-09-27 and removed on 2026-10-06 (seat chat-layout).
 
      TWO RULES RIDE WITH THE PLACEMENT, both still in force:
        - Nothing may open a paragraph in the log above the bar on load. That is
@@ -324,6 +332,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-06-mail-lens"></script>
+<script type="module" src="lens.js?v=2026-10-06-chat-layout"></script>
 </body>
 </html>
