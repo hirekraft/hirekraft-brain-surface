@@ -230,6 +230,8 @@ function renderWho() {
   // Tests are the owner's. Hiding the way in is courtesy; the brain refuses anyone else.
   const te = $("#tests-entry");
   if (te) te.hidden = !v.all_access;
+  const ae = $("#access-entry");
+  if (ae) ae.hidden = !v.all_access;
 }
 
 // ── the tree: structure first, then the reading lands into it ────────────────
@@ -1000,6 +1002,16 @@ function fillAttention() {
     });
     boxes.appendChild(see);
 
+    // WHO SEES WHAT sits beside what is connected, for the owner (seat who-sees-what).
+    if (shape.viewer?.all_access) {
+      const w = el("button", "box");
+      w.type = "button";
+      w.innerHTML = `<span class="box-t">Who sees what</span>`
+        + `<span class="box-d">Each person, what their own Google account opens, and your changes.</span>`;
+      w.addEventListener("click", () => { userMoved = true; goto("s-access"); });
+      boxes.appendChild(w);
+    }
+
     // No items, no box. Nothing takes its place and nothing says so.
     if (items.length) {
       const b = el("button", mine > 0 ? "box needs" : "box");
@@ -1761,6 +1773,8 @@ function openName(name, url) {
 function renderAsk(slot, body) {
   slot.innerHTML = "";
   if (body.state === "answered" && body.table && typeof body.table === "object") { tableAnswer(slot, body); return; }
+  // A typed instruction about who sees what (lens-ask v14): its line and the preview card.
+  if (body.state === "access_instruction") { accessAnswer(slot, body); return; }
   const state = body.state;
   const answered = state === "answered" && typeof body.answer === "string" && body.answer;
 
@@ -2185,6 +2199,177 @@ async function loadTests() {
   });
 })();
 
+// -- WHO SEES WHAT (seat who-sees-what Phase B, 2026-10-06) --
+// Capability: "I decide who in my company sees what", the owner's view. OWNER ONLY, ENFORCED
+// IN THE BRAIN: access_people, access_person, access_rule_change and access_rule_retire refuse
+// anyone who is not an owner, with a reason. The way in is hidden for everyone else as a
+// courtesy, not as the guard.
+// NOTHING CHANGES WITHOUT A PREVIEW. Every change is first asked of the same function that
+// makes it with confirm false, which counts the effect through the door and writes nothing;
+// one tap confirms. A typed instruction ("Erin shouldn't see pay figures") arrives from
+// lens-ask as a proposal and goes through exactly the same card; lens-ask changes nothing.
+// What a person sees from Google is the brain's sentence, shown as it is.
+let accessRead = null;
+
+async function accessCall(fn, args) {
+  const { data, error } = await sb.rpc(fn, args);
+  if (error) throw error;
+  return data;
+}
+const countOf = (n) => Number(n ?? 0).toLocaleString();
+
+// One change, previewed, then confirmed or left. p: { action: "withhold", person_id, kind,
+// source } or { action: "restore", rule_id }. Drawn into `mount`; returns the card.
+function changeCard(p, mount) {
+  const box = el("div", "notice access-card");
+  const said = el("p");
+  said.textContent = "Working out what this would change.";
+  const acts = el("div", "actions");
+  box.append(said, acts);
+  mount.appendChild(box);
+  const call = (confirm) => p.action === "restore"
+    ? accessCall("access_rule_retire", { p_rule: p.rule_id, p_confirm: confirm })
+    : accessCall("access_rule_change", { p_identity: p.person_id, p_content_kind: p.kind,
+        p_source_key: p.source ?? null, p_confirm: confirm });
+  (async () => {
+    let v;
+    try { v = await call(false); }
+    catch (e) { said.textContent = `What this would change could not be worked out, so nothing is offered: ${e?.message ?? e}`; return; }
+    if (!v?.ok) { said.textContent = v?.note ?? "This cannot be changed, and no reason was given."; return; }
+    said.textContent = v.words;
+    const yes = el("button", "go"); yes.type = "button"; yes.textContent = "Confirm";
+    const no = el("button", "go ghost"); no.type = "button"; no.textContent = "Leave it as it is";
+    acts.append(yes, no);
+    no.addEventListener("click", () => { acts.innerHTML = ""; said.textContent = "Nothing was changed."; });
+    yes.addEventListener("click", async () => {
+      yes.disabled = true; no.disabled = true;
+      let d;
+      try { d = await call(true); }
+      catch (e) { yes.disabled = false; no.disabled = false; said.textContent = `Not changed: ${e?.message ?? e}`; return; }
+      acts.innerHTML = "";
+      if (!d?.ok) { said.textContent = d?.note ?? "Not changed, and no reason was given."; return; }
+      said.textContent = d.words;
+      if (p.action !== "restore" && d.rule_id) {
+        const undo = el("button", "go ghost"); undo.type = "button"; undo.textContent = "Undo";
+        undo.addEventListener("click", () => { undo.remove(); changeCard({ action: "restore", rule_id: d.rule_id }, mount); });
+        acts.appendChild(undo);
+      }
+      if (accessRead) loadAccess();
+    });
+  })();
+  return box;
+}
+
+// A typed instruction, answered: lens-ask's one line, then the card when it sent a proposal.
+function accessAnswer(slot, body) {
+  const lead = el("p", "ans-lead");
+  lead.textContent = String(body.answer || body.state_reason || "");
+  slot.appendChild(lead);
+  if (body.proposal && typeof body.proposal === "object") changeCard(body.proposal, slot);
+}
+
+async function loadAccess() {
+  const mount = $("#access");
+  if (!mount) return;
+  if (!accessRead) mount.innerHTML = `<p class="quiet">Reading who sees what.</p>`;
+  try {
+    accessRead = await accessCall("access_people", {});
+    drawAccess(accessRead);
+  } catch (e) {
+    mount.innerHTML = "";
+    const n = el("p", "notice flagged");
+    n.textContent = `Who sees what could not be read, so nothing here is known: ${e?.message ?? e}`;
+    mount.appendChild(n);
+  }
+}
+
+function drawAccess(v) {
+  const mount = $("#access");
+  mount.innerHTML = "";
+  if (!v?.ok) {
+    const n = el("p", "notice");
+    n.textContent = v?.note ?? `Refused: ${v?.reason ?? "no reason given"}.`;
+    mount.appendChild(n);
+    return;
+  }
+  const ul = el("ul", "attn");
+  for (const p of v.people ?? []) {
+    const li = el("li");
+    li.dataset.person = p.id;
+    const t = el("p", "a-title"); t.textContent = p.name + (p.is_you ? " (you)" : "");
+    const d = el("p", "a-detail"); d.textContent = p.line;
+    li.append(t, d);
+    for (const c of p.changes ?? []) {
+      const row = el("p", "a-detail access-change");
+      row.textContent = c.words + " ";
+      const undo = el("button", "go ghost"); undo.type = "button"; undo.textContent = "Undo";
+      const slot = el("div");
+      undo.addEventListener("click", () => { undo.hidden = true; changeCard({ action: "restore", rule_id: c.rule_id }, slot); });
+      row.appendChild(undo);
+      li.append(row, slot);
+    }
+    if (!p.is_owner) {
+      const more = el("button", "go ghost"); more.type = "button"; more.textContent = "Exactly what, and why";
+      const detail = el("div");
+      more.addEventListener("click", () => {
+        if (detail.childElementCount) { detail.innerHTML = ""; return; }
+        personDetail(p, detail);
+      });
+      li.append(more, detail);
+    }
+    ul.appendChild(li);
+  }
+  mount.appendChild(ul);
+  for (const w of v.warnings ?? []) {
+    const n = el("p", "notice flagged"); n.textContent = w.words; mount.appendChild(n);
+  }
+  if (Number(v.not_signing_in) > 0) {
+    const n = el("p", "quiet");
+    n.textContent = `${countOf(v.not_signing_in)} more people appear in your records but cannot sign in, so they see nothing here.`;
+    mount.appendChild(n);
+  }
+  const other = (v.people ?? []).find((p) => !p.is_owner);
+  const hint = el("p", "quiet");
+  hint.textContent = `To change something, say it in the question box, for example "${other ? other.name : "Sam"} shouldn't see pay figures". `
+    + `You see what it would change before anything changes, and every change can be undone.`;
+  mount.appendChild(hint);
+}
+
+// One person: exactly what they can and cannot see, and why, counted by the brain.
+async function personDetail(p, mount) {
+  mount.innerHTML = `<p class="quiet">Reading.</p>`;
+  let v;
+  try { v = await accessCall("access_person", { p_identity: p.id }); }
+  catch (e) { mount.innerHTML = ""; const n = el("p", "quiet"); n.textContent = `This could not be read: ${e?.message ?? e}`; mount.appendChild(n); return; }
+  mount.innerHTML = "";
+  if (!v?.ok) { const n = el("p", "quiet"); n.textContent = v?.note ?? "Not shown, and no reason was given."; mount.appendChild(n); return; }
+  const part = (head, lines) => {
+    if (!lines.length) return;
+    const h = el("p", "a-detail"); const b = el("b"); b.textContent = head; h.appendChild(b);
+    const u = el("ul", "ans-list");
+    for (const line of lines) { const li = el("li"); li.textContent = line; u.appendChild(li); }
+    mount.append(h, u);
+  };
+  const cap = (s) => String(s ?? "").charAt(0).toUpperCase() + String(s ?? "").slice(1);
+  part("Sees", [
+    ...(v.sees_words ? [v.sees_words] : []),
+    ...(v.sees ?? []).map((s) => `${cap(s.words)}, ${countOf(s.records)} records. ${s.why}`),
+    ...(Number(v.records_about_this_person) > 0 ? [`${countOf(v.records_about_this_person)} records about this person in other places.`] : []),
+  ]);
+  part("Kept back by your changes", (v.withheld ?? []).map((w) =>
+    `${countOf(w.records)} records: ${String(w.reason ?? "").split("refused: ").join("")}`));
+  part("Cannot see", (v.cannot ?? []).map((c) =>
+    `${cap(c.words)}${c.detail && !String(c.detail).includes(":") ? ` (${c.detail})` : ""}. ${c.why}`));
+  const acts = el("div", "actions");
+  const slot = el("div");
+  for (const [kind, label] of [["pay_and_rates", "pay and rate figures"], ["everything", "everything"]]) {
+    const b = el("button", "go ghost"); b.type = "button"; b.textContent = `Keep ${label} from ${v.name}`;
+    b.addEventListener("click", () => { slot.innerHTML = ""; changeCard({ action: "withhold", person_id: v.id, kind, source: null }, slot); });
+    acts.appendChild(b);
+  }
+  mount.append(acts, slot);
+}
+
 // ── steps ───────────────────────────────────────────────────────────────────
 
 // The page opens on the holding state, so this must ALWAYS land somewhere - a
@@ -2219,6 +2404,7 @@ function goto(id, key) {
   window.scrollTo({ top: 0 });
   if (id === "s-connect" && !$("#connect-stage").children.length) stageTypes();
   if (id === "s-tests") loadTests();
+  if (id === "s-access") loadAccess();
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
   workDock(id === 's-work');
   if (id === 's-work') loadWork();
