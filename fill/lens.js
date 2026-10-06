@@ -1879,6 +1879,7 @@ async function ask(question) {
     // previous question here, so the form knows when this one was a follow-on.
     if (shape?.viewer?.all_access) slot.appendChild(saveAsTest(q, lastAsked));
     lastAsked = q;
+    await keepTurn(slot, q, body);
   } catch (e) {
     askProblem(slot, `The brain could not be reached: ${e?.message ?? e}`);
   } finally {
@@ -2219,7 +2220,9 @@ function goto(id, key) {
   if (id === "s-connect" && !$("#connect-stage").children.length) stageTypes();
   if (id === "s-tests") loadTests();
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
-  markTab(id === 's-lens' ? lensKey : 'brain');
+  workDock(id === 's-work');
+  if (id === 's-work') loadWork();
+  markTab(id === 's-lens' ? lensKey : id === 's-work' ? 'work' : 'brain');
 }
 
 // -- tabs (seat tool-tabs, 2026-10-02) --
@@ -2227,7 +2230,7 @@ function goto(id, key) {
 // the Brain tab's own list shows for that source, drawn by the same drawMembers, or
 // one line saying it is not connected and pointing to Brain. No lens features here:
 // each tab is fleshed out later, one at a time.
-const TABS = [{ key: 'brain', label: 'Brain' },
+const TABS = [{ key: 'brain', label: 'Brain' }, { key: 'work', label: 'Work' },
   ...GROUPS.map((g) => ({ key: g.key, label: g.key === 'email' ? 'Mail' : g.label }))];
 
 function markTab(key) {
@@ -2248,7 +2251,7 @@ function drawTabs() {
     b.textContent = t.label;
     b.addEventListener('click', () => {
       userMoved = true;
-      if (t.key === 'brain') goto('s-summary'); else goto('s-lens', t.key);
+      if (t.key === 'brain') goto('s-summary'); else if (t.key === 'work') goto('s-work'); else goto('s-lens', t.key);
     });
     nav.appendChild(b);
   }
@@ -2286,6 +2289,179 @@ function drawLens() {
   body.append(line, list);
   drawMembers(lensKey, list);
 }
+
+// -- WORK (seat work-tab, 2026-10-06, Alex's rulings 2026-10-02 and 2026-10-06) --
+// Every question asked in the Tool is kept as a chat, whichever tab it was asked from, because
+// there is one Ask and it calls keepTurn() after each answer.
+// THE ARRANGEMENT IS THE CLAUDE CHAT APP'S (Alex 2026-10-06), not its branding: a left sidebar
+// with New chat, then Projects, then recent chats newest first; the open conversation in the
+// middle with the question box at the bottom of it; a project opens to its own list of chats.
+// ONE RENDERER: on the Work tab the dock's conversation (#s-answer) and question box (.dock-bar)
+// are MOVED into the middle column, and moved back when leaving, so turns are still drawn only
+// by renderAsk and asked only by ask(). No second conversation panel exists.
+// Opening a chat redraws its turns FROM WHAT WAS KEPT, without asking again; the next Ask
+// continues that chat. Recents shows chats not in a project; a project shows its own.
+// PRIVATE TO THE PERSON, ENFORCED IN THE BRAIN: work_list, work_open, work_keep, work_project_new
+// and work_move resolve the person from the sign-in and refuse anything else with a reason.
+// Nothing here filters by person; the screen only shows what the brain returns.
+let workChat = null;      // the chat the Ask is continuing, or null for a new one
+let workInto = null;      // a project a NEW chat goes into once its first turn is kept
+let workView = null;      // the project shown in the middle, or null for the conversation
+let workRead = null;      // the last work_list() reply
+
+function workSaid(text) { const s = $('#work-said'); if (s) s.textContent = text || ''; }
+
+// Moves the one conversation and the one question box between the dock and the Work middle.
+function workDock(onWork) {
+  const ans = $('#s-answer'), bar = document.querySelector('.dock-bar'), slot = $('#work-convo');
+  const home = document.querySelector('.dock-in');
+  if (!ans || !bar || !slot || !home) return;
+  if (onWork && ans.parentElement !== slot) { slot.append(ans, bar); }
+  if (!onWork && ans.parentElement === slot) { home.append(ans, bar); }
+  $('#dock').hidden = !!onWork;
+}
+
+async function keepTurn(slot, q, body) {
+  try {
+    const fresh = !workChat;
+    const { data, error } = await sb.rpc('work_keep', { p_chat: workChat, p_question: q, p_answer: body });
+    if (error) throw error;
+    if (!data?.ok) throw new Error(data?.note ?? data?.reason ?? 'no reason was given');
+    workChat = data.chat_id;
+    if (fresh && workInto) {
+      const m = await sb.rpc('work_move', { p_chat: workChat, p_project: workInto });
+      if (m.error || !m.data?.ok) throw new Error(`kept, but not put in the project: ${m.error?.message ?? m.data?.note}`);
+    }
+    workInto = null;
+    if (!$('#s-work').hidden) loadWork();
+  } catch (e) {
+    const p = el('p', 'quiet'); p.textContent = `This answer was not kept in Work: ${e?.message ?? e}`;
+    slot.appendChild(p);
+  }
+}
+
+function showConvo() {
+  workView = null;
+  $('#work-project-view').hidden = true; $('#work-convo').hidden = false;
+}
+
+function newChat(projectId) {
+  workChat = null; lastAsked = ''; workInto = projectId ?? null;
+  const mount = $('#answer-in'); if (mount) mount.innerHTML = '';
+  $('#s-answer').hidden = true;
+  showConvo(); markOpen();
+  const p = workInto && workRead?.projects.find((x) => x.id === workInto);
+  $('#ask-input').placeholder = p ? `New chat in ${p.name}` : 'Ask about what is in your brain';
+  $('#ask-input')?.focus();
+}
+
+async function openChat(id) {
+  workSaid('Opening.');
+  const { data, error } = await sb.rpc('work_open', { p_chat: id });
+  if (error || !data?.ok) { workSaid(error?.message ?? data?.note ?? 'That chat could not be opened.'); return; }
+  workSaid('');
+  showConvo();
+  const mount = $('#answer-in'); mount.innerHTML = '';
+  $('#s-answer').hidden = false;
+  for (const t of data.turns) {
+    const turn = el('div', 'answer-turn');
+    const asked = el('p', 'answer-asked'); asked.textContent = t.question;
+    const slot = el('div', 'answer-slot');
+    turn.append(asked, slot); mount.appendChild(turn);
+    if (t.withheld || t.answer?.state === 'withheld') { const p = el('p', 'quiet'); p.textContent = t.answer?.note ?? 'No longer shown.'; slot.appendChild(p); }
+    else { try { renderAsk(slot, t.answer); } catch (e) { const p = el('p', 'quiet'); p.textContent = `This kept answer could not be drawn: ${e?.message ?? e}`; slot.appendChild(p); } }
+    const when = el('p', 'quiet work-when');
+    when.textContent = `As shown on ${new Date(t.asked_at).toLocaleString()}. Not asked again.`;
+    slot.appendChild(when);
+  }
+  workChat = data.chat.id; workInto = null;
+  lastAsked = data.turns.length ? data.turns[data.turns.length - 1].question : '';
+  $('#ask-input').placeholder = 'Continue this chat';
+  markOpen();
+  mount.lastElementChild?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
+function markOpen() {
+  document.querySelectorAll('#s-work [data-chat]').forEach((b) => {
+    if (b.dataset.chat === workChat && !workView) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+  });
+  document.querySelectorAll('#s-work [data-project]').forEach((b) => {
+    if (b.dataset.project === workView) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+  });
+}
+
+function chatRow(c, projects) {
+  const li = el('li', 'work-chat');
+  const b = el('button', 'work-open'); b.type = 'button'; b.dataset.chat = c.id; b.textContent = c.title;
+  b.addEventListener('click', () => openChat(c.id));
+  const mv = el('select', 'work-move'); mv.setAttribute('aria-label', 'Move this chat');
+  const opts = [['', c.project_id ? 'Move' : 'Move'], ...projects.filter((p) => p.id !== c.project_id).map((p) => [p.id, `To ${p.name}`])];
+  if (c.project_id) opts.push(['none', 'Out of the project']);
+  if (opts.length === 1) mv.hidden = true;
+  for (const [v, label] of opts) { const o = el('option'); o.value = v; o.textContent = label; mv.appendChild(o); }
+  mv.addEventListener('change', async () => {
+    if (!mv.value) return;
+    const target = mv.value === 'none' ? null : mv.value;
+    const { data, error } = await sb.rpc('work_move', { p_chat: c.id, p_project: target });
+    if (error || !data?.ok) { workSaid(error?.message ?? data?.note ?? 'Not moved, and no reason was given.'); return; }
+    loadWork();
+  });
+  li.append(b, mv);
+  return li;
+}
+
+function openProject(id) {
+  workView = id;
+  const p = workRead?.projects.find((x) => x.id === id);
+  if (!p) { showConvo(); return; }
+  $('#work-convo').hidden = true;
+  const v = $('#work-project-view'); v.hidden = false; v.innerHTML = '';
+  const h = el('h2'); h.textContent = p.name;
+  const go = el('button', 'go'); go.type = 'button'; go.textContent = `New chat in ${p.name}`;
+  go.addEventListener('click', () => newChat(id));
+  const ul = el('ul', 'work-chats');
+  const mine = workRead.chats.filter((c) => c.project_id === id);
+  for (const c of mine) ul.appendChild(chatRow(c, workRead.projects));
+  if (!mine.length) { const e = el('li', 'quiet'); e.textContent = 'No chats here yet. Start one, or move a chat here from Recents.'; ul.appendChild(e); }
+  v.append(h, go, ul);
+  markOpen();
+}
+
+async function loadWork() {
+  const { data, error } = await sb.rpc('work_list');
+  if (error) { workSaid(`Your chats could not be read: ${error.message}`); return; }
+  if (!data?.ok) { workSaid(data?.note ?? 'Your chats could not be read, and no reason was given.'); return; }
+  workRead = data; workSaid('');
+  const pl = $('#work-projects'); pl.innerHTML = '';
+  for (const p of data.projects) {
+    const li = el('li');
+    const b = el('button', 'work-open'); b.type = 'button'; b.dataset.project = p.id;
+    const n = data.chats.filter((c) => c.project_id === p.id).length;
+    b.textContent = p.name;
+    const k = el('span', 'quiet work-count'); k.textContent = String(n);
+    b.appendChild(k);
+    b.addEventListener('click', () => openProject(p.id));
+    li.appendChild(b); pl.appendChild(li);
+  }
+  if (!data.projects.length) { const e = el('li', 'quiet'); e.textContent = 'None yet.'; pl.appendChild(e); }
+  const rl = $('#work-recents'); rl.innerHTML = '';
+  const loose = data.chats.filter((c) => !c.project_id);
+  for (const c of loose) rl.appendChild(chatRow(c, data.projects));
+  if (!data.chats.length) { const e = el('li', 'quiet'); e.textContent = 'Nothing asked yet. Anything you ask, on any tab, is kept here.'; rl.appendChild(e); }
+  if (workView) openProject(workView); else markOpen();
+}
+
+(function wireWork() {
+  $('#work-new')?.addEventListener('click', () => newChat(null));
+  $('#work-project-new')?.addEventListener('click', async () => {
+    const name = (window.prompt('Name the project') ?? '').trim();
+    if (!name) return;
+    const { data, error } = await sb.rpc('work_project_new', { p_name: name });
+    if (error || !data?.ok) { workSaid(error?.message ?? data?.note ?? 'Not created, and no reason was given.'); return; }
+    await loadWork();
+    openProject(data.project_id);
+  });
+})();
 
 // ── boot ────────────────────────────────────────────────────────────────────
 
