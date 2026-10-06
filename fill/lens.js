@@ -302,11 +302,18 @@ function fillTree(sel = "#tree", pfx = "") {
       // The group counts in the same words its own rows use. Two vocabularies for
       // one fact is how a summary starts disagreeing with the list below it.
       const rows = [...mailboxes.values()];
-      const need = rows.filter((r) => r.needs_you).length;
-      const ok = rows.length - need;
-      alive = need === 0 ? "all working"
-            : ok === 0   ? `${need} need you`
-            : `${ok} working, ${need} need you`;
+      // Counted from what happened to each mailbox (seat mail-lens, 2026-10-06). The
+      // old count called every mailbox that did not need the person working, so a
+      // mailbox never read once was counted as working.
+      const count = (f) => rows.filter(f).length;
+      const reading = count((r) => r.state === 'reading' || r.state === 'closed_to_you');
+      const unread = count((r) => r.state === 'unread');
+      const stopped = count((r) => r.state === 'stopped');
+      const need = count((r) => r.needs_you);
+      alive = [reading ? `${reading} reading` : null,
+               unread ? `${unread} not read yet` : null,
+               stopped ? `${stopped} stopped` : null,
+               need ? `${need} need you` : null].filter(Boolean).join(', ') || 'state not recorded';
       // A mailbox row is keyed by its full source key on this screen, and the picker
       // keys drives by a bare id. Both lookups are explicit rather than assumed -
       // guessing one shape from the other is what labelled every live drive junk.
