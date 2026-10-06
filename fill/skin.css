@@ -39,6 +39,11 @@
   --radius:   6px;
   --row-h:    58px;
   --dock-h:   54px;
+  /* THE PAGE USES THE WINDOW (seat chat-layout, 2026-10-06). Every tab follows these three:
+     --page is how wide the page may grow, --pad its edge, --convo the conversation column. */
+  --page:     1480px;
+  --pad:      clamp(16px, 3vw, 44px);
+  --convo:    48rem;
 
   --ease:     cubic-bezier(.2, .6, .2, 1);
 }
@@ -60,13 +65,13 @@ body {
 /* Reserve the room the dock actually takes. One line when there is no
    conversation, most of the lower half once there is, so the end of the page
    is never left underneath it. */
-body:has(#s-answer:not([hidden])) #main {
+body:has(.dock #s-answer:not([hidden])) #main {
   padding-bottom: 62vh;
 }
 
 /* ── shell ───────────────────────────────────────────────────────────── */
 
-.shell { max-width: 860px; margin: 0 auto; padding: 0 var(--gap); }
+.shell { max-width: var(--page); margin: 0 auto; padding: 0 var(--pad); }
 
 .masthead {
   display: flex; align-items: baseline; justify-content: space-between;
@@ -114,7 +119,7 @@ p + p { margin-top: var(--gap); }
   max-width: 50ch;
 }
 
-section.step { padding: var(--gap-xl) 0; }
+section.step { padding: var(--gap-lg) 0; }
 section.step[hidden] { display: none; }
 /* Brain tab: what is connected sits straight under connecting, as one page. */
 #s-connect:not([hidden]) ~ #s-summary { padding-top: 0; }
@@ -345,7 +350,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   display: flex; flex-direction: column; max-height: 58vh;
 }
 .dock-in {
-  max-width: 860px; margin: 0 auto; padding: 0 var(--gap); width: 100%;
+  max-width: var(--convo); margin: 0 auto; padding: 0 var(--pad); width: 100%;
   display: flex; flex-direction: column; min-height: 0;
 }
 /* The conversation scrolls inside the dock; the input never leaves the bottom. */
@@ -403,9 +408,12 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .ans-lead, .ans-lead-prose p, .ans-prose p, .ans-list, .ans-gap, .ans-meta {
   max-width: var(--measure);
 }
+/* HER QUESTION, A QUIET BUBBLE ON THE RIGHT, IN HER OWN CASE (Alex, 2026-10-06: his questions
+   showed in capitals and the answer did not stand apart from them). */
 .answer-asked {
-  font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase;
-  color: var(--ink-4); margin-bottom: var(--u);
+  width: fit-content; max-width: 80%; margin: 0 0 calc(var(--u) * 3) auto;
+  padding: calc(var(--u) * 2) calc(var(--u) * 3.5); border-radius: 14px;
+  background: var(--line-2); color: var(--ink); font-size: var(--t-body); line-height: 1.45;
 }
 /* THE ANSWER SCREEN. Two sizes only, and no third creeps in: 17px is the answer
    and the line qualifying it, 13.5px is everything else. The previous version used
@@ -693,3 +701,42 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 #work-convo .dock-bar { position: sticky; bottom: 0; margin-top: 1rem; }
 .work-when { margin-top: .4em; }
 @media (max-width: 720px) { .work { grid-template-columns: 1fr; } .work-side { position: static; max-height: none; } }
+
+/* THE PAGE USES THE WINDOW, AND ASK READS LIKE A CHAT. Seat chat-layout, 2026-10-06.
+   Alex's rulings that day: use the arrangement of Claude or ChatGPT, not their branding; and
+   (HQ's addendum) every tab uses the width of the window. ONE RULE FOR EVERY TAB: the page grows
+   with the screen up to --page (.shell above); a paragraph keeps --measure, because a line wider
+   than that stops being read; lists, trees, tables and grids take the whole width; boxes and
+   cards sit side by side when there is room. No tab carries a width of its own.
+   SUPERSEDES the 860px column every tab sat in until today. */
+.tree, .recog, .facts, .srclist, .attn, .members, .counts, .ans-table-wrap,
+.recog li, .srclist li, .attn > li { max-width: none; }
+.boxes { grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr)); }
+.attn { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(26rem, 100%), 1fr)); column-gap: var(--gap-lg); }
+.attn.faults > li { grid-template-columns: 26px 1fr; }
+
+/* The conversation, on every tab, because there is one. Her question is the bubble above; the
+   answer sits under it, left-aligned, the full width of the column, in reading type; sources and
+   Save as test are quiet under it; the question box stays at the bottom. */
+.answer-turn + .answer-turn { margin-top: var(--gap-lg); }
+.answer-slot { min-width: 0; }
+.answer .ans-lead, .answer .ans-lead-prose p, .answer .ans-prose p, .answer .ans-list,
+.answer .ans-gap, .answer .ans-meta { max-width: none; }
+.answer-slot .recs { margin-top: var(--gap); }
+.t-save-as > .go { margin-top: var(--gap); padding: 6px 12px; font-size: var(--t-micro); }
+.work-main { align-items: center; }
+#work-convo { width: 100%; max-width: var(--convo); min-width: 0; }
+.dock-bar {
+  border: 1px solid var(--line); border-radius: 14px; background: var(--paper);
+  padding: 0 var(--gap); margin: var(--u) 0 calc(var(--u) * 3);
+}
+
+/* TODAY IN THE HEADER, on every tab: from her computer, or the zone she picks (Alex, 2026-10-06). */
+.clock {
+  flex: 1; display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline;
+  gap: calc(var(--u) * 2); font-size: var(--t-small); color: var(--ink-3);
+}
+.clock-when { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.clock-zone { font-size: var(--t-micro); color: var(--ink-4); text-decoration: underline dotted; }
+.clock-zone:hover { color: var(--ink); }
+#clock-pick { font: inherit; font-size: var(--t-micro); max-width: 16rem; }
