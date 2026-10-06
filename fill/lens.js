@@ -290,7 +290,11 @@ function fillTree(sel = "#tree", pfx = "") {
       const need = rows.filter((r) => r.state === "needs_signin" || r.state === "shut_out").length;
       const busy = rows.filter((r) => r.state === "filling").length;
       const ok   = rows.filter((r) => r.state === "ready").length;
+      const unread = rows.filter((r) => r.state === 'unread').length;
+      const failed = rows.filter((r) => r.state === 'failed').length;
       alive = [busy ? `${busy} reading now` : null,
+               unread ? `${unread} not read yet` : null,
+               failed ? `${failed} stopped` : null,
                ok ? `${ok} up to date` : null,
                need ? `${need} need you` : null]
               .filter(Boolean).join(", ") || "none chosen yet";
@@ -376,7 +380,7 @@ function drawMembers(key, body, pfx = "") {
     const from = fmtWindow(m.window_from);
     const win = from
       ? `from ${from} &rarr; now`
-      : `<span class="state unread">no dates recorded for this source</span>`;
+      : `<span class="state unread">${m.health === 'never' ? 'nothing read yet' : 'no dates recorded for this source'}</span>`;
     const grants = m.grants && m.grants > 1 ? ` &middot; reachable by ${m.grants} people` : "";
 
     const nav = m.nav ? `<span class="m-nav">${escape(m.nav)}</span>` : "";
