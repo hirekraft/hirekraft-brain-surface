@@ -379,7 +379,22 @@ function drawMembers(key, body, pfx = "") {
   }
 
   const list = el("ul", "members");
-  for (const m of data.members) {
+  // Mailboxes from more than one company are grouped under their domain, so they are
+  // told apart at a glance (Alex, 2026-10-06). One domain needs no heading.
+  const domainOf = (m) => m.domain ?? String(m.full ?? '').split('@')[1] ?? '';
+  const domains = key === 'email' ? new Set(data.members.map(domainOf)) : new Set();
+  const members = domains.size > 1
+    ? [...data.members].sort((a, b) => domainOf(a).localeCompare(domainOf(b)))
+    : data.members;
+  let lastDomain = null;
+  for (const m of members) {
+    if (domains.size > 1 && domainOf(m) !== lastDomain) {
+      lastDomain = domainOf(m);
+      const h = el('li', 'quiet');
+      h.style.margin = '1rem 0 .3rem';
+      h.textContent = lastDomain;
+      list.appendChild(h);
+    }
     const li = el("li");
     const btn = el("button", "member");
     btn.type = "button";
