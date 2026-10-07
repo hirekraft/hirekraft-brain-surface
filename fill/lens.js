@@ -10,6 +10,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { onBrainChange } from "../doorbell.js";
+// The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
+import { initMail, drawMail, chooseMailbox } from "./mail.js?v=2026-10-07-mail-tab";
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
@@ -416,6 +418,14 @@ function drawMembers(key, body, pfx = "") {
       // `opens`, and the link ignored it - so every mailbox opened whatever the
       // mail lens defaults to. Clicking recruitment@ landed on alex@, which is
       // the worst possible version of wrong on a surface about whose mail is whose.
+      // A mailbox opens in the Mail tab now; the July page at /mail/ is archived (seat
+      // mail-redesign, 2026-10-07).
+      if (key === 'email' && m.target && m.target.startsWith('gmail:')) {
+        userMoved = true;
+        chooseMailbox(m.target);
+        goto('s-lens', 'email');
+        return;
+      }
       if (m.opens) {
         userMoved = true;
         location.href = m.target && m.target.startsWith("gmail:")
@@ -1064,6 +1074,7 @@ function fillAttention() {
       : `${mine} need${mine === 1 ? "s" : ""} you`
         + (ours > 0 ? `, ${ours} ${ours === 1 ? "is" : "are"} ours` : "");
   }
+  drawReconnect();
   if (!ul) return;
   ul.innerHTML = "";
   if (!items.length) return;
@@ -1097,6 +1108,47 @@ function fillAttention() {
     }
     ul.appendChild(li);
   }
+}
+
+// SOURCES THAT CANNOT BE OPENED, ONE PLAIN LINE ON THE BRAIN TAB (seat mail-redesign; Alex's
+// ruling 2026-10-06 with HQ's refinement). It used to be a note at the foot of the mail view
+// saying "there's more of this story we can't reach from here", which was a connection
+// problem shown in the wrong place. The rows come from the two readings this tab already
+// makes: a mailbox whose row offers a sign-in or connect, and a drive Google will not open
+// or that needs a sign-in. Each is listed with its own line, which carries its fix. None, no line.
+function drawReconnect() {
+  const box = $('#reconnect');
+  if (!box) return;
+  box.innerHTML = '';
+  const rows = [...mailboxes.values()].filter((m) => m.action)
+    .map((m) => ({ name: m.address, line: () => mailboxLine(m) }))
+    .concat([...driveStates.values()].filter((d) => d.state === 'needs_signin' || d.state === 'shut_out')
+      .map((d) => ({ name: d.label, line: () => driveLine(d) })));
+  if (!rows.length) return;
+  const head = el('p', 'reconnect-head');
+  head.textContent = `${rows.length} ${rows.length === 1 ? 'source' : 'sources'} cannot be opened right now. `;
+  const show = el('button', 'work-add');
+  show.type = 'button';
+  show.textContent = 'See each one and what would open it';
+  const ul = el('ul', 'members');
+  ul.hidden = true;
+  for (const r of rows) {
+    const li = el('li');
+    li.appendChild(el('span', 'm-name')).textContent = r.name;
+    li.appendChild(r.line());
+    ul.appendChild(li);
+  }
+  show.addEventListener('click', () => { ul.hidden = !ul.hidden; });
+  head.appendChild(show);
+  box.append(head, ul);
+}
+
+// The Ask bar is the one place a question is asked; the Mail tab starts one here for her.
+function prefillAsk(text) {
+  const i = $('#ask-input');
+  if (!i) return;
+  i.value = text;
+  i.focus();
 }
 
 function routeFix(a) {
@@ -2480,6 +2532,10 @@ function drawLens() {
   const t = TABS.find((x) => x.key === lensKey);
   const body = $('#lens-body');
   if (!t || !body) return;
+  // MAIL IS AN INBOX YOU CAN WORK IN (seat mail-redesign, Alex 2026-10-06): three columns
+  // across the window, drawn by mail.js. The tab itself names it, so no heading.
+  $('#lens-head').hidden = lensKey === 'email';
+  if (lensKey === 'email') { drawMail(body); return; }
   $('#lens-head').textContent = t.label;
   body.innerHTML = '';
   const data = groupsFor().find((x) => x.key === lensKey);
@@ -2733,6 +2789,12 @@ function drawClock() {
 drawTreeFrame();                 // the frame first, instantly, with space reserved
 stageTypes();
 drawTabs();
+initMail({
+  sb, url: SUPABASE_URL, key: PUBLISHABLE_KEY, el,
+  mailboxes: () => mailboxes, mbxError: () => mbxError,
+  viewer: () => shape?.viewer ?? null, readingState: () => readingState,
+  mailboxLine, openConnect, prefillAsk,
+});
 
 // Once a person has chosen a screen, a late-arriving reading must not move them
 // off it. Declared before the first read is issued, below.
@@ -2830,6 +2892,13 @@ readBrain();                     // then the live reading lands into the frame
 // An old #sources link still lands somewhere true: there is one lens now. Routed
 // immediately rather than waiting for the read, because it is already a decision.
 if (location.hash === "#sources") { userMoved = true; goto("s-summary"); }
+// The archived /mail/ page sends its visitors here as #mail, with the mailbox they asked for.
+if (location.hash.startsWith('#mail')) {
+  userMoved = true;
+  const asked = new URLSearchParams(location.hash.split('?')[1] || '').get('mailbox');
+  if (asked) chooseMailbox(asked);
+  goto('s-lens', 'email');
+}
 
 /* ================= the doorbell ================= */
 /* A source going live, falling behind, or a read landing is the same class of
