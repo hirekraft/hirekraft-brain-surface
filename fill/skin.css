@@ -3,9 +3,14 @@
    Replace this file to replace the aesthetic; index.html and lens.js do not
    name a single colour, size or spacing value.
 
-   Register: near-monochrome, one functional accent, system sans only (no font
-   is fetched), two weights, generous white space, sentence case, nothing shouts.
-   The accent marks one thing only — an item that needs a person. Healthy is silent.
+   Register: near-monochrome, system sans only (no font is fetched), generous white
+   space, sentence case, nothing shouts. Two colours carry meaning and nothing else
+   does: --act marks what you can act on (buttons, links, the selected row) and
+   --accent marks an item that needs a person. Healthy is silent. Weights are plain,
+   mid, and strong for unread mail only.
+   SUPERSEDES (seat reading, 2026-10-07): "one functional accent" and "two weights".
+   Alex asked for a scheme made for a workday; an action colour and a darker grey
+   ladder were the change.
    ───────────────────────────────────────────────────────────────────────── */
 
 :root {
