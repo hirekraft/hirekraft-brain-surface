@@ -11,7 +11,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox } from "./mail.js?v=2026-10-07-reading-answer";
+import { initMail, drawMail, chooseMailbox, askFromMailBar } from "./mail.js?v=2026-10-07-workspace";
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
@@ -1143,13 +1143,8 @@ function drawReconnect() {
   box.append(head, ul);
 }
 
-// The Ask bar is the one place a question is asked; the Mail tab starts one here for her.
-function prefillAsk(text) {
-  const i = $('#ask-input');
-  if (!i) return;
-  i.value = text;
-  i.focus();
-}
+// prefillAsk() is gone (seat email-workspace, 2026-10-07): the Mail tab no longer starts a question
+// in the Ask bar for her; the bar itself asks about the open email while she is on Mail.
 
 function routeFix(a) {
   // Route by the source the fault is actually about, never by words in its title.
@@ -2079,7 +2074,8 @@ async function ask(question) {
 (function wireAsk() {
   const input = $("#ask-input"), send = $("#ask-send");
   if (!input || !send) return;
-  const go = () => { const v = input.value; input.value = ""; ask(v); };
+  // On Mail the question goes to the open email's conversation (seat email-workspace).
+  const go = () => { const v = input.value; input.value = ''; if (onMail && v.trim() && askFromMailBar(v.trim())) return; ask(v); };
   send.addEventListener("click", go);
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
 })();
@@ -2574,6 +2570,7 @@ function goto(id, key) {
   if (id === "s-access") loadAccess();
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
   workDock(id === 's-work');
+  mailDock(id === 's-lens' && lensKey === 'email');
   if (id === 's-work') loadWork();
   markTab(id === 's-lens' ? lensKey : id === 's-work' ? 'work' : 'brain');
 }
@@ -2678,8 +2675,37 @@ function workDock(onWork) {
   $('#dock').hidden = !!onWork;
 }
 
-async function keepTurn(slot, q, body) {
+// THE MAIL TAB KEEPS ITS CONVERSATIONS WITH THE EMAIL (seat email-workspace, Alex 2026-10-07: the
+// band of conversation under the Mail columns squeezed them to a strip, and an answer about one
+// email stayed on screen over the next). While Mail is open the dock is only the question box: the
+// conversation is parked, not destroyed, so every other tab finds it as it was left, and what is
+// asked on Mail is answered in the reading column by mail.js (askFromMailBar).
+let onMail = false;
+function mailDock(on) {
+  const ans = $('#s-answer');
+  if (!ans) return;
+  let park = $('#answer-park');
+  if (!park) { park = el('div'); park.id = 'answer-park'; park.hidden = true; document.body.appendChild(park); }
+  if (on && ans.closest('#dock')) park.appendChild(ans);
+  if (!on && ans.parentElement === park) document.querySelector('.dock-in')?.insertBefore(ans, document.querySelector('.dock-in > .dock-bar'));
+  if (onMail && !on) $('#ask-input').placeholder = 'Ask about what is in your brain';
+  onMail = on;
+}
+
+// into: { chat, about, title } keeps the turn in a chat of its own (the conversation about one email,
+// answer.js) instead of the Work chat that happens to be open; work_keep finds or makes this person's
+// chat about that email and into.chat remembers it. Without into, as before.
+async function keepTurn(slot, q, body, into) {
   try {
+    if (into) {
+      const { data, error } = await sb.rpc('work_keep', Object.assign({ p_chat: into.chat ?? null, p_question: q, p_answer: body },
+        into.about ? { p_about: into.about, p_title: into.title ?? null } : {}));
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.note ?? data?.reason ?? 'no reason was given');
+      into.chat = data.chat_id;
+      if (!$('#s-work').hidden) loadWork();
+      return;
+    }
     const fresh = !workChat;
     const { data, error } = await sb.rpc('work_keep', { p_chat: workChat, p_question: q, p_answer: body });
     if (error) throw error;
@@ -2876,7 +2902,7 @@ initMail({
   sb, url: SUPABASE_URL, key: PUBLISHABLE_KEY, el,
   mailboxes: () => mailboxes, mbxError: () => mbxError,
   viewer: () => shape?.viewer ?? null, readingState: () => readingState,
-  mailboxLine, openConnect, prefillAsk,
+  mailboxLine, openConnect,
   // Seat answer, 2026-10-07: the answer conversation on the Mail tab draws and keeps its turns
   // with the same two functions as the Ask bar, so there is one way an answer looks and is kept.
   renderAsk, keepTurn, zone,
