@@ -11,7 +11,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox } from "./mail.js?v=2026-10-07-reading";
+import { initMail, drawMail, chooseMailbox } from "./mail.js?v=2026-10-07-reading-answer";
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
@@ -1714,6 +1714,12 @@ function proseBlocks(text, cls) { return mdBlocks(text, cls); }
 
 // EVIDENCE IS COLLAPSED BY DEFAULT, ALWAYS. Each record is its own disclosure, so a
 // citation opens THAT passage rather than landing the reader in a wall of twelve.
+function sourceName(s) {
+  if (s.startsWith("gmail:")) return "Mail, " + s.slice(6);
+  if (s.startsWith("drive:")) return "Files, " + s.slice(6);
+  return s || "Other records";
+}
+
 function recordList(evidence, summaryText) {
   const wrap = el("details", "recs");
   const sum = el("summary", "recs-sum");
@@ -1721,7 +1727,25 @@ function recordList(evidence, summaryText) {
   wrap.appendChild(sum);
 
   const ul = el("ul", "records");
+  // GROUPED BY WHERE IT CAME FROM, newest first in each (seat answer, 2026-10-07: Alex asked for
+  // "a quick summary of all the sources that touch on it"). Groups keep the order in which their
+  // first record ranked; numbers and ids are unchanged, so every citation still finds its record.
+  const order = [];
+  const groups = new Map();
   for (const e of evidence) {
+    const k = e.source ?? "";
+    if (!groups.has(k)) { groups.set(k, []); order.push(k); }
+    groups.get(k).push(e);
+  }
+  const sorted = [];
+  for (const k of order) sorted.push(...groups.get(k).sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? ""))));
+  let lastGroup = null;
+  for (const e of sorted) {
+    if (order.length > 1 && (e.source ?? "") !== lastGroup) {
+      lastGroup = e.source ?? "";
+      const g = el("li", "record-group"); g.textContent = sourceName(lastGroup);
+      ul.appendChild(g);
+    }
     const li = el("li", "record");
     li.id = "rec-" + e.n;
 
@@ -1729,7 +1753,7 @@ function recordList(evidence, summaryText) {
     const s = el("summary", "record-head");
     const n = el("span", "record-n"); n.textContent = e.n;
     const doc = el("span", "record-doc"); doc.textContent = titleFor(e);
-    const src = el("span", "record-src"); src.textContent = e.source ?? "";
+    const src = el("span", "record-src"); src.textContent = (e.date ? e.date + " · " : "") + (e.source ?? "");
     s.append(n, doc, src);
     d.appendChild(s);
 
@@ -2794,6 +2818,9 @@ initMail({
   mailboxes: () => mailboxes, mbxError: () => mbxError,
   viewer: () => shape?.viewer ?? null, readingState: () => readingState,
   mailboxLine, openConnect, prefillAsk,
+  // Seat answer, 2026-10-07: the answer conversation on the Mail tab draws and keeps its turns
+  // with the same two functions as the Ask bar, so there is one way an answer looks and is kept.
+  renderAsk, keepTurn, zone,
 });
 
 // Once a person has chosen a screen, a late-arriving reading must not move them
