@@ -858,3 +858,28 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
 /* The Brain tab's line for sources that cannot be opened (seat mail-redesign). */
 .reconnect-head { margin-top: var(--gap); font-size: var(--t-small); color: var(--ink-2); }
 .reconnect-head .work-add { margin-left: .3em; }
+
+/* ANSWER (seat answer, 2026-10-07; Alex's ruling "the Tool sends mail"). The conversation about one
+   email, under its Answer and Forward buttons: the briefing and her questions keep the Ask
+   conversation's own look (answer-turn, answer-asked, answer-slot); the draft below is plain fields
+   she types over. The page's variables only; nothing defined here. */
+.mailx-answer:empty { display: none; }
+.answerx { margin-top: var(--gap-lg); padding-top: var(--gap); border-top: 1px solid var(--line); }
+.answerx-convo .answer-turn { margin-top: var(--gap); }
+.answerx-ask { margin-top: var(--gap); }
+.answerx-input, .answerx-field input, .answerx-body {
+  display: block; width: 100%; font: inherit; font-size: var(--t-small); color: var(--ink);
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: calc(var(--u) * 1.5) calc(var(--u) * 2);
+}
+.answerx-btns { display: flex; flex-wrap: wrap; gap: var(--gap); align-items: center; }
+.answerx-btns .go { margin-top: calc(var(--u) * 2); }
+.answerx-draft { margin-top: var(--gap-lg); padding: var(--gap); background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.answerx-field { display: block; margin-top: calc(var(--u) * 2); font-size: var(--t-small); color: var(--ink-3); }
+.answerx-field > span { display: block; margin-bottom: var(--u); }
+.answerx-body { min-height: 12em; line-height: var(--lead); resize: vertical; }
+.answerx-fwd { margin-top: var(--u); max-height: 16em; overflow: auto; white-space: pre-wrap; font: inherit; font-size: var(--t-small); color: var(--ink-3); border-left: 2px solid var(--line); padding-left: var(--gap); }
+.answerx-said { margin-top: calc(var(--u) * 2); }
+.answerx-draft > .go { margin-top: var(--gap); }
+/* The records under every answer, grouped by where they came from (lens.js recordList). */
+.record-group { list-style: none; margin-top: var(--gap); font-size: var(--t-micro); color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
