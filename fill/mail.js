@@ -30,6 +30,8 @@
 // on the frame). The frame's colours are read from skin.css when it is drawn, so no colour is
 // written here either.
 
+import { drawAnswer } from './answer.js?v=2026-10-07-answer';
+
 const LIVE = '/functions/v1/worklens-live';
 
 let C = null;              // what lens.js hands over (initMail)
@@ -571,9 +573,12 @@ function htmlMessage(wrap, m) {
   wrap.appendChild(frame);
 }
 
-// Answer and Forward say plainly that the Tool reads and does not yet write. "Ask about
-// this" puts a question about this email into the one Ask bar, for her to finish and send;
-// the answer lands in the conversation and is kept in Work like every other question.
+// Answer and Forward open a conversation about this email under these buttons (fill/answer.js):
+// a briefing of what the company knows about it, her questions, a draft when she asks, and Send
+// as its own press. SUPERSEDED 2026-10-07 by Alex's ruling "the Tool sends mail" (seat answer):
+// these buttons used to say only that the Tool reads and does not write; that note is removed.
+// "Ask about this" still puts a question about this email into the one Ask bar, for her to finish
+// and send; the answer lands in the conversation and is kept in Work like every other question.
 function actions(t) {
   const row = mk('div', 'mailx-acts');
   const note = mk('p', 'quiet mailx-said');
@@ -584,12 +589,16 @@ function actions(t) {
     b.addEventListener('click', fn);
     row.appendChild(b);
   };
-  const writeNote = (verb) => {
-    note.textContent = verb + ' means writing into this mailbox, and the Tool holds permission to read it only. '
-      + 'When you want that, you grant it once, deliberately, and you will see exactly what changed.';
+  // The answer view hangs on the open email, so a redraw (the related read arriving, a refresh)
+  // moves it instead of wiping her conversation and draft.
+  if (!open.answerHost) open.answerHost = mk('div', 'mailx-answer');
+  const start = (mode) => {
+    note.textContent = '';
+    const m = boxRow();
+    drawAnswer(open.answerHost, C, { sourceKey: chosen, mailbox: (m && m.address) || chosen.split(':').slice(1).join(':'), thread: t, mode });
   };
-  btn('Answer', true, () => writeNote('Replying'));
-  btn('Forward', false, () => writeNote('Forwarding'));
+  btn('Answer', true, () => start('reply'));
+  btn('Forward', false, () => start('forward'));
   btn('Ask about this', false, () => {
     const first = (t.messages || [])[0] || {};
     const from = first.from_name || first.from_email || 'the sender';
@@ -597,6 +606,6 @@ function actions(t) {
     note.textContent = 'Your question is started in the Ask bar below. Finish it and press Ask; the answer is kept in Work.';
   });
   const wrap = mk('div');
-  wrap.append(row, note);
+  wrap.append(row, note, open.answerHost);
   return wrap;
 }
