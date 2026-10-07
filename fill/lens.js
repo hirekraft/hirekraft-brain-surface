@@ -1574,7 +1574,39 @@ function titleFor(e) {
 // lists, horizontal rules, inline bold, and [n] citations. Anything else stays text.
 
 // Inline: [3] becomes a citation, **text** becomes emphasis, the rest is a text node.
+// ORIGINS (lens-ask v17, seat answer-like-claude, Alex 2026-10-07). [w2] is a web page from this answer's own
+// search, drawn as a mark that opens it in the list below; [g] is the model's general knowledge, drawn as a
+// quiet words-mark. Only [n] is a record of the company. Split by hand, not by pattern, so this file stays
+// writable (see PATTERNS ARE BUILT, below).
 function inlineInto(parent, text) {
+  const s = String(text);
+  let i = 0, plain = "";
+  const flush = () => { if (plain) { inlineBase(parent, plain); plain = ""; } };
+  while (i < s.length) {
+    if (s[i] === "[") {
+      const j = s.indexOf("]", i);
+      const inner = j > i ? s.slice(i + 1, j) : "";
+      if (inner === "g") {
+        flush(); spaceBefore(parent);
+        const m = el("span", "cite-g"); m.textContent = "(general knowledge)"; m.title = "From general knowledge, not from your records";
+        parent.appendChild(m); i = j + 1; continue;
+      }
+      const n = inner.slice(1);
+      if (inner[0] === "w" && n.length > 0 && n.length <= 2 && String(Number(n)) === n) {
+        flush(); spaceBefore(parent);
+        const a = el("a", "cite cite-web"); a.href = "#"; a.dataset.web = n; a.textContent = "web " + n; a.title = "A web page found for this question";
+        parent.appendChild(a); i = j + 1; continue;
+      }
+    }
+    plain += s[i]; i++;
+  }
+  flush();
+}
+function spaceBefore(parent) {
+  const prev = parent.lastChild;
+  if (prev && !(prev.nodeType === 3 && prev.textContent.endsWith(" "))) parent.appendChild(document.createTextNode(" "));
+}
+function inlineBase(parent, text) {
   for (const part of String(text).split(/(\[\d+\]|\*\*[^*]+\*\*)/)) {
     if (!part) continue;
     const c = /^\[(\d+)\]$/.exec(part);
@@ -1881,7 +1913,9 @@ function renderAsk(slot, body) {
   // A typed instruction about who sees what (lens-ask v14): its line and the preview card.
   if (body.state === "access_instruction") { accessAnswer(slot, body); return; }
   const state = body.state;
-  const answered = state === "answered" && typeof body.answer === "string" && body.answer;
+  // lens-ask v17: an answer from the web or general knowledge is drawn whatever the records gave. `state`
+  // still says what the records gave, and the answer says it in its own first sentence.
+  const answered = (state === "answered" || body.origins) && typeof body.answer === "string" && body.answer;
 
   // 1. THE LEAD. One or two sentences, and nothing above it. When the server
   //    composed an answer the answer IS the lead; a heading reading "Answer" above
@@ -1932,7 +1966,23 @@ function renderAsk(slot, body) {
     // The audit line (records looked at, closeness, floor) is gone from the page by
     // Alex's ruling of 2026-09-25: the reader is not only Alex, and it was the working.
     // The figures stay in body.retrieval for anyone measuring.
-    slot.appendChild(recordList(ev, answered ? "The records this came from" : "What came back"));
+    slot.appendChild(recordList(ev, answered && state === "answered" ? "The records this came from" : "What came back"));
+  }
+
+  // 5. THE WEB (lens-ask v17): each page this answer's search used, by its title, opening in a new tab.
+  if (Array.isArray(body.web) && body.web.length) {
+    const box = el("details", "recs");
+    const sum = el("summary"); sum.textContent = "From the web (" + body.web.length + ")"; box.appendChild(sum);
+    const ol = el("ol", "record-list");
+    for (const w of body.web) {
+      const li = el("li"); li.dataset.webn = String(w.n);
+      const u = String(w.url || "");
+      if (u.startsWith("https://") || u.startsWith("http://")) {
+        const a = el("a"); a.href = u; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = w.n + ". " + String(w.title || u); li.appendChild(a);
+      } else li.textContent = w.n + ". " + String(w.title || "");
+      ol.appendChild(li);
+    }
+    box.appendChild(ol); slot.appendChild(box);
   }
 }
 
@@ -1940,6 +1990,15 @@ function renderAsk(slot, body) {
 // into a list and leaving them to find it.
 document.addEventListener("click", (e) => {
   const a = e.target.closest ? e.target.closest("a.cite") : null;
+  if (a && a.dataset.web) {
+    e.preventDefault();
+    const scope = a.closest(".answer-slot") || document;
+    const li = scope.querySelector("li[data-webn='" + a.dataset.web + "']");
+    if (!li) return;
+    const d = li.closest("details"); if (d) d.open = true;
+    li.scrollIntoView({ block: "center", behavior: "smooth" });
+    return;
+  }
   if (!a || !a.dataset.rec) return;
   const li = document.getElementById("rec-" + a.dataset.rec);
   if (!li) return;
