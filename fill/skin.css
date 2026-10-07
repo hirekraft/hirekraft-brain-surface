@@ -9,26 +9,43 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 :root {
-  --ink:      #111113;
-  --ink-2:    #3c3e42;
-  --ink-3:    #71747a;
-  --ink-4:    #a2a5ab;
-  --line:     #e3e3e6;
-  --line-2:   #efeff1;
+  /* A WORKDAY SCHEME (seat reading, 2026-10-07; Alex that day: "If people spend the day using
+     this tool, they should be comfortable with it"). Every colour a person reads passes WCAG AA
+     on white and on --paper-2: --ink 18:1, --ink-2 13.5:1, --ink-3 7.4:1, --ink-4 5.8:1 (5.0
+     on --act-soft). Until today --ink-4 was 2.5:1 and carried dates, snippets and labels, and
+     --ink-3 was 4.7:1. --act is the one colour for what you can act on: buttons, links, the
+     selected row. --accent keeps its meaning, something that needs a person, never decoration. */
+  --ink:      #14171c;
+  --ink-2:    #2a2f37;
+  --ink-3:    #4f5661;
+  --ink-4:    #60666f;
+  --line:     #d9dde3;
+  --line-2:   #e9ecf0;
   --paper:    #ffffff;
-  --paper-2:  #fbfbfc;
-  --accent:   #c4441a;
+  --paper-2:  #f4f6f9;
+  --accent:   #b8401a;
+  --act:      #1f55c8;
+  --act-soft: #e9effc;
+  --font:     system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
   --w-plain:  400;
   --w-mid:    500;
+  --w-strong: 600;
 
   --t-hero:   clamp(27px, 4.4vw, 40px);
   --t-head:   clamp(19px, 2.4vw, 23px);
   --t-body:   16px;
-  --t-small:  13.5px;
-  --t-micro:  11.5px;
+  --t-small:  14.5px;
+  --t-micro:  12.5px;
+  /* Reading text, for an email or anything read at length: 16px, generous leading, about 70
+     characters a line. The email frame takes its measure and padding from here too. */
+  --t-read:   16px;
+  --lead-read: 1.65;
+  --read:     70ch;
+  --frame-measure: 46rem;
+  --frame-pad: 4px 4px 24px;
 
-  --lead:     1.55;
+  --lead:     1.6;
   --lead-tight: 1.28;
 
   --u:        4px;
@@ -53,7 +70,7 @@
 html { -webkit-text-size-adjust: 100%; }
 
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font);
   font-size: var(--t-body);
   font-weight: var(--w-plain);
   line-height: var(--lead);
@@ -75,7 +92,7 @@ body:has(.dock #s-answer:not([hidden])) #main {
 
 .masthead {
   display: flex; align-items: baseline; justify-content: space-between;
-  gap: var(--gap); padding: var(--gap-lg) 0 0;
+  gap: var(--gap); padding: calc(var(--u) * 3) 0 0;
 }
 .wordmark {
   font-size: var(--t-body); font-weight: var(--w-mid); color: var(--ink);
@@ -83,8 +100,8 @@ body:has(.dock #s-answer:not([hidden])) #main {
 }
 .wordmark span {
   display: block; font-size: var(--t-micro); font-weight: var(--w-plain);
-  color: var(--ink-4); letter-spacing: .1em; text-transform: uppercase;
-  margin-top: calc(var(--u) * .5);
+  color: var(--ink-3);
+  margin-top: calc(var(--u) * .25);
 }
 .whoami { font-size: var(--t-small); color: var(--ink-3); text-align: right; }
 .whoami b { font-weight: var(--w-mid); color: var(--ink-2); }
@@ -109,8 +126,8 @@ p + p { margin-top: var(--gap); }
 
 .lede { font-size: 17px; color: var(--ink-2); max-width: 54ch; }
 .eyebrow {
-  font-size: var(--t-micro); font-weight: var(--w-mid); color: var(--ink-4);
-  letter-spacing: .11em; text-transform: uppercase; margin-bottom: var(--gap);
+  font-size: var(--t-small); font-weight: var(--w-mid); color: var(--ink-3);
+  margin-bottom: var(--gap);
 }
 .quiet { color: var(--ink-3); font-size: var(--t-small); }
 .pull {
@@ -128,7 +145,7 @@ section.step[hidden] { display: none; }
 
 .tabs {
   display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1.5) var(--gap);
-  margin-top: var(--gap); border-bottom: 1px solid var(--line);
+  margin-top: calc(var(--u) * 2); border-bottom: 1px solid var(--line);
 }
 .tab {
   font-size: var(--t-small); color: var(--ink-3); padding: calc(var(--u) * 2) 0;
@@ -159,14 +176,14 @@ section.step[hidden] { display: none; }
 /* ── buttons ─────────────────────────────────────────────────────────── */
 
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
-:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 2px; }
+:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; border-radius: 2px; }
 
 .go {
   margin-top: var(--gap-lg); padding: 11px 20px; border-radius: var(--radius);
-  background: var(--ink); color: var(--paper); font-weight: var(--w-mid);
+  background: var(--act); color: var(--paper); font-weight: var(--w-mid);
   font-size: var(--t-small);
 }
-.go.ghost { background: none; color: var(--ink-3); border: 1px solid var(--line); }
+.go.ghost { background: none; color: var(--ink-2); border: 1px solid var(--line); }
 .go[disabled] { opacity: .4; cursor: default; }
 .actions { display: flex; flex-wrap: wrap; gap: var(--gap); align-items: center; }
 
@@ -416,9 +433,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   background: var(--line-2); color: var(--ink); font-size: var(--t-body); line-height: 1.45;
 }
 /* THE ANSWER SCREEN. Two sizes only, and no third creeps in: 17px is the answer
-   and the line qualifying it, 13.5px is everything else. The previous version used
+   and the line qualifying it, --t-small is everything else. The previous version used
    four sizes in one block, which is what "showing its working" looks like. */
-.answer-wait { font-size: 13.5px; color: var(--ink-4); }
+.answer-wait { font-size: var(--t-small); color: var(--ink-4); }
 
 .ans-lead, .ans-lead-prose p, .ans-lead-prose li {
   font-size: 17px; line-height: 1.5; color: var(--ink); margin: 0;
@@ -440,13 +457,13 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .cite:hover { text-decoration: underline; }
 
-.ans-meta { margin-top: var(--gap); font-size: 13.5px; color: var(--ink-3); }
+.ans-meta { margin-top: var(--gap); font-size: var(--t-small); color: var(--ink-3); }
 
-/* Section labels inside a long answer. 13.5px so they group without competing with
+/* Section labels inside a long answer. --t-small so they group without competing with
    the answer itself: one thing emphasised per block, and in a section the emphasis
    is the content, not the label. */
 .ans-h {
-  font-size: 13.5px; letter-spacing: .08em; text-transform: uppercase;
+  font-size: var(--t-small); letter-spacing: .08em; text-transform: uppercase;
   color: var(--ink-3); margin: calc(var(--u) * 8) 0 calc(var(--u) * 2);
 }
 .ans-prose > .ans-h:first-child, .ans-lead-prose > .ans-h:first-child { margin-top: var(--gap); }
@@ -454,7 +471,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* A SET IS A TABLE. Hairlines only, no fill, no zebra: the data is the emphasis. */
 .ans-table-wrap { margin-top: var(--gap); overflow-x: auto; }
-.ans-table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.ans-table { border-collapse: collapse; width: 100%; font-size: var(--t-small); }
 .ans-table th {
   text-align: left; font-weight: var(--w-mid); color: var(--ink);
   padding: 0 calc(var(--u) * 5) calc(var(--u) * 2) 0;
@@ -489,13 +506,13 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .ans-gap-lead { font-size: 17px; line-height: 1.5; color: var(--ink); margin: 0; }
 .ans-gap-list { margin: calc(var(--u) * 1.5) 0 0; padding-left: 20px; }
-.ans-gap-list li { font-size: 13.5px; color: var(--ink-2); }
+.ans-gap-list li { font-size: var(--t-small); color: var(--ink-2); }
 .ans-gap-list li + li { margin-top: calc(var(--u)); }
 
 /* EVIDENCE, COLLAPSED BY DEFAULT, ALWAYS. */
 .recs { margin-top: var(--gap-lg); border-top: 1px solid var(--line); }
 .recs-sum {
-  font-size: 13.5px; color: var(--ink-3); cursor: pointer;
+  font-size: var(--t-small); color: var(--ink-3); cursor: pointer;
   padding: calc(var(--u) * 3) 0; list-style: none;
 }
 .recs-sum::-webkit-details-marker { display: none; }
@@ -508,7 +525,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .record-d { padding: calc(var(--u) * 2.5) 0; }
 .record-head {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: calc(var(--u) * 2);
-  font-size: 13.5px; cursor: pointer; list-style: none;
+  font-size: var(--t-small); cursor: pointer; list-style: none;
 }
 .record-head::-webkit-details-marker { display: none; }
 .record-n { color: var(--ink-4); flex: none; min-width: 14px; }
@@ -516,11 +533,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .record-src { color: var(--ink-4); }
 .record-go {
   display: inline-block; margin-top: calc(var(--u) * 2);
-  font-size: 13.5px; color: var(--accent); text-decoration: none;
+  font-size: var(--t-small); color: var(--accent); text-decoration: none;
 }
 .record-go:hover { text-decoration: underline; }
 .record-snip, .record-note {
-  font-size: 13.5px; line-height: 1.55; color: var(--ink-2);
+  font-size: var(--t-small); line-height: 1.55; color: var(--ink-2);
   margin-top: calc(var(--u) * 2); max-width: var(--measure);
 }
 .record-note { color: var(--ink-4); }
@@ -656,7 +673,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   display: block; font-size: 15px; font-weight: var(--w-mid); color: var(--ink);
 }
 .box .box-d {
-  display: block; font-size: 13.5px; color: var(--ink-3);
+  display: block; font-size: var(--t-small); color: var(--ink-3);
   margin-top: calc(var(--u) * 1.5); line-height: 1.45;
 }
 /* Red means a person is needed, never that a count is non-zero. */
@@ -743,47 +760,95 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* MAIL (seat mail-redesign, 2026-10-07; Alex 2026-10-06). An inbox you can work in, across the
    whole window: mailboxes on the left, the inbox in the middle, the open email on the right.
-   Same tokens, rows and states as every other tab; nothing here is new colour. */
-.mailx { display: grid; grid-template-columns: minmax(13rem, 17rem) minmax(18rem, 26rem) 1fr; gap: 2rem; align-items: start; }
-.mailx-side { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; }
-.mailx-who { font-size: var(--t-small); color: var(--ink-3); margin-bottom: var(--gap); }
+   THE SCREEN FITS THE WINDOW (seat reading, 2026-10-07; Alex that day: "a waste of real
+   estate"). While Mail is open the page itself does not scroll: the three columns fill the
+   height between the header and the Ask bar and each scrolls by itself, and the reading pane
+   takes the width that is left. Under 1100px the mailbox column folds behind a Mailboxes
+   button; under 720px one column shows at a time (mail.js sets data-view on .mailx).
+   SUPERSEDES the sticky mailbox column and the inbox that grew the page to its own length. */
+html body:has(#s-lens:not([hidden]) .mailx) { height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+html body:has(#s-lens:not([hidden]) .mailx) > .shell { width: 100%; }
+html body:has(#s-lens:not([hidden]) .mailx) #main { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; padding-bottom: 0; }
+html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: calc(var(--u) * 3) 0 0; }
+#lens-body:has(> .mailx) { flex: 1; min-height: 0; }
+.mailx { height: 100%; display: grid; grid-template-columns: minmax(11rem, 13rem) minmax(17rem, 22rem) minmax(0, 1fr); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--paper); }
+.mailx-side, .mailx-list, .mailx-read { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.mailx-side { background: var(--paper-2); border-right: 1px solid var(--line); padding: calc(var(--u) * 4) calc(var(--u) * 2); }
+.mailx-list { border-right: 1px solid var(--line); }
+.mailx-read { padding: calc(var(--u) * 5) clamp(12px, 2vw, 36px) calc(var(--u) * 10); }
+
+.mailx-who { font-size: var(--t-small); color: var(--ink-3); margin: 0 calc(var(--u) * 2) var(--gap); }
 .mailx-who b { font-weight: var(--w-mid); color: var(--ink); }
-.mailx-domain { margin: 1.2em 0 .3em; font-size: var(--t-micro); font-weight: var(--w-mid); color: var(--ink-4); letter-spacing: .08em; text-transform: uppercase; }
+.mailx-domain { margin: calc(var(--u) * 4) calc(var(--u) * 2) var(--u); font-size: var(--t-small); font-weight: var(--w-mid); color: var(--ink-3); }
 .mailx-boxes, .mailx-msgs, .mailx-rel ul { list-style: none; margin: 0; padding: 0; }
-.mailx-boxes li { margin-bottom: .2em; }
-.mailx-boxes .state { padding: 0 .4em .3em; }
-.mailx-box { width: 100%; display: flex; justify-content: space-between; gap: .5em; text-align: left; background: none; border: 0; padding: .35em .4em; color: var(--ink-2); font: inherit; font-size: var(--t-small); border-radius: var(--radius); cursor: pointer; }
-.mailx-box:hover, .mailx-box[aria-current='true'] { background: var(--line); }
-.mailx-box[aria-current='true'] { color: var(--ink); font-weight: var(--w-mid); }
+.mailx-boxes li { margin-bottom: 2px; }
+.mailx-boxes .state { display: block; padding: 0 calc(var(--u) * 2) var(--u); }
+.mailx-box { width: 100%; display: flex; justify-content: space-between; align-items: baseline; gap: .5em; text-align: left; padding: calc(var(--u) * 2); color: var(--ink-2); font-size: var(--t-small); border-radius: var(--radius); }
+.mailx-box:hover { background: var(--line-2); }
+.mailx-box[aria-current='true'] { background: var(--act-soft); color: var(--ink); font-weight: var(--w-mid); }
 .mailx-addr { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mailx-count { flex: none; font-size: var(--t-micro); color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.mailx-list, .mailx-read { min-width: 0; }
-.mailx-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .4em 1em; margin-bottom: .6em; }
+.mailx-count { flex: none; font-size: var(--t-micro); font-weight: var(--w-strong); color: var(--act); font-variant-numeric: tabular-nums; }
+
+.mailx-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--u) var(--gap); }
 .mailx-head h3 { margin: 0; overflow-wrap: anywhere; }
-.mailx-msgs { border-top: 1px solid var(--line-2); }
-.mailx-msg { width: 100%; display: flex; flex-direction: column; gap: .15em; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line-2); padding: .6em .4em; color: var(--ink-3); font: inherit; font-size: var(--t-small); cursor: pointer; }
-.mailx-msg:hover, .mailx-msg[aria-current='true'] { background: var(--paper-2); }
-.mailx-msg[aria-current='true'] { box-shadow: inset 2px 0 0 var(--ink); }
-.mailx-msg.unread .mailx-from, .mailx-msg.unread .mailx-subj { color: var(--ink); font-weight: var(--w-mid); }
-.mailx-r1 { display: flex; justify-content: space-between; gap: .6em; }
+.mailx-list > .mailx-head { position: sticky; top: 0; z-index: 1; background: var(--paper); padding: calc(var(--u) * 4); border-bottom: 1px solid var(--line); }
+.mailx-list > .quiet, .mailx-list > .state, .mailx-list > .go { margin: var(--gap) calc(var(--u) * 4); }
+.mailx-msg { position: relative; width: 100%; display: grid; gap: 2px; text-align: left; border-bottom: 1px solid var(--line-2); padding: calc(var(--u) * 3) calc(var(--u) * 4) calc(var(--u) * 3) calc(var(--u) * 6); font-size: var(--t-small); line-height: 1.45; }
+.mailx-msg:hover { background: var(--paper-2); }
+.mailx-msg[aria-current='true'] { background: var(--act-soft); box-shadow: inset 3px 0 0 var(--act); }
+.mailx-msg.unread::before { content: ""; position: absolute; left: calc(var(--u) * 2.5); top: calc(var(--u) * 3 + .5em); width: 7px; height: 7px; border-radius: 50%; background: var(--act); }
+.mailx-msg.unread .mailx-from, .mailx-msg.unread .mailx-subj { color: var(--ink); font-weight: var(--w-strong); }
+.mailx-r1 { display: flex; justify-content: space-between; align-items: baseline; gap: .6em; }
 .mailx-from { color: var(--ink-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mailx-when { flex: none; font-size: var(--t-micro); color: var(--ink-4); font-variant-numeric: tabular-nums; }
 .mailx-subj { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mailx-snip { color: var(--ink-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mailx-read p { max-width: var(--convo); }
+.mailx-snip { color: var(--ink-3); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+.mailx-read p { max-width: var(--read); }
+.mailx-read > .mailx-head { margin-bottom: var(--gap); }
+.mailx-subject { margin: 0; max-width: 40ch; font-size: var(--t-head); overflow-wrap: anywhere; }
+.mailx-read > .mailx-head > a { font-size: var(--t-small); color: var(--act); }
 .mailx-know, .mailx-stands, .mailx-rel { margin-top: var(--gap); }
-.mailx-know .eyebrow, .mailx-stands .eyebrow, .mailx-rel .eyebrow { margin-bottom: .3em; }
+.mailx-know .eyebrow, .mailx-stands .eyebrow, .mailx-rel .eyebrow { margin-bottom: var(--u); }
 .mailx-know p:not(.eyebrow) { color: var(--ink); }
-.mailx-acts { display: flex; flex-wrap: wrap; gap: .6em; }
-.mailx-acts .go { margin-top: var(--gap); }
-.mailx-said { margin-top: .5em; }
-.mailx-toggle { margin-top: var(--gap); background: none; border: 0; padding: 0; font: inherit; font-size: var(--t-small); color: var(--ink-3); text-decoration: underline; cursor: pointer; }
-.mailx-mail { margin-top: var(--gap); padding-top: var(--gap); border-top: 1px solid var(--line-2); max-width: var(--convo); }
-.mailx-text { margin-top: .6em; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink-2); }
-.mailx-link { display: block; background: none; border: 0; padding: .25em 0; font: inherit; font-size: var(--t-small); color: var(--ink-2); text-align: left; text-decoration: underline; text-decoration-color: var(--line); cursor: pointer; }
-.mailx-link:hover { color: var(--ink); }
-@media (max-width: 1100px) { .mailx { grid-template-columns: minmax(12rem, 15rem) 1fr; } .mailx-read { grid-column: 1 / -1; } }
-@media (max-width: 720px) { .mailx { grid-template-columns: 1fr; } .mailx-side { position: static; max-height: none; } }
+.mailx-bulk { width: fit-content; padding: calc(var(--u) * 2) calc(var(--u) * 3); border-radius: var(--radius); background: var(--paper-2); color: var(--ink-2); font-size: var(--t-small); }
+.mailx-acts { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); }
+.mailx-acts .go { margin-top: var(--gap); padding: 8px 16px; }
+.mailx-said { margin-top: var(--u); }
+.mailx-toggle { margin-top: var(--gap); font-size: var(--t-small); color: var(--act); }
+.mailx-mail { margin-top: calc(var(--u) * 6); padding-top: var(--gap); border-top: 1px solid var(--line); }
+.mailx-mail > .mailx-r1 .mailx-from { color: var(--ink); font-weight: var(--w-mid); }
+.mailx-mail > .mailx-r1 .mailx-when { font-size: var(--t-small); }
+.mailx-mail > .quiet { margin-top: 2px; }
+.mailx-body { margin-top: var(--gap); }
+.mailx-text { max-width: var(--read); font-size: var(--t-read); line-height: var(--lead-read); color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.mailx-url { color: var(--act); }
+.mailx-quote { margin-top: var(--gap); white-space: normal; }
+.mailx-quote > summary { width: fit-content; cursor: pointer; font-size: var(--t-small); color: var(--ink-3); }
+.mailx-quote > .mailx-text { margin-top: calc(var(--u) * 2); padding-left: calc(var(--u) * 3); border-left: 2px solid var(--line); color: var(--ink-3); }
+.mailx-imgs { margin-bottom: calc(var(--u) * 2); font-size: var(--t-small); color: var(--ink-3); }
+.mailx-show { color: var(--act); font-weight: var(--w-mid); text-decoration: underline; }
+.mailx-frame { display: block; width: 100%; height: max(28rem, 68vh); border: 0; background: var(--paper); }
+.mailx-link { display: block; padding: var(--u) 0; font-size: var(--t-small); color: var(--act); text-align: left; text-decoration: underline; text-decoration-color: var(--act-soft); }
+.mailx-link:hover { text-decoration-color: currentColor; }
+.mailx-nav { display: none; font-size: var(--t-small); font-weight: var(--w-mid); color: var(--act); }
+@media (max-width: 1100px) {
+  .mailx { grid-template-columns: minmax(16rem, 21rem) minmax(0, 1fr); }
+  .mailx-side { display: none; }
+  .mailx[data-view='side'] .mailx-side { display: block; }
+  .mailx[data-view='side'] .mailx-list { display: none; }
+  .mailx-list .mailx-nav { display: inline; }
+}
+@media (max-width: 720px) {
+  .mailx { grid-template-columns: minmax(0, 1fr); }
+  .mailx > .mailx-list, .mailx > .mailx-read { display: none; }
+  .mailx[data-view='list'] > .mailx-list, .mailx[data-view='read'] > .mailx-read { display: block; }
+  .mailx-read .mailx-back { display: inline-block; margin-bottom: var(--gap); }
+  .mailx-frame { height: 72vh; }
+}
+/* On a phone the Ask bar's scope label took the room of what she types; the placeholder says
+   enough (seat reading, 2026-10-07). */
+@media (max-width: 560px) { .dock-bar .ask-scope { display: none; } }
 
 /* The Brain tab's line for sources that cannot be opened (seat mail-redesign). */
 .reconnect-head { margin-top: var(--gap); font-size: var(--t-small); color: var(--ink-2); }
