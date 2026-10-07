@@ -740,3 +740,51 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .clock-zone { font-size: var(--t-micro); color: var(--ink-4); text-decoration: underline dotted; }
 .clock-zone:hover { color: var(--ink); }
 #clock-pick { font: inherit; font-size: var(--t-micro); max-width: 16rem; }
+
+/* MAIL (seat mail-redesign, 2026-10-07; Alex 2026-10-06). An inbox you can work in, across the
+   whole window: mailboxes on the left, the inbox in the middle, the open email on the right.
+   Same tokens, rows and states as every other tab; nothing here is new colour. */
+.mailx { display: grid; grid-template-columns: minmax(13rem, 17rem) minmax(18rem, 26rem) 1fr; gap: 2rem; align-items: start; }
+.mailx-side { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; }
+.mailx-who { font-size: var(--t-small); color: var(--ink-3); margin-bottom: var(--gap); }
+.mailx-who b { font-weight: var(--w-mid); color: var(--ink); }
+.mailx-domain { margin: 1.2em 0 .3em; font-size: var(--t-micro); font-weight: var(--w-mid); color: var(--ink-4); letter-spacing: .08em; text-transform: uppercase; }
+.mailx-boxes, .mailx-msgs, .mailx-rel ul { list-style: none; margin: 0; padding: 0; }
+.mailx-boxes li { margin-bottom: .2em; }
+.mailx-boxes .state { padding: 0 .4em .3em; }
+.mailx-box { width: 100%; display: flex; justify-content: space-between; gap: .5em; text-align: left; background: none; border: 0; padding: .35em .4em; color: var(--ink-2); font: inherit; font-size: var(--t-small); border-radius: var(--radius); cursor: pointer; }
+.mailx-box:hover, .mailx-box[aria-current='true'] { background: var(--line); }
+.mailx-box[aria-current='true'] { color: var(--ink); font-weight: var(--w-mid); }
+.mailx-addr { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mailx-count { flex: none; font-size: var(--t-micro); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.mailx-list, .mailx-read { min-width: 0; }
+.mailx-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .4em 1em; margin-bottom: .6em; }
+.mailx-head h3 { margin: 0; overflow-wrap: anywhere; }
+.mailx-msgs { border-top: 1px solid var(--line-2); }
+.mailx-msg { width: 100%; display: flex; flex-direction: column; gap: .15em; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line-2); padding: .6em .4em; color: var(--ink-3); font: inherit; font-size: var(--t-small); cursor: pointer; }
+.mailx-msg:hover, .mailx-msg[aria-current='true'] { background: var(--paper-2); }
+.mailx-msg[aria-current='true'] { box-shadow: inset 2px 0 0 var(--ink); }
+.mailx-msg.unread .mailx-from, .mailx-msg.unread .mailx-subj { color: var(--ink); font-weight: var(--w-mid); }
+.mailx-r1 { display: flex; justify-content: space-between; gap: .6em; }
+.mailx-from { color: var(--ink-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mailx-when { flex: none; font-size: var(--t-micro); color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.mailx-subj { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mailx-snip { color: var(--ink-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mailx-read p { max-width: var(--convo); }
+.mailx-know, .mailx-stands, .mailx-rel { margin-top: var(--gap); }
+.mailx-know .eyebrow, .mailx-stands .eyebrow, .mailx-rel .eyebrow { margin-bottom: .3em; }
+.mailx-know p:not(.eyebrow) { color: var(--ink); }
+.mailx-acts { display: flex; flex-wrap: wrap; gap: .6em; }
+.mailx-acts .go { margin-top: var(--gap); }
+.mailx-said { margin-top: .5em; }
+.mailx-toggle { margin-top: var(--gap); background: none; border: 0; padding: 0; font: inherit; font-size: var(--t-small); color: var(--ink-3); text-decoration: underline; cursor: pointer; }
+.mailx-mail { margin-top: var(--gap); padding-top: var(--gap); border-top: 1px solid var(--line-2); max-width: var(--convo); }
+.mailx-text { margin-top: .6em; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink-2); }
+.mailx-link { display: block; background: none; border: 0; padding: .25em 0; font: inherit; font-size: var(--t-small); color: var(--ink-2); text-align: left; text-decoration: underline; text-decoration-color: var(--line); cursor: pointer; }
+.mailx-link:hover { color: var(--ink); }
+@media (max-width: 1100px) { .mailx { grid-template-columns: minmax(12rem, 15rem) 1fr; } .mailx-read { grid-column: 1 / -1; } }
+@media (max-width: 720px) { .mailx { grid-template-columns: 1fr; } .mailx-side { position: static; max-height: none; } }
+
+/* The Brain tab's line for sources that cannot be opened (seat mail-redesign). */
+.reconnect-head { margin-top: var(--gap); font-size: var(--t-small); color: var(--ink-2); }
+.reconnect-head .work-add { margin-left: .3em; }
