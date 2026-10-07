@@ -833,7 +833,7 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
 .mailx-quote > .mailx-text { margin-top: calc(var(--u) * 2); padding-left: calc(var(--u) * 3); border-left: 2px solid var(--line); color: var(--ink-3); }
 .mailx-imgs { margin-bottom: calc(var(--u) * 2); font-size: var(--t-small); color: var(--ink-3); }
 .mailx-show { color: var(--act); font-weight: var(--w-mid); text-decoration: underline; }
-.mailx-frame { display: block; width: 100%; height: max(28rem, 68vh); border: 0; background: var(--paper); }
+.mailx-frame { display: block; width: 100%; height: 24rem; border: 0; background: var(--paper); }
 .mailx-link { display: block; padding: var(--u) 0; font-size: var(--t-small); color: var(--act); text-align: left; text-decoration: underline; text-decoration-color: var(--act-soft); }
 .mailx-link:hover { text-decoration-color: currentColor; }
 .mailx-nav { display: none; font-size: var(--t-small); font-weight: var(--w-mid); color: var(--act); }
@@ -849,7 +849,7 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
   .mailx > .mailx-list, .mailx > .mailx-read { display: none; }
   .mailx[data-view='list'] > .mailx-list, .mailx[data-view='read'] > .mailx-read { display: block; }
   .mailx-read .mailx-back { display: inline-block; margin-bottom: var(--gap); }
-  .mailx-frame { height: 72vh; }
+
 }
 /* On a phone the Ask bar's scope label took the room of what she types; the placeholder says
    enough (seat reading, 2026-10-07). */
@@ -883,3 +883,16 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
 .answerx-draft > .go { margin-top: var(--gap); }
 /* The records under every answer, grouped by where they came from (lens.js recordList). */
 .record-group { list-style: none; margin-top: var(--gap); font-size: var(--t-micro); color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
+
+/* WORKSPACE (seat email-workspace, 2026-10-07; Alex that day). The conversation about an email sits
+   with it in the reading column, and while she talks the email shows its sender and first lines.
+   The Mail columns keep the whole height: on Mail the dock is only the question box (lens.js
+   mailDock). The email frame takes the email's height (mail.js fitFrame); the 24rem above is only
+   what it keeps if it cannot be measured. SUPERSEDES the fixed frame height of seat reading.
+   The page's variables only; nothing defined here. */
+.mailx-folded .mailx-first { margin: var(--u) 0 0; color: var(--ink-3); font-size: var(--t-small); max-width: var(--read);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.answerx-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--gap); }
+.answerx-top .eyebrow { margin: 0; }
+.answerx-kept { font-size: var(--t-small); }
+.answerx-discard { margin-left: auto; padding: 4px 10px; font-size: var(--t-micro); }
