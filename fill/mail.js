@@ -22,15 +22,25 @@
 //
 // READING (seat reading, 2026-10-07; Alex that day: "Workability is very important, it's not a
 // luxury"). An email reads like email. HTML mail is shown as it was sent, inside a sandboxed
-// frame: no scripts, no shared origin, so nothing inside it can run on this page or read it;
+// frame: no scripts, so nothing inside it can run on this page or read it (the frame note below);
 // links open in a new tab; remote pictures stay hidden until she asks, because loading them
 // tells the sender she opened it. Plain mail keeps its line breaks, with links clickable. The
 // earlier quoted reply folds away. A newsletter is said in one line, not listed. The columns
 // fill the window and scroll by themselves; on a narrow screen one shows at a time (data-view
 // on the frame). The frame's colours are read from skin.css when it is drawn, so no colour is
 // written here either.
+//
+// THE CONVERSATION ABOUT AN EMAIL STAYS WITH THAT EMAIL (seat email-workspace, 2026-10-07; Alex that
+// day, after an answer about one mailbox stayed on screen over the next: "Either it resets, or we
+// find another way to show the answers to the email"). What she asks while an email is open, from
+// Answer, Forward or the one Ask bar, is answered in the reading column under that email (answer.js),
+// and the email folds to its first lines while she talks. Opening another email or mailbox takes it
+// off the screen; it is kept in Work as a chat named after the email; returning to the email shows
+// it again, from memory on this page or, after a reload, from what Work kept (work_about). Discard
+// is one click on the conversation. With no email open, a question asked here is answered in the
+// reading column too, so nothing on the Mail tab ever draws a band of conversation under the columns.
 
-import { drawAnswer } from './answer.js?v=2026-10-07-answer';
+import { conversation } from './answer.js?v=2026-10-07-workspace';
 
 const LIVE = '/functions/v1/worklens-live';
 
@@ -42,6 +52,8 @@ const unread = new Map();  // source key -> unread conversations, when Gmail say
 let countsAsked = false;
 let parts = null;          // the three columns once drawn
 const imagesShown = new Set(); // message ids whose remote pictures she chose to load
+const convos = new Map();      // 'mail:<source_key>:<thread_id>' -> the conversation about that email
+let general = null;            // what she asked on Mail with no email open
 const NL = String.fromCharCode(10);
 const TAB = String.fromCharCode(9);
 // worklens-live finds at most this many related conversations (RELATED_THREADS there), so a
@@ -289,6 +301,7 @@ async function openThread(threadId) {
     const t = await live('thread', { source_key: key, thread_id: threadId });
     if (!open || open.id !== threadId) return;
     open.thread = t; drawRead();
+    restoreKept(key, t);
     const r = await live('related', { source_key: key, thread_id: threadId });
     if (!open || open.id !== threadId) return;
     open.related = r;
@@ -305,6 +318,20 @@ async function openThread(threadId) {
 function didntKnow(t, r) {
   const mail = (r && r.mail && r.mail.threads) || [];
   const docs = (r && r.documents && r.documents.docs) || [];
+  // A NOTIFICATION (worklens-live notice: an applicant from a job board, an invoice, a sign-in
+  // notice, an invitation) comes from a machine, so "earlier conversations with" its sender says
+  // nothing. What matters is what else carries the same subject: for an applicant notification,
+  // the other applications to the same job. worklens-live searches by subject only for these.
+  if (t.notice) {
+    const same = mail.filter((x) => x.why === 'same subject');
+    const lead = same[0];
+    const m = same.length
+      ? (same.length >= RELATED_CAP ? 'At least ' : '') + same.length + ' other email' + (same.length === 1 ? '' : 's') + ' in this mailbox carr' + (same.length === 1 ? 'ies' : 'y')
+        + ' the same subject, the latest from ' + (lead.from_name || lead.from_email || 'someone') + ', ' + when(lead.date) + '.'
+      : 'Nothing else in this mailbox carries this subject.';
+    const d = docs.length ? ' Your files hold ' + docs.length + ' document' + (docs.length === 1 ? '' : 's') + ' that match it, starting with ' + (docs[0].name || 'one without a name') + '.' : '';
+    return m + d;
+  }
   const who = (r && r.anchor && r.anchor.from_email) || 'this correspondent';
   const nThreads = mail.length + ' earlier conversation' + (mail.length === 1 ? '' : 's');
   const nDocs = docs.length + ' document' + (docs.length === 1 ? '' : 's');
@@ -324,7 +351,12 @@ function whereItStands(t) {
 function drawRead() {
   const read = parts.read;
   read.innerHTML = '';
-  if (!open) { read.appendChild(mk('p', 'quiet', 'Choose an email to read it here.')); return; }
+  setBar();
+  if (!open) {
+    read.appendChild(mk('p', 'quiet', 'Choose an email to read it here.'));
+    if (general) read.appendChild(general.el);
+    return;
+  }
   read.appendChild(navButton('Back to the inbox', 'list', ' mailx-back'));
   if (open.error) { read.appendChild(mk('p', 'state stalled', 'This email could not be opened: ' + open.error)); return; }
   const t = open.thread;
@@ -342,8 +374,10 @@ function drawRead() {
   const r = open.related;
   // A NEWSLETTER IS SAID ONCE (Alex, 2026-10-07: thirteen earlier issues listed under "Belongs
   // with it" is noise, not knowledge). worklens-live flags the thread as bulk when every
-  // message in it carries List-Unsubscribe or comes from a no-reply address; then one line
-  // replaces what you didn't know, where it stands, and the list below.
+  // message in it carries List-Unsubscribe and is not a notification (its noticeOf(): applicants
+  // from job boards, invoices, receipts, sign-in and security notices, invitations are shown as
+  // person mail is; Alex 2026-10-07). Then one line replaces what you didn't know, where it
+  // stands, and the list below.
   if (t.bulk) {
     read.appendChild(mk('p', 'mailx-bulk', newsletterLine(t, r)));
   } else {
@@ -361,6 +395,33 @@ function drawRead() {
   }
 
   read.appendChild(actions(t));
+
+  const conv = convos.get(aboutKey(chosen, t.thread_id)) || null;
+  if (open.keptError) read.appendChild(mk('p', 'quiet', open.keptError));
+  // WHILE SHE TALKS ABOUT IT, THE EMAIL FOLDS to who sent it and its first lines, one click to
+  // unfold (Alex 2026-10-07: the email frame felt boxed in, and the conversation belongs with it).
+  if (conv && conv.count() && !open.unfold) {
+    const m = (t.messages || [])[(t.messages || []).length - 1] || {};
+    const box = mk('article', 'mailx-mail mailx-folded');
+    const mh = mk('div', 'mailx-r1');
+    mh.appendChild(mk('span', 'mailx-from', m.from_name || m.from_email || ''));
+    mh.appendChild(mk('span', 'mailx-when', when(m.date)));
+    box.appendChild(mh);
+    box.appendChild(mk('p', 'mailx-first', String(m.body || '').split(NL).filter((l) => l.trim()).slice(0, 4).join(' ').slice(0, 320)));
+    const un = mk('button', 'mailx-toggle', 'Show the whole email');
+    un.type = 'button';
+    un.addEventListener('click', () => { open.unfold = true; drawRead(); });
+    box.appendChild(un);
+    read.appendChild(box);
+    read.appendChild(conv.el);
+    return;
+  }
+  if (conv && conv.count()) {
+    const fold = mk('button', 'mailx-toggle', 'Fold the email');
+    fold.type = 'button';
+    fold.addEventListener('click', () => { open.unfold = false; drawRead(); });
+    read.appendChild(fold);
+  }
 
   // The newest message, with the earlier ones one click away.
   const msgs = t.messages || [];
@@ -382,6 +443,7 @@ function drawRead() {
     box.appendChild(messageContent(m));
     read.appendChild(box);
   }
+  if (conv) read.appendChild(conv.el);
 
   // What the related read found, each openable where it lives.
   if (!t.bulk && r && r !== 'loading' && !r.error) {
@@ -489,17 +551,23 @@ function plainMessage(text) {
   return box;
 }
 
-// HTML mail, as it was sent. THE FRAME IS THE SECURITY BOUNDARY: sandbox without allow-scripts
-// (nothing in the email runs) and without allow-same-origin (the email cannot reach this page,
-// its session or its storage); allow-popups so a link can open in a new tab, escaping the
-// sandbox so the site it opens works normally. A content policy inside the frame allows inline
-// styles and embedded pictures only; remote pictures are added to it when she presses Show
-// images. Belt and braces, before the frame is filled: scripts, frames, plugins, meta refresh
-// and base are removed, and any link that is not http, https, mailto or tel loses its target.
-// LIVE OBJECTION (seat reading): the frame cannot size itself to its content without
-// allow-same-origin or a script, both excluded by the brief, so it has a fixed height and
-// scrolls inside. Adding allow-same-origin WITHOUT allow-scripts would let it size to fit and
-// is the usual practice; it is HQ's call.
+// HTML mail, as it was sent. THE FRAME IS THE SECURITY BOUNDARY: sandbox WITHOUT allow-scripts,
+// so nothing in the email runs: no script element, no onerror or onload handler, no javascript:
+// link. allow-popups so a link can open in a new tab, escaping the sandbox so the site it opens
+// works normally. A content policy inside the frame allows inline styles and embedded pictures
+// only; remote pictures are added to it when she presses Show images. Belt and braces, before the
+// frame is filled: scripts, frames, plugins, meta refresh and base are removed, and any link that
+// is not http, https, mailto or tel loses its target.
+// THE FRAME GROWS TO FIT THE EMAIL (decided 2026-10-07, Alex's call, carried by seat
+// email-workspace): allow-same-origin is added so THIS page can measure the email's height and
+// size the frame to it; there is no box inside a box. It gives the email nothing, because nothing
+// in it can run: reaching this page's session or storage takes a script, and scripts stay off.
+// The rule that keeps this safe is therefore one line: allow-scripts must never be added beside
+// allow-same-origin, since the two together let an email remove its own sandbox. Proven the same
+// day in a real browser with a planted script, an onerror handler, an onload handler and a
+// javascript: link (none ran), against a control frame with scripts allowed (which did).
+// SUPERSEDES seat reading's note here (fixed height, scrolling inside), which named this exact
+// change as the usual practice and left it to HQ.
 const SAFE_LINK = /^(https?:|mailto:|tel:|#)/i;
 function prepareHtml(html) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -557,7 +625,7 @@ function frameDoc(doc, images) {
 function htmlMessage(wrap, m) {
   const prepared = prepareHtml(m.html);
   const frame = mk('iframe', 'mailx-frame');
-  frame.setAttribute('sandbox', 'allow-popups allow-popups-to-escape-sandbox');
+  frame.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
   frame.setAttribute('referrerpolicy', 'no-referrer');
   frame.title = 'The email as it was sent';
   const fill = () => { frame.srcdoc = frameDoc(prepared.doc, imagesShown.has(m.id)); };
@@ -569,16 +637,40 @@ function htmlMessage(wrap, m) {
     line.appendChild(b);
     wrap.appendChild(line);
   }
+  fitFrame(frame);
   fill();
   wrap.appendChild(frame);
 }
 
-// Answer and Forward open a conversation about this email under these buttons (fill/answer.js):
-// a briefing of what the company knows about it, her questions, a draft when she asks, and Send
-// as its own press. SUPERSEDED 2026-10-07 by Alex's ruling "the Tool sends mail" (seat answer):
-// these buttons used to say only that the Tool reads and does not write; that note is removed.
-// "Ask about this" still puts a question about this email into the one Ask bar, for her to finish
-// and send; the answer lands in the conversation and is kept in Work like every other question.
+// The frame takes the height of what is in it, measured from this page, and again when pictures
+// arrive or an earlier message is unfolded inside it. If it cannot be measured it keeps the
+// height skin.css gives it and scrolls inside, which is how it looked before.
+function fitFrame(frame) {
+  const size = () => {
+    try {
+      const d = frame.contentDocument;
+      if (!d || !d.body) return;
+      const h = Math.ceil(Math.max(d.body.scrollHeight, d.body.getBoundingClientRect().height));
+      if (h > 0) frame.style.height = h + 'px';
+    } catch (_) { /* not measurable: the fallback height stands */ }
+  };
+  frame.addEventListener('load', () => {
+    size();
+    try {
+      if (frame._fit) frame._fit.disconnect();
+      frame._fit = new ResizeObserver(size);
+      frame._fit.observe(frame.contentDocument.body);
+    } catch (_) { /* no observer: the load-time size stands */ }
+    for (const ms of [300, 1200, 4000]) setTimeout(size, ms);
+  });
+}
+
+// Answer and Forward start the conversation about this email (answer.js): a briefing of what the
+// company knows about it, then a draft when she asks, and Send as its own press. "Ask about this"
+// puts her in the one Ask bar, which asks about the open email while one is open; the answer lands
+// in the same conversation, with this email, and is kept in Work as a chat named after it.
+// SUPERSEDED 2026-10-07 (seat email-workspace): "Ask about this" used to start a question in the Ask
+// bar that was answered in the band under the columns and kept in whichever Work chat was open.
 function actions(t) {
   const row = mk('div', 'mailx-acts');
   const note = mk('p', 'quiet mailx-said');
@@ -589,23 +681,82 @@ function actions(t) {
     b.addEventListener('click', fn);
     row.appendChild(b);
   };
-  // The answer view hangs on the open email, so a redraw (the related read arriving, a refresh)
-  // moves it instead of wiping her conversation and draft.
-  if (!open.answerHost) open.answerHost = mk('div', 'mailx-answer');
-  const start = (mode) => {
-    note.textContent = '';
-    const m = boxRow();
-    drawAnswer(open.answerHost, C, { sourceKey: chosen, mailbox: (m && m.address) || chosen.split(':').slice(1).join(':'), thread: t, mode });
-  };
-  btn('Answer', true, () => start('reply'));
-  btn('Forward', false, () => start('forward'));
+  btn('Answer', true, () => { note.textContent = ''; convoFor(t, true).start('reply'); });
+  btn('Forward', false, () => { note.textContent = ''; convoFor(t, true).start('forward'); });
   btn('Ask about this', false, () => {
-    const first = (t.messages || [])[0] || {};
-    const from = first.from_name || first.from_email || 'the sender';
-    C.prefillAsk('About the email "' + (t.subject || 'with no subject') + '" from ' + from + ': ');
-    note.textContent = 'Your question is started in the Ask bar below. Finish it and press Ask; the answer is kept in Work.';
+    const i = document.getElementById('ask-input');
+    if (i) i.focus();
+    note.textContent = 'Ask in the box at the bottom; the answer appears here, with this email.';
   });
   const wrap = mk('div');
-  wrap.append(row, note, open.answerHost);
+  wrap.append(row, note);
   return wrap;
+}
+
+// ── the conversation about an email ─────────────────────────────────────────
+function aboutKey(sourceKey, threadId) { return 'mail:' + sourceKey + ':' + threadId; }
+
+function convoFor(t, create, keptChat) {
+  const key = aboutKey(chosen, t.thread_id);
+  if (convos.has(key) || !create) return convos.get(key) || null;
+  const m = boxRow();
+  const threadId = t.thread_id;
+  const conv = conversation(C, {
+    sourceKey: chosen, mailbox: (m && m.address) || chosen.split(':').slice(1).join(':'), thread: t,
+    keep: { chat: keptChat || null, about: key, title: t.subject || '(no subject)' },
+    // The first question folds the email; later ones leave the page as it is.
+    onTurn: () => { if (open && open.id === threadId && conv.count() === 1) drawRead(); },
+    onDiscard: () => { convos.delete(key); if (open && open.id === threadId) { open.unfold = false; drawRead(); } },
+  });
+  convos.set(key, conv);
+  return conv;
+}
+
+// After a reload the page has forgotten, but Work has not: an email she talked about before shows
+// its conversation again, drawn from what was kept. A failed lookup is said, never shown as none.
+async function restoreKept(key, t) {
+  const about = aboutKey(key, t.thread_id);
+  if (convos.has(about)) return;
+  try {
+    const a = await C.sb.rpc('work_about', { p_about: about });
+    if (a.error || !a.data || !a.data.ok) throw new Error((a.error && a.error.message) || (a.data && a.data.note) || 'no reason was given');
+    if (!a.data.chat_id || convos.has(about)) return;
+    const w = await C.sb.rpc('work_open', { p_chat: a.data.chat_id });
+    if (w.error || !w.data || !w.data.ok) throw new Error((w.error && w.error.message) || (w.data && w.data.note) || 'no reason was given');
+    if (key !== chosen || !open || open.id !== t.thread_id || convos.has(about)) return;
+    convoFor(t, true, a.data.chat_id).restore(w.data.turns);
+  } catch (e) {
+    if (open && open.id === t.thread_id) open.keptError = 'Whether you talked about this email before could not be read just now (' + ((e && e.message) || e) + ').';
+  }
+  if (open && open.id === t.thread_id) drawRead();
+}
+
+// The one Ask bar says what it will ask about. Only while the Mail tab is on screen; lens.js puts
+// its own words back when she leaves.
+function setBar() {
+  const i = document.getElementById('ask-input');
+  if (!i || !parts || !parts.wrap.offsetParent) return;
+  i.placeholder = open && open.thread ? 'Ask about this email, or anything' : 'Ask anything';
+}
+
+// Called by lens.js for a question typed in the Ask bar while the Mail tab is on screen. With an
+// email open the question is about it and lands with it; with none open it lands in the reading
+// column. Returns false when the Mail tab is not on screen, so lens.js asks as it always has.
+export function askFromMailBar(text) {
+  if (!parts || !parts.wrap.isConnected || !parts.wrap.offsetParent) return false;
+  if (open && open.thread) {
+    const conv = convoFor(open.thread, true);
+    setView('read');
+    conv.ask(text);
+    return true;
+  }
+  if (!general) {
+    general = conversation(C, {
+      sourceKey: chosen, mailbox: '', thread: null, keep: { chat: null, about: null, title: null },
+      onDiscard: () => { general = null; drawRead(); },
+    });
+  }
+  if (!open) { setView('read'); drawRead(); }
+  general.ask(text);
+  return true;
 }
