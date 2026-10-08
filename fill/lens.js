@@ -12,7 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints } from "./mail.js?v=2026-10-08-onebox";
-import { initBox, drawBox } from "./box.js?v=2026-10-08-onebox";
+import { initBox, drawBox } from "./box.js?v=2026-10-08-refusal";
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
@@ -2920,6 +2920,13 @@ initMail({
 // THE ONE BOX (seat one-box, 2026-10-08): what it needs from this page, and nothing it does itself.
 initBox({
   el, ask,
+  // seat refusal-wire, 2026-10-08: who is viewing, and the owner's refused-attempts reader (the brain refuses anyone else).
+  viewer: () => shape?.viewer ?? null,
+  refusalWatch: async () => {
+    const { data, error } = await sb.rpc('refusal_watch', { p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone });
+    if (error) throw error;
+    return data;
+  },
   onMail: () => onMail,
   mailScope, mailHints, findMail, clearFind, doFromBox, askFromMailBar,
   showMail: () => { userMoved = true; if (!onMail) goto('s-lens', 'email'); },
