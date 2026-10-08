@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-10-07-reading2-answer-workspace">
+<link rel="stylesheet" href="skin.css?v=2026-10-08-onebox">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -51,6 +51,21 @@
   <!-- THE TABS. Alex's order and words, 2026-10-02. Drawn by lens.js; each one is a
        goto() call, so there is still one router. Brain is where she lands. -->
   <nav class='tabs' id='tabs' aria-label='Parts of the Tool'></nav>
+  <!-- THE ONE BOX (seat one-box, Alex 2026-10-08): at the top, on every tab, the first thing the eye
+       lands on. It finds emails, answers from everything the company knows, or starts the Answer flow,
+       deciding which from what she says (box.js). Scope shows as chips she can remove. Examples appear
+       when it is empty and focused, drawn from what she can see. SUPERSEDES the question box at the
+       bottom of the page and its "asking across everything" line. -->
+  <div class="onebox" id="onebox">
+    <div class="onebox-bar">
+      <span class="onebox-chips" id="onebox-chips"></span>
+      <input id="ask-input" type="text" autocomplete="off" enterkeyhint="go"
+             aria-label="Find an email, ask anything, or say what to do"
+             placeholder="Find an email, ask anything, or say what to do">
+      <button class="send" id="ask-send" type="button">Go</button>
+    </div>
+    <div class="onebox-tips" id="onebox-tips" hidden></div>
+  </div>
 </div>
 
 <main id="main" class="shell">
@@ -292,10 +307,10 @@
      it is instructed not to, but because in the other three states there is no
      such field to render.
 
-     THE ANSWER LANDS IN THE CONVERSATION, under the question that asked it, with the
-     question box at the bottom: the arrangement of the Claude and ChatGPT apps (Alex,
-     2026-10-06). The older note here, that the answer lands in the page body and not
-     the dock, was superseded on 2026-09-27 and removed on 2026-10-06 (seat chat-layout).
+     THE ANSWER LANDS IN THE CONVERSATION, under the question that asked it (Alex,
+     2026-10-06). The question box itself moved to the top of every tab on 2026-10-08 (seat
+     one-box, Alex that day: the bottom bar was "almost not visible"); the dock now holds only
+     the conversation and is hidden while there is none.
 
      TWO RULES RIDE WITH THE PLACEMENT, both still in force:
        - Nothing may open a paragraph in the log above the bar on load. That is
@@ -319,16 +334,6 @@
     <section class="answer" id="s-answer" hidden aria-live="polite">
       <div class="answer-in" id="answer-in"></div>
     </section>
-    <div class="dock-bar">
-      <svg class="ask-mark" width="14" height="14" aria-hidden="true"><use href="#i-chev"/></svg>
-      <input id="ask-input" type="text" autocomplete="off" enterkeyhint="send"
-             aria-label="Ask about what is in your brain"
-             placeholder="Ask about what is in your brain">
-      <button class="send" id="ask-send" type="button">Ask</button>
-      <!-- Says where the question goes, on every tab. Asking one tab only is a later
-           step: the ask has no way to narrow to one source yet (seat tool-tabs). -->
-      <span class='ask-scope' id='ask-scope'>asking across everything</span>
-    </div>
   </div>
 </div>
 
@@ -337,6 +342,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-07-claude-workspace"></script>
+<script type="module" src="lens.js?v=2026-10-08-onebox"></script>
 </body>
 </html>
