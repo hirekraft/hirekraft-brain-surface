@@ -158,7 +158,6 @@ section.step[hidden] { display: none; }
 }
 .tab:hover { color: var(--ink); }
 .tab[aria-current='page'] { color: var(--ink); font-weight: var(--w-mid); border-bottom-color: var(--ink); }
-.dock-bar .ask-scope { font-size: var(--t-micro); color: var(--ink-4); white-space: nowrap; flex: none; }
 
 /* ── fact list: checkable statements, not claims ─────────────────────── */
 
@@ -375,12 +374,12 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   max-width: var(--convo); margin: 0 auto; padding: 0 var(--pad); width: 100%;
   display: flex; flex-direction: column; min-height: 0;
 }
-/* The conversation scrolls inside the dock; the input never leaves the bottom. */
+/* The conversation scrolls inside the dock. (The question box left the dock for the top of every
+   tab on 2026-10-08, seat one-box; see THE ONE BOX at the end of this file.) */
 .dock .answer {
   flex: 1 1 auto; min-height: 0; overflow-y: auto;
   margin-bottom: 0; padding: var(--gap) 0;
 }
-.dock .dock-bar { flex: none; border-top: 1px solid var(--line-2); }
 
 .dock-log {
   max-height: 0; overflow-y: auto; transition: max-height .2s var(--ease);
@@ -394,15 +393,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .turn.asked::before { content: "You  "; font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase; }
 .turn.said { color: var(--ink-2); }
 
-.dock-bar { display: flex; align-items: center; gap: var(--gap); height: var(--dock-h); }
-.dock-bar input {
-  flex: 1; min-width: 0; font: inherit; font-size: var(--t-small);
-  border: 0; background: none; color: var(--ink); outline: none; padding: 0;
-}
-.dock-bar input::placeholder { color: var(--ink-4); }
-.dock-bar .send { font-size: var(--t-small); color: var(--ink-3); }
-.dock-bar .send:hover { color: var(--ink); }
-.dock-bar .ask-mark { color: var(--ink-4); flex: none; }
 
 /* The offered questions. One compact row directly above the line you type on, so
    they are readable without opening the log. Absent entirely when the brain has
@@ -720,7 +710,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .work-main { min-width: 0; display: flex; flex-direction: column; }
 #work-convo { display: flex; flex-direction: column; min-height: 60vh; }
 #work-convo .answer { flex: 1; }
-#work-convo .dock-bar { position: sticky; bottom: 0; margin-top: 1rem; }
 .work-when { margin-top: .4em; }
 @media (max-width: 720px) { .work { grid-template-columns: 1fr; } .work-side { position: static; max-height: none; } }
 
@@ -739,7 +728,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* The conversation, on every tab, because there is one. Her question is the bubble above; the
    answer sits under it, left-aligned, the full width of the column, in reading type; sources and
-   Save as test are quiet under it; the question box stays at the bottom. */
+   Save as test are quiet under it. */
 .answer-turn + .answer-turn { margin-top: var(--gap-lg); }
 .answer-slot { min-width: 0; }
 .answer .ans-lead, .answer .ans-lead-prose p, .answer .ans-prose p, .answer .ans-list,
@@ -748,10 +737,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .t-save-as > .go { margin-top: var(--gap); padding: 6px 12px; font-size: var(--t-micro); }
 .work-main { align-items: center; }
 #work-convo { width: 100%; max-width: var(--convo); min-width: 0; }
-.dock-bar {
-  border: 1px solid var(--line); border-radius: 14px; background: var(--paper);
-  padding: 0 var(--gap); margin: var(--u) 0 calc(var(--u) * 3);
-}
 
 /* TODAY IN THE HEADER, on every tab: from her computer, or the zone she picks (Alex, 2026-10-06). */
 .clock {
@@ -853,7 +838,6 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
 }
 /* On a phone the Ask bar's scope label took the room of what she types; the placeholder says
    enough (seat reading, 2026-10-07). */
-@media (max-width: 560px) { .dock-bar .ask-scope { display: none; } }
 
 /* The Brain tab's line for sources that cannot be opened (seat mail-redesign). */
 .reconnect-head { margin-top: var(--gap); font-size: var(--t-small); color: var(--ink-2); }
@@ -896,3 +880,64 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
 .answerx-top .eyebrow { margin: 0; }
 .answerx-kept { font-size: var(--t-small); }
 .answerx-discard { margin-left: auto; padding: 4px 10px; font-size: var(--t-micro); }
+
+/* THE ONE BOX (seat one-box, 2026-10-08; Alex that day: the bottom bar was "almost not visible").
+   Directly under the tabs on every tab, the full width of the page, in larger type than anything
+   around it; scope as removable chips; examples under it when it is empty and focused. The dock
+   keeps only the conversation and is hidden while there is none, so nothing waits at the bottom.
+   SUPERSEDES the question box in the dock and its rules, removed above the same day.
+   The page's variables only; nothing defined here. */
+.onebox { position: relative; margin: calc(var(--u) * 4) 0 calc(var(--u) * 2); }
+.onebox-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 2);
+  min-height: 58px; padding: calc(var(--u) * 2) calc(var(--u) * 2) calc(var(--u) * 2) var(--gap);
+  border: 1.5px solid var(--line); border-radius: 14px; background: var(--paper);
+}
+.onebox-bar:focus-within { border-color: var(--act); }
+.onebox-bar input {
+  flex: 1; min-width: 12rem; font: inherit; font-size: calc(var(--t-read) * 1.15);
+  border: 0; background: none; color: var(--ink); outline: none; padding: calc(var(--u) * 1.5) 0;
+}
+.onebox-bar input::placeholder { color: var(--ink-4); }
+.onebox-bar .send {
+  flex: none; font-size: var(--t-small); font-weight: var(--w-mid); color: var(--paper);
+  background: var(--act); border-radius: var(--radius); padding: calc(var(--u) * 2) calc(var(--u) * 4);
+}
+.onebox-chips { display: contents; }
+.onebox-chip {
+  display: inline-flex; align-items: center; gap: 2px; flex: none; white-space: nowrap;
+  font-size: var(--t-small); color: var(--act); background: var(--act-soft);
+  border-radius: 999px; padding: 3px 4px 3px 12px;
+}
+.onebox-chip button { font: inherit; color: inherit; background: none; border: 0; padding: 0 7px; cursor: pointer; }
+.onebox-tips {
+  position: absolute; left: 0; right: 0; top: 100%; z-index: 30; margin-top: var(--u);
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: calc(var(--u) * 3) 0 calc(var(--u) * 2);
+}
+.onebox-tips > p { margin: 0 var(--gap) calc(var(--u) * 2); max-width: var(--measure); }
+.onebox-tip {
+  display: block; width: 100%; text-align: left; font: inherit; font-size: var(--t-read);
+  color: var(--ink-2); background: none; border: 0; padding: calc(var(--u) * 2) var(--gap); cursor: pointer;
+}
+.onebox-tip:hover, .onebox-tip:focus-visible { background: var(--act-soft); color: var(--ink); }
+.dock:not(.open):not(:has(#s-answer:not([hidden]))) { display: none; }
+body { padding-bottom: var(--gap-lg); }
+
+/* A find, in the inbox column: every mailbox's emails, each labelled with its mailbox. */
+.mailx-found { padding: calc(var(--u) * 3) calc(var(--u) * 4); border-bottom: 1px solid var(--line-2); }
+.mailx-found > p { margin: 0 0 var(--u); }
+.mailx-found-line { color: var(--ink); font-size: var(--t-small); }
+.mailx-found-status { list-style: none; padding: 0; margin: var(--u) 0 0; font-size: var(--t-small); }
+.mailx-instead { margin-top: calc(var(--u) * 2); padding: 6px 12px; font-size: var(--t-micro); }
+.mailx-close { font: inherit; font-size: var(--t-head); line-height: 1; color: var(--ink-3); background: none; border: 0; padding: 0 var(--u); cursor: pointer; }
+.mailx-close:hover { color: var(--ink); }
+.mailx-tag {
+  display: inline-block; margin-right: calc(var(--u) * 1.5); padding: 0 7px; border-radius: 999px;
+  font-size: var(--t-micro); color: var(--act); background: var(--act-soft); vertical-align: 1px;
+}
+.mailx-why { font-size: var(--t-micro); color: var(--ink-4); }
+.mailx-files-head { margin: var(--gap) calc(var(--u) * 4) var(--u); font-size: var(--t-small); }
+.mailx-files { list-style: none; padding: 0 calc(var(--u) * 4) var(--gap); margin: 0; font-size: var(--t-small); }
+.mailx-files li + li { margin-top: var(--u); }
+.mailx-files a { color: var(--act); }
