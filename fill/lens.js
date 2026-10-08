@@ -50,14 +50,12 @@ const GROUPS = [
 //    which source types have OAuth configured on this project. Anything not
 //    wired says so instead of offering a button that cannot work.
 const PICKERS = {
+  // ONE FIELD, NO PROVIDER TILES (Alex, HQ 6 2026-09-27, reaffirmed 2026-10-06; built by
+  // seat connect-by-address 2026-10-08). The Google / Microsoft / Yahoo / Enter your
+  // address tiles are retired: she types her address and the Tool works out the provider.
   email: {
-    head: "Which mail?", sub: "Pick your provider. You sign in on their page, not here.",
-    options: [
-      { name: "Google",             type: "gmail", wired: true },
-      { name: "Microsoft",          wired: false },
-      { name: "Yahoo",              wired: false },
-      { name: "Enter your address", wired: false },
-    ],
+    head: "Connect your email", sub: "Type your email address. You sign in on their page, not here.",
+    address: true,
   },
   drives: {
     head: "Which drive?", sub: "Your files stay where they are. Nothing is moved or reorganised.",
@@ -550,8 +548,7 @@ function mailboxLine(mb) {
     // Individual scope, always. The administrator path writes a firm-property
     // posture - the one the mail lens refuses - so that consent would complete
     // and this row would not move.
-    const gmail = PICKERS.email.options.find((o) => o.type === "gmail");
-    beginConnect(gmail, "individual", mb.address, b, () => { b.textContent = was; });
+    beginConnect(GMAIL, "individual", mb.address, b, () => { b.textContent = was; }, mb.address);
   });
   wrap.appendChild(b);
   return wrap;
@@ -1196,6 +1193,7 @@ function stageProviders(groupKey, p) {
   stage.innerHTML = "";
 
   if (p.loose) return stageLoose(stage);
+  if (p.address) return stageAddress(stage);
 
   const grid = el("div", "tiles");
   for (const o of p.options) {
@@ -1248,40 +1246,9 @@ function stageScope(groupKey, provider) {
     return;
   }
 
-  // Only mail has a real fork here. For Drive both branches resolve to the same
-  // source key, the same posture and the same reach - the choice decided nothing
-  // except who was allowed to make it. Asking anyway is a screen pretending to
-  // take a decision from you.
-  if (provider.type !== "gmail") return stageConsent(provider, "individual", groupKey);
-
-  $("#connect-head").textContent = "Whose account?";
-  $("#connect-sub").textContent = "This decides what gets listed, and what your colleagues see later.";
-
-  const box = el("div", "choices");
-  const noun = groupKey === "email" ? "mailbox" : "drive";
-
-  const admin = el("button", "choice");
-  admin.type = "button";
-  admin.innerHTML = icon("i-lock")
-    + `<span><span class="c-name">As administrator</span>`
-    + `<span class="c-sub">Every company ${noun} is listed and you choose which go in. `
-    + `Each colleague who signs in later reaches only their own.</span></span>`;
-  admin.addEventListener("click", () => stageConsent(provider, "admin", groupKey));
-
-  const solo = el("button", "choice");
-  solo.type = "button";
-  solo.innerHTML = icon("i-person")
-    + `<span><span class="c-name">Just my account</span>`
-    + `<span class="c-sub">Only what the account you sign in with already reaches.</span></span>`;
-  solo.addEventListener("click", () => stageConsent(provider, "individual", groupKey));
-
-  box.append(admin, solo);
-  stage.appendChild(box);
-
-  const back = el("button", "go ghost");
-  back.type = "button"; back.textContent = "Back";
-  back.addEventListener("click", () => stageProviders(groupKey, PICKERS[groupKey]));
-  stage.appendChild(back);
+  // Mail no longer comes through here: it is one field (stageAddress). The old
+  // "Whose account?" fork for mail was removed with the provider tiles, 2026-10-08.
+  return stageConsent(provider, "individual", groupKey);
 }
 
 function stageConsent(provider, scope, groupKey) {
@@ -1312,19 +1279,6 @@ function stageConsent(provider, scope, groupKey) {
     stage.appendChild(w);
   }
 
-  // Gate on what this actually is, not on the scope word next to it. Written as
-  // `scope === "admin"`, this put the company mailbox list on the Drive consent
-  // screen, where picking a line would have created a drive keyed by a mailbox.
-  if (scope === "admin" && provider.type === "gmail") {
-    // The copy on the previous screen promises every company mailbox is listed.
-    // It used to show a blank address box, which is a different thing and left
-    // the person guessing their own addresses. The list is read live.
-    const which = el("div", "notice");
-    which.innerHTML = `<b>Which mailbox?</b> <span class="quiet">reading your company mailboxes</span>`;
-    stage.appendChild(which);
-    listMailboxes(which, provider, scope);
-  }
-
   stage.appendChild(consentButton(provider, scope, groupKey));
 
   const back = el("button", "go ghost");
@@ -1333,66 +1287,118 @@ function stageConsent(provider, scope, groupKey) {
   stage.appendChild(back);
 }
 
-// The address box stays as the fallback, and is the only input consentButton
-// reads. Picking from the list fills it; typing into it still works.
-function mbxInput(v) {
-  return `<input id="mbx" type="email" value="${escape(v)}" placeholder="name@yourcompany.com" `
-    + `style="margin-top:.6rem;width:100%;max-width:22rem;font:inherit;padding:.5rem;`
-    + `border:1px solid currentColor;border-radius:4px;background:none;color:inherit">`;
+// ── connect mail by address ─────────────────────────────────────────────────
+// She types her address. oauth-start (?address=) says who holds that mail from where the
+// domain's mail is delivered; only the domain leaves, never the address. If it cannot
+// tell, the screen asks THEN, never up front. The typed address is the mailbox expected:
+// the provider's page opens with that account chosen, and the callback refuses a sign-in
+// as any other account (oauth-callback right-account check), so this screen is the
+// convenience and the callback is the control.
+const GMAIL = { name: "Google", type: "gmail" };
+const MAIL_BY = { google: "Google", microsoft: "Microsoft", yahoo: "Yahoo" };
+
+function stageAddress(stage) {
+  const form = el("form", "");
+  form.innerHTML = `<label for="addr-in"><b>Your email address</b></label>`
+    + `<input id="addr-in" type="email" autocomplete="email" required `
+    + `placeholder="name@yourcompany.com" style="display:block;margin-top:.5rem;width:100%;`
+    + `max-width:24rem;font:inherit;padding:.6rem;border:1px solid currentColor;`
+    + `border-radius:6px;background:none;color:inherit">`
+    + `<div class="actions"><button class="go" type="submit">Continue</button></div>`;
+  const out = el("div", "");
+  form.addEventListener("submit", (ev) => { ev.preventDefault(); lookUpAddress(form, out); });
+  stage.append(form, out);
+
+  const back = el("button", "go ghost");
+  back.type = "button"; back.textContent = "Back to all sources";
+  back.addEventListener("click", stageTypes);
+  stage.appendChild(back);
+  form.querySelector("#addr-in").focus();
 }
 
-// Live, from connectable_mailboxes(). Each line says what is true of that mailbox
-// today rather than offering an identical button for every one of them.
-async function listMailboxes(box, provider, scope) {
+function addrSay(out, html, flagged) {
+  out.innerHTML = "";
+  const n = el("div", flagged ? "notice flagged" : "notice");
+  n.innerHTML = html;
+  out.appendChild(n);
+  return n;
+}
+
+async function lookUpAddress(form, out) {
+  const address = form.querySelector("#addr-in").value.trim().toLowerCase();
+  const btn = form.querySelector("button[type=submit]");
+  btn.disabled = true; btn.textContent = "Checking…";
+  const restore = () => { btn.disabled = false; btn.textContent = "Continue"; };
+  let r;
   try {
-    const { data, error } = await sb.rpc("connectable_mailboxes");
-    if (error) throw error;
-    const rows = data ?? [];
-    if (!rows.length) {
-      box.innerHTML = `<b>Which mailbox?</b> Nothing is on record yet, so type the address.`
-        + mbxInput("");
-      return;
-    }
-    box.innerHTML = `<b>Which mailbox?</b> These are the company mailboxes on record. `
-      + `Pick the one you are about to sign in as.`
-      + `<div class="choices" id="mbx-list"></div>`
-      + `<p class="quiet">A mailbox that has never been connected here does not `
-      + `appear on this list. Type its address instead - a new address, or one this `
-      + `brain has never been pointed at.</p>`
-      + mbxInput("");
-    const list = box.querySelector("#mbx-list");
-    for (const r of rows) {
-      const b = el("button", "choice");
-      b.type = "button";
-      b.innerHTML = `<span aria-hidden="true"></span>`
-        + `<span><span class="c-name">${escape(r.address)}</span>`
-        + `<span class="c-sub">${escape(r.note)}</span></span>`;
-      // ONE GESTURE. This used to fill the address box, which then needed a second
-      // click on a button somewhere below - two acts for a choice the click had
-      // already made, and the filled box read like a form to check rather than a
-      // decision taken.
-      b.addEventListener("click", () => {
-        list.querySelectorAll(".choice").forEach((x) => x.removeAttribute("aria-pressed"));
-        b.setAttribute("aria-pressed", "true");
-        const sub = b.querySelector(".c-sub");
-        if (sub) sub.textContent = `opening ${provider.name}`;
-        beginConnect(provider, scope, r.address, b, () => {
-          if (sub) sub.textContent = r.note;
-        });
-      });
-      list.appendChild(b);
-    }
-  } catch (e) {
-    // Never a spinner that lies. If the list cannot be read, say so and fall back.
-    box.innerHTML = `<b>Which mailbox?</b> The list could not be read `
-      + `(${escape(e?.message ?? e)}), so type the address instead.` + mbxInput("");
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/oauth-start?address=${encodeURIComponent(address)}`);
+    r = await res.json();
+  } catch (_e) {
+    r = { ok: false, reason: "lookup_failed" };
   }
+  const where = escape(r.domain ?? address.split("@")[1] ?? "that address");
+
+  if (!r.ok && r.reason === "not_an_address") {
+    restore();
+    return addrSay(out, "That does not look like an email address. Check it and try again.", true);
+  }
+  if (!r.ok && r.reason === "no_mail_records") {
+    restore();
+    return addrSay(out, `<b>${where} does not receive email,</b> so there is no mailbox to `
+      + `connect. Check the spelling.`, true);
+  }
+  if (!r.ok) {
+    restore();
+    return askMailProvider(out, address, `Who handles mail for ${where} could not be looked up just now.`);
+  }
+  if (!MAIL_BY[r.provider]) {
+    restore();
+    return askMailProvider(out, address, `Mail for ${where} goes through a service that could not be recognised.`);
+  }
+  if (!r.supported) {
+    restore();
+    return mailNotBuilt(out, address, MAIL_BY[r.provider]);
+  }
+  startMailConnect(out, address, btn, restore);
+}
+
+function mailNotBuilt(out, address, name) {
+  addrSay(out, (name
+    ? `<b>${escape(address)} is ${escape(name)} mail.</b> Connecting ${escape(name)} mail is not built yet`
+    : `<b>Only Google mail can be connected so far.</b> Other providers are not built yet`)
+    + `, so nothing here pretends otherwise. Nothing was stored.`, true);
+}
+
+function startMailConnect(out, address, btn, restore) {
+  addrSay(out, `<b>${escape(address)} is Google mail.</b> Opening Google's page with this `
+    + `account chosen. Sign in as ${escape(address)}: a sign-in as any other account is refused `
+    + `and nothing is kept.`);
+  if (btn) btn.textContent = "Opening Google…";
+  beginConnect(GMAIL, "admin", address, btn, restore, address);
+}
+
+// Asked only when the Tool could not tell, never up front.
+function askMailProvider(out, address, why) {
+  const n = addrSay(out, `${why} Which company handles this mail?`);
+  const box = el("div", "choices");
+  for (const [key, name] of Object.entries({ google: "Google", microsoft: "Microsoft", other: "Someone else" })) {
+    const b = el("button", "choice");
+    b.type = "button";
+    b.innerHTML = `<span aria-hidden="true"></span><span><span class="c-name">${name}</span></span>`;
+    b.addEventListener("click", () => key === "google"
+      ? startMailConnect(out, address, b, null)
+      : mailNotBuilt(out, address, key === "microsoft" ? "Microsoft" : null));
+    box.appendChild(b);
+  }
+  n.appendChild(box);
 }
 
 // ONE PATH TO THE PROVIDER, whether the address came from a click on the list or
 // from the box. Two copies of this would be two truths, and the one nobody used
 // would be the one that rotted.
-async function beginConnect(provider, scope, mailbox, btn, restore) {
+// hint: an address the person typed on this screen. It is echoed to the provider so the
+// right account is pre-chosen; nothing read from the brain is ever put into it.
+async function beginConnect(provider, scope, mailbox, btn, restore, hint) {
   if (btn) btn.disabled = true;
   const giveBack = () => { if (btn) btn.disabled = false; if (restore) restore(); };
   try {
@@ -1405,6 +1411,12 @@ async function beginConnect(provider, scope, mailbox, btn, restore) {
       p_return_to: location.origin + location.pathname,
     });
     if (error) throw error;
+
+    // A typed address tries the owner path first: an owner's own sign-in is then read
+    // through that sign-in. Anyone else is connected for themselves.
+    if (!data?.ok && data?.reason === "owner_only" && hint && scope === "admin") {
+      return beginConnect(provider, "individual", mailbox, btn, restore, hint);
+    }
 
     if (!data?.ok) {
       giveBack();
@@ -1423,7 +1435,8 @@ async function beginConnect(provider, scope, mailbox, btn, restore) {
     }
     // Hand off to the provider. The consent itself is a human act, by design.
     window.location.href = `${SUPABASE_URL}/functions/v1/oauth-start`
-      + `?source_id=${encodeURIComponent(data.source_id)}`;
+      + `?source_id=${encodeURIComponent(data.source_id)}`
+      + (hint ? `&login_hint=${encodeURIComponent(hint)}` : "");
   } catch (e) {
     giveBack();
     stageStopped(`The connect could not be started: ${e?.message ?? e}`);
