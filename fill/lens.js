@@ -11,7 +11,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar } from "./mail.js?v=2026-10-07-workspace";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints } from "./mail.js?v=2026-10-08-onebox";
+import { initBox, drawBox } from "./box.js?v=2026-10-08-onebox";
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
@@ -2071,14 +2072,8 @@ async function ask(question) {
 // If a derived placeholder is wanted again it needs a reading that cannot time out,
 // not this one brought back.
 
-(function wireAsk() {
-  const input = $("#ask-input"), send = $("#ask-send");
-  if (!input || !send) return;
-  // On Mail the question goes to the open email's conversation (seat email-workspace).
-  const go = () => { const v = input.value; input.value = ''; if (onMail && v.trim() && askFromMailBar(v.trim())) return; ask(v); };
-  send.addEventListener("click", go);
-  input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
-})();
+// THE BOX IS WIRED BY box.js (seat one-box, 2026-10-08): it decides find, ask or do and hands an
+// ask to ask() here, or to mail.js on the Mail tab. SUPERSEDES wireAsk, which sent everything to ask().
 
 // The sources tab was a second build of this same lens and is retired. What it
 // derived came across into brain_shape: the credential mechanism, the drill-in
@@ -2573,6 +2568,7 @@ function goto(id, key) {
   mailDock(id === 's-lens' && lensKey === 'email');
   if (id === 's-work') loadWork();
   markTab(id === 's-lens' ? lensKey : id === 's-work' ? 'work' : 'brain');
+  drawBox();
 }
 
 // -- tabs (seat tool-tabs, 2026-10-02) --
@@ -2650,9 +2646,10 @@ function drawLens() {
 // THE ARRANGEMENT IS THE CLAUDE CHAT APP'S (Alex 2026-10-06), not its branding: a left sidebar
 // with New chat, then Projects, then recent chats newest first; the open conversation in the
 // middle with the question box at the bottom of it; a project opens to its own list of chats.
-// ONE RENDERER: on the Work tab the dock's conversation (#s-answer) and question box (.dock-bar)
-// are MOVED into the middle column, and moved back when leaving, so turns are still drawn only
-// by renderAsk and asked only by ask(). No second conversation panel exists.
+// ONE RENDERER: on the Work tab the dock's conversation (#s-answer) is MOVED into the middle column,
+// and moved back when leaving, so turns are still drawn only by renderAsk and asked only by ask().
+// No second conversation panel exists. The question box no longer moves: it is the one box at the
+// top of every tab (seat one-box, 2026-10-08).
 // Opening a chat redraws its turns FROM WHAT WAS KEPT, without asking again; the next Ask
 // continues that chat. Recents shows chats not in a project; a project shows its own.
 // PRIVATE TO THE PERSON, ENFORCED IN THE BRAIN: work_list, work_open, work_keep, work_project_new
@@ -2665,21 +2662,21 @@ let workRead = null;      // the last work_list() reply
 
 function workSaid(text) { const s = $('#work-said'); if (s) s.textContent = text || ''; }
 
-// Moves the one conversation and the one question box between the dock and the Work middle.
+// Moves the one conversation between the dock and the Work middle.
 function workDock(onWork) {
-  const ans = $('#s-answer'), bar = document.querySelector('.dock-bar'), slot = $('#work-convo');
+  const ans = $('#s-answer'), slot = $('#work-convo');
   const home = document.querySelector('.dock-in');
-  if (!ans || !bar || !slot || !home) return;
-  if (onWork && ans.parentElement !== slot) { slot.append(ans, bar); }
-  if (!onWork && ans.parentElement === slot) { home.append(ans, bar); }
+  if (!ans || !slot || !home) return;
+  if (onWork && ans.parentElement !== slot) slot.append(ans);
+  if (!onWork && ans.parentElement === slot) home.append(ans);
   $('#dock').hidden = !!onWork;
 }
 
 // THE MAIL TAB KEEPS ITS CONVERSATIONS WITH THE EMAIL (seat email-workspace, Alex 2026-10-07: the
 // band of conversation under the Mail columns squeezed them to a strip, and an answer about one
-// email stayed on screen over the next). While Mail is open the dock is only the question box: the
-// conversation is parked, not destroyed, so every other tab finds it as it was left, and what is
-// asked on Mail is answered in the reading column by mail.js (askFromMailBar).
+// email stayed on screen over the next). While Mail is open the conversation is parked, not destroyed,
+// so every other tab finds it as it was left, and what is asked on Mail is answered in the reading
+// column by mail.js (askFromMailBar).
 let onMail = false;
 function mailDock(on) {
   const ans = $('#s-answer');
@@ -2687,8 +2684,7 @@ function mailDock(on) {
   let park = $('#answer-park');
   if (!park) { park = el('div'); park.id = 'answer-park'; park.hidden = true; document.body.appendChild(park); }
   if (on && ans.closest('#dock')) park.appendChild(ans);
-  if (!on && ans.parentElement === park) document.querySelector('.dock-in')?.insertBefore(ans, document.querySelector('.dock-in > .dock-bar'));
-  if (onMail && !on) $('#ask-input').placeholder = 'Ask about what is in your brain';
+  if (!on && ans.parentElement === park) document.querySelector('.dock-in')?.append(ans);
   onMail = on;
 }
 
@@ -2734,7 +2730,7 @@ function newChat(projectId) {
   $('#s-answer').hidden = true;
   showConvo(); markOpen();
   const p = workInto && workRead?.projects.find((x) => x.id === workInto);
-  $('#ask-input').placeholder = p ? `New chat in ${p.name}` : 'Ask about what is in your brain';
+  drawBox();
   $('#ask-input')?.focus();
 }
 
@@ -2759,7 +2755,7 @@ async function openChat(id) {
   }
   workChat = data.chat.id; workInto = null;
   lastAsked = data.turns.length ? data.turns[data.turns.length - 1].question : '';
-  $('#ask-input').placeholder = 'Continue this chat';
+  drawBox();
   markOpen();
   mount.lastElementChild?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
@@ -2906,6 +2902,22 @@ initMail({
   // Seat answer, 2026-10-07: the answer conversation on the Mail tab draws and keeps its turns
   // with the same two functions as the Ask bar, so there is one way an answer looks and is kept.
   renderAsk, keepTurn, zone,
+  scopeChanged: () => drawBox(),
+});
+// THE ONE BOX (seat one-box, 2026-10-08): what it needs from this page, and nothing it does itself.
+initBox({
+  el, ask,
+  onMail: () => onMail,
+  mailScope, mailHints, findMail, clearFind, doFromBox, askFromMailBar,
+  showMail: () => { userMoved = true; if (!onMail) goto('s-lens', 'email'); },
+  mailboxAddresses: () => [...mailboxes.values()].map((m) => m.address),
+  readingMailboxKeys: () => [...mailboxes.values()].filter((m) => m.state === 'reading').map((m) => m.source_key),
+  // On Work the box continues the open chat or starts one, and says so.
+  placeholder: () => {
+    if ($('#s-work')?.hidden !== false) return null;
+    const p = workInto && workRead?.projects.find((x) => x.id === workInto);
+    return workChat ? 'Continue this chat, or find an email' : p ? `New chat in ${p.name}, or find an email` : null;
+  },
 });
 
 // Once a person has chosen a screen, a late-arriving reading must not move them
