@@ -169,13 +169,43 @@ function submit(text) {
     ? 'Open the email you want answered, then say it again in the box; these may be it.' : '');
 }
 
-// Find across the mailboxes the door lists for her (the same list the Mail tab draws), or the one
-// the chip names.
+// A MAILBOX SHE NAMES GOES TO THE DOOR (seat refusal-wire, 2026-10-08). Until now "open accounting@" was a
+// find across the mailboxes she can already open, so a mailbox kept from her was never asked about: nothing
+// refused, nothing recorded, an empty search. Now an address she names AS A MAILBOX (after open, in, inbox,
+// mailbox, check or read; as a possessive, alex@'s; or alone) at one of her own company's domains is matched
+// to her mailboxes: hers, and the find is scoped to it; not hers, and the find is sent to it anyway, so the
+// door (worklens-live) refuses it, records it and says so. This file decides nothing about access. An address
+// used any other way (emails from kevin@client.com) stays an ordinary find and is never sent to the door.
+const REACH_BEFORE = ['open', 'in', 'into', 'inbox', 'mailbox', 'check', 'read'];
+function namedMailbox(text) {
+  const raw = String(text || '').toLowerCase().split(' ').filter(Boolean);
+  const mine = (C.mailboxAddresses() || []).map((a) => String(a).toLowerCase());
+  const domains = [...new Set(mine.map((a) => a.split('@')[1]).filter(Boolean))];
+  for (let i = 0; i < raw.length; i++) {
+    const poss = raw[i].endsWith("'s");
+    const tok = (poss ? raw[i].slice(0, -2) : raw[i]).replace(/[^a-z0-9@._+-]/g, '');
+    const at = tok.indexOf('@');
+    if (at <= 0) continue;
+    if (!(poss || REACH_BEFORE.includes(raw[i - 1] || '') || raw.length <= 2)) continue;
+    const local = tok.slice(0, at), domain = tok.slice(at + 1);
+    const hit = mine.find((a) => domain ? a === tok : a.split('@')[0] === local);
+    const rest = raw.filter((w, k) => k !== i && !FIND_FIRST.includes(w) && !REACH_BEFORE.includes(w) && w !== 'me').join(' ');
+    if (hit) return { key: 'gmail:' + hit, rest };
+    if (domain && !domains.includes(domain)) return null;
+    const dom = domain || domains[0];
+    return dom ? { key: 'gmail:' + local + '@' + dom, rest } : null;
+  }
+  return null;
+}
+
+// Find across the mailboxes the door lists for her (the same list the Mail tab draws), the one
+// the chip names, or the one she names (above).
 function find(text, unsure, note) {
   const sc = scope();
-  const keys = sc.mailbox ? [sc.mailbox.key] : C.readingMailboxKeys();
+  const named = sc.mailbox ? null : namedMailbox(text);
+  const keys = sc.mailbox ? [sc.mailbox.key] : named ? [named.key] : C.readingMailboxKeys();
   C.showMail();
-  C.findMail(text, keys, { unsure, note, askInstead: () => { C.clearFind(); if (!C.askFromMailBar(text, true)) C.ask(text); } });
+  C.findMail(named ? (named.rest || 'in:inbox') : text, keys, { unsure, note, askInstead: () => { C.clearFind(); if (!C.askFromMailBar(text, true)) C.ask(text); } });
 }
 
 export function initBox(ctx) {
@@ -192,4 +222,35 @@ export function initBox(ctx) {
   input.addEventListener('input', () => showTips(true));
   input.addEventListener('blur', () => setTimeout(() => showTips(false), 120));
   drawBox();
+  ownerLines();
+}
+
+// THE OWNER IS TOLD (seat refusal-wire, 2026-10-08). When the owner opens the Tool and someone was told today
+// that an attempt was recorded and the owner can see it (or crossed an alert), one line per person sits at the
+// top of the box, once per page load, until she closes it. The lines are the brain's own (refusal_watch, owner
+// only); nothing here counts or decides. If the read itself fails, that is said in the same place, never
+// shown as nothing. Anyone else sees nothing here, and the brain refuses them the read anyway.
+async function ownerLines(tries = 0) {
+  const v = C.viewer ? C.viewer() : null;
+  if (!v) { if (tries < 40) setTimeout(() => ownerLines(tries + 1), 500); return; }
+  if (!v.all_access || !C.refusalWatch) return;
+  let data = null, err = '';
+  try { data = await C.refusalWatch(); } catch (e) { err = String((e && e.message) || e); }
+  if (!err && (!data || data.ok !== true)) err = (data && data.note) || 'no reason was given';
+  const lines = !err && Array.isArray(data.lines) ? data.lines : [];
+  if (!lines.length && !err) return;
+  const host = $('#onebox');
+  if (!host || $('#onebox-watch')) return;
+  const box = C.el('div', 'notice onebox-watch');
+  box.id = 'onebox-watch';
+  box.setAttribute('role', 'status');
+  for (const l of lines) { const p = C.el('p'); p.textContent = l; box.appendChild(p); }
+  if (err) { const p = C.el('p', 'quiet'); p.textContent = 'Refused attempts could not be read: ' + err; box.appendChild(p); }
+  const x = C.el('button');
+  x.type = 'button';
+  x.textContent = 'x';
+  x.setAttribute('aria-label', 'Close');
+  x.addEventListener('click', () => box.remove());
+  box.appendChild(x);
+  host.insertBefore(box, host.firstChild);
 }
