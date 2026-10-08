@@ -54,6 +54,8 @@ let parts = null;          // the three columns once drawn
 const imagesShown = new Set(); // message ids whose remote pictures she chose to load
 const convos = new Map();      // 'mail:<source_key>:<thread_id>' -> the conversation about that email
 let general = null;            // what she asked on Mail with no email open
+let found = null;              // a find from the one box (box.js): emails from every mailbox, in the inbox column
+let findSeq = 0;
 const NL = String.fromCharCode(10);
 const TAB = String.fromCharCode(9);
 // worklens-live finds at most this many related conversations (RELATED_THREADS there), so a
@@ -74,6 +76,8 @@ export function initMail(ctx) { C = ctx; }
 // The Brain tab's list and the old /mail/ address both arrive here with a mailbox in hand.
 export function chooseMailbox(key) {
   if (!key) return;
+  // Choosing a mailbox ends a find: the list column goes back to being that inbox (seat one-box).
+  if (found) { found = null; if (key === chosen && parts) { setView('list'); drawList(); return; } }
   if (key === chosen) { setView('list'); return; }
   chosen = key; inbox = null; open = null;
   if (parts) { setView('list'); parts.list.scrollTop = 0; drawSide(); drawList(); drawRead(); }
@@ -236,6 +240,7 @@ async function loadInbox(more) {
 function drawList() {
   const list = parts.list;
   list.innerHTML = '';
+  if (found) { drawFound(list); return; }
   const m = boxRow();
   if (!m) { list.appendChild(mk('p', 'quiet', 'Choose a mailbox on the left.')); return; }
   const head = mk('div', 'mailx-head');
@@ -292,7 +297,9 @@ function drawList() {
 }
 
 // ── right: the open email ────────────────────────────────────────────────────
-async function openThread(threadId) {
+async function openThread(threadId, from) {
+  // An email from a find may sit in another mailbox: open it there, and keep the find on screen.
+  if (from && from !== chosen) { chosen = from; inbox = null; drawSide(); }
   const key = chosen;
   open = { id: threadId, thread: null, related: 'loading', error: null, full: false };
   setView('read'); parts.read.scrollTop = 0;
@@ -686,7 +693,7 @@ function actions(t) {
   btn('Ask about this', false, () => {
     const i = document.getElementById('ask-input');
     if (i) i.focus();
-    note.textContent = 'Ask in the box at the bottom; the answer appears here, with this email.';
+    note.textContent = 'Ask in the box at the top; the answer appears here, with this email.';
   });
   const wrap = mk('div');
   wrap.append(row, note);
@@ -731,19 +738,208 @@ async function restoreKept(key, t) {
   if (open && open.id === t.thread_id) drawRead();
 }
 
-// The one Ask bar says what it will ask about. Only while the Mail tab is on screen; lens.js puts
-// its own words back when she leaves.
-function setBar() {
-  const i = document.getElementById('ask-input');
-  if (!i || !parts || !parts.wrap.offsetParent) return;
-  i.placeholder = open && open.thread ? 'Ask about this email, or anything' : 'Ask anything';
+// The one box says what it will ask about, as chips (box.js drawBox): told whenever the open
+// mailbox or email changes. SUPERSEDES the placeholder this function set until 2026-10-08.
+function setBar() { if (C && C.scopeChanged) C.scopeChanged(); }
+
+// What the one box needs to know about this tab (box.js): which mailbox and email are open, and the
+// senders already on screen, so its examples are drawn from what she can see.
+export function mailScope() {
+  const m = boxRow();
+  const on = !!(parts && parts.wrap.isConnected && parts.wrap.offsetParent);
+  return { key: on ? chosen : null, address: (m && m.address) || '', emailOpen: on && !!(open && open.thread),
+    threadKey: open && open.thread ? aboutKey(chosen, open.thread.thread_id) : null };
+}
+
+export function mailHints() {
+  const msgs = (open && open.thread && open.thread.messages) || [];
+  const mine = String((boxRow() && boxRow().address) || '').toLowerCase();
+  const other = [...msgs].reverse().find((x) => String(x.from_email || '').toLowerCase() !== mine);
+  return {
+    open: other ? { from_name: other.from_name, from_email: other.from_email } : null,
+    recent: ((inbox && inbox.pages) || []).filter((x) => !x.details_unavailable).slice(0, 25)
+      .map((x) => ({ from_name: x.from_name, from_email: x.from_email })),
+  };
+}
+
+// DO, from the one box: the Answer flow on the open email. A reply is asked as said, so lens-ask
+// drafts it; a forward opens the forward flow. False when no email is open.
+export function doFromBox(text, verb) {
+  if (!parts || !open || !open.thread) return false;
+  const conv = convoFor(open.thread, true);
+  setView('read');
+  if (verb === 'forward') conv.start('forward'); else conv.ask(text);
+  return true;
+}
+
+// -- FIND (seat one-box, 2026-10-08) --
+// What she asked the one box to find, from every mailbox in keys at once: each mailbox is searched by
+// worklens-live (Gmail's own search, everywhere in that mailbox) and drawn as it lands, so a slow or
+// refused mailbox never holds up or hides the others; it says so on its own line. The brain's meaning
+// search runs beside them and adds what the words alone missed, marked as such. Newest first.
+export function findMail(text, keys, opts) {
+  const o = opts || {};
+  const seq = ++findSeq;
+  found = { text, keys: keys.slice(), per: new Map(keys.map((k) => [k, { state: 'loading' }])),
+    meaning: { state: 'loading' }, unsure: !!o.unsure, note: o.note || '', askInstead: o.askInstead || null, seq };
+  if (parts) { setView('list'); parts.list.scrollTop = 0; drawList(); }
+  const mine = () => found && found.seq === seq;
+  for (const k of keys) {
+    live('search', { source_key: k, text }).then((j) => {
+      if (!mine()) return;
+      found.per.set(k, { state: 'done', items: (j.messages || []).map((x) => Object.assign({}, x, { source_key: k })),
+        query: j.query_used || '', estimate: j.total_estimate || null, more: !!j.next_page_token });
+    }).catch((e) => {
+      if (!mine()) return;
+      found.per.set(k, { state: 'error', error: String((e && e.message) || e) });
+    }).finally(() => { if (mine() && parts) drawList(); });
+  }
+  live('meaning', { text }).then((j) => {
+    if (!mine()) return;
+    found.meaning = { state: 'done', mail: j.mail || [], failed: j.mail_failed || [],
+      docs: (j.documents && j.documents.docs) || [], docsGate: (j.documents && j.documents.gate) || {} };
+  }).catch((e) => {
+    if (!mine()) return;
+    found.meaning = { state: 'error', error: String((e && e.message) || e) };
+  }).finally(() => { if (mine() && parts) drawList(); });
+}
+
+export function clearFind() { found = null; if (parts) drawList(); }
+
+function addrOf(key) {
+  const m = C.mailboxes().get(key);
+  return (m && m.address) || String(key || '').split(':').slice(1).join(':');
+}
+
+function drawFound(list) {
+  const f = found;
+  const head = mk('div', 'mailx-head');
+  head.appendChild(navButton('Mailboxes', 'side'));
+  head.appendChild(mk('h3', null, 'Found'));
+  const x = mk('button', 'mailx-close', 'x');
+  x.type = 'button';
+  x.title = 'Back to the inbox';
+  x.setAttribute('aria-label', 'Close the search and go back to the inbox');
+  x.addEventListener('click', clearFind);
+  head.appendChild(x);
+  list.appendChild(head);
+
+  const box = mk('div', 'mailx-found');
+  list.appendChild(box);
+  if (!f.keys.length) {
+    box.appendChild(mk('p', 'state stalled', C.readingState() === null
+      ? 'Your mailboxes are still being read, so there is nowhere to search yet. Try again in a moment.'
+      : 'No mailbox is open to you here, so there is nowhere to search.'));
+    return;
+  }
+
+  // Every mailbox's live results, then what the meaning search adds, one row per conversation.
+  const seen = new Set();
+  const rows = [];
+  for (const [, p] of f.per) {
+    if (p.state !== 'done') continue;
+    for (const it of p.items) {
+      const k = it.source_key + '|' + it.thread_id;
+      if (seen.has(k)) continue;
+      seen.add(k); rows.push(it);
+    }
+  }
+  let byMeaning = 0;
+  if (f.meaning.state === 'done') {
+    for (const it of f.meaning.mail) {
+      const k = it.source_key + '|' + it.thread_id;
+      if (seen.has(k)) continue;
+      seen.add(k); byMeaning++;
+      rows.push(Object.assign({}, it, { by_meaning: true }));
+    }
+  }
+  rows.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+
+  const done = [...f.per.values()].filter((p) => p.state === 'done');
+  const waiting = [...f.per.values()].filter((p) => p.state === 'loading').length;
+  const boxes = new Set(rows.map((r) => r.source_key)).size;
+  const said = rows.length + ' email' + (rows.length === 1 ? '' : 's') + ' for ' + String.fromCharCode(8220) + f.text + String.fromCharCode(8221)
+    + (rows.length ? ', in ' + boxes + ' of ' + f.keys.length + ' mailbox' + (f.keys.length === 1 ? '' : 'es') : ' so far')
+    + ', newest first.';
+  box.appendChild(mk('p', 'mailx-found-line', said));
+  const q = done.find((p) => p.query);
+  if (q) box.appendChild(mk('p', 'quiet', 'Gmail was searched for: ' + q.query + (byMeaning ? '. ' + byMeaning + ' more found by meaning in what the company has read.' : '.')));
+  else if (byMeaning) box.appendChild(mk('p', 'quiet', byMeaning + ' found by meaning in what the company has read.'));
+  if (f.note) box.appendChild(mk('p', 'quiet', f.note));
+  if (f.unsure && f.askInstead) {
+    const b = mk('button', 'go ghost mailx-instead', 'Ask this as a question instead');
+    b.type = 'button';
+    b.addEventListener('click', f.askInstead);
+    box.appendChild(b);
+  }
+
+  // A mailbox still searching, or one that could not be searched, says so: never silently missing.
+  const status = mk('ul', 'mailx-found-status');
+  for (const [k, p] of f.per) {
+    if (p.state === 'loading') status.appendChild(mk('li', 'quiet', addrOf(k) + ': searching'));
+    else if (p.state === 'error') status.appendChild(mk('li', 'state stalled', addrOf(k) + ' could not be searched: ' + p.error));
+    else if (p.more) status.appendChild(mk('li', 'quiet', addrOf(k) + ': showing the newest ' + p.items.length + (p.estimate ? ' of about ' + p.estimate : '') + '; add a word to narrow it'));
+  }
+  if (f.meaning.state === 'loading') status.appendChild(mk('li', 'quiet', 'Also searching by meaning'));
+  else if (f.meaning.state === 'error') status.appendChild(mk('li', 'state stalled', 'The search by meaning could not run: ' + f.meaning.error));
+  else for (const x of f.meaning.failed || []) status.appendChild(mk('li', 'state stalled', x.count + ' found by meaning in ' + addrOf(x.source_key) + ' could not be opened: ' + x.error));
+  if (status.children.length) box.appendChild(status);
+
+  if (!rows.length) {
+    if (!waiting && f.meaning.state !== 'loading') box.appendChild(mk('p', 'quiet', 'Nothing found. Try fewer or different words, or a name.'));
+  } else {
+    const ul = mk('ul', 'mailx-msgs');
+    for (const r of rows.slice(0, 150)) {
+      const li = mk('li');
+      const b = mk('button', 'mailx-msg');
+      b.type = 'button';
+      if (open && open.id === r.thread_id && chosen === r.source_key) b.setAttribute('aria-current', 'true');
+      const r1 = mk('span', 'mailx-r1');
+      const who = mk('span', 'mailx-from');
+      who.appendChild(mk('span', 'mailx-tag', addrOf(r.source_key)));
+      who.appendChild(document.createTextNode(r.details_unavailable ? 'Sender and subject could not be loaded' : (r.from_name || r.from_email || '')));
+      r1.appendChild(who);
+      if (!r.details_unavailable) r1.appendChild(mk('span', 'mailx-when', when(r.date)));
+      b.appendChild(r1);
+      if (!r.details_unavailable) {
+        b.appendChild(mk('span', 'mailx-subj', r.subject || '(no subject)'));
+        if (r.snippet) b.appendChild(mk('span', 'mailx-snip', String(r.snippet).slice(0, 140)));
+      }
+      if (r.by_meaning) b.appendChild(mk('span', 'mailx-why', 'found by meaning'));
+      b.addEventListener('click', () => openThread(r.thread_id, r.source_key));
+      li.appendChild(b);
+      ul.appendChild(li);
+    }
+    list.appendChild(ul);
+  }
+
+  // Files the company has read, when the meaning search found any she may open.
+  const docs = (f.meaning.state === 'done' && f.meaning.docs) || [];
+  if (docs.length) {
+    const fh = mk('h4', 'mailx-files-head', 'Files');
+    const fl = mk('ul', 'mailx-files');
+    for (const d of docs) {
+      const li = mk('li');
+      const a = mk('a', null, d.name || '(untitled)');
+      if (d.drive_url && /^https:/.test(d.drive_url)) { a.href = d.drive_url; a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+      li.appendChild(a);
+      fl.appendChild(li);
+    }
+    list.append(fh, fl);
+  }
+  if (f.meaning.state === 'done' && f.meaning.docsGate && f.meaning.docsGate.failed_closed) {
+    list.appendChild(mk('p', 'quiet mailx-files-head', 'Files could not be checked just now, so none are shown; that is not a claim there are none.'));
+  }
 }
 
 // Called by lens.js for a question typed in the Ask bar while the Mail tab is on screen. With an
 // email open the question is about it and lands with it; with none open it lands in the reading
 // column. Returns false when the Mail tab is not on screen, so lens.js asks as it always has.
-export function askFromMailBar(text) {
+export function askFromMailBar(text, notAboutEmail) {
   if (!parts || !parts.wrap.isConnected || !parts.wrap.offsetParent) return false;
+  // She removed the "about this email" chip: the question goes to the Mail conversation about no one
+  // email, so the open email is put away to show it (seat one-box).
+  if (notAboutEmail && open) { open = null; drawList(); }
   if (open && open.thread) {
     const conv = convoFor(open.thread, true);
     setView('read');
