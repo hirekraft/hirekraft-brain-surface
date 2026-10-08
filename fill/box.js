@@ -172,7 +172,7 @@ function submit(text) {
 // A MAILBOX SHE NAMES GOES TO THE DOOR (seat refusal-wire, 2026-10-08). Until now "open accounting@" was a
 // find across the mailboxes she can already open, so a mailbox kept from her was never asked about: nothing
 // refused, nothing recorded, an empty search. Now an address she names AS A MAILBOX (after open, in, inbox,
-// mailbox, check or read; as a possessive, alex@'s; or alone) at one of her own company's domains is matched
+// mailbox, check or read; as a possessive, alex@'s; or alone as a shorthand, accounting@) at one of her own company's domains is matched
 // to her mailboxes: hers, and the find is scoped to it; not hers, and the find is sent to it anyway, so the
 // door (worklens-live) refuses it, records it and says so. This file decides nothing about access. An address
 // used any other way (emails from kevin@client.com) stays an ordinary find and is never sent to the door.
@@ -186,8 +186,8 @@ function namedMailbox(text) {
     const tok = (poss ? raw[i].slice(0, -2) : raw[i]).replace(/[^a-z0-9@._+-]/g, '');
     const at = tok.indexOf('@');
     if (at <= 0) continue;
-    if (!(poss || REACH_BEFORE.includes(raw[i - 1] || '') || raw.length <= 2)) continue;
     const local = tok.slice(0, at), domain = tok.slice(at + 1);
+    if (!(poss || REACH_BEFORE.includes(raw[i - 1] || '') || (raw.length <= 2 && !domain))) continue;
     const hit = mine.find((a) => domain ? a === tok : a.split('@')[0] === local);
     const rest = raw.filter((w, k) => k !== i && !FIND_FIRST.includes(w) && !REACH_BEFORE.includes(w) && w !== 'me').join(' ');
     if (hit) return { key: 'gmail:' + hit, rest };
