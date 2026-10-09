@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-10-08-onebox">
+<link rel="stylesheet" href="skin.css?v=2026-10-08-workchat">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -295,22 +295,37 @@
     <div id="sec-door" aria-live="polite"></div>
   </section>
 
-  <!-- 8. WORK. Arranged like the Claude chat app (Alex 2026-10-06), not branded like it.
-       Seat work-tab. The middle column receives the dock's conversation and question box
-       while this tab is open (workDock in lens.js), so there is still one of each. -->
+  <!-- 8. WORK. Laid out the way every AI chat is (Alex 2026-10-08, seat work-chat): the convention
+       millions already know, in the Tool's own look; no other product's name, mark or colours.
+       Sidebar: New chat, search, Projects, Pinned, then chats by day. Middle: the conversation,
+       and under it the one box, MOVED here from the top while this tab is open and moved back on
+       leaving (workDock in lens.js), so there is still one conversation and one box. -->
   <section class='step work' id='s-work' hidden>
     <aside class='work-side' aria-label='Your chats'>
-      <button class='go work-newchat' id='work-new' type='button'>New chat</button>
-      <div class='work-head'><h3>Projects</h3>
-        <button class='work-add' id='work-project-new' type='button' aria-label='New project'>New project</button></div>
-      <ul class='work-chats' id='work-projects'></ul>
-      <h3>Recents</h3>
-      <ul class='work-chats' id='work-recents'></ul>
-      <p class='quiet' id='work-said' aria-live='polite'></p>
+      <div class='work-top'>
+        <button class='work-fold' id='work-fold' type='button' aria-expanded='true' aria-label='Hide your chats'>Hide</button>
+        <button class='go work-newchat' id='work-new' type='button'>New chat</button>
+      </div>
+      <div class='work-list' id='work-list'>
+        <input class='work-search' id='work-search' type='search' autocomplete='off'
+               placeholder='Search your chats' aria-label='Search your chats'>
+        <div class='work-head'><h3>Projects</h3>
+          <button class='work-add' id='work-project-new' type='button' aria-label='New project'>New project</button></div>
+        <ul class='work-chats' id='work-projects'></ul>
+        <div id='work-pinned'></div>
+        <div id='work-recents'></div>
+        <p class='quiet' id='work-said' aria-live='polite'></p>
+      </div>
     </aside>
     <div class='work-main'>
       <div id='work-project-view' hidden></div>
-      <div id='work-convo'></div>
+      <div id='work-convo'>
+        <div class='work-hello' id='work-hello'>
+          <h2>What are we working on?</h2>
+          <p class='quiet'>Ask about anything in your mail, files and books. Click the box below for examples from your own business.</p>
+        </div>
+      </div>
+      <div class='work-box' id='work-box'></div>
     </div>
   </section>
 
@@ -377,6 +392,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-08-security"></script>
+<script type="module" src="lens.js?v=2026-10-08-workchat"></script>
 </body>
 </html>
