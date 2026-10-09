@@ -2841,32 +2841,47 @@ function drawLens() {
 // -- WORK (seat work-tab, 2026-10-06, Alex's rulings 2026-10-02 and 2026-10-06) --
 // Every question asked in the Tool is kept as a chat, whichever tab it was asked from, because
 // there is one Ask and it calls keepTurn() after each answer.
-// THE ARRANGEMENT IS THE CLAUDE CHAT APP'S (Alex 2026-10-06), not its branding: a left sidebar
-// with New chat, then Projects, then recent chats newest first; the open conversation in the
-// middle with the question box at the bottom of it; a project opens to its own list of chats.
-// ONE RENDERER: on the Work tab the dock's conversation (#s-answer) is MOVED into the middle column,
-// and moved back when leaving, so turns are still drawn only by renderAsk and asked only by ask().
-// No second conversation panel exists. The question box no longer moves: it is the one box at the
-// top of every tab (seat one-box, 2026-10-08).
+// THE ARRANGEMENT EVERY AI CHAT SHARES (Alex 2026-10-08, seat work-chat; refines his 2026-10-06
+// ruling): "They all look the same because millions of people know it is the best way to work.
+// Meet the customer where they are." The convention, in the Tool's own look: a sidebar that folds,
+// with New chat, a search over her chats, Projects, Pinned, then her chats by day (Today,
+// Yesterday, Previous 7 days, Previous 30 days, then by month, in HER time zone); each row has a
+// small menu to rename, pin, move to a project or delete. The conversation in the middle at a
+// readable width, and the input UNDER it. SUPERSEDES the 2026-10-08 one-box note that the box no
+// longer moves: it is still the one box, at the top of every other tab, docked under the
+// conversation here because that is where every chat puts it.
+// ONE RENDERER: on the Work tab the dock's conversation (#s-answer) and the one box (#onebox) are
+// MOVED into the middle column, and moved back when leaving, so turns are still drawn only by
+// renderAsk, asked only by ask(), routed only by box.js. No second panel or box exists.
 // Opening a chat redraws its turns FROM WHAT WAS KEPT, without asking again; the next Ask
-// continues that chat. Recents shows chats not in a project; a project shows its own.
-// PRIVATE TO THE PERSON, ENFORCED IN THE BRAIN: work_list, work_open, work_keep, work_project_new
-// and work_move resolve the person from the sign-in and refuse anything else with a reason.
-// Nothing here filters by person; the screen only shows what the brain returns.
+// continues that chat. A chat is titled from its first question (work_keep), or by its email.
+// DELETE IS AN ARCHIVE (Alex 2026-10-01): work_discard retires the chat; it leaves her list and her
+// search and stays in the brain. SEARCH reads chat titles and her own questions, never answers, so
+// an answer withheld after her access narrowed cannot be found by its words (work_list, p_q).
+// PRIVATE TO THE PERSON, ENFORCED IN THE BRAIN: every work_* function resolves the person from the
+// sign-in and refuses anything else with a reason. Nothing here filters by person.
 let workChat = null;      // the chat the Ask is continuing, or null for a new one
 let workInto = null;      // a project a NEW chat goes into once its first turn is kept
 let workView = null;      // the project shown in the middle, or null for the conversation
 let workRead = null;      // the last work_list() reply
+let workQ = '';           // what the sidebar search is looking for, or ''
+let boxHome = null;       // where the one box lives on every other tab
 
 function workSaid(text) { const s = $('#work-said'); if (s) s.textContent = text || ''; }
 
-// Moves the one conversation between the dock and the Work middle.
+// Moves the one conversation and the one box between their homes and the Work middle.
 function workDock(onWork) {
   const ans = $('#s-answer'), slot = $('#work-convo');
   const home = document.querySelector('.dock-in');
+  const box = $('#onebox'), boxSlot = $('#work-box');
   if (!ans || !slot || !home) return;
   if (onWork && ans.parentElement !== slot) slot.append(ans);
   if (!onWork && ans.parentElement === slot) home.append(ans);
+  if (box && boxSlot) {
+    if (!boxHome) { boxHome = document.createComment('the one box lives here'); box.before(boxHome); }
+    if (onWork && box.parentElement !== boxSlot) boxSlot.append(box);
+    if (!onWork && box.parentElement === boxSlot) boxHome.after(box);
+  }
   $('#dock').hidden = !!onWork;
 }
 
@@ -2967,24 +2982,99 @@ function markOpen() {
   });
 }
 
+// One chat in the sidebar: its title opens it; the small menu renames, pins, moves or deletes it.
 function chatRow(c, projects) {
   const li = el('li', 'work-chat');
   const b = el('button', 'work-open'); b.type = 'button'; b.dataset.chat = c.id; b.textContent = c.title;
+  b.title = c.title;
   b.addEventListener('click', () => openChat(c.id));
-  const mv = el('select', 'work-move'); mv.setAttribute('aria-label', 'Move this chat');
-  const opts = [['', c.project_id ? 'Move' : 'Move'], ...projects.filter((p) => p.id !== c.project_id).map((p) => [p.id, `To ${p.name}`])];
-  if (c.project_id) opts.push(['none', 'Out of the project']);
-  if (opts.length === 1) mv.hidden = true;
-  for (const [v, label] of opts) { const o = el('option'); o.value = v; o.textContent = label; mv.appendChild(o); }
-  mv.addEventListener('change', async () => {
-    if (!mv.value) return;
-    const target = mv.value === 'none' ? null : mv.value;
-    const { data, error } = await sb.rpc('work_move', { p_chat: c.id, p_project: target });
-    if (error || !data?.ok) { workSaid(error?.message ?? data?.note ?? 'Not moved, and no reason was given.'); return; }
+  const more = el('button', 'work-more'); more.type = 'button'; more.textContent = '···';
+  more.setAttribute('aria-label', `More for ${c.title}`); more.setAttribute('aria-haspopup', 'menu');
+  more.addEventListener('click', (e) => { e.stopPropagation(); chatMenu(li, c, projects); });
+  li.append(b, more);
+  return li;
+}
+
+async function workSet(id, args) {
+  const { data, error } = await sb.rpc('work_set', Object.assign({ p_chat: id }, args));
+  if (error || !data?.ok) { workSaid(error?.message ?? data?.note ?? 'Not changed, and no reason was given.'); return false; }
+  return true;
+}
+
+function closeMenus() { document.querySelectorAll('#s-work .work-menu').forEach((m) => m.remove()); }
+
+function chatMenu(li, c, projects) {
+  const open = li.querySelector('.work-menu');
+  closeMenus();
+  if (open) return;
+  const m = el('div', 'work-menu'); m.setAttribute('role', 'menu');
+  const item = (label, fn) => {
+    const i = el('button', 'work-item'); i.type = 'button'; i.setAttribute('role', 'menuitem'); i.textContent = label;
+    i.addEventListener('click', async (e) => { e.stopPropagation(); closeMenus(); await fn(); });
+    m.appendChild(i);
+  };
+  item('Rename', () => renameRow(li, c));
+  item(c.pinned_at ? 'Unpin' : 'Pin', async () => { if (await workSet(c.id, { p_pinned: !c.pinned_at })) loadWork(); });
+  for (const p of projects.filter((x) => x.id !== c.project_id)) {
+    item(`Move to ${p.name}`, () => moveChat(c.id, p.id));
+  }
+  if (c.project_id) item('Take out of the project', () => moveChat(c.id, null));
+  item('Delete', async () => {
+    if (!window.confirm(`Delete "${c.title}"? It leaves your chats and is kept in the archive.`)) return;
+    const { data, error } = await sb.rpc('work_discard', { p_chat: c.id });
+    if (error || !data?.ok) { workSaid(error?.message ?? data?.note ?? 'Not deleted, and no reason was given.'); return; }
+    if (workChat === c.id) newChat(null);
     loadWork();
   });
-  li.append(b, mv);
-  return li;
+  li.appendChild(m);
+  m.querySelector('button')?.focus();
+}
+
+async function moveChat(id, project) {
+  const { data, error } = await sb.rpc('work_move', { p_chat: id, p_project: project });
+  if (error || !data?.ok) { workSaid(error?.message ?? data?.note ?? 'Not moved, and no reason was given.'); return; }
+  loadWork();
+}
+
+// Rename in place: the title becomes a field; Enter keeps the new name, Escape keeps the old one.
+function renameRow(li, c) {
+  const b = li.querySelector('.work-open'); if (!b) return;
+  const f = el('input', 'work-rename'); f.type = 'text'; f.value = c.title; f.maxLength = 120;
+  f.setAttribute('aria-label', 'New name for this chat');
+  b.replaceWith(f); f.focus(); f.select();
+  let done = false;
+  const finish = async (keep) => {
+    if (done) return; done = true;
+    const t = f.value.trim();
+    if (keep && t && t !== c.title) { if (await workSet(c.id, { p_title: t })) { loadWork(); return; } }
+    f.replaceWith(b);
+  };
+  f.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  f.addEventListener('blur', () => finish(true));
+}
+
+// Which day group a chat falls in, from when it last moved, counted in HER time zone.
+function dayGroup(iso, now) {
+  const z = zone();
+  const key = (d) => { try { return d.toLocaleDateString('en-CA', { timeZone: z }); } catch (_) { return d.toISOString().slice(0, 10); } };
+  const d = new Date(iso);
+  const diff = Math.round((Date.parse(key(now)) - Date.parse(key(d))) / 86400000);
+  if (diff <= 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff <= 7) return 'Previous 7 days';
+  if (diff <= 30) return 'Previous 30 days';
+  try { return d.toLocaleDateString(undefined, { timeZone: z, month: 'long', year: 'numeric' }); } catch (_) { return key(d).slice(0, 7); }
+}
+
+function chatGroup(host, label, chats, projects) {
+  if (!chats.length) return;
+  const h = el('h3'); h.textContent = label;
+  const ul = el('ul', 'work-chats');
+  for (const c of chats) ul.appendChild(chatRow(c, projects));
+  host.append(h, ul);
 }
 
 function openProject(id) {
@@ -3005,27 +3095,49 @@ function openProject(id) {
 }
 
 async function loadWork() {
-  const { data, error } = await sb.rpc('work_list');
+  const q = workQ;
+  const { data, error } = await sb.rpc('work_list', q ? { p_q: q } : {});
+  if (q !== workQ) return;   // she typed again while this was on its way; the newer reading wins
   if (error) { workSaid(`Your chats could not be read: ${error.message}`); return; }
   if (!data?.ok) { workSaid(data?.note ?? 'Your chats could not be read, and no reason was given.'); return; }
-  workRead = data; workSaid('');
+  workSaid('');
+  if (!q) workRead = data;
+  const projects = data.projects;
   const pl = $('#work-projects'); pl.innerHTML = '';
-  for (const p of data.projects) {
+  for (const p of projects) {
     const li = el('li');
     const b = el('button', 'work-open'); b.type = 'button'; b.dataset.project = p.id;
-    const n = data.chats.filter((c) => c.project_id === p.id).length;
+    const n = (workRead?.chats ?? data.chats).filter((c) => c.project_id === p.id).length;
     b.textContent = p.name;
     const k = el('span', 'quiet work-count'); k.textContent = String(n);
     b.appendChild(k);
     b.addEventListener('click', () => openProject(p.id));
     li.appendChild(b); pl.appendChild(li);
   }
-  if (!data.projects.length) { const e = el('li', 'quiet'); e.textContent = 'None yet.'; pl.appendChild(e); }
-  const rl = $('#work-recents'); rl.innerHTML = '';
-  const loose = data.chats.filter((c) => !c.project_id);
-  for (const c of loose) rl.appendChild(chatRow(c, data.projects));
-  if (!data.chats.length) { const e = el('li', 'quiet'); e.textContent = 'Nothing asked yet. Anything you ask, on any tab, is kept here.'; rl.appendChild(e); }
-  if (workView) openProject(workView); else markOpen();
+  if (!projects.length) { const e = el('li', 'quiet'); e.textContent = 'None yet.'; pl.appendChild(e); }
+  const pin = $('#work-pinned'), rl = $('#work-recents');
+  pin.innerHTML = ''; rl.innerHTML = '';
+  if (q) {
+    // A search shows every chat it found, in projects or not, and says what it looked through.
+    chatGroup(rl, 'Found', data.chats, projects);
+    const note = el('p', 'quiet work-searched');
+    note.textContent = data.chats.length
+      ? 'Searched your chat names and your own questions. Answers are not searched.'
+      : `No chat name or question of yours contains "${q}". Answers are not searched.`;
+    rl.appendChild(note);
+  } else {
+    chatGroup(pin, 'Pinned', data.chats.filter((c) => c.pinned_at), projects);
+    const loose = data.chats.filter((c) => !c.project_id && !c.pinned_at);
+    const now = new Date(), groups = new Map();
+    for (const c of loose) {
+      const g = dayGroup(c.updated_at, now);
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push(c);
+    }
+    for (const [label, chats] of groups) chatGroup(rl, label, chats, projects);
+    if (!data.chats.length) { const e = el('p', 'quiet'); e.textContent = 'Nothing asked yet. Anything you ask, on any tab, is kept here.'; rl.appendChild(e); }
+  }
+  if (workView && !q) openProject(workView); else markOpen();
 }
 
 (function wireWork() {
@@ -3038,6 +3150,28 @@ async function loadWork() {
     await loadWork();
     openProject(data.project_id);
   });
+  let wait = null;
+  $('#work-search')?.addEventListener('input', (e) => {
+    clearTimeout(wait);
+    wait = setTimeout(() => { workQ = e.target.value.trim(); loadWork(); }, 250);
+  });
+  // The sidebar folds away, as in every chat app, and remembers it in this browser.
+  const FOLD = 'tool.work.folded';
+  const fold = (on) => {
+    $('#s-work')?.classList.toggle('work-folded', on);
+    const b = $('#work-fold'); if (!b) return;
+    b.setAttribute('aria-expanded', String(!on));
+    b.setAttribute('aria-label', on ? 'Show your chats' : 'Hide your chats');
+    b.textContent = on ? 'Chats' : 'Hide';
+  };
+  try { fold(localStorage.getItem(FOLD) === '1'); } catch (_) { fold(false); }
+  $('#work-fold')?.addEventListener('click', () => {
+    const on = !$('#s-work').classList.contains('work-folded');
+    fold(on);
+    try { localStorage.setItem(FOLD, on ? '1' : '0'); } catch (_) { /* kept for this page only */ }
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.work-menu')) closeMenus(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(); });
 })();
 
 // ── boot ────────────────────────────────────────────────────────────────────
