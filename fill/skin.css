@@ -693,8 +693,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .t-controls { margin-top: var(--gap-lg); }
 .t-controls summary { cursor: pointer; }
 
-/* WORK (seat work-tab, 2026-10-06). The Claude chat app's arrangement: sidebar, then the
-   conversation with its question box at the bottom. No colour value introduced. */
+/* WORK (seat work-tab 2026-10-06; seat work-chat 2026-10-08). The arrangement every AI chat
+   shares, in the Tool's own look: a sidebar that folds, the conversation, the one box under it.
+   No colour value introduced; no other product's look. */
 .work { display: grid; grid-template-columns: minmax(12rem, 16rem) 1fr; gap: 2rem; align-items: start; }
 .work-side { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; }
 .work-side h3 { margin: 1.4em 0 .3em; font-size: var(--t-small); font-weight: var(--w-mid);  }
@@ -706,12 +707,40 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .work-open { flex: 1; min-width: 0; display: flex; justify-content: space-between; gap: .5em; text-align: left; background: none; border: 0; padding: .3em .4em; color: inherit; font: inherit; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: var(--radius); }
 .work-open:hover, .work-open[aria-current='true'] { background: var(--line); }
 .work-open[aria-current='true'] { font-weight: var(--w-mid); }
-.work-move { font: inherit; font-size: var(--t-micro); max-width: 6.5rem; }
 .work-main { min-width: 0; display: flex; flex-direction: column; }
 #work-convo { display: flex; flex-direction: column; min-height: 60vh; }
 #work-convo .answer { flex: 1; }
 .work-when { margin-top: .4em; }
 @media (max-width: 720px) { .work { grid-template-columns: 1fr; } .work-side { position: static; max-height: none; } }
+.work-top { display: flex; gap: .5em; align-items: center; }
+.work-top .work-newchat { flex: 1; width: auto; margin: 0; }
+.work-chat .work-open { display: block; }
+.work-fold { flex: none; background: none; border: 1px solid var(--line); border-radius: var(--radius); padding: calc(var(--u) * 1.5) calc(var(--u) * 2.5); font: inherit; font-size: var(--t-small); color: var(--ink-3); cursor: pointer; }
+.work.work-folded { grid-template-columns: auto 1fr; }
+.work-folded .work-list { display: none; }
+.work-search { display: block; width: 100%; margin-top: var(--gap); font: inherit; font-size: var(--t-small); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: calc(var(--u) * 2) calc(var(--u) * 3); }
+.work-search:focus { outline: none; border-color: var(--act); }
+.work-searched { margin-top: var(--u); font-size: var(--t-micro); }
+.work-chat { position: relative; }
+.work-more { flex: none; background: none; border: 0; padding: .2em .45em; font: inherit; color: var(--ink-4); cursor: pointer; border-radius: var(--radius); opacity: 0; }
+.work-chat:hover .work-more, .work-more:focus-visible, .work-chat:has(.work-menu) .work-more,
+.work-chat:has([aria-current='true']) .work-more { opacity: 1; }
+.work-more:hover { background: var(--line); color: var(--ink); }
+@media (hover: none) { .work-more { opacity: 1; } }
+.work-menu { position: absolute; right: 0; top: 100%; z-index: 40; min-width: 12rem; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--u) 0; }
+.work-item { display: block; width: 100%; text-align: left; background: none; border: 0; font: inherit; font-size: var(--t-small); color: var(--ink-2); padding: calc(var(--u) * 1.5) calc(var(--u) * 3); cursor: pointer; }
+.work-item:hover, .work-item:focus-visible { background: var(--act-soft); color: var(--ink); outline: none; }
+.work-rename { flex: 1; min-width: 0; font: inherit; color: var(--ink); padding: .25em .4em; border: 1px solid var(--act); border-radius: var(--radius); }
+/* An empty chat greets her, centred; it goes the moment there is a turn to show. */
+.work-hello { margin: auto 0; padding: 10vh var(--gap) var(--gap); text-align: center; }
+.work-hello h2 { margin-bottom: calc(var(--u) * 2); }
+.work-hello p { margin: 0 auto; max-width: var(--measure); }
+#work-convo:has(#s-answer:not([hidden])) .work-hello { display: none; }
+/* THE ONE BOX, docked under the conversation on this tab only, and it stays in reach while she
+   reads; its examples open upward because there is no room below. */
+.work-box { position: sticky; bottom: 0; z-index: 20; width: 100%; max-width: var(--convo); background: var(--paper); padding: var(--gap) 0 calc(var(--u) * 3); }
+.work-box .onebox { margin: 0; }
+.work-box .onebox-tips { top: auto; bottom: 100%; margin: 0 0 var(--u); }
 
 /* THE PAGE USES THE WINDOW, AND ASK READS LIKE A CHAT. Seat chat-layout, 2026-10-06.
    Alex's rulings that day: use the arrangement of Claude or ChatGPT, not their branding; and
