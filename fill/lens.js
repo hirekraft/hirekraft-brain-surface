@@ -212,6 +212,7 @@ function renderState(state, detail) {
   box.appendChild(b);
   // Every reading ends here, so an open source tab is redrawn from it (seat tool-tabs).
   if ($('#s-lens') && !$('#s-lens').hidden) drawLens();
+  if ($('#s-security') && !$('#s-security').hidden) drawSecConnected();
 }
 
 // A placeholder that never resolves would be a spinner that lies. When the read
@@ -231,8 +232,9 @@ function renderWho() {
   // Tests are the owner's. Hiding the way in is courtesy; the brain refuses anyone else.
   const te = $("#tests-entry");
   if (te) te.hidden = !v.all_access;
-  const ae = $("#access-entry");
-  if (ae) ae.hidden = !v.all_access;
+  // The Security tab is the owner's (seat security-tab). Hidden is courtesy; the brain refuses anyone else.
+  const st = document.querySelector('#tabs [data-tab="security"]');
+  if (st) st.hidden = !v.all_access;
 }
 
 // ── the tree: structure first, then the reading lands into it ────────────────
@@ -1038,15 +1040,7 @@ function fillAttention() {
     });
     boxes.appendChild(see);
 
-    // WHO SEES WHAT sits beside what is connected, for the owner (seat who-sees-what).
-    if (shape.viewer?.all_access) {
-      const w = el("button", "box");
-      w.type = "button";
-      w.innerHTML = `<span class="box-t">Who sees what</span>`
-        + `<span class="box-d">Each person, what their own Google account opens, and your changes.</span>`;
-      w.addEventListener("click", () => { userMoved = true; goto("s-access"); });
-      boxes.appendChild(w);
-    }
+    // Who sees what moved to the Security tab on 2026-10-08 (seat security-tab, Alex's ruling that day).
 
     // No items, no box. Nothing takes its place and nothing says so.
     if (items.length) {
@@ -2491,6 +2485,9 @@ function drawAccess(v) {
     ul.appendChild(li);
   }
   mount.appendChild(ul);
+  if (!(v.people ?? []).some((p) => (p.changes ?? []).length)) {
+    const n = el("p", "quiet"); n.textContent = "You have not kept anything back from anyone yet."; mount.appendChild(n);
+  }
   for (const w of v.warnings ?? []) {
     const n = el("p", "notice flagged"); n.textContent = w.words; mount.appendChild(n);
   }
@@ -2501,7 +2498,7 @@ function drawAccess(v) {
   }
   const other = (v.people ?? []).find((p) => !p.is_owner);
   const hint = el("p", "quiet");
-  hint.textContent = `To change something, say it in the question box, for example "${other ? other.name : "Sam"} shouldn't see pay figures". `
+  hint.textContent = `To change something, tell the box at the top of the page, for example "${other ? other.name : "Sam"} shouldn't see pay figures". `
     + `You see what it would change before anything changes, and every change can be undone.`;
   mount.appendChild(hint);
 }
@@ -2553,6 +2550,7 @@ function routeOnState(mode) {
   routed = true;
   if (location.hash === "#sources") { goto("s-summary"); return; }
   if (location.hash === "#tests" && $("#s-tests")) { goto("s-tests"); return; }
+  if (location.hash === "#security" && $("#s-security")) { goto("s-security"); return; }
   // Nobody signed in: the introduction is the honest screen, and it claims nothing
   // about data because there is no identity to claim it about.
   if (mode === "unbound") { goto("s-intro"); return; }
@@ -2570,17 +2568,18 @@ function routeOnState(mode) {
 const BRAIN_PAIR = ['s-connect', 's-summary'];
 let lensKey = null;
 function goto(id, key) {
+  if (id === 's-access') id = 's-security';   // who sees what moved to the Security tab (seat security-tab)
   const show = BRAIN_PAIR.includes(id) ? BRAIN_PAIR : [id];
   document.querySelectorAll("section.step").forEach((s) => { s.hidden = !show.includes(s.id); });
   window.scrollTo({ top: 0 });
   if (id === "s-connect" && !$("#connect-stage").children.length) stageTypes();
   if (id === "s-tests") loadTests();
-  if (id === "s-access") loadAccess();
+  if (id === "s-security") loadSecurity();
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
   workDock(id === 's-work');
   mailDock(id === 's-lens' && lensKey === 'email');
   if (id === 's-work') loadWork();
-  markTab(id === 's-lens' ? lensKey : id === 's-work' ? 'work' : 'brain');
+  markTab(id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : 'brain');
   drawBox();
 }
 
@@ -2590,6 +2589,8 @@ function goto(id, key) {
 // one line saying it is not connected and pointing to Brain. No lens features here:
 // each tab is fleshed out later, one at a time.
 const TABS = [{ key: 'brain', label: 'Brain' }, { key: 'work', label: 'Work' },
+  // Owner only, after Work (seat security-tab, Alex 2026-10-08). Shown once the reading says she is an owner.
+  { key: 'security', label: 'Security', owner: true },
   ...GROUPS.map((g) => ({ key: g.key, label: g.key === 'email' ? 'Mail' : g.label }))];
 
 function markTab(key) {
@@ -2608,9 +2609,11 @@ function drawTabs() {
     b.type = 'button';
     b.dataset.tab = t.key;
     b.textContent = t.label;
+    if (t.owner) b.hidden = !shape?.viewer?.all_access;
     b.addEventListener('click', () => {
       userMoved = true;
-      if (t.key === 'brain') goto('s-summary'); else if (t.key === 'work') goto('s-work'); else goto('s-lens', t.key);
+      if (t.key === 'brain') goto('s-summary'); else if (t.key === 'work') goto('s-work');
+      else if (t.key === 'security') goto('s-security'); else goto('s-lens', t.key);
     });
     nav.appendChild(b);
   }
