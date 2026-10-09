@@ -2538,6 +2538,188 @@ async function personDetail(p, mount) {
   mount.append(acts, slot);
 }
 
+// -- SECURITY AND ADMIN (seat security-tab, Alex 2026-10-08) --
+// Capabilities "Know who can see what, and what is more open than I meant" and "I decide who in my
+// company sees what". Every part is read from a brain function that refuses anyone but the owner with
+// a reason (audit_latest, refusal_watch, access_people, security_watch_extras). This screen decides
+// nothing about access and computes no finding. Empty is said in words, never left blank; a part that
+// cannot be read says so and why, and the other parts still draw.
+const SEV_WORD = { critical: "Most serious", high: "Serious", medium: "Worth a look", low: "Minor" };
+const SEV_TONE = { critical: "tone-red", high: "tone-amber", medium: "tone-plain", low: "tone-plain" };
+
+function secNote(mount, text, flagged) {
+  const n = el("p", flagged ? "notice flagged" : "quiet"); n.textContent = text; mount.appendChild(n); return n;
+}
+function secRefused(mount, v, what) {
+  secNote(mount, v?.note ?? `${what} could not be shown${v?.reason ? ` (${v.reason})` : ""}.`, true);
+}
+function secState(tone, text) {
+  const s = el("p", `state ${tone}`); s.innerHTML = `<span class="dot"></span>`;
+  s.appendChild(document.createTextNode(text)); return s;
+}
+function secLine(cls, text) { const p = el("p", cls); p.textContent = text; return p; }
+async function secCall(fn, args) {
+  const { data, error } = await sb.rpc(fn, args ?? {});
+  if (error) throw error;
+  return data;
+}
+
+// What is connected comes from the reading this page already holds (brain_shape), not a second count.
+const CAN_TELL = {
+  email: "Google tells the Tool who may open each mailbox, so each person sees only the mail their own Google account opens.",
+  drives: "Google tells the Tool who may open each file, so each person sees only the files their own Google account opens.",
+  calendar: "Google tells the Tool who may see each calendar.",
+  contacts: "Google tells the Tool who may see each contact list.",
+  systems: "Cannot tell the Tool who may see what, so only owners see it unless you decide otherwise.",
+  loose: "Files loaded by hand carry no sharing of their own, so only owners see them unless you decide otherwise.",
+};
+function drawSecConnected() {
+  const mount = $("#sec-connected"); if (!mount) return;
+  mount.innerHTML = "";
+  if (!shape) {
+    secNote(mount, readingState === null ? "Reading what is connected."
+      : "What is connected could not be read just now, so nothing here is a claim either way.");
+    return;
+  }
+  const ul = el("ul", "attn");
+  const off = [];
+  for (const g of GROUPS) {
+    const d = groupsFor().find((x) => x.key === g.key);
+    if (!d || !d.connected) { off.push(g.key === "email" ? "Mail" : g.label); continue; }
+    const li = el("li");
+    li.appendChild(secLine("a-title", `${g.key === "email" ? "Mail" : g.label}: ${d.count} ${d.noun}`));
+    li.appendChild(secState(g.key === "systems" || g.key === "loose" ? "tone-amber" : "tone-green", CAN_TELL[g.key] ?? ""));
+    if (g.key === "systems" && (d.members ?? []).length) li.appendChild(secLine("a-detail", d.members.map((x) => x.name).join(", ")));
+    ul.appendChild(li);
+  }
+  if (ul.childElementCount) mount.appendChild(ul);
+  else secNote(mount, "Nothing is connected yet, so the Tool reads nothing and shows nothing to anyone.");
+  if (off.length) secNote(mount, `Not connected: ${off.join(", ")}.`);
+}
+
+function drawSecAudit(v) {
+  const mount = $("#sec-audit"); mount.innerHTML = "";
+  if (!v?.ok) { secRefused(mount, v, "The security check"); return; }
+  mount.appendChild(secLine("a-detail", `Last checked ${fmtWindow(v.run_at)}. ${(v.limits ?? [])[0] ?? ""}`));
+  const lines = v.lines ?? [];
+  if (lines.length) {
+    const ul = el("ul", "attn");
+    for (const l of lines) {
+      const li = el("li");
+      li.appendChild(secState(SEV_TONE[l.severity] ?? "tone-plain", SEV_WORD[l.severity] ?? l.severity));
+      li.appendChild(secLine("a-title", l.text));
+      if (l.why) li.appendChild(secLine("a-detail", `Why it matters: ${l.why}`));
+      if (l.fix) li.appendChild(secLine("a-detail", `How to fix it: ${l.fix}`));
+      ul.appendChild(li);
+    }
+    mount.appendChild(ul);
+    if (Number(v.serious_not_listed) > 0) secNote(mount, `${countOf(v.serious_not_listed)} more serious findings are not listed here, to keep this short. They are the same kinds as the ones above, and the same fixes apply.`);
+  } else {
+    secNote(mount, v.status === "finished" ? "Nothing serious was found."
+      : "Nothing serious was found in the part that was read. This check did not read everything, so this is not an all-clear.");
+  }
+  const grouped = v.grouped ?? [];
+  if (grouped.length) {
+    const h = el("p", "a-detail"); const b = el("b"); b.textContent = "Less serious, grouped"; h.appendChild(b); mount.appendChild(h);
+    const ul = el("ul", "attn");
+    for (const g of grouped) {
+      const li = el("li");
+      li.appendChild(secLine("a-title", `${countOf(g.count)} found: ${g.title}`));
+      if ((g.examples ?? []).length) li.appendChild(secLine("a-detail", `For example: ${g.examples.join(", ")}.`));
+      if (g.why) li.appendChild(secLine("a-detail", `Why it matters: ${g.why}`));
+      if (g.fix) li.appendChild(secLine("a-detail", `How to fix it: ${g.fix}`));
+      ul.appendChild(li);
+    }
+    mount.appendChild(ul);
+  }
+  if (v.cannot_check_line) secNote(mount, `What could not be checked: ${v.cannot_check_line}`);
+  const rest = (v.limits ?? []).slice(1);
+  if (rest.length) {
+    const d = el("details", "recs");
+    const s = el("summary", "recs-sum"); s.textContent = "What this check cannot see"; d.appendChild(s);
+    const ul = el("ul", "ans-list");
+    for (const r of rest) { const li = el("li"); li.textContent = r; ul.appendChild(li); }
+    d.appendChild(ul); mount.appendChild(d);
+  }
+  secNote(mount, "Starting the check again from this tab is not built yet.");
+}
+
+function drawSecWatch(v) {
+  const mount = $("#sec-watch"); mount.innerHTML = "";
+  if (!v?.ok) { secRefused(mount, v, "Refused attempts"); return; }
+  const people = v.people ?? [];
+  if (!people.length) { secNote(mount, "No one has been refused this week."); }
+  else {
+    const ul = el("ul", "attn");
+    for (const p of people) {
+      const li = el("li");
+      li.appendChild(secLine("a-title", p.name));
+      const kinds = (p.by_kind ?? []).map((k) => k.words ?? k.kind).filter(Boolean);
+      li.appendChild(secLine("a-detail", `Refused ${countOf(p.today)} ${Number(p.today) === 1 ? "time" : "times"} today and ${countOf(p.week)} this week.`
+        + (kinds.length ? ` On: ${kinds.join(", ")}.` : "")));
+      if (p.alert) li.appendChild(secState("tone-red", `Alert: ${p.alert_why ?? "keeps trying"}.`));
+      ul.appendChild(li);
+    }
+    mount.appendChild(ul);
+  }
+  secNote(mount, "Alerts show here and in the box when you open the Tool. Alerts by email are not built yet.");
+}
+
+function drawSecExtras(v) {
+  const sends = $("#sec-sends"), door = $("#sec-door");
+  sends.innerHTML = ""; door.innerHTML = "";
+  if (!v?.ok) { secRefused(sends, v, "The send record"); secRefused(door, v, "The Tool's own checks"); return; }
+  const s = v.sends ?? {};
+  if (!Number(s.total)) secNote(sends, "Nothing has been sent from the Tool yet.");
+  else {
+    secNote(sends, `${countOf(s.total)} ${Number(s.total) === 1 ? "email" : "emails"} sent from the Tool so far. The latest:`);
+    const ul = el("ul", "attn");
+    for (const x of s.last ?? []) { const li = el("li"); li.appendChild(secLine("a-detail", `${fmtWindow(x.at)}: ${x.who}, from ${x.mailbox} (${x.status}).`)); ul.appendChild(li); }
+    sends.appendChild(ul);
+  }
+  const d = v.door ?? {};
+  if (!d.ran_at) { secNote(door, "The Tool's own checks have never run, so nothing here is known.", true); return; }
+  if (d.stale) secNote(door, `The Tool's own checks have not run since ${fmtWindow(d.ran_at)}, so what follows may be out of date.`, true);
+  const lines = d.lines ?? [];
+  const failing = lines.filter((x) => !x.ok);
+  if (failing.length) {
+    const ul = el("ul", "attn");
+    for (const l of failing) { const li = el("li"); li.appendChild(secState("tone-amber", l.text)); ul.appendChild(li); }
+    door.appendChild(ul);
+  }
+  const det = el("details", "recs");
+  const sum = el("summary", "recs-sum"); sum.textContent = `${countOf(d.passing)} passing, last checked ${fmtWindow(d.ran_at)}`; det.appendChild(sum);
+  const pl = el("ul", "ans-list");
+  for (const l of lines.filter((x) => x.ok)) { const li = el("li"); li.textContent = l.text; pl.appendChild(li); }
+  det.appendChild(pl); door.appendChild(det);
+}
+
+function secFailed(id, what) {
+  return (e) => {
+    const m = $(id); if (!m) return;
+    m.innerHTML = "";
+    const msg = String(e?.message ?? e);
+    secNote(m, msg.includes("Could not find the function")
+      ? `${what}: this part is not switched on yet.`
+      : `${what} could not be read, so nothing here is known: ${msg}`, true);
+  };
+}
+function secBusy(id, text) { const m = $(id); if (m && !m.childElementCount) secNote(m, text); }
+
+async function loadSecurity() {
+  drawSecConnected();
+  loadAccess();
+  secBusy("#sec-audit", "Reading the latest security check.");
+  secBusy("#sec-watch", "Reading refused attempts.");
+  secBusy("#sec-sends", "Reading the send record.");
+  secBusy("#sec-door", "Reading the Tool's own checks.");
+  secCall("audit_latest").then(drawSecAudit).catch(secFailed("#sec-audit", "The security check"));
+  secCall("refusal_watch", { p_tz: zone() }).then(drawSecWatch).catch(secFailed("#sec-watch", "Refused attempts"));
+  secCall("security_watch_extras", { p_tz: zone() }).then(drawSecExtras).catch((e) => {
+    secFailed("#sec-sends", "The send record")(e); secFailed("#sec-door", "The Tool's own checks")(e);
+  });
+}
+
 // ── steps ───────────────────────────────────────────────────────────────────
 
 // The page opens on the holding state, so this must ALWAYS land somewhere - a
