@@ -13,6 +13,7 @@ import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints } from "./mail.js?v=2026-10-08-onebox";
 import { initBox, drawBox } from "./box.js?v=2026-10-08-refusal";
+import { attachOutputs } from "./outputs.js?v=2026-10-10-outputs";
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
@@ -1910,7 +1911,16 @@ function openName(name, url) {
   return document.createTextNode(String(name || ""));
 }
 
+// ANSWERS BECOME CHARTS AND FILES (seat work-outputs, 2026-10-10). Every answer drawn anywhere passes here once,
+// so its chart and the PDF / Spreadsheet / Slides buttons come with it, kept answers and the email conversation
+// included. outputs.js builds files in the browser from the body drawn here and sends nothing.
+const OUT_CTX = { askUrl: ASK_URL, key: PUBLISHABLE_KEY, session: () => sb.auth.getSession() };
 function renderAsk(slot, body) {
+  drawAsk(slot, body);
+  try { attachOutputs(slot, body, OUT_CTX); }
+  catch (e) { const p = el("p", "quiet"); p.textContent = `The chart or the file buttons could not be drawn: ${e?.message ?? e}`; slot.appendChild(p); }
+}
+function drawAsk(slot, body) {
   slot.innerHTML = "";
   if (body.state === "answered" && body.table && typeof body.table === "object") { tableAnswer(slot, body); return; }
   // A typed instruction about who sees what (lens-ask v14): its line and the preview card.
