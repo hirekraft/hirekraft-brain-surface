@@ -79,7 +79,8 @@ const PICKERS = {
   systems: {
     head: "Which system?", sub: "These are reached at the moment you ask, not copied.",
     options: [{ name: "QuickBooks", type: "qbo", wired: true, account: true },
-              { name: "Wise",       wired: false }],
+              { name: "Wise",       key: "wise", account: true },
+              { name: "HubSpot",    key: "hubspot", account: true }],
   },
   loose: {
     head: "Drop in files", sub: "A one-off set of documents that does not live in a connected drive.",
@@ -1200,9 +1201,9 @@ function stageProviders(groupKey, p) {
       + `border:1px solid currentColor;border-radius:3px;font-size:11px;font-weight:500">`
       + `${escape(o.name[0])}</span>`
       + `<span class="t-name">${escape(o.name)}</span>`
-      + `<span class="t-sub">${o.wired ? "ready" : "not connected yet"}</span>`;
+      + `<span class="t-sub">${o.wired || o.key ? "ready" : "not connected yet"}</span>`;
     b.addEventListener("click", () =>
-      o.wired ? stageScope(groupKey, o) : stageNotWired(stage, o));
+      o.key ? stageKey(groupKey, o) : o.wired ? stageScope(groupKey, o) : stageNotWired(stage, o));
     grid.appendChild(b);
   }
   stage.appendChild(grid);
@@ -1219,6 +1220,68 @@ function stageNotWired(stage, o) {
     + `pretends it is. Providers get added when a customer needs one — say the word and it gets `
     + `built, rather than sitting on a roadmap.`;
   stage.appendChild(n);
+}
+
+// CONNECT BY KEY (seat connect-systems, 2026-10-11). Wise and HubSpot offer a small business no sign-in page the
+// Tool can use, so the owner creates a read-only key in the system's own settings and pastes it here. system-read
+// tests it against the system first; only a key the system accepts is kept, in this brain's own vault. The field is
+// cleared the moment it is sent and the key is never shown again. The brain refuses anyone but the owner.
+const SYSTEM_READ_URL = `${SUPABASE_URL}/functions/v1/system-read`;
+const KEY_HOW = {
+  wise: "In Wise, signed in to the business, open Settings, then API tokens, create a token with Read only access, and copy it.",
+  hubspot: "In HubSpot, open Settings, then Integrations, then Private apps. Create one with read access to contacts, companies, deals and notes, and copy its access token.",
+};
+function stageKey(groupKey, o) {
+  const stage = $("#connect-stage");
+  stage.innerHTML = "";
+  $("#connect-head").textContent = `Connect ${o.name}`;
+  $("#connect-sub").textContent = "";
+  const n = el("div", "notice flagged");
+  n.innerHTML = `<b>${escape(o.name)} has no per-person boundary.</b> A key opens the whole account, so only you `
+    + `connect it and only your questions read it. The Tool only reads; it never changes anything in ${escape(o.name)}.`;
+  const how = el("p", "quiet");
+  how.textContent = KEY_HOW[o.key] ?? "";
+  const form = el("form", "");
+  form.innerHTML = `<label for="key-in"><b>Paste the key</b></label>`
+    + `<input id="key-in" type="password" autocomplete="off" spellcheck="false" required `
+    + `style="display:block;margin-top:.5rem;width:100%;max-width:28rem;font:inherit;padding:.6rem;`
+    + `border:1px solid currentColor;border-radius:6px;background:none;color:inherit">`
+    + `<div class="actions"><button class="go" type="submit">Connect</button></div>`;
+  const out = el("div", "");
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const input = form.querySelector("#key-in");
+    const key = input.value.trim();
+    input.value = "";
+    const btn = form.querySelector("button[type=submit]");
+    btn.disabled = true; btn.textContent = "Checking the key";
+    try {
+      const { data } = await sb.auth.getSession();
+      const jwt = data?.session?.access_token;
+      if (!jwt) throw new Error("you are not signed in on this browser");
+      const r = await fetch(SYSTEM_READ_URL, { method: "POST",
+        headers: { Authorization: `Bearer ${jwt}`, apikey: PUBLISHABLE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "connect", kind: o.key, key }) });
+      const body = await r.json().catch(() => null);
+      out.innerHTML = "";
+      const msg = el("div", body?.ok ? "notice" : "notice flagged");
+      msg.textContent = body?.ok
+        ? `${o.name} is connected. Ask the box about it in your own words.`
+        : `Not connected: ${body?.reason ?? body?.error ?? "no reason was given"} Nothing was kept.`;
+      out.appendChild(msg);
+      if (body?.ok) await refreshBrain();
+    } catch (e) {
+      out.innerHTML = "";
+      const msg = el("div", "notice flagged");
+      msg.textContent = `Not connected: ${e?.message ?? e}. Nothing was kept.`;
+      out.appendChild(msg);
+    } finally { btn.disabled = false; btn.textContent = "Connect"; }
+  });
+  const back = el("button", "go ghost");
+  back.type = "button"; back.textContent = "Back";
+  back.addEventListener("click", () => stageProviders(groupKey, PICKERS[groupKey]));
+  stage.append(n, how, form, out, back);
+  form.querySelector("#key-in").focus();
 }
 
 // The account-shaped truth is told at the moment it applies, not in a policy page.
@@ -1594,6 +1657,12 @@ function inlineInto(parent, text) {
       if (inner === "g") {
         flush(); spaceBefore(parent);
         const m = el("span", "cite-g"); m.textContent = "(general knowledge)"; m.title = "From general knowledge, not from your records";
+        parent.appendChild(m); i = j + 1; continue;
+      }
+      // [b2] (lens-ask v22): a figure read live from QuickBooks when she asked. Drawn as words, like [g].
+      if (inner[0] === "b" && inner.length > 1 && inner.length <= 3 && String(Number(inner.slice(1))) === inner.slice(1)) {
+        flush(); spaceBefore(parent);
+        const m = el("span", "cite-g"); m.textContent = "(QuickBooks)"; m.title = "Read live from your books when you asked";
         parent.appendChild(m); i = j + 1; continue;
       }
       const n = inner.slice(1);
