@@ -176,7 +176,7 @@ function build(host) {
   const cn = el("details", "chats-way");
   cn.appendChild(el("summary", null, "Connect your own Claude"));
   const cnHost = el("div"); cnHost.id = "chats-connector";
-  cnHost.appendChild(el("p", "quiet", "Save a chat to the Tool from inside Claude. Being set up."));
+  drawConnector(cnHost);
   cn.appendChild(cnHost);
   host.appendChild(cn);
 
@@ -189,6 +189,39 @@ function build(host) {
   const list = el("div"); list.id = "chats-mine";
   const viewer = el("div"); viewer.id = "chats-view";
   host.append(search, list, viewer);
+}
+
+// ---- connect your own Claude (seat chat-connector, 2026-10-10) ------------------------------------
+// The address she pastes into her own Claude, three steps, and her own status. Status comes from
+// connector_status(), which answers only about the caller: chatbots she approved (the sign-in system's own
+// record) and her last save from one. Whether chatbot sign-in is switched on at all is read from the sign-in
+// system's public discovery document, so the panel never claims a step that cannot work yet.
+const CONNECTOR_URL = "https://uvdoompnnypmneyrvtas.supabase.co/functions/v1/connector-mcp";
+async function drawConnector(host) {
+  host.innerHTML = "";
+  host.appendChild(el("p", null, "Add HireKraft to your own Claude, then say “save this to HireKraft” in any chat to keep it here, private to you, or “ask HireKraft” to get an answer from what you can see."));
+  const addr = el("div"); addr.style.display = "flex"; addr.style.gap = "8px"; addr.style.alignItems = "center";
+  const code = el("code", null, CONNECTOR_URL); code.style.wordBreak = "break-all";
+  const copy = el("button", "go ghost", "Copy"); copy.type = "button";
+  copy.addEventListener("click", async () => { try { await navigator.clipboard.writeText(CONNECTOR_URL); copy.textContent = "Copied"; } catch (e) { copy.textContent = "Select and copy it"; } });
+  addr.append(code, copy); host.appendChild(addr);
+  const ol = el("ol");
+  for (const s of ["In your Claude: Settings, Connectors, Add custom connector. Paste the address above.",
+    "Claude opens a HireKraft page. Sign in with your usual emailed code and press Allow.",
+    "In any chat, say “save this to HireKraft”. It appears below, marked “from your Claude”."]) ol.appendChild(el("li", null, s));
+  host.appendChild(ol);
+  host.appendChild(el("p", "quiet", "On a Claude Team or Enterprise seat, only the workspace owner can add it; you then press Connect. Saves from a chatbot are marked condensed, because the chatbot chooses what to pass. ChatGPT can ask on a Pro plan; saving from ChatGPT needs a Business or Enterprise workspace with developer mode on."));
+  const st = el("p", "quiet", "Checking your connection."); host.appendChild(st);
+  let on = null;
+  try { const d = await fetch("https://uvdoompnnypmneyrvtas.supabase.co/.well-known/oauth-authorization-server/auth/v1"); on = d.ok; } catch (e) { on = null; }
+  if (on === false) { said(st, "Not switched on yet: the sign-in step for chatbots is waiting to be turned on. Adding the address now will not connect.", true); return; }
+  const r = await rpc("connector_status", {});
+  if (!r?.ok) { said(st, "Your connection could not be shown: " + (r?.note || "no reason was given") + ".", true); return; }
+  const parts = [];
+  if (!r.connections.length) parts.push(on === null ? "No chatbot connected (whether chatbot sign-in is on could not be checked)." : "No chatbot connected yet.");
+  else parts.push(r.connections.map((c) => `${c.client} connected since ${day(c.since)}`).join("; ") + ".");
+  parts.push(r.last_save ? `Last saved from a chatbot ${day(r.last_save)} (${r.saves} so far).` : "Nothing saved from a chatbot yet.");
+  said(st, parts.join(" "));
 }
 
 async function openExport(file, pick, pickSaid) {
