@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tool — Connect your chatbot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,-apple-system,"Segoe UI",sans-serif;background:#faf9f7;color:#1a1b1d;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;line-height:1.5}
+  .card{width:100%;max-width:440px}
+  .mark{font-family:Fraunces,Georgia,serif;font-size:30px;font-weight:500;letter-spacing:-.01em}
+  .mark small{display:block;font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.14em;
+    text-transform:uppercase;color:#a9aab0;margin-top:6px;font-weight:400}
+  h1{font-size:19px;font-weight:600;margin:26px 0 10px}
+  p{color:#56585e;font-size:14.5px;margin-bottom:12px}
+  ul{margin:4px 0 18px 18px;color:#1a1b1d;font-size:14.5px}
+  li{margin-bottom:6px}
+  .as{font-size:12.5px;color:#8a8d93;margin-bottom:18px}
+  .btns{display:flex;gap:10px;margin-top:8px}
+  button{flex:1;padding:13px 15px;font:inherit;font-size:15px;font-weight:500;border:0;border-radius:9px;cursor:pointer}
+  .yes{background:#1a1b1d;color:#fff}
+  .no{background:#fff;color:#1a1b1d;border:1px solid #e2ded6}
+  button:disabled{opacity:.45;cursor:default}
+  .msg{margin-top:18px;padding:13px 15px;border-radius:9px;font-size:13.5px;display:none}
+  .msg.on{display:block}
+  .msg.err{background:#f9ecea;color:#96342d;border:1px solid #eed4d0}
+  .msg.info{background:#eef2f8;color:#2c5a92;border:1px solid #dbe5f2}
+  @media (prefers-color-scheme: dark){
+    body{background:#151618;color:#ecebe8}
+    p,.as{color:#a9aab0} ul{color:#ecebe8}
+    .yes{background:#ecebe8;color:#151618} .no{background:#1f2023;color:#ecebe8;border-color:#34353a}
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="mark">Tool<small>hirekraft</small></div>
+  <div id="ask" hidden>
+    <h1 id="title">Connect your chatbot</h1>
+    <p>It will work as you in HireKraft. It can:</p>
+    <ul>
+      <li>save a chat you choose, private to you until you share it from the Chats tab;</li>
+      <li>ask the company a question and get the answer from what you are allowed to see, nothing more.</li>
+    </ul>
+    <p class="as" id="as"></p>
+    <div class="btns">
+      <button class="no" id="deny">Don't allow</button>
+      <button class="yes" id="allow">Allow</button>
+    </div>
+    <p class="as" style="margin-top:16px">You can disconnect it at any time in your chatbot's settings.</p>
+  </div>
+  <div class="msg" id="msg"></div>
+</div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// THE CONSENT PAGE FOR A PERSON'S OWN CHATBOT (seat chat-connector, 2026-10-10).
+// The brain's own sign-in system acts as the OAuth server for the connector (connector-mcp). When a
+// chatbot asks to connect, the sign-in system sends the person here with an authorization_id. This
+// page decides nothing about access: it makes sure she is signed in with her usual code, shows what
+// the chatbot will be able to do, and passes her Allow or Don't allow back to the sign-in system,
+// which then returns her to the chatbot. Someone signed in but not one of the company's people is
+// refused here with the reason, and the chatbot is told no.
+
+const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
+const PUBLISHABLE_KEY = "sb_publishable_joP87JJiePfN3k1uPoxxVA_DLGT1zv5";
+const sb = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
+  auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true, flowType: "pkce" },
+});
+
+const $ = (id) => document.getElementById(id);
+const say = (kind, t) => { const m = $("msg"); m.className = "msg on " + kind; m.textContent = t; };
+const id = new URLSearchParams(location.search).get("authorization_id");
+
+async function go(decide) {
+  $("allow").disabled = true; $("deny").disabled = true;
+  say("info", decide ? "Connecting." : "Telling your chatbot no.");
+  const r = decide ? await sb.auth.oauth.approveAuthorization(id) : await sb.auth.oauth.denyAuthorization(id);
+  if (r.error || !r.data || !r.data.redirect_url) {
+    say("err", "That did not go through: " + ((r.error && r.error.message) || "no address to return to") + ". Nothing was connected.");
+    return;
+  }
+  location.href = r.data.redirect_url;
+}
+
+async function start() {
+  if (!id) { say("err", "This page is opened by your chatbot when it connects to HireKraft. Start from your chatbot's connector settings."); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    location.href = "../login/?next=" + encodeURIComponent("connect/?authorization_id=" + id);
+    return;
+  }
+  const prof = await sb.rpc("my_profile");
+  if (prof.error || !prof.data) {
+    say("err", "You are signed in as " + session.user.email + ", but that sign-in is not one of the company's people in HireKraft, so nothing can be connected.");
+    const d = await sb.auth.oauth.denyAuthorization(id);
+    if (d.data && d.data.redirect_url) setTimeout(() => { location.href = d.data.redirect_url; }, 4000);
+    return;
+  }
+  const det = await sb.auth.oauth.getAuthorizationDetails(id);
+  if (det.error || !det.data) { say("err", "This connection request could not be read: " + ((det.error && det.error.message) || "unknown") + ". Start again from your chatbot."); return; }
+  if (!det.data.authorization_id && det.data.redirect_url) { location.href = det.data.redirect_url; return; }
+  const name = (det.data.client && det.data.client.name) || "Your chatbot";
+  $("title").textContent = name + " wants to connect to HireKraft";
+  $("as").textContent = "Signed in as " + session.user.email + ".";
+  $("ask").hidden = false;
+  $("allow").addEventListener("click", () => go(true));
+  $("deny").addEventListener("click", () => go(false));
+}
+start();
+</script>
+</body>
+</html>
