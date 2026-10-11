@@ -14,7 +14,7 @@ import { onBrainChange } from "../doorbell.js";
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints } from "./mail.js?v=2026-10-08-onebox";
 import { initBox, drawBox } from "./box.js?v=2026-10-08-refusal";
 import { attachOutputs } from "./outputs.js?v=2026-10-10-outputs";
-import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-10-panel"; import { initChats, loadChats } from "./chats.js?v=2026-10-10-connector"; // Chats tab (seat chat-import)
+import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-10-panel"; import { initChats, loadChats } from "./chats.js?v=2026-10-10-connector2"; // Chats tab (seat chat-import)
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
