@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-10-10-outputs">
+<link rel="stylesheet" href="skin.css?v=2026-10-10-panel">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -252,9 +252,44 @@
        is read from a brain function that refuses anyone else with a reason; the tab is hidden for
        everyone else as a courtesy, not as the guard. Who sees what lived on the Brain tab until
        2026-10-08 (seat who-sees-what) and moved here; s-access now routes to this section. -->
+  <!-- 2026-10-10 (seat security-panel, Alex: "more like an instrument panel than just a lot of writing"):
+       gauges first, then openings by place, the who-sees-what grid, conflicts and the live strip, one line
+       each saying what it is. The file-by-file findings list (sec-audit) is retired from this tab; a single
+       file is reached by asking the box. What is connected and the owner's own rules sit one click down. -->
   <section class="step" id="s-security" hidden>
     <p class="eyebrow">Security and admin</p>
-    <h2>Who can see what in your business, and who tried to see more.</h2>
+    <h2>Who can see what in your business.</h2>
+    <p class="quiet">Only you, as the owner, see this tab. Each number opens its part.</p>
+    <div id="sec-gauges" aria-live="polite"></div>
+
+    <h3 style="margin-top:2.5rem">Openings</h3>
+    <p class="quiet">Each line is a folder or drive open beyond the people it was shared with, worst first. Mark it on purpose, or close it in Google.</p>
+    <div id="sec-openings" aria-live="polite"></div>
+
+    <h3 style="margin-top:2.5rem">Who sees what</h3>
+    <p class="quiet">People and outside parties down, mailboxes and drives across, and how each one gets in.</p>
+    <div id="sec-grid" aria-live="polite"></div>
+
+    <h3 style="margin-top:2.5rem">Conflicts</h3>
+    <p class="quiet">One person holding two powers that should not sit together.</p>
+    <div id="sec-conflicts" aria-live="polite"></div>
+
+    <h3 style="margin-top:2.5rem">Live</h3>
+    <p class="quiet">Questions refused, emails sent from the Tool, and the Tool's own checks every 15 minutes.</p>
+    <div id="sec-watch" aria-live="polite"></div>
+    <div id="sec-sends" aria-live="polite"></div>
+    <div id="sec-door" aria-live="polite"></div>
+
+    <div id="sec-how" style="margin-top:2.5rem"></div>
+
+    <details class="recs">
+      <summary class="recs-sum">What is connected, and your own rules for who sees what in the Tool</summary>
+      <p class="quiet">Where a source can tell the Tool who may see what, each person sees only what their own account opens. You can keep more from anyone; nothing changes until you have seen what it would change, and every change can be undone.</p>
+      <div id="sec-connected" aria-live="polite"></div>
+      <div id="access" aria-live="polite"></div>
+    </details>
+  </section>
+  <template id="sec-retired-2026-10-10">
     <p class="quiet">This tab shows what the Tool reads, who may see each part of it, what is more
       open than you probably meant, and anyone who asked the Tool for something they are not
       allowed to see. Only you, as the owner, see this tab.</p>
@@ -292,8 +327,7 @@
     <h3 style="margin-top:2.5rem">The Tool's own checks</h3>
     <p class="quiet">Every 15 minutes the Tool tests its own lock: that people are let into what
       they may open and kept out of what they may not. Anything failing is listed first.</p>
-    <div id="sec-door" aria-live="polite"></div>
-  </section>
+  </template>
 
   <!-- 8. WORK. Laid out the way every AI chat is (Alex 2026-10-08, seat work-chat): the convention
        millions already know, in the Tool's own look; no other product's name, mark or colours.
@@ -392,6 +426,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-10-outputs"></script>
+<script type="module" src="lens.js?v=2026-10-10-panel"></script>
 </body>
 </html>
