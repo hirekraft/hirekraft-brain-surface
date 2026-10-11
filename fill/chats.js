@@ -213,7 +213,13 @@ async function drawConnector(host) {
   host.appendChild(el("p", "quiet", "On a Claude Team or Enterprise seat, only the workspace owner can add it; you then press Connect. Saves from a chatbot are marked condensed, because the chatbot chooses what to pass. ChatGPT can ask on a Pro plan; saving from ChatGPT needs a Business or Enterprise workspace with developer mode on."));
   const st = el("p", "quiet", "Checking your connection."); host.appendChild(st);
   let on = null;
-  try { const d = await fetch("https://uvdoompnnypmneyrvtas.supabase.co/.well-known/oauth-authorization-server/auth/v1"); on = d.ok; } catch (e) { on = null; }
+  // The sign-in system's OpenID document lists a registration endpoint only once chatbot sign-in is on.
+  // Read this one, not the oauth-authorization-server path: on 2026-10-10 the latter failed to fetch from
+  // outside after switch-on while this one answered (seat chat-connector). A failed fetch is unknown, never off.
+  try {
+    const d = await fetch("https://uvdoompnnypmneyrvtas.supabase.co/auth/v1/.well-known/openid-configuration");
+    if (d.ok) { const j = await d.json(); on = !!(j && j.registration_endpoint); } else if (d.status === 404) on = false;
+  } catch (e) { on = null; }
   if (on === false) { said(st, "Not switched on yet: the sign-in step for chatbots is waiting to be turned on. Adding the address now will not connect.", true); return; }
   const r = await rpc("connector_status", {});
   if (!r?.ok) { said(st, "Your connection could not be shown: " + (r?.note || "no reason was given") + ".", true); return; }
