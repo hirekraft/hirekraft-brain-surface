@@ -14,6 +14,7 @@ import { onBrainChange } from "../doorbell.js";
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints } from "./mail.js?v=2026-10-08-onebox";
 import { initBox, drawBox } from "./box.js?v=2026-10-08-refusal";
 import { attachOutputs } from "./outputs.js?v=2026-10-10-outputs";
+import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-10-panel";
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
@@ -2548,14 +2549,16 @@ async function personDetail(p, mount) {
   mount.append(acts, slot);
 }
 
-// -- SECURITY AND ADMIN (seat security-tab, Alex 2026-10-08) --
+// -- SECURITY AND ADMIN (seat security-tab, Alex 2026-10-08; panel by seat security-panel, 2026-10-10) --
 // Capabilities "Know who can see what, and what is more open than I meant" and "I decide who in my
 // company sees what". Every part is read from a brain function that refuses anyone but the owner with
-// a reason (audit_latest, refusal_watch, access_people, security_watch_extras). This screen decides
+// a reason (audit_panel, refusal_watch, access_people, security_watch_extras). This screen decides
 // nothing about access and computes no finding. Empty is said in words, never left blank; a part that
 // cannot be read says so and why, and the other parts still draw.
-const SEV_WORD = { critical: "Most serious", high: "Serious", medium: "Worth a look", low: "Minor" };
-const SEV_TONE = { critical: "tone-red", high: "tone-amber", medium: "tone-plain", low: "tone-plain" };
+// SUPERSEDED 2026-10-10 (Alex, on screen: "really not workable... I have to see WHERE they are"): the
+// findings list drawn from audit_latest, which listed files one by one, is retired from this tab. The
+// panel (gauges, openings by place, the grid, conflicts) is drawn by security.js. audit_latest still
+// answers "how secure is my business?" in the box.
 
 function secNote(mount, text, flagged) {
   const n = el("p", flagged ? "notice flagged" : "quiet"); n.textContent = text; mount.appendChild(n); return n;
@@ -2605,53 +2608,6 @@ function drawSecConnected() {
   if (ul.childElementCount) mount.appendChild(ul);
   else secNote(mount, "Nothing is connected yet, so the Tool reads nothing and shows nothing to anyone.");
   if (off.length) secNote(mount, `Not connected: ${off.join(", ")}.`);
-}
-
-function drawSecAudit(v) {
-  const mount = $("#sec-audit"); mount.innerHTML = "";
-  if (!v?.ok) { secRefused(mount, v, "The security check"); return; }
-  mount.appendChild(secLine("a-detail", `Last checked ${fmtWindow(v.run_at)}. ${(v.limits ?? [])[0] ?? ""}`));
-  const lines = v.lines ?? [];
-  if (lines.length) {
-    const ul = el("ul", "attn");
-    for (const l of lines) {
-      const li = el("li");
-      li.appendChild(secState(SEV_TONE[l.severity] ?? "tone-plain", SEV_WORD[l.severity] ?? l.severity));
-      li.appendChild(secLine("a-title", l.text));
-      if (l.why) li.appendChild(secLine("a-detail", `Why it matters: ${l.why}`));
-      if (l.fix) li.appendChild(secLine("a-detail", `How to fix it: ${l.fix}`));
-      ul.appendChild(li);
-    }
-    mount.appendChild(ul);
-    if (Number(v.serious_not_listed) > 0) secNote(mount, `${countOf(v.serious_not_listed)} more serious findings are not listed here, to keep this short. They are the same kinds as the ones above, and the same fixes apply.`);
-  } else {
-    secNote(mount, v.status === "finished" ? "Nothing serious was found."
-      : "Nothing serious was found in the part that was read. This check did not read everything, so this is not an all-clear.");
-  }
-  const grouped = v.grouped ?? [];
-  if (grouped.length) {
-    const h = el("p", "a-detail"); const b = el("b"); b.textContent = "Less serious, grouped"; h.appendChild(b); mount.appendChild(h);
-    const ul = el("ul", "attn");
-    for (const g of grouped) {
-      const li = el("li");
-      li.appendChild(secLine("a-title", `${countOf(g.count)} found: ${g.title}`));
-      if ((g.examples ?? []).length) li.appendChild(secLine("a-detail", `For example: ${g.examples.join(", ")}.`));
-      if (g.why) li.appendChild(secLine("a-detail", `Why it matters: ${g.why}`));
-      if (g.fix) li.appendChild(secLine("a-detail", `How to fix it: ${g.fix}`));
-      ul.appendChild(li);
-    }
-    mount.appendChild(ul);
-  }
-  if (v.cannot_check_line) secNote(mount, `What could not be checked: ${v.cannot_check_line}`);
-  const rest = (v.limits ?? []).slice(1);
-  if (rest.length) {
-    const d = el("details", "recs");
-    const s = el("summary", "recs-sum"); s.textContent = "What this check cannot see"; d.appendChild(s);
-    const ul = el("ul", "ans-list");
-    for (const r of rest) { const li = el("li"); li.textContent = r; ul.appendChild(li); }
-    d.appendChild(ul); mount.appendChild(d);
-  }
-  secNote(mount, "Starting the check again from this tab is not built yet.");
 }
 
 function drawSecWatch(v) {
@@ -2717,15 +2673,15 @@ function secFailed(id, what) {
 function secBusy(id, text) { const m = $(id); if (m && !m.childElementCount) secNote(m, text); }
 
 async function loadSecurity() {
+  initPanel({ sb, zone, el, $, countOf });
   drawSecConnected();
   loadAccess();
-  secBusy("#sec-audit", "Reading the latest security check.");
   secBusy("#sec-watch", "Reading refused attempts.");
   secBusy("#sec-sends", "Reading the send record.");
   secBusy("#sec-door", "Reading the Tool's own checks.");
-  secCall("audit_latest").then(drawSecAudit).catch(secFailed("#sec-audit", "The security check"));
-  secCall("refusal_watch", { p_tz: zone() }).then(drawSecWatch).catch(secFailed("#sec-watch", "Refused attempts"));
-  secCall("security_watch_extras", { p_tz: zone() }).then(drawSecExtras).catch((e) => {
+  loadPanel();
+  secCall("refusal_watch", { p_tz: zone() }).then((v) => { setLive("refused", v); drawSecWatch(v); }).catch(secFailed("#sec-watch", "Refused attempts"));
+  secCall("security_watch_extras", { p_tz: zone() }).then((v) => { setLive("door", v); drawSecExtras(v); }).catch((e) => {
     secFailed("#sec-sends", "The send record")(e); secFailed("#sec-door", "The Tool's own checks")(e);
   });
 }
