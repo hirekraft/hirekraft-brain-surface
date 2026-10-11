@@ -298,9 +298,13 @@ function fillTree(sel = "#tree", pfx = "") {
       const ok   = rows.filter((r) => r.state === "ready").length;
       const unread = rows.filter((r) => r.state === 'unread').length;
       const failed = rows.filter((r) => r.state === 'failed').length;
+      // 'gaps' (seat drive-coverage 2026-10-11): Google holds files the Tool has not seen or read.
+      // Without this line a drive that is not fully read was counted nowhere in the summary.
+      const gaps = rows.filter((r) => r.state === 'gaps').length;
       alive = [busy ? `${busy} reading now` : null,
                unread ? `${unread} not read yet` : null,
                failed ? `${failed} stopped` : null,
+               gaps ? `${gaps} not fully read` : null,
                ok ? `${ok} up to date` : null,
                need ? `${need} need you` : null]
               .filter(Boolean).join(", ") || "none chosen yet";
