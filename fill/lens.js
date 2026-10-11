@@ -1232,8 +1232,8 @@ function stageNotWired(stage, o) {
 // cleared the moment it is sent and the key is never shown again. The brain refuses anyone but the owner.
 const SYSTEM_READ_URL = `${SUPABASE_URL}/functions/v1/system-read`;
 const KEY_HOW = {
-  wise: "In Wise, signed in to the business, open Settings, then API tokens, create a token with Read only access, and copy it.",
-  hubspot: "In HubSpot, open Settings, then Integrations, then Private apps. Create one with read access to contacts, companies, deals and notes, and copy its access token.",
+  wise: "In Wise, signed in to the business account, open Your Account, then Integrations and Tools, then API tokens. Choose Add new token, set it to Read only, and copy it (Wise shows it once).",
+  hubspot: "In HubSpot (as a super admin), open Development and create a service key with read access to CRM contacts, companies and deals, then copy it. An access token from a private app under Development, Legacy apps works too.",
 };
 function stageKey(groupKey, o) {
   const stage = $("#connect-stage");
