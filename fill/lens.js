@@ -511,6 +511,13 @@ function driveLine(s) {
 function systemLine(m, group) {
   const wrap = el('div', 'state tone-plain');
   let text;
+  // A brain that predates this line sends no last_read at all (undefined, not null). Then the older health
+  // words stand, rather than claiming "not read yet" about a system that was read.
+  if (!('last_read' in m)) {
+    wrap.className = `state ${HEALTH_CLASS[m.health] ?? ''}`;
+    wrap.innerHTML = `<span class="dot"></span>${HEALTH[m.health] ?? escape(m.health)}`;
+    return wrap;
+  }
   if (m.mechanism === 'imported') {
     const brought = `brought in on ${fmtDay(m.last_read) ?? 'a date not recorded'}`;
     const live = m.superseded_by && (group.members ?? []).find((x) => x.target === m.superseded_by);
