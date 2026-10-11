@@ -80,7 +80,9 @@ const PICKERS = {
     head: "Which system?", sub: "These are reached at the moment you ask, not copied.",
     options: [{ name: "QuickBooks", type: "qbo", wired: true, account: true },
               { name: "Wise",       key: "wise", account: true },
-              { name: "HubSpot",    key: "hubspot", account: true }],
+              { name: "HubSpot",    key: "hubspot", account: true },
+              { name: "CATS",       key: "cats", account: true },
+              { name: "Mercury",    key: "mercury", account: true }],
   },
   loose: {
     head: "Drop in files", sub: "A one-off set of documents that does not live in a connected drive.",
@@ -1234,6 +1236,8 @@ const SYSTEM_READ_URL = `${SUPABASE_URL}/functions/v1/system-read`;
 const KEY_HOW = {
   wise: "In Wise, signed in to the business account, open Your Account, then Integrations and Tools, then API tokens. Choose Add new token, set it to Read only, and copy it (Wise shows it once).",
   hubspot: "In HubSpot (as a super admin), open Development and create a service key with read access to CRM contacts, companies and deals, then copy it. An access token from a private app under Development, Legacy apps works too.",
+  cats: "In CATS, open Settings, then Administration, then API Keys, create a key named Verrandi (read only if CATS offers it), and copy it. The Tool only ever reads from CATS.",
+  mercury: "In Mercury, open Settings, then API Tokens, create a token with Read Only access, and copy it. If Mercury asks for allowed IP addresses, say so here: the Tool cannot use a token tied to fixed addresses.",
 };
 function stageKey(groupKey, o) {
   const stage = $("#connect-stage");
