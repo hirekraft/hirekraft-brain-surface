@@ -1663,10 +1663,11 @@ function inlineInto(parent, text) {
         const m = el("span", "cite-g"); m.textContent = "(general knowledge)"; m.title = "From general knowledge, not from your records";
         parent.appendChild(m); i = j + 1; continue;
       }
-      // [b2] (lens-ask v22): a figure read live from QuickBooks when she asked. Drawn as words, like [g].
+      // [b2] (lens-ask v22/v23): a figure read live from a connected system (QuickBooks, Wise, HubSpot) when she
+      // asked; which system is named in the first line under the answer. Drawn as words, like [g].
       if (inner[0] === "b" && inner.length > 1 && inner.length <= 3 && String(Number(inner.slice(1))) === inner.slice(1)) {
         flush(); spaceBefore(parent);
-        const m = el("span", "cite-g"); m.textContent = "(QuickBooks)"; m.title = "Read live from your books when you asked";
+        const m = el("span", "cite-g"); m.textContent = "(read live)"; m.title = "Read live from a connected system when you asked; the line under the answer names it";
         parent.appendChild(m); i = j + 1; continue;
       }
       const n = inner.slice(1);
