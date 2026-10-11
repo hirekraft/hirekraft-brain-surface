@@ -189,6 +189,12 @@ async function render() {
   const bound = !!r.profile;
   // An unbound login reaches nothing, so offering it doors would be a lie in link form.
   nav.className = bound ? "nav on" : "nav";
+  // RETURN TO WHERE SHE CAME FROM (seat chat-connector, 2026-10-10): the consent page for a person's
+  // own chatbot sends her here with ?next=connect/... when she is not signed in. Only a path inside
+  // this site is followed (no scheme, no leading slash, no parent step), so this cannot be used to
+  // send anyone elsewhere.
+  const next = new URLSearchParams(location.search).get("next") || "";
+  if (bound && next && !next.includes(":") && !next.startsWith("/") && !next.includes("..")) { location.href = "../" + next; return; }
   let html = "";
   html += row("Signed in as", r.session.user.email);
   html += row("Auth user (JWT sub)", r.session.user.id);
@@ -218,7 +224,7 @@ $("send").addEventListener("click", async () => {
   say("info", "Sending&hellip;");
   const { error } = await sb.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: window.location.href.split("#")[0].split("?")[0] },
+    options: { emailRedirectTo: window.location.href.split("#")[0] },
   });
   $("send").disabled = false;
   if (error) { say("err", error.message); return; }
