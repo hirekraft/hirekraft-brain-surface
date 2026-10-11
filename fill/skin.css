@@ -996,3 +996,24 @@ body { padding-bottom: var(--gap-lg); }
 .out-btn:disabled { color: var(--ink-4); cursor: default; background: var(--paper-2); }
 .out-said { margin-top: var(--u); font-size: var(--t-micro); color: var(--ink-3); }
 .out-said:empty { display: none; }
+
+/* SECURITY PANEL (seat security-panel, Alex 2026-10-10: "more like an instrument panel"). A row of gauges, each a
+   number and a few words that open their part; the who-sees-what grid scrolls inside its own box so the page never
+   scrolls sideways. --accent marks a gauge that needs her, as everywhere else. */
+.sp-gauges { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: calc(var(--u) * 2); margin: var(--gap) 0 var(--u); }
+.sp-gauge { font: inherit; text-align: left; background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+  padding: calc(var(--u) * 2) calc(var(--u) * 3); cursor: pointer; color: var(--ink-2); }
+.sp-gauge:hover { background: var(--act-soft); border-color: var(--act); }
+.sp-gauge.sp-red { border-color: var(--accent); }
+.sp-gauge .sp-n { font-size: 1.75rem; font-weight: var(--w-strong); color: var(--ink); margin: 0; line-height: 1.1; }
+.sp-gauge.sp-red .sp-n { color: var(--accent); }
+.sp-gauge .sp-w { font-size: var(--t-micro); margin: 4px 0 0; color: var(--ink-3); }
+.sp-gauge .sp-s { font-size: var(--t-micro); margin: 2px 0 0; color: var(--ink-4); }
+.sp-acts { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); margin-top: var(--u); align-items: center; }
+.sp-crit { margin-top: var(--u); padding-left: calc(var(--u) * 3); border-left: 2px solid var(--line); }
+.sp-grid-wrap { overflow-x: auto; max-width: 100%; border: 1px solid var(--line-2); border-radius: 8px; margin-top: var(--u); }
+.sp-grid { border-collapse: collapse; font-size: var(--t-micro); min-width: 100%; }
+.sp-grid th, .sp-grid td { padding: 6px 10px; border-bottom: 1px solid var(--line-2); text-align: left; vertical-align: top; white-space: nowrap; }
+.sp-grid thead th { color: var(--ink-3); font-weight: var(--w-mid); background: var(--paper-2); }
+.sp-grid tbody th { color: var(--ink); font-weight: var(--w-mid); position: sticky; left: 0; background: var(--paper); }
+.sp-grid tr.sp-wide th { color: var(--accent); }
