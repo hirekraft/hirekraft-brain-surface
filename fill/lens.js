@@ -14,7 +14,7 @@ import { onBrainChange } from "../doorbell.js";
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints } from "./mail.js?v=2026-10-08-onebox";
 import { initBox, drawBox } from "./box.js?v=2026-10-08-refusal";
 import { attachOutputs } from "./outputs.js?v=2026-10-10-outputs";
-import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-10-panel";
+import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-10-panel"; import { initChats, loadChats } from "./chats.js?v=2026-10-10-chats"; // Chats tab (seat chat-import)
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
@@ -2726,8 +2726,8 @@ function goto(id, key) {
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
   workDock(id === 's-work');
   mailDock(id === 's-lens' && lensKey === 'email');
-  if (id === 's-work') loadWork();
-  markTab(id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : 'brain');
+  if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); }
+  markTab(id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-chats' ? 'chats' : 'brain');
   drawBox();
 }
 
@@ -2736,7 +2736,7 @@ function goto(id, key) {
 // the Brain tab's own list shows for that source, drawn by the same drawMembers, or
 // one line saying it is not connected and pointing to Brain. No lens features here:
 // each tab is fleshed out later, one at a time.
-const TABS = [{ key: 'brain', label: 'Brain' }, { key: 'work', label: 'Work' },
+const TABS = [{ key: 'brain', label: 'Brain' }, { key: 'work', label: 'Work' }, { key: 'chats', label: 'Chats' },
   // Owner only, after Work (seat security-tab, Alex 2026-10-08). Shown once the reading says she is an owner.
   { key: 'security', label: 'Security', owner: true },
   ...GROUPS.map((g) => ({ key: g.key, label: g.key === 'email' ? 'Mail' : g.label }))];
@@ -2761,7 +2761,7 @@ function drawTabs() {
     b.addEventListener('click', () => {
       userMoved = true;
       if (t.key === 'brain') goto('s-summary'); else if (t.key === 'work') goto('s-work');
-      else if (t.key === 'security') goto('s-security'); else goto('s-lens', t.key);
+      else if (t.key === 'security') goto('s-security'); else if (t.key === 'chats') goto('s-chats'); else goto('s-lens', t.key);
     });
     nav.appendChild(b);
   }
