@@ -411,8 +411,10 @@ function drawMembers(key, body, pfx = "") {
     const btn = el("button", "member");
     btn.type = "button";
 
-    const from = fmtWindow(m.window_from);
-    const win = from
+    // A system's own line below says when it was connected and last asked. The date window here read a
+    // chunk span a live-read system never has, hence "no dates recorded" (seat systems-list, 2026-10-11).
+    const from = key === 'systems' ? null : fmtWindow(m.window_from);
+    const win = key === 'systems' ? '' : from
       ? `from ${from} &rarr; now`
       : `<span class="state unread">${m.health === 'never' ? 'nothing read yet' : 'no dates recorded for this source'}</span>`;
     const grants = m.grants && m.grants > 1 ? ` &middot; reachable by ${m.grants} people` : "";
@@ -443,7 +445,7 @@ function drawMembers(key, body, pfx = "") {
           : m.opens;
         return;
       }
-      drawPlaceholder(li, m, data);
+      drawConnectOffer(li, m, data);
     });
     li.appendChild(btn);
 
@@ -467,6 +469,8 @@ function drawMembers(key, body, pfx = "") {
       st.innerHTML = `<span class="dot"></span>Its state could not be read just now `
         + `(${escape(mbxError)}), so this line is not a claim either way.`;
       li.appendChild(st);
+    } else if (key === 'systems') {
+      li.appendChild(systemLine(m, data));
     } else {
       const st = el("div", `state ${HEALTH_CLASS[m.health] ?? ""}`);
       st.innerHTML = `<span class="dot"></span>${HEALTH[m.health] ?? m.health}`
@@ -498,6 +502,33 @@ function driveLine(s) {
     + (s.detail ? ` &middot; ${escape(s.detail)}` : "");
   if (s.action === "sign_in") wrap.appendChild(signInAgainControl(s));
   if (s.action === "resume")  wrap.appendChild(resumeControl(s));
+  return wrap;
+}
+
+// One system, one line (seat systems-list, 2026-10-11). An import says it was brought in and is not updated,
+// in grey and never red: it has no schedule, so it cannot be behind one. A connected system says when it was
+// connected and when it was last asked. Built from facts brain_shape carries; nothing here is guessed.
+function systemLine(m, group) {
+  const wrap = el('div', 'state tone-plain');
+  let text;
+  if (m.mechanism === 'imported') {
+    const brought = `brought in on ${fmtDay(m.last_read) ?? 'a date not recorded'}`;
+    const live = m.superseded_by && (group.members ?? []).find((x) => x.target === m.superseded_by);
+    text = live
+      ? `Older copy, ${brought}; ${escape(live.name)} is now read directly`
+      : `Brought in on ${fmtDay(m.last_read) ?? 'a date not recorded'}, not updated since`;
+    if (m.items) text += ` &middot; ${Number(m.items).toLocaleString()} pieces held`;
+  } else if (m.health === 'refused' || m.health === 'unconnected') {
+    wrap.className = `state ${HEALTH_CLASS[m.health]}`;
+    text = HEALTH[m.health];
+  } else {
+    const since = m.connected_at ? `Connected ${fmtDay(m.connected_at)}` : 'Connected';
+    if (m.last_read) wrap.className = 'state live';
+    text = m.last_read
+      ? `${since}, read when you ask, last asked ${fmtWindow(m.last_read)}`
+      : `${since}, not read yet`;
+  }
+  wrap.innerHTML = `<span class="dot"></span><span class="s-head">${text}</span>`;
   return wrap;
 }
 
@@ -565,15 +596,16 @@ function mailboxLine(mb) {
   return wrap;
 }
 
-// Level 3 — wired, and honest that the room is not built yet.
-function drawPlaceholder(li, m, group) {
+// A row that is not connected opens the way to connect it, and nothing else.
+// RETIRED 2026-10-11 (seat systems-list, HQ 7's brief from Alex's screenshot): the grey box "This is where the
+// <figures/files> for X will live. Reading and acting on them is a separate build." It was false by then (drive
+// files and systems are read), it served drives as well as systems, and it is removed, not hidden. Nothing
+// replaces it: a row's own line says what is true. Clicking a connected row without a lens does nothing.
+function drawConnectOffer(li, m, group) {
   const open = $(".placeholder", li);
   if (open) { open.remove(); return; }
 
   const box = el("div", "placeholder");
-  const what = group.key === "email"   ? "inbox"
-             : group.key === "drives"  ? "files"
-             : group.key === "systems" ? "figures" : "records";
 
   // A row that says "not connected" has to carry the way to connect it. Describing a
   // room that will exist later, to someone who opened that row to open the door, is
@@ -593,17 +625,7 @@ function drawPlaceholder(li, m, group) {
     go.addEventListener("click", (ev) => { ev.stopPropagation(); openConnect(group.key); });
     box.appendChild(go);
     li.appendChild(box);
-    return;
   }
-
-  box.innerHTML =
-    `<h3>This is where the ${what} for ${escape(m.name)} will live.</h3>` +
-    `<p class="quiet">Reading and acting on ${what} is a separate build. The way in is wired now, `
-    + `so it opens here when it lands, and nothing else about this screen changes.</p>`
-    + (m.items
-        ? `<p class="quiet">The brain currently holds ${m.items.toLocaleString()} pieces from this source.</p>`
-        : `<p class="quiet">The brain holds nothing from this source yet.</p>`);
-  li.appendChild(box);
 }
 
 // ── recognition: describe what is seen, name what is not. Never rank. ───────
