@@ -970,3 +970,29 @@ body { padding-bottom: var(--gap-lg); }
 .mailx-files { list-style: none; padding: 0 calc(var(--u) * 4) var(--gap); margin: 0; font-size: var(--t-small); }
 .mailx-files li + li { margin-top: var(--u); }
 .mailx-files a { color: var(--act); }
+
+/* ── OUTPUTS (seat work-outputs, 2026-10-10): the chart under an answer, and its file buttons. The chart's
+   colours are the action colour and three quiet companions; healthy is still silent. ── */
+.out-chart { margin: var(--gap) 0 0; max-width: 720px; }
+.out-chart svg { display: block; width: 100%; height: auto; }
+.out-title { fill: var(--ink); font-family: var(--font); }
+.out-axis { fill: var(--ink-4); font-family: var(--font); }
+.out-grid { stroke: var(--line-2); }
+.out-bar.out-s0, .out-dot.out-s0 { fill: var(--act); }
+.out-bar.out-s1, .out-dot.out-s1 { fill: #b8401a; }
+.out-bar.out-s2, .out-dot.out-s2 { fill: #2f7d4f; }
+.out-bar.out-s3, .out-dot.out-s3 { fill: #7a4fb5; }
+.out-line.out-s0 { stroke: var(--act); }
+.out-line.out-s1 { stroke: #b8401a; }
+.out-line.out-s2 { stroke: #2f7d4f; }
+.out-line.out-s3 { stroke: #7a4fb5; }
+.out-bar:hover, .out-dot:hover { opacity: 0.8; }
+.out-note { margin-top: var(--u); font-size: var(--t-micro); color: var(--ink-4); }
+.out-wrap { margin-top: var(--gap); }
+.out-row { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); }
+.out-btn { font: inherit; font-size: var(--t-micro); color: var(--act); background: var(--paper); border: 1px solid var(--line);
+  border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+.out-btn:hover { background: var(--act-soft); }
+.out-btn:disabled { color: var(--ink-4); cursor: default; background: var(--paper-2); }
+.out-said { margin-top: var(--u); font-size: var(--t-micro); color: var(--ink-3); }
+.out-said:empty { display: none; }
