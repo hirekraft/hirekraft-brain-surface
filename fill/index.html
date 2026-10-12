@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-10-12-talk">
+<link rel="stylesheet" href="skin.css?v=2026-10-12-panel">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -60,8 +60,8 @@
     <div class="onebox-bar">
       <span class="onebox-chips" id="onebox-chips"></span>
       <input id="ask-input" type="text" autocomplete="off" enterkeyhint="go"
-             aria-label="Find an email, ask anything, or say what to do"
-             placeholder="Find an email, ask anything, or say what to do">
+             aria-label="Ask or tell the Tool anything"
+             placeholder="Ask or tell the Tool anything">
       <!-- Speak instead of typing, and have answers read aloud (seat talk-to-the-tool, 2026-10-12; box.js). -->
       <button class="onebox-icon" id="ask-speak" type="button" aria-pressed="false" aria-label="Read answers aloud: off" title="Read answers aloud: off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg></button>
       <button class="onebox-icon onebox-mic" id="ask-mic" type="button" aria-pressed="false" aria-label="Speak instead of typing" title="Speak instead of typing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2z"/></svg></button>
@@ -300,20 +300,20 @@
     </details>
   </section>
 
-  <!-- 8. WORK. Laid out the way every AI chat is (Alex 2026-10-08, seat work-chat): the convention
-       millions already know, in the Tool's own look; no other product's name, mark or colours.
-       Sidebar: New chat, search, Projects, Pinned, then chats by day. Middle: the conversation,
-       and under it the one box, MOVED here from the top while this tab is open and moved back on
-       leaving (workDock in lens.js), so there is still one conversation and one box. -->
+  <!-- 8. WORK: THE LIST OF CONVERSATIONS (seat conversation-panel, Alex 2026-10-12: "in order to actually
+       continue, I have to go to the work tab... It's just not right"). Search, Projects, Pinned, then chats by
+       day. Opening one reopens it in the conversation panel on the right, on whatever tab she is on.
+       SUPERSEDES the 2026-10-08 Work layout (seat work-chat) in which the conversation and the one box were
+       moved into this tab's middle column (workDock): retired, so there is one place a conversation is shown. -->
   <section class='step work' id='s-work' hidden>
-    <aside class='work-side' aria-label='Your chats'>
+    <aside class='work-side' aria-label='Your conversations'>
       <div class='work-top'>
-        <button class='work-fold' id='work-fold' type='button' aria-expanded='true' aria-label='Hide your chats'>Hide</button>
-        <button class='go work-newchat' id='work-new' type='button'>New chat</button>
+        <h2 class='work-title'>Conversations</h2>
+        <button class='go work-newchat' id='work-new' type='button'>New conversation</button>
       </div>
       <div class='work-list' id='work-list'>
         <input class='work-search' id='work-search' type='search' autocomplete='off'
-               placeholder='Search your chats' aria-label='Search your chats'>
+               placeholder='Search your conversations' aria-label='Search your conversations'>
         <div class='work-head'><h3>Projects</h3>
           <button class='work-add' id='work-project-new' type='button' aria-label='New project'>New project</button></div>
         <ul class='work-chats' id='work-projects'></ul>
@@ -324,13 +324,6 @@
     </aside>
     <div class='work-main'>
       <div id='work-project-view' hidden></div>
-      <div id='work-convo'>
-        <div class='work-hello' id='work-hello'>
-          <h2>What are we working on?</h2>
-          <p class='quiet'>Ask about anything in your mail, files and books. Click the box below for examples from your own business.</p>
-        </div>
-      </div>
-      <div class='work-box' id='work-box'></div>
     </div>
   </section>
 
@@ -368,58 +361,49 @@
 
 </main>
 
-<!-- ── The dock. It reports what this surface DOES - a source resumed, a mailbox
-     adopted, a sign-in declined - and nothing else.
-
-     THE QUESTION BOX CAME BACK ON 2026-09-10, WIRED THIS TIME.
-     It was removed on 2026-09-09 because it called nothing: it answered from a
-     list of canned client-side strings, and nothing on screen said so. It was
-     found by reading the code rather than by anyone watching it fail, which is
-     the worst way for it to have been found, because it means it had been read
-     as working.
-
-     WHAT IT CALLS NOW: lens-ask, with the signed-in person's own token. That
-     function derives who is asking from the token, refuses an asserted identity,
-     and returns ONE OF FOUR STATES. It carries an `answer` field in exactly one
-     of them. So this screen cannot render retrieval as an answer - not because
-     it is instructed not to, but because in the other three states there is no
-     such field to render.
-
-     THE ANSWER LANDS IN THE CONVERSATION, under the question that asked it (Alex,
-     2026-10-06). The question box itself moved to the top of every tab on 2026-10-08 (seat
-     one-box, Alex that day: the bottom bar was "almost not visible"); the dock now holds only
-     the conversation and is hidden while there is none.
-
-     TWO RULES RIDE WITH THE PLACEMENT, both still in force:
-       - Nothing may open a paragraph in the log above the bar on load. That is
-         what pushed the bar under an explanation and made it read as chrome.
-       - Offered questions are built from what is actually connected, and NEVER
-         include a question the system cannot answer. One failure teaches the
-         customer the box is decoration, permanently - and this surface has now
-         spent that credit once already. They come from ask_openers(), which
-         counts THIS caller's own readable records and returns nothing when
-         nothing clears the floor. No question on this screen is written here. ── -->
-<div class="dock" id="dock">
-  <div class="dock-in">
+<!-- THE CONVERSATION PANEL (seat conversation-panel, Alex 2026-10-12, approved picture "Tool conversation
+     panel"). One conversation, where she asked, that she controls: on the right, the tab still visible on the
+     left; Put away leaves a tab on the right edge named after the conversation, which brings it back as it
+     was; Full screen widens it over the tab; on a phone it is the whole screen. No state needs a refresh.
+     SUPERSEDES the bottom dock (2026-09-27, "the bottom half is the chat"), which had no close, shrink or
+     expand and grew over the tab until the page was reloaded. The dock's written rationale is removed here.
+     STILL IN FORCE: the answer is drawn only by renderAsk and asked only by ask() (lens.js), and lens-ask's
+     state decides what is an answer; this screen cannot render retrieval as one. Not a .step, so the step
+     router never hides it: the conversation survives every tab change. -->
+<aside class="panel" id="panel" aria-label="Conversation" hidden>
+  <div class="panel-handle" id="panel-handle" aria-hidden="true"><span></span></div>
+  <div class="panel-head">
+    <h2 class="panel-title" id="panel-title">New conversation</h2>
+    <button class="panel-btn" id="panel-new" type="button" aria-label="New conversation" title="New conversation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="panel-btn panel-wide" id="panel-full" type="button" aria-pressed="false" aria-label="Full screen" title="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="panel-btn" id="panel-away" type="button" aria-label="Put away" title="Put away (Esc)"><svg class="panel-x" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><svg class="panel-down" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+  </div>
+  <div class="panel-body" id="panel-body">
+    <p class="panel-empty quiet">Ask or tell the Tool anything, here or in the box at the top. Your conversations are kept in Work.</p>
+    <!-- What this screen itself did (a source resumed, a mailbox adopted), said in the conversation. -->
     <div class="dock-log" id="dock-log"><div class="dock-log-in" id="dock-turns"></div></div>
-
-    <!-- THE CONVERSATION LIVES IN THE DOCK, moved here 2026-09-27 at Alex's
-         instruction that the bottom half is the chat and it is the working half.
-         It previously sat at the top of main, which put the place you type and
-         the place the answer lands at opposite ends of the page.
-         Still not a .step, so the step router never hides it: the conversation
-         survives everything else that is clicked. -->
     <section class="answer" id="s-answer" hidden aria-live="polite">
       <div class="answer-in" id="answer-in"></div>
     </section>
   </div>
-</div>
+  <div class="panel-foot">
+    <div class="onebox-bar panel-box">
+      <input id="panel-input" type="text" autocomplete="off" enterkeyhint="go"
+             aria-label="Ask a follow-up" placeholder="Ask a follow-up">
+      <button class="onebox-icon onebox-mic" id="panel-mic" type="button" aria-pressed="false" aria-label="Speak instead of typing" title="Speak instead of typing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2z"/></svg></button>
+      <button class="send" id="panel-send" type="button">Go</button>
+    </div>
+    <p class="onebox-mic-said" id="panel-mic-said" role="status" aria-live="polite" hidden></p>
+  </div>
+</aside>
+<!-- Put away: a tab on the right edge, named after the conversation; it reopens it exactly as it was. -->
+<button class="panel-tab" id="panel-tab" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span id="panel-tab-name"></span></button>
 
 <!-- The version token is not decoration. Pages reported a successful build while
      browsers kept running the previous lens.js, so a change could be live and
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-12-profile-talk-runway-slack-mic-kept-ledger"></script>
+<script type="module" src="lens.js?v=2026-10-12-panel"></script>
 </body>
 </html>
