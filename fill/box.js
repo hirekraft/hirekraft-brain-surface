@@ -15,8 +15,11 @@
 // four seconds longer and comes back as an answer with the emails in it. Chosen deliberately: one place
 // decides, and nothing guesses from the first word. If a find must be instant again, the place is lens-ask
 // (decide first, then search live), not word rules here.
-// WHERE IT LANDS: on Mail, about the open email (the "about this email" chip), or Mail's own reading column;
-// everywhere else, the one conversation (lens.js ask).
+// WHERE IT LANDS: on Mail, about the open email (the "about this email" chip), with that email; everything else,
+// on every tab, the one conversation in the panel on the right (lens.js ask). Mail's own conversation about no
+// one email is retired (seat conversation-panel, 2026-10-12): it was a second place a conversation was shown.
+// TWO BOXES, ONE PATH (seat conversation-panel): the box at the top and the follow-up box at the foot of the
+// panel go through the same submit and share one microphone; only the top one shows examples and chips.
 // THE ONE EXCEPTION is a mailbox she names as a mailbox ("open accounting@"): that opens it, so a mailbox kept
 // from her goes to the door and is refused there, recorded, and said (seat refusal-wire). A pointer, not a guess.
 // No pattern here carries a backslash (the repository write tool mangles them; STANDING-CLAUSES).
@@ -37,7 +40,7 @@
 let C = null;
 const off = { mailbox: null, email: null };   // which chip she removed, by what it named
 
-const DEFAULT_PH = 'Ask anything, find an email, or say what to do';
+const DEFAULT_PH = 'Ask or tell the Tool anything';
 // Used only to read a mailbox she names ("open accounting@"), never to decide what she means.
 const FIND_FIRST = ['find', 'search', 'locate', 'show', 'pull', 'open', 'get'];
 
@@ -73,8 +76,8 @@ export function drawBox() {
   host.innerHTML = '';
   if (sc.mailbox) host.appendChild(chip('in ' + sc.mailbox.address, () => { off.mailbox = sc.mailbox.key; }));
   if (sc.email) host.appendChild(chip('about this email', () => { off.email = sc.raw.threadKey; }));
-  input.placeholder = C.placeholder() || (sc.email ? 'Ask about this email, have it answered, or find another'
-    : DEFAULT_PH);
+  input.placeholder = sc.email ? 'Ask about this email, have it answered, or find another'
+    : C.continuing && C.continuing() ? 'Continue the conversation on the right, or press New there' : DEFAULT_PH;
 }
 
 function firstName(n) {
@@ -137,14 +140,15 @@ function showTips(on) {
   tips.hidden = false;
 }
 
-function submit(text) {
+function submit(text, fromPanel) {
   const t = String(text || '').trim();
   if (!t) return;
   stopSpeaking();
   const sc = scope();
   const named = sc.mailbox ? null : namedMailbox(t);
   if (named) { find(t, named); return; }
-  if (sc.onMail && C.askFromMailBar(t, !sc.email)) return;
+  // A follow-up typed in the panel always continues the panel's conversation.
+  if (!fromPanel && sc.email && C.askFromMailBar(t)) return;
   C.ask(t);
 }
 
@@ -188,6 +192,12 @@ export function initBox(ctx) {
   const input = $('#ask-input'), send = $('#ask-send');
   if (!input || !send) return;
   const go = () => { const v = input.value; input.value = ''; showTips(false); submit(v); };
+  const pin = $('#panel-input'), psend = $('#panel-send');
+  if (pin && psend) {
+    const pgo = () => { const v = pin.value; pin.value = ''; submit(v, true); };
+    psend.addEventListener('click', pgo);
+    pin.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); pgo(); } stopSpeaking(); });
+  }
   send.addEventListener('click', go);
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); go(); }
@@ -214,9 +224,12 @@ const CAN_RECORD = typeof window !== 'undefined' && !!(navigator.mediaDevices &&
 const WAY = SR ? 'live' : CAN_RECORD ? 'record' : 'none';
 const MAX_RECORD_MS = 120000;
 let mic = { on: false, rec: null, media: null, chunks: [], stream: null, timer: null, base: '' };
+// Which box the microphone is writing into: the top box or the panel's follow-up box.
+const MICS = [{ btn: '#ask-mic', input: '#ask-input', said: '#onebox-mic-said' }, { btn: '#panel-mic', input: '#panel-input', said: '#panel-mic-said' }];
+let at = MICS[0];
 
 function micSaid(text, tone) {
-  const p = $('#onebox-mic-said');
+  const p = $(at.said);
   if (!p) return;
   p.textContent = text || '';
   p.className = 'onebox-mic-said' + (tone ? ' ' + tone : '');
@@ -224,7 +237,7 @@ function micSaid(text, tone) {
 }
 
 function micLook(state) {
-  const b = $('#ask-mic');
+  const b = $(at.btn);
   if (!b) return;
   b.dataset.state = state;
   b.setAttribute('aria-pressed', state === 'listening' || state === 'recording' ? 'true' : 'false');
@@ -236,16 +249,21 @@ function micLook(state) {
 }
 
 function wireMic() {
-  const b = $('#ask-mic');
-  if (!b) return;
-  micLook('idle');
-  b.addEventListener('click', () => {
-    stopSpeaking();
-    if (mic.on) { stopMic(); return; }
-    if (WAY === 'live' && !liveFailed) startLive();
-    else if (CAN_RECORD) startRecord();
-    else micSaid('This browser cannot listen. Type your question, or open the Tool in Chrome, Edge or Safari, on a computer or your phone, to speak it.', 'stalled');
-  });
+  for (const m of MICS) {
+    const b = $(m.btn);
+    if (!b) continue;
+    const was = at; at = m; micLook('idle'); at = was;
+    b.addEventListener('click', () => pressMic(m));
+  }
+}
+
+function pressMic(m) {
+  stopSpeaking();
+  if (mic.on) { if (m === at) stopMic(); return; }
+  micSaid('', ''); at = m;
+  if (WAY === 'live' && !liveFailed) startLive();
+  else if (CAN_RECORD) startRecord();
+  else micSaid('This browser cannot listen. Type your question, or open the Tool in Chrome, Edge or Safari, on a computer or your phone, to speak it.', 'stalled');
 }
 
 function stopMic() {
@@ -256,7 +274,7 @@ function stopMic() {
 }
 
 function startLive() {
-  const input = $('#ask-input');
+  const input = $(at.input);
   let rec;
   try { rec = new SR(); } catch (e) { micSaid('The microphone could not start: ' + String((e && e.message) || e), 'stalled'); return; }
   rec.lang = navigator.language || 'en-US';
@@ -338,7 +356,7 @@ async function startRecord() {
   }
   let media;
   try { media = new MediaRecorder(stream); } catch (e) { stream.getTracks().forEach((t) => t.stop()); micSaid('This browser cannot record: ' + String((e && e.message) || e), 'stalled'); return; }
-  mic = { on: true, rec: null, media, chunks: [], stream, timer: null, base: $('#ask-input').value.trim() };
+  mic = { on: true, rec: null, media, chunks: [], stream, timer: null, base: $(at.input).value.trim() };
   media.ondataavailable = (ev) => { if (ev.data && ev.data.size) mic.chunks.push(ev.data); };
   media.onstop = () => { stream.getTracks().forEach((t) => t.stop()); mic.on = false; writeDown(mic.chunks, media.mimeType || 'audio/webm', mic.base); };
   media.start();
@@ -348,7 +366,7 @@ async function startRecord() {
 }
 
 async function writeDown(chunks, mime, base) {
-  const input = $('#ask-input');
+  const input = $(at.input);
   if (!chunks.length) { micLook('idle'); micSaid('Nothing was recorded. Press the microphone and speak again.', ''); return; }
   micLook('writing');
   micSaid('Writing down what you said.', 'live');
