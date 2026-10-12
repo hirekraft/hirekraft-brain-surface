@@ -3016,7 +3016,13 @@ function routeOnState(mode) {
   // the strength of a request that never came back.
   if (mode === "unknown") { goto("s-summary"); return; }
   const connected = (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
-  goto(connected > 0 ? "s-summary" : "s-intro");
+  if (!connected) { goto("s-intro"); return; }
+  // THE TAB SHE USED LAST, in this browser; Mail the first time (seat conversation-panel, Alex 2026-10-12).
+  // An owner-only tab remembered by someone who is not the owner falls back to Mail.
+  let last = null;
+  try { last = localStorage.getItem(TAB_KEY); } catch (_) { /* storage off: Mail */ }
+  const t = TABS.find((x) => x.key === last && (!x.owner || shape?.viewer?.all_access));
+  goTab(t ? t.key : 'email');
 }
 
 // THE BRAIN TAB SHOWS CONNECTING AND WHAT IS CONNECTED TOGETHER (Alex, 2026-10-02,
@@ -3039,7 +3045,10 @@ function goto(id, key) {
     import("./ledger.js?v=2026-10-12-ledger").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
   if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); }
-  markTab(id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : 'brain');
+  const tabNow = id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : 'brain';
+  markTab(tabNow);
+  // Remembered so the Tool opens where she was (seat conversation-panel); first-run screens are not tabs.
+  if (!['s-intro', 's-kinds'].includes(id)) { try { localStorage.setItem(TAB_KEY, tabNow); } catch (_) { /* this page only */ } }
   drawBox();
 }
 
@@ -3048,12 +3057,19 @@ function goto(id, key) {
 // the Brain tab's own list shows for that source, drawn by the same drawMembers, or
 // one line saying it is not connected and pointing to Brain. No lens features here:
 // each tab is fleshed out later, one at a time.
-const TABS = [{ key: 'brain', label: 'Brain' }, { key: 'work', label: 'Work' }, { key: 'chats', label: 'Chats' },
-  // Owner only, after Work (seat security-tab, Alex 2026-10-08). Shown once the reading says she is an owner.
-  { key: 'security', label: 'Security', owner: true },
-  // Owner only (seat runway, Alex 2026-10-10: "more tabs for now"). Books are the owner's.
-  { key: 'money', label: 'Money', owner: true },
-  ...GROUPS.map((g) => ({ key: g.key, label: g.key === 'email' ? 'Mail' : g.label }))];
+// ORDER (seat conversation-panel, Alex 2026-10-12): the daily tabs first (Mail, Work, Money, Drives, Calendar,
+// Contacts), then Brain, Chats, Security, Systems, Loose files. Owner-only tabs are shown once the reading says
+// she is an owner (Security: seat security-tab, 2026-10-08; Money: seat runway, 2026-10-10).
+const GROUP_TAB = (k, label) => ({ key: k, label: label ?? GROUPS.find((g) => g.key === k).label });
+const TABS = [GROUP_TAB('email', 'Mail'), { key: 'work', label: 'Work' }, { key: 'money', label: 'Money', owner: true },
+  GROUP_TAB('drives', 'Drives'), GROUP_TAB('calendar'), GROUP_TAB('contacts'),
+  { key: 'brain', label: 'Brain' }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
+  GROUP_TAB('systems'), GROUP_TAB('loose')];
+const TAB_KEY = 'tool.tab';
+function goTab(key) {
+  if (key === 'brain') goto('s-summary'); else if (key === 'work') goto('s-work');
+  else if (key === 'security') goto('s-security'); else if (key === 'money') goto('s-money'); else if (key === 'chats') goto('s-chats'); else goto('s-lens', key);
+}
 
 function markTab(key) {
   document.querySelectorAll('#tabs .tab').forEach((b) => {
@@ -3072,14 +3088,9 @@ function drawTabs() {
     b.dataset.tab = t.key;
     b.textContent = t.label;
     if (t.owner) b.hidden = !shape?.viewer?.all_access;
-    b.addEventListener('click', () => {
-      userMoved = true;
-      if (t.key === 'brain') goto('s-summary'); else if (t.key === 'work') goto('s-work');
-      else if (t.key === 'security') goto('s-security'); else if (t.key === 'money') goto('s-money'); else if (t.key === 'chats') goto('s-chats'); else goto('s-lens', t.key);
-    });
+    b.addEventListener('click', () => { userMoved = true; goTab(t.key); });
     nav.appendChild(b);
   }
-  markTab('brain');
 }
 
 function drawLens() {
