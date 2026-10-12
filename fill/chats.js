@@ -276,14 +276,26 @@ async function openExport(file, pick, pickSaid) {
   const kn = await call({ action: "known", came_from: cf, refs: parsed.map((c) => c.ref).filter(Boolean) });
   const have = new Set(kn?.ok ? kn.kept : []);
   let already = 0;
+  // ONLY WHAT IS MISSING IS LISTED (Alex 2026-10-11 19:49: "couldn't it just show only what is missing").
+  const keptRows = [];
   boxes.forEach((b) => {
     const c = parsed[Number(b.dataset.i)];
     if (c.ref && have.has(c.ref)) {
       already++; b.checked = false; b.disabled = true;
       const node = pick.querySelector(`[data-mark="${b.dataset.i}"]`);
       if (node) { node.dataset.kept = "1"; node.textContent = "Already in the Tool."; }
+      const li = b.closest("li"); if (li) { li.hidden = true; keptRows.push(li); }
     }
   });
+  if (already) {
+    const line = el("p", "quiet");
+    line.appendChild(document.createTextNode(`${already} chat${already === 1 ? " is" : "s are"} already in the Tool and not listed. `));
+    const sh = el("button", "go ghost", "Show them"); sh.type = "button";
+    sh.addEventListener("click", () => { const show = sh.textContent === "Show them"; keptRows.forEach((li) => { li.hidden = !show; }); sh.textContent = show ? "Hide them" : "Show them"; });
+    line.appendChild(sh);
+    ul.before(line);
+    allB.textContent = "Check all";
+  }
   count();
 
   const items = parsed.slice(0, 600).map((c, i) => ({ i, title: c.title, opening: (c.messages.find((m) => m.role === "person")?.text || "").slice(0, 300) }));
