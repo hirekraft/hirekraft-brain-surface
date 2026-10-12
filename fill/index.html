@@ -166,10 +166,16 @@
 
   <!-- ── 4. RECOGNITION — described from live data, never ranked ── -->
   <section class="step" id="s-recognition" hidden>
-    <p class="eyebrow">What Tool can see so far</p>
-    <h2>This is what is in the memory, described plainly.</h2>
-    <p class="quiet">Read it and tell it where it is wrong. What it cannot see is listed too —
-      those are the next things worth connecting.</p>
+    <p class="eyebrow">Read it back to me</p>
+    <h2>What I think your business is.</h2>
+    <!-- seat know-the-business, 2026-10-12: the profile written by the second pass over the brain, answered
+         statement by statement (profile.js). Owner only; the brain refuses anyone else with a reason.
+         SUPERSEDES the old lede here ("Read it and tell it where it is wrong"), which offered a correction
+         nothing recorded; the correction is now real and stored. What is connected stays below it. -->
+    <p class="quiet">Each line is the Tool's guess from your own records. Say whether it is right, wrong,
+      or put it in your own words; only what you answer is relied on. Only you, as the owner, see this.</p>
+    <div id="profile" aria-live="polite"></div>
+    <h3 style="margin-top:2.5rem">What is connected</h3>
     <ul class="recog" id="recog" aria-live="polite"></ul>
     <div class="actions">
       <button class="go" data-goto="s-summary">This is us</button>
@@ -410,6 +416,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-12-money-slack-askfirst"></script>
+<script type="module" src="lens.js?v=2026-10-12-profile"></script>
 </body>
 </html>
