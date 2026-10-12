@@ -324,6 +324,29 @@
     </div>
   </section>
 
+  <!-- 9b. MONEY (seat runway, Alex 2026-10-10: "how much do we have, how much longer can we go... what subscriptions").
+       Owner only: read from public.money_commitments, which refuses anyone else with a reason; the tab is hidden for
+       everyone else as a courtesy, not as the guard. Filled by money.js. #money-ledger belongs to seat contractor-ledger
+       (where we stand with each contractor); money.js does not draw into it. -->
+  <section class="step" id="s-money" hidden>
+    <p class="eyebrow">Money</p>
+    <h2>How long can we go, and what are we paying for.</h2>
+    <p class="quiet">Only you, as the owner, see this tab. Every figure opens the record it came from.</p>
+
+    <h3 style="margin-top:2.5rem">How long we can go</h3>
+    <div id="money-runway" aria-live="polite"></div>
+
+    <h3 style="margin-top:2.5rem">What we pay for</h3>
+    <p class="quiet">Every company that bills the business regularly, how often, the last charge, the card, and when the next one is due.</p>
+    <div id="money-commitments" aria-live="polite"></div>
+
+    <div id="money-ledger" aria-live="polite"></div>
+
+    <h3 style="margin-top:2.5rem">What was not read</h3>
+    <p class="quiet">What this tab could not use, and how that changes the answer.</p>
+    <div id="money-notread" aria-live="polite"></div>
+  </section>
+
   <!-- 7b. CHATS. Chats brought in from outside chatbots, private by default (seat chat-import 2026-10-10, decision cb1a7115); filled by chats.js. --> <section class='step' id='s-chats' hidden><h2>Chats</h2><div id='chats' aria-live='polite'></div></section> <!-- 7. ONE SOURCE. The tab for Mail, Drives & folders, Calendar, Contacts, Systems
        or Loose files. Seat tool-tabs, 2026-10-02. Very basic on purpose: what is
        connected, or one line pointing to Brain. Mail is the exception: an inbox you can
@@ -387,6 +410,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-11-only-missing"></script>
+<script type="module" src="lens.js?v=2026-10-12-money"></script>
 </body>
 </html>
