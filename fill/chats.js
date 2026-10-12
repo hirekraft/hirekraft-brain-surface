@@ -256,7 +256,17 @@ async function openExport(file, pick, pickSaid) {
   const go = el("button", "go", "Keep the ticked chats"); go.type = "button";
   const count = () => { const n = boxes.filter((b) => b.checked).length; go.textContent = n ? `Keep ${n} ticked chat${n === 1 ? "" : "s"}` : "Keep the ticked chats"; go.disabled = !n; };
   boxes.forEach((b) => b.addEventListener("change", count)); count();
-  pick.append(ul, go);
+  // TICK ALL (Alex 2026-10-11: a long export should not need one click per chat).
+  const marks = new Map();
+  const bar = el("div"); bar.style.display = "flex"; bar.style.gap = "8px"; bar.style.flexWrap = "wrap"; bar.style.margin = "8px 0";
+  const allB = el("button", "go ghost", "Tick all"); allB.type = "button";
+  const bizB = el("button", "go ghost", "Tick business only"); bizB.type = "button";
+  const noneB = el("button", "go ghost", "Untick all"); noneB.type = "button";
+  allB.addEventListener("click", () => { boxes.forEach((b) => { b.checked = true; }); count(); });
+  noneB.addEventListener("click", () => { boxes.forEach((b) => { b.checked = false; }); count(); });
+  bizB.addEventListener("click", () => { boxes.forEach((b) => { b.checked = marks.get(Number(b.dataset.i)) === "business"; }); count(); });
+  bar.append(allB, bizB, noneB);
+  pick.append(bar, ul, go);
   go.addEventListener("click", () => keepTicked(boxes, go, pickSaid));
 
   const items = parsed.slice(0, 600).map((c, i) => ({ i, title: c.title, opening: (c.messages.find((m) => m.role === "person")?.text || "").slice(0, 300) }));
@@ -264,6 +274,7 @@ async function openExport(file, pick, pickSaid) {
   const byI = new Map((r.ok ? r.marks : []).map((m) => [m.i, m]));
   pick.querySelectorAll("[data-mark]").forEach((node) => {
     const m = byI.get(Number(node.dataset.mark));
+    if (m && m.mark) marks.set(Number(node.dataset.mark), m.mark);
     node.textContent = !m ? "Not marked; decide yourself." : m.mark ? `Looks ${m.mark === "business" ? "like business" : "personal"}: ${m.why}` : m.why;
   });
   said(pickSaid, `${parsed.length} chats found. Tick the ones to keep.${r.ok ? "" : " (They could not be marked: " + (r.note || "no reason given") + ")"}`);
