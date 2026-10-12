@@ -313,17 +313,22 @@ async function openExport(file, pick, pickSaid) {
 async function keepTicked(boxes, go, pickSaid) {
   const picks = boxes.filter((b) => b.checked).map((b) => parsed[Number(b.dataset.i)]);
   go.disabled = true;
+  // The working sign beside the button she pressed, with the count and a thin bar (seat conversation-panel).
+  const w = el("p", "working"); const wt = el("span"); const bar = el("span", "working-bar"); const fill = el("span");
+  bar.appendChild(fill); w.append(wt, bar); go.after(w);
   let kept = 0, dup = 0; const failed = [];
   for (let k = 0; k < picks.length; k++) {
     const c = picks[k];
     said(pickSaid, `Keeping ${k + 1} of ${picks.length}.`);
     go.textContent = `Keeping ${k + 1} of ${picks.length}...`;
+    wt.textContent = `Keeping ${k + 1} of ${picks.length}`; fill.style.width = `${Math.round((k / picks.length) * 100)}%`;
     const r = await call({ action: "keep", came_from: c.came_from, title: c.title, started_at: c.started_at, exact: true, origin_ref: c.ref, messages: c.messages });
     if (r.ok && r.duplicate) dup++; else if (r.ok) kept++; else failed.push(`${c.title || "Untitled chat"}: ${r.note || r.reason}`);
   }
   const parts = [`Kept ${kept} chat${kept === 1 ? "" : "s"}, private to you.`];
   if (dup) parts.push(`${dup} ${dup === 1 ? "was" : "were"} already kept.`);
   if (failed.length) parts.push(`${failed.length} not kept: ${failed.join("; ")}`);
+  w.remove();
   said(pickSaid, parts.join(" "), failed.length > 0);
   boxes.forEach((b) => { b.checked = false; });
   go.disabled = true; go.textContent = parts[0];
