@@ -83,7 +83,8 @@ const PICKERS = {
               { name: "Wise",       key: "wise", account: true },
               { name: "HubSpot",    key: "hubspot", account: true },
               { name: "CATS",       key: "cats", account: true },
-              { name: "Mercury",    key: "mercury", account: true }],
+              { name: "Mercury",    key: "mercury", account: true },
+              { name: "Slack",      key: "slack", account: true }],
   },
   loose: {
     head: "Drop in files", sub: "A one-off set of documents that does not live in a connected drive.",
@@ -1269,7 +1270,14 @@ const KEY_HOW = {
   hubspot: "In HubSpot (as a super admin), open Development and create a service key with read access to CRM contacts, companies and deals, then copy it. An access token from a private app under Development, Legacy apps works too.",
   cats: "In CATS, open Settings, then Administration, then API Keys, create a key named Verrandi (read only if CATS offers it), and copy it. The Tool only ever reads from CATS.",
   mercury: "In Mercury, open Settings, then API Tokens, create a token with Read Only access, and copy it. If Mercury asks for allowed IP addresses, say so here: the Tool cannot use a token tied to fixed addresses.",
+  slack: "In a browser signed in to your Slack, open api.slack.com/apps and choose Create New App, then From a manifest. Pick your workspace, paste the text below, and create it. Then choose Install to Workspace and Allow. On the app's OAuth & Permissions page, copy the User OAuth Token (it starts with xoxp-) and paste it here. The app only reads, and only what you yourself can see in Slack.",
 };
+// Slack's internal-app manifest (read-only USER scopes: the token reads exactly what the installing person sees).
+const SLACK_MANIFEST = JSON.stringify({
+  display_information: { name: "Verrandi", description: "Reads your Slack for your own questions in Verrandi. Read only." },
+  oauth_config: { scopes: { user: ["channels:history", "channels:read", "groups:history", "groups:read", "users:read", "users:read.email", "team:read"] } },
+  settings: { org_deploy_enabled: false, socket_mode_enabled: false, token_rotation_enabled: false },
+}, null, 2);
 function stageKey(groupKey, o) {
   const stage = $("#connect-stage");
   stage.innerHTML = "";
@@ -1319,7 +1327,16 @@ function stageKey(groupKey, o) {
   const back = el("button", "go ghost");
   back.type = "button"; back.textContent = "Back";
   back.addEventListener("click", () => stageProviders(groupKey, PICKERS[groupKey]));
-  stage.append(n, how, form, out, back);
+  const extra = [];
+  if (o.key === "slack") {
+    const ta = el("textarea", "");
+    ta.readOnly = true; ta.value = SLACK_MANIFEST; ta.rows = 12;
+    ta.style.cssText = "display:block;width:100%;max-width:28rem;font:12px/1.4 ui-monospace,monospace;padding:.6rem;border:1px solid currentColor;border-radius:6px;background:none;color:inherit";
+    const copy = el("button", "go ghost"); copy.type = "button"; copy.textContent = "Copy the manifest";
+    copy.addEventListener("click", async () => { try { await navigator.clipboard.writeText(SLACK_MANIFEST); copy.textContent = "Copied"; } catch (_) { ta.select(); } });
+    extra.push(ta, copy);
+  }
+  stage.append(n, how, ...extra, form, out, back);
   form.querySelector("#key-in").focus();
 }
 
