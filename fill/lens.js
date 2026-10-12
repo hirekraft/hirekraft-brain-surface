@@ -11,12 +11,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail } from "./mail.js?v=2026-10-12-panel";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail } from "./mail.js?v=2026-10-12-working";
 import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-12-panel";
 import { attachOutputs } from "./outputs.js?v=2026-10-10-outputs";
-import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-10-panel"; import { initChats, loadChats } from "./chats.js?v=2026-10-11-only-missing"; // Chats tab (seat chat-import)
-import { initMoney, loadMoney } from "./money.js?v=2026-10-12-runway"; // Money tab (seat runway)
-import { initProfile, loadProfile } from "./profile.js?v=2026-10-12-profile"; // what the Tool thinks the business is (seat know-the-business)
+import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-12-working"; // Chats tab (seat chat-import)
+import { initMoney, loadMoney } from "./money.js?v=2026-10-12-working"; // Money tab (seat runway)
+import { initProfile, loadProfile } from "./profile.js?v=2026-10-12-working"; // what the Tool thinks the business is (seat know-the-business)
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
@@ -921,8 +921,8 @@ async function stageDrivePicker(accountKey) {
   stage.innerHTML = "";
   rowRedraws = [];
   const said = el("div", "notice");
-  said.innerHTML = `<b>Tick a box to have Tool read that drive or folder. Untick it to stop.</b> `
-    + `Tool reads what is ticked here and nothing else. Building this list needed only `
+  said.innerHTML = `<b>Check a box to have Tool read that drive or folder. Uncheck it to stop.</b> `
+    + `Tool reads what is checked here and nothing else. Building this list needed only `
     + `the names &mdash; no file was opened, and nothing was added to the memory.`;
   stage.appendChild(said);
 
@@ -1546,7 +1546,7 @@ async function lookUpAddress(form, out) {
   }
   if (!MAIL_BY[r.provider]) {
     restore();
-    return askMailProvider(out, address, `Mail for ${where} goes through a service that could not be recognised.`);
+    return askMailProvider(out, address, `Mail for ${where} goes through a service that could not be recognized.`);
   }
   if (!r.supported) {
     restore();
@@ -2403,7 +2403,7 @@ async function ask(question) {
   const turn = el("div", "answer-turn");
   const asked = el("p", "answer-asked"); asked.textContent = q;
   const slot = el("div", "answer-slot");
-  const wait = el("p", "answer-wait"); wait.textContent = "Reading your records.";
+  const wait = el("p", "answer-wait working"); wait.textContent = "Reading your records.";
   slot.appendChild(wait);
   turn.append(asked, slot);
   mount.appendChild(turn);
@@ -2487,7 +2487,7 @@ function rightAnswerText(t) {
   if (Array.isArray(k.names)) return `${k.names.length} named: ${k.names.join(", ")}.${asOf}`;
   if (typeof k.period === 'string') return `The answer says it means ${k.period}.${asOf}`;
   if (Array.isArray(k.state_in)) return `The Tool must reply: ${k.state_in.join(" or ")}.`;
-  return "Stored in a shape this screen does not recognise.";
+  return "Stored in a shape this screen does not recognize.";
 }
 
 function cameBackText(t) {
@@ -3096,7 +3096,7 @@ function goto(id, key) {
   onMail = id === 's-lens' && lensKey === 'email';
   if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney();
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
-    import("./ledger.js?v=2026-10-12-ledger").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
+    import("./ledger.js?v=2026-10-12-working").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
   if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); }
   const tabNow = id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : 'brain';
@@ -3263,8 +3263,9 @@ function newChat(projectId) {
 }
 
 async function openChat(id) {
-  workSaid('Opening.');
+  workSaid('Opening.'); $('#work-said').classList.add('working');
   const { data, error } = await sb.rpc('work_open', { p_chat: id });
+  $('#work-said').classList.remove('working');
   if (error || !data?.ok) { workSaid(error?.message ?? data?.note ?? 'That chat could not be opened.'); return; }
   workSaid('');
   const mount = $('#answer-in'); mount.innerHTML = '';
