@@ -85,11 +85,12 @@ function statement(s) {
   const row = ctx.el('div', 'actions');
   const mk = (label, ghost) => { const b = ctx.el('button', ghost ? 'go ghost' : 'go'); b.type = 'button'; b.textContent = label; row.appendChild(b); return b; };
   const open = s.status === 'guess' || s.status === 'asked_again';
-  const right = mk(open ? 'Right' : 'Still right', false);
+  const right = mk(open ? 'Right' : s.status === 'rejected' ? 'Right after all' : 'Still right', false);
   const wrong = mk('Wrong', true);
   const fix = mk('Correct it', true);
   const btns = [right, wrong, fix];
   right.hidden = s.status === 'confirmed';
+  wrong.hidden = s.status === 'rejected';
   right.addEventListener('click', () => answer(s.id, 'right', null, btns));
   wrong.addEventListener('click', () => answer(s.id, 'wrong', null, btns));
   fix.addEventListener('click', () => {
