@@ -11,8 +11,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints } from "./mail.js?v=2026-10-08-onebox";
-import { initBox, drawBox } from "./box.js?v=2026-10-11-ask-first";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail } from "./mail.js?v=2026-10-12-talk";
+import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-12-talk";
 import { attachOutputs } from "./outputs.js?v=2026-10-10-outputs";
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-10-panel"; import { initChats, loadChats } from "./chats.js?v=2026-10-11-only-missing"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-12-money2"; // Money tab (seat runway)
@@ -2039,6 +2039,79 @@ function openName(name, url) {
   return document.createTextNode(String(name || ""));
 }
 
+// THE EMAILS AN ANSWER RESTS ON (seat talk-to-the-tool, 2026-10-12, Alex 2026-10-11: "whenever I ask the tool
+// anything, it goes back to the email screen"). A find is no longer a jump to Mail decided by the first word:
+// every question goes to the conversation, and when the answer rests on emails, those emails are listed in it,
+// each opening in its own mailbox on Mail. The list is read from the answer's own citations (lens-ask's open
+// links into Gmail carry the mailbox and the email's id), so it shows exactly what the answer used and nothing
+// the screen chose. The sources below still open each one in Gmail.
+const GMAIL_OPEN = "https://mail.google.com/mail/u/";
+function emailsOf(body) {
+  const ev = (Array.isArray(body.citations) && body.citations.length) ? body.citations
+    : (Array.isArray(body.evidence) ? body.evidence : []);
+  const out = [], seen = new Set();
+  for (const e of ev) {
+    const u = String(e?.open_url || "");
+    if (!u.startsWith(GMAIL_OPEN)) continue;
+    const rest = u.slice(GMAIL_OPEN.length);
+    const cut = rest.indexOf("/#all/");
+    if (cut <= 0) continue;
+    let mailbox = "";
+    try { mailbox = decodeURIComponent(rest.slice(0, cut)); } catch (_) { continue; }
+    const id = rest.slice(cut + 6);
+    if (!mailbox.includes("@") || !id || seen.has(mailbox + "|" + id)) continue;
+    seen.add(mailbox + "|" + id);
+    out.push({ key: "gmail:" + mailbox, mailbox, id, title: String(e.doc || ""), snippet: String(e.snippet || "") });
+  }
+  return out;
+}
+const EMAILS_SHOWN = 8;
+function emailList(mails) {
+  const box = el("div", "ans-emails");
+  const h = el("p", "ans-emails-head");
+  h.textContent = mails.length === 1 ? "The email this rests on" : `The ${mails.length} emails this rests on`;
+  box.appendChild(h);
+  const ul = el("ul", "ans-emails-list");
+  for (const m of mails.slice(0, EMAILS_SHOWN)) {
+    const li = el("li");
+    const b = el("button", "ans-email");
+    b.type = "button";
+    b.title = "Open this email";
+    const t = el("span", "ans-email-subj"); t.textContent = m.title || "(no subject)";
+    const w = el("span", "ans-email-box"); w.textContent = m.mailbox;
+    b.append(t, w);
+    const sn = m.snippet.split(String.fromCharCode(10)).map((s) => s.trim()).filter(Boolean).join(" ").slice(0, 140);
+    if (sn) { const s = el("span", "ans-email-snip"); s.textContent = sn; b.appendChild(s); }
+    b.addEventListener("click", () => openFromAnswer(m.key, m.id));
+    li.appendChild(b);
+    ul.appendChild(li);
+  }
+  box.appendChild(ul);
+  if (mails.length > EMAILS_SHOWN) {
+    const p = el("p", "quiet");
+    p.textContent = `${mails.length - EMAILS_SHOWN} more are in the records below.`;
+    box.appendChild(p);
+  }
+  return box;
+}
+// The one move to Mail: she opened an email from an answer.
+function openFromAnswer(key, id) { userMoved = true; goto("s-lens", "email"); openEmail(key, id); }
+
+// HEARING A SPOKEN QUESTION where the browser cannot (box.js microphone, seat talk-to-the-tool): the recording
+// goes to lens-ask, which writes it down and sends back only the words. As the signed-in person, like every ask.
+async function hearSpoken(b64, mime) {
+  const { data } = await sb.auth.getSession();
+  const jwt = data?.session?.access_token;
+  if (!jwt) return { state: "heard_failed", answer: "You are not signed in on this browser, so nothing can be written down. Sign in and try again." };
+  const r = await fetch(ASK_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${jwt}`, apikey: PUBLISHABLE_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ listen: b64, mime_type: mime }),
+  });
+  const j = await r.json().catch(() => null);
+  return j ?? { state: "heard_failed", answer: `The Tool did not answer (${r.status}).` };
+}
+
 // ANSWERS BECOME CHARTS AND FILES (seat work-outputs, 2026-10-10). Every answer drawn anywhere passes here once,
 // so its chart and the PDF / Spreadsheet / Slides buttons come with it, kept answers and the email conversation
 // included. outputs.js builds files in the browser from the body drawn here and sends nothing.
@@ -2098,6 +2171,10 @@ function drawAsk(slot, body) {
     n.textContent = "Not composed because " + body.not_composed_because + ".";
     slot.appendChild(n);
   }
+
+  // 3b. THE EMAILS IT RESTS ON, each opening on Mail (seat talk-to-the-tool). See emailsOf.
+  const mails = emailsOf(body);
+  if (mails.length) slot.appendChild(emailList(mails));
 
   // 4. SOURCES BEHIND A CLICK, with the audit line inside them rather than on the page.
   const ev = (Array.isArray(body.citations) && body.citations.length)
@@ -2196,6 +2273,7 @@ async function ask(question) {
     if (!body) { askProblem(slot, `The brain did not answer (${r.status}). Nothing was changed.`); return; }
     if (body.ok !== true) { askProblem(slot, body.error ?? `The brain refused this (${r.status}).`); return; }
     renderAsk(slot, body);
+    speakAnswer(slot);   // read aloud when she switched it on (box.js); never for a reopened, kept answer
     // Save as test sits on every answer, for the owner (seat save-as-test). lastAsked is still the
     // previous question here, so the form knows when this one was a follow-on.
     if (shape?.viewer?.all_access) slot.appendChild(saveAsTest(q, lastAsked));
@@ -3335,7 +3413,7 @@ initMail({
 });
 // THE ONE BOX (seat one-box, 2026-10-08): what it needs from this page, and nothing it does itself.
 initBox({
-  el, ask,
+  el, ask, hear: hearSpoken,
   // seat refusal-wire, 2026-10-08: who is viewing, and the owner's refused-attempts reader (the brain refuses anyone else).
   viewer: () => shape?.viewer ?? null,
   refusalWatch: async () => {
