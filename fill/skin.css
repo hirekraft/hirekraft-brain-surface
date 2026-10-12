@@ -985,6 +985,35 @@ body { padding-bottom: var(--gap-lg); }
 .sp-grid tbody th { color: var(--ink); font-weight: var(--w-mid); position: sticky; left: 0; background: var(--paper); }
 .sp-grid tr.sp-wide th { color: var(--accent); }
 
+/* COMPACT HEADERS (seat conversation-panel, Alex 2026-10-12): each tab opens with one line of heading and one
+   line of count; the explanation sits behind "What is this?". */
+.tab-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: calc(var(--u) * 1) calc(var(--u) * 4); margin: var(--gap) 0 var(--gap-lg); }
+.tab-top h2, #lens-head { margin: 0; font-size: var(--t-head); }
+.tab-count { margin: 0; font-size: var(--t-small); color: var(--ink-3); }
+.tab-count:empty { display: none; }
+.whatis { flex-basis: 100%; font-size: var(--t-small); }
+.whatis > summary { width: fit-content; cursor: pointer; color: var(--act); list-style: none; }
+.whatis > summary::-webkit-details-marker { display: none; }
+.whatis[open] > summary { margin-bottom: var(--u); }
+.whatis > p { margin: 0; max-width: var(--measure); }
+#lens-head { margin: var(--gap) 0 calc(var(--u) * 3); }
+
+/* ONE STATUS WORD PER LINE (seat conversation-panel, Alex 2026-10-12). Every source, drive and system leads with a
+   short badge; the full sentence opens on click. The word comes from the state the brain decided, never from a
+   color: green only for Up to date. Text on each background passes AA; the four differ in lightness as well as
+   hue (green and orange text are dark, blue mid, grey neutral), and the word itself carries the meaning. */
+.badge { display: inline-flex; align-items: center; flex: none; border-radius: 999px; padding: 1px 9px; font-size: var(--t-micro); font-weight: var(--w-mid); line-height: 1.6; white-space: nowrap; }
+.badge.b-green { background: #e3f1e7; color: #1b5e30; }
+.badge.b-blue { background: var(--act-soft); color: #1a47a8; }
+.badge.b-orange { background: #fbe7de; color: #8f3010; }
+.badge.b-grey { background: var(--paper-2); color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line); }
+.s-badge { display: inline-flex; align-items: baseline; gap: calc(var(--u) * 2); background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.s-badge .s-count { font-size: var(--t-micro); color: var(--ink-3); }
+.s-badge:hover .badge, .s-badge:focus-visible .badge { box-shadow: inset 0 0 0 1px currentColor; }
+.state.badged > .dot, .s-full .dot { display: none; }
+.s-full { display: block; margin-top: 2px; }
+.s-full[hidden] { display: none; }
+
 /* ── THE CONVERSATION PANEL (seat conversation-panel, Alex 2026-10-12; approved picture "Tool conversation
    panel": Open, Put away, Phone). On the right, 460px; on a wide screen the tab reflows into the rest of the
    width, below 1100px it lays over the tab, on a phone it is the whole screen with a handle to pull it down.
