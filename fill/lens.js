@@ -16,6 +16,7 @@ import { initBox, drawBox } from "./box.js?v=2026-10-11-ask-first";
 import { attachOutputs } from "./outputs.js?v=2026-10-10-outputs";
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-10-panel"; import { initChats, loadChats } from "./chats.js?v=2026-10-11-only-missing"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-12-money2"; // Money tab (seat runway)
+import { initProfile, loadProfile } from "./profile.js?v=2026-10-12-profile"; // what the Tool thinks the business is (seat know-the-business)
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
@@ -2853,6 +2854,7 @@ function goto(id, key) {
   workDock(id === 's-work');
   mailDock(id === 's-lens' && lensKey === 'email');
   if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney(); }
+  if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
   if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); }
   markTab(id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : 'brain');
   drawBox();
