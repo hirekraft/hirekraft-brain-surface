@@ -33,7 +33,7 @@ export function setLive(key, value) { live[key] = value; drawGauges(); }
 
 export async function loadPanel() {
   for (const id of ["#sec-gauges", "#sec-openings", "#sec-grid", "#sec-conflicts"]) {
-    const m = ctx.$(id); if (m && !m.childElementCount) note(m, "Reading the latest check.");
+    const m = ctx.$(id); if (m && !m.childElementCount) m.appendChild(line("quiet working", "Reading the latest check."));
   }
   try {
     const { data, error } = await ctx.sb.rpc("audit_panel", { p_tz: ctx.zone() });
@@ -139,7 +139,7 @@ async function mark(p, onPurpose, said) {
 async function showCritical(p, li) {
   const prior = li.querySelector(".sp-crit"); if (prior) { prior.remove(); return; }
   const box = ctx.el("div", "sp-crit"); li.appendChild(box);
-  note(box, "Reading.");
+  box.appendChild(line("quiet working", "Reading."));
   const { data, error } = await ctx.sb.rpc("audit_place_files", { p_place_key: p.key });
   box.innerHTML = "";
   if (error || !data?.ok) { note(box, data?.note ?? (error ? "Could not be read: " + error.message : "Could not be read."), true); return; }
