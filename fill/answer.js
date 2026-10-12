@@ -162,7 +162,7 @@ export function conversation(C, o) {
     if (busy) { said.textContent = 'Still answering the last question; ask again in a moment.'; return; }
     busy = true; quick.disabled = true; said.textContent = '';
     const slot = row(q, !brief);
-    slot.appendChild(mk('p', 'answer-wait', brief ? 'Putting together what the company knows about this email.' : 'Reading your records.'));
+    slot.appendChild(mk('p', 'answer-wait working', brief ? 'Putting together what the company knows about this email.' : 'Reading your records.'));
     if (o.onTurn) o.onTurn();
     slot.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     try {
