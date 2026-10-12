@@ -31,7 +31,7 @@ export async function loadLedger() {
   const m = ctx.$("#money-ledger"); if (!m) return;
   m.innerHTML = "";
   m.appendChild(line("a-title", "Where we stand with each contractor"));
-  note(m, "Reading the books and Wise.");
+  m.appendChild(line("quiet working", "Reading the books and Wise."));
   data = await readLedger();
   draw();
 }
@@ -123,6 +123,6 @@ function draw() {
   const read = (data.read ?? []).map((s) => s.system + ": " + s.what + " (" + ctx.countOf(s.records) + " records" + (s.read_at ? ", " + when(s.read_at) : "") + ")");
   if (read.length) note(mount, "Read live just now: " + read.join("; ") + ".");
   for (const x of data.not_read ?? []) note(mount, "Not read: " + x.what + ". " + x.why);
-  if (data.wise?.cancelled_or_returned) note(mount, ctx.countOf(data.wise.cancelled_or_returned) + " Wise transfers were cancelled or returned and are not counted as paid.");
+  if (data.wise?.cancelled_or_returned) note(mount, ctx.countOf(data.wise.cancelled_or_returned) + " Wise transfers were canceled or returned and are not counted as paid.");
   note(mount, data.months_note + " Ask the box: where are we with a contractor by name?");
 }
