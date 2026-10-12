@@ -950,6 +950,38 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
   color: var(--ink-2); background: none; border: 0; padding: calc(var(--u) * 2) var(--gap); cursor: pointer;
 }
 .onebox-tip:hover, .onebox-tip:focus-visible { background: var(--act-soft); color: var(--ink); }
+/* Speak instead of typing, and read answers aloud (seat talk-to-the-tool, 2026-10-12). Large enough to press on a phone. */
+.onebox-icon {
+  flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 999px; background: none; color: var(--ink-3); cursor: pointer; padding: 0;
+}
+.onebox-icon svg { width: 22px; height: 22px; fill: currentColor; }
+.onebox-icon:hover, .onebox-icon:focus-visible { background: var(--act-soft); color: var(--ink); }
+.onebox-icon[aria-pressed="true"] { color: var(--act); background: var(--act-soft); }
+.onebox-mic[data-state="listening"], .onebox-mic[data-state="recording"] {
+  color: var(--paper); background: var(--act); animation: onebox-pulse 1.4s ease-in-out infinite;
+}
+.onebox-mic[data-state="writing"] { opacity: 0.6; cursor: progress; }
+@keyframes onebox-pulse { 0%, 100% { box-shadow: 0 0 0 0 var(--act-soft); } 50% { box-shadow: 0 0 0 8px var(--act-soft); } }
+@media (prefers-reduced-motion: reduce) { .onebox-mic[data-state] { animation: none; } }
+.onebox-mic-said { margin: var(--u) var(--gap) 0; font-size: var(--t-small); color: var(--ink-3); }
+.onebox-mic-said.live { color: var(--act); }
+.onebox-mic-said.stalled { color: var(--accent); }
+/* The emails an answer rests on, each opening on Mail (lens.js emailList). */
+.ans-emails { margin: calc(var(--u) * 3) 0; max-width: var(--measure); }
+.ans-emails-head { margin: 0 0 var(--u); font-size: var(--t-small); font-weight: var(--w-mid); color: var(--ink-2); }
+.ans-emails-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); }
+.ans-emails-list li + li { border-top: 1px solid var(--line); }
+.ans-email {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px calc(var(--u) * 3); width: 100%;
+  text-align: left; font: inherit; color: var(--ink); background: none; border: 0;
+  padding: calc(var(--u) * 2) calc(var(--u) * 3); cursor: pointer;
+}
+.ans-email:hover, .ans-email:focus-visible { background: var(--act-soft); }
+.ans-email-subj { font-weight: var(--w-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ans-email-box { font-size: var(--t-small); color: var(--ink-4); white-space: nowrap; }
+.ans-email-snip { grid-column: 1 / -1; font-size: var(--t-small); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 520px) { .ans-email { grid-template-columns: minmax(0, 1fr); } }
 .dock:not(.open):not(:has(#s-answer:not([hidden]))) { display: none; }
 body { padding-bottom: var(--gap-lg); }
 
