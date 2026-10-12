@@ -137,7 +137,7 @@ function build(host) {
   const input = el("input"); input.type = "file"; input.accept = ".zip,.json"; input.hidden = true;
   drop.appendChild(input);
   ex.appendChild(drop);
-  ex.appendChild(el("p", "quiet", "Only the chats you tick are kept. The rest never leave your computer. To mark them business or personal, the Tool reads each title and its first lines; nothing of that is kept."));
+  ex.appendChild(el("p", "quiet", "Only the chats you check are kept. Chats already in the Tool are marked and skipped. The rest never leave your computer. To mark them business or personal, the Tool reads each title and its first lines; nothing of that is kept."));
   const pickSaid = el("div"); pickSaid.id = "chats-pick-said";
   const pick = el("div"); pick.id = "chats-pick";
   ex.appendChild(pickSaid); ex.appendChild(pick);
@@ -253,31 +253,50 @@ async function openExport(file, pick, pickSaid) {
     txt.appendChild(mk);
     lab.append(cb, txt); li.appendChild(lab); ul.appendChild(li); boxes.push(cb);
   });
-  const go = el("button", "go", "Keep the ticked chats"); go.type = "button";
-  const count = () => { const n = boxes.filter((b) => b.checked).length; go.textContent = n ? `Keep ${n} ticked chat${n === 1 ? "" : "s"}` : "Keep the ticked chats"; go.disabled = !n; };
+  const go = el("button", "go", "Keep the checked chats"); go.type = "button";
+  const count = () => { const n = boxes.filter((b) => b.checked).length; go.textContent = n ? `Keep ${n} checked chat${n === 1 ? "" : "s"}` : "Keep the checked chats"; go.disabled = !n; };
   boxes.forEach((b) => b.addEventListener("change", count)); count();
-  // TICK ALL (Alex 2026-10-11: a long export should not need one click per chat).
+  // CHECK ALL (Alex 2026-10-11: a long export should not need one click per chat). Only chats not yet in the
+  // Tool can be checked: the Tool says which it already has (chat-import action known), so a second drop of
+  // the same export is Check all, Keep, and only the new ones are sent.
   const marks = new Map();
+  const open = () => boxes.filter((b) => !b.disabled);
   const bar = el("div"); bar.style.display = "flex"; bar.style.gap = "8px"; bar.style.flexWrap = "wrap"; bar.style.margin = "8px 0";
-  const allB = el("button", "go ghost", "Tick all"); allB.type = "button";
-  const bizB = el("button", "go ghost", "Tick business only"); bizB.type = "button";
-  const noneB = el("button", "go ghost", "Untick all"); noneB.type = "button";
-  allB.addEventListener("click", () => { boxes.forEach((b) => { b.checked = true; }); count(); });
+  const allB = el("button", "go ghost", "Check all new"); allB.type = "button";
+  const bizB = el("button", "go ghost", "Check business only"); bizB.type = "button";
+  const noneB = el("button", "go ghost", "Uncheck all"); noneB.type = "button";
+  allB.addEventListener("click", () => { open().forEach((b) => { b.checked = true; }); count(); });
   noneB.addEventListener("click", () => { boxes.forEach((b) => { b.checked = false; }); count(); });
-  bizB.addEventListener("click", () => { boxes.forEach((b) => { b.checked = marks.get(Number(b.dataset.i)) === "business"; }); count(); });
+  bizB.addEventListener("click", () => { open().forEach((b) => { b.checked = marks.get(Number(b.dataset.i)) === "business"; }); count(); });
   bar.append(allB, bizB, noneB);
   pick.append(bar, ul, go);
   go.addEventListener("click", () => keepTicked(boxes, go, pickSaid));
+
+  const cf = parsed[0]?.came_from;
+  const kn = await call({ action: "known", came_from: cf, refs: parsed.map((c) => c.ref).filter(Boolean) });
+  const have = new Set(kn?.ok ? kn.kept : []);
+  let already = 0;
+  boxes.forEach((b) => {
+    const c = parsed[Number(b.dataset.i)];
+    if (c.ref && have.has(c.ref)) {
+      already++; b.checked = false; b.disabled = true;
+      const node = pick.querySelector(`[data-mark="${b.dataset.i}"]`);
+      if (node) { node.dataset.kept = "1"; node.textContent = "Already in the Tool."; }
+    }
+  });
+  count();
 
   const items = parsed.slice(0, 600).map((c, i) => ({ i, title: c.title, opening: (c.messages.find((m) => m.role === "person")?.text || "").slice(0, 300) }));
   const r = await call({ action: "mark", items });
   const byI = new Map((r.ok ? r.marks : []).map((m) => [m.i, m]));
   pick.querySelectorAll("[data-mark]").forEach((node) => {
     const m = byI.get(Number(node.dataset.mark));
+    if (node.dataset.kept) return;
     if (m && m.mark) marks.set(Number(node.dataset.mark), m.mark);
     node.textContent = !m ? "Not marked; decide yourself." : m.mark ? `Looks ${m.mark === "business" ? "like business" : "personal"}: ${m.why}` : m.why;
   });
-  said(pickSaid, `${parsed.length} chats found. Tick the ones to keep.${r.ok ? "" : " (They could not be marked: " + (r.note || "no reason given") + ")"}`);
+  const fresh = parsed.length - already;
+  said(pickSaid, `${parsed.length} chats found${already ? `: ${already} already in the Tool, ${fresh} new` : ""}. ${fresh ? "Check the ones to keep." : "Nothing new to keep."}${r.ok ? "" : " (They could not be marked: " + (r.note || "no reason given") + ")"}${kn?.ok ? "" : " (Could not check which are already in the Tool; any you keep twice are skipped.)"}`);
 }
 
 async function keepTicked(boxes, go, pickSaid) {
@@ -287,6 +306,7 @@ async function keepTicked(boxes, go, pickSaid) {
   for (let k = 0; k < picks.length; k++) {
     const c = picks[k];
     said(pickSaid, `Keeping ${k + 1} of ${picks.length}.`);
+    go.textContent = `Keeping ${k + 1} of ${picks.length}...`;
     const r = await call({ action: "keep", came_from: c.came_from, title: c.title, started_at: c.started_at, exact: true, origin_ref: c.ref, messages: c.messages });
     if (r.ok && r.duplicate) dup++; else if (r.ok) kept++; else failed.push(`${c.title || "Untitled chat"}: ${r.note || r.reason}`);
   }
@@ -295,7 +315,7 @@ async function keepTicked(boxes, go, pickSaid) {
   if (failed.length) parts.push(`${failed.length} not kept: ${failed.join("; ")}`);
   said(pickSaid, parts.join(" "), failed.length > 0);
   boxes.forEach((b) => { b.checked = false; });
-  go.disabled = true; go.textContent = "Keep the ticked chats";
+  go.disabled = true; go.textContent = parts[0];
   drawMine();
 }
 
