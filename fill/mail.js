@@ -40,7 +40,7 @@
 // is one click on the conversation. With no email open, a question asked here is answered in the
 // reading column too, so nothing on the Mail tab ever draws a band of conversation under the columns.
 
-import { conversation } from './answer.js?v=2026-10-07-workspace';
+import { conversation } from './answer.js?v=2026-10-12-working';
 
 const LIVE = '/functions/v1/worklens-live';
 
@@ -176,7 +176,7 @@ function drawSide() {
   }
   const rows = [...C.mailboxes().values()];
   if (!rows.length) {
-    if (C.readingState() === null) { side.appendChild(mk('p', 'quiet', 'Reading your mailboxes.')); return; }
+    if (C.readingState() === null) { side.appendChild(mk('p', 'quiet working', 'Reading your mailboxes.')); return; }
     side.appendChild(mk('p', 'quiet', 'No mailbox is open to you here yet.'));
     const b = mk('button', 'go ghost', 'Connect yours in Brain');
     b.type = 'button';
@@ -253,7 +253,7 @@ function drawList() {
     return;
   }
   if (!inbox) { loadInbox(false); return; }
-  if (inbox.loading && !inbox.pages.length) { list.appendChild(mk('p', 'quiet', 'Reading this inbox from Gmail.')); return; }
+  if (inbox.loading && !inbox.pages.length) { list.appendChild(mk('p', 'quiet working', 'Reading this inbox from Gmail.')); return; }
   if (inbox.error && !inbox.pages.length) {
     list.appendChild(mk('p', 'state stalled', 'This inbox could not be opened: ' + inbox.error));
     return;
@@ -367,7 +367,7 @@ function drawRead() {
   read.appendChild(navButton('Back to the inbox', 'list', ' mailx-back'));
   if (open.error) { read.appendChild(mk('p', 'state stalled', 'This email could not be opened: ' + open.error)); return; }
   const t = open.thread;
-  if (!t) { read.appendChild(mk('p', 'quiet', 'Opening it.')); return; }
+  if (!t) { read.appendChild(mk('p', 'quiet working', 'Opening it.')); return; }
 
   const head = mk('div', 'mailx-head');
   head.appendChild(mk('h2', 'mailx-subject', t.subject || '(no subject)'));
