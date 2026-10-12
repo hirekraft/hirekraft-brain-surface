@@ -53,6 +53,8 @@ function drawRunway() {
   if (books) {
     note(mount, "Not worked out yet. Months left needs cash on hand, money owed to and by the company, and every charge, and those come from QuickBooks and Wise, which have not been read yet.", true);
     note(mount, "To fix this: put the QuickBooks reports and Wise statements in the Accounting shared drive. Each file shows below once it has been read.");
+  } else {
+    note(mount, "Months left is not worked out on this screen yet.", true);
   }
 }
 
@@ -107,7 +109,7 @@ function drawCommitments() {
   const stopped = sys.filter((r) => r.state !== "active");
   if (!sys.length) { note(mount, "No company sends this business regular bills or receipts by email in the last 24 months, as far as the mail that was read shows."); }
   else {
-    note(mount, ctx.countOf(active.length) + " companies bill regularly and are still billing; " + ctx.countOf(stopped.length) + " look stopped. Read from 24 months of mail; not yet checked against the books.");
+    note(mount, ctx.countOf(active.length) + (active.length === 1 ? " company bills" : " companies bill") + " regularly and " + (active.length === 1 ? "is" : "are") + " still billing; " + ctx.countOf(stopped.length) + (stopped.length === 1 ? " looks" : " look") + " stopped. Read from 24 months of mail; not yet checked against the books.");
     mount.appendChild(commitmentTable(active));
     if (stopped.length) {
       const d = ctx.el("details", "recs");
@@ -122,7 +124,8 @@ function drawCommitments() {
     d.appendChild(commitmentTable(people));
     mount.appendChild(d);
   }
-  note(mount, "Ask the box: what are we paying for every month? what did we sign up for that we are not using? what if I cancel two of these?");
+  // No "ask the box" line here until lens-ask can answer these questions from money_commitments: a question the box
+  // cannot answer must never be offered (standing rule on offered questions, index.html dock comment).
 }
 
 // ── what was not read ────────────────────────────────────────────────────────
