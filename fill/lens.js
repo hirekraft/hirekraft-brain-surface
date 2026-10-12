@@ -12,7 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints } from "./mail.js?v=2026-10-08-onebox";
-import { initBox, drawBox } from "./box.js?v=2026-10-08-refusal";
+import { initBox, drawBox } from "./box.js?v=2026-10-11-ask-first";
 import { attachOutputs } from "./outputs.js?v=2026-10-10-outputs";
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-10-panel"; import { initChats, loadChats } from "./chats.js?v=2026-10-11-only-missing"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-12-money2"; // Money tab (seat runway)
