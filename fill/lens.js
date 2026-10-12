@@ -1271,14 +1271,34 @@ const KEY_HOW = {
   hubspot: "In HubSpot (as a super admin), open Development and create a service key with read access to CRM contacts, companies and deals, then copy it. An access token from a private app under Development, Legacy apps works too.",
   cats: "In CATS, open Settings, then Administration, then API Keys, create a key named Verrandi (read only if CATS offers it), and copy it. The Tool only ever reads from CATS.",
   mercury: "In Mercury, open Settings, then API Tokens, create a token with Read Only access, and copy it. If Mercury asks for allowed IP addresses, say so here: the Tool cannot use a token tied to fixed addresses.",
-  slack: "In a browser signed in to your Slack, open api.slack.com/apps and choose Create New App, then From a manifest. Pick your workspace, paste the text below, and create it. Then choose Install to Workspace and Allow. On the app's OAuth & Permissions page, copy the User OAuth Token (it starts with xoxp-) and paste it here. The app only reads, and only what you yourself can see in Slack.",
+  slack: "The app only reads, and only what you yourself can see in Slack. It lives in your own workspace, so Slack does not slow it down.",
 };
 // Slack's internal-app manifest (read-only USER scopes: the token reads exactly what the installing person sees).
-const SLACK_MANIFEST = JSON.stringify({
-  display_information: { name: "Verrandi", description: "Reads your Slack for your own questions in Verrandi. Read only." },
-  oauth_config: { scopes: { user: ["channels:history", "channels:read", "groups:history", "groups:read", "users:read", "users:read.email", "team:read"] } },
-  settings: { org_deploy_enabled: false, socket_mode_enabled: false, token_rotation_enabled: false },
-}, null, 2);
+// Named after the customer's own Tool (Alex 2026-10-12: HireKraft's systems carry HireKraft's name), pre-filled from
+// the masthead's wordmark and editable, so nothing here names a customer.
+function slackManifest(name) {
+  const n = String(name || "").trim().slice(0, 35) || "Tool";
+  return JSON.stringify({
+    display_information: { name: n, description: `Reads your Slack for your own questions in ${n}. Read only.` },
+    oauth_config: { scopes: { user: ["channels:history", "channels:read", "groups:history", "groups:read", "users:read", "users:read.email", "team:read"] } },
+    settings: { org_deploy_enabled: false, socket_mode_enabled: false, token_rotation_enabled: false },
+  }, null, 2);
+}
+function slackDefaultName() {
+  const w = (document.querySelector(".wordmark span")?.textContent || "").trim();
+  return w ? w.charAt(0).toUpperCase() + w.slice(1) : "Tool";
+}
+// Slack's create page changed in 2026: a wizard ending in Create and Install, which fails for an app that only
+// reads as a person (seen on Alex's screen 2026-10-12). Installing from the app's own OAuth & Permissions page works
+// (that is how HireKraft's Slack was connected). So the steps lead there, whatever the wizard does.
+const SLACK_STEPS = [
+  "Type the app's name above (your business name), then press Copy the manifest.",
+  "In a browser signed in to Slack, open api.slack.com/apps.",
+  "If an app with that name is already listed under Your Apps, open it and skip to step 5. Otherwise choose Create New App, then From a manifest, pick your workspace and paste.",
+  "Finish creating the app. If Slack shows Installation was not completed, that is expected here: carry on.",
+  "Open the app, then OAuth & Permissions in the left menu, then Install to Workspace (or Reinstall), then Allow.",
+  "On that same page, copy the User OAuth Token (it starts with xoxp-) and paste it below.",
+];
 function stageKey(groupKey, o) {
   const stage = $("#connect-stage");
   stage.innerHTML = "";
@@ -1330,11 +1350,20 @@ function stageKey(groupKey, o) {
   back.addEventListener("click", () => stageProviders(groupKey, PICKERS[groupKey]));
   const extra = [];
   if (o.key === "slack") {
+    const nameLab = el("label", "");
+    nameLab.innerHTML = "<b>The app's name in Slack</b>";
+    const nameIn = el("input", "");
+    nameIn.type = "text"; nameIn.value = slackDefaultName(); nameIn.maxLength = 35;
+    nameIn.style.cssText = "display:block;margin:.5rem 0 1rem;width:100%;max-width:28rem;font:inherit;padding:.6rem;border:1px solid currentColor;border-radius:6px;background:none;color:inherit";
+    const steps = el("ol", "");
+    for (const s of SLACK_STEPS) { const li = el("li", ""); li.textContent = s; steps.appendChild(li); }
     const ta = el("textarea", "");
-    ta.readOnly = true; ta.value = SLACK_MANIFEST; ta.rows = 12;
+    ta.readOnly = true; ta.value = slackManifest(nameIn.value); ta.rows = 12;
+    nameIn.addEventListener("input", () => { ta.value = slackManifest(nameIn.value); });
+    extra.push(nameLab, nameIn, steps);
     ta.style.cssText = "display:block;width:100%;max-width:28rem;font:12px/1.4 ui-monospace,monospace;padding:.6rem;border:1px solid currentColor;border-radius:6px;background:none;color:inherit";
     const copy = el("button", "go ghost"); copy.type = "button"; copy.textContent = "Copy the manifest";
-    copy.addEventListener("click", async () => { try { await navigator.clipboard.writeText(SLACK_MANIFEST); copy.textContent = "Copied"; } catch (_) { ta.select(); } });
+    copy.addEventListener("click", async () => { try { await navigator.clipboard.writeText(ta.value); copy.textContent = "Copied"; } catch (_) { ta.select(); } });
     extra.push(ta, copy);
   }
   stage.append(n, how, ...extra, form, out, back);
