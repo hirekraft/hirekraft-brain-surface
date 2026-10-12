@@ -40,7 +40,14 @@ function wordsOf(text) {
   return String(text || '').toLowerCase().replace(/[^a-z0-9@' ]+/g, ' ').split(' ').filter(Boolean);
 }
 
-// 'do' | 'do-none' (a DO with no email open) | 'find' | 'ask' | 'unsure' (treated as find, offers ask)
+// REVERSED 2026-10-11 (HQ 7; Alex: "whenever I ask the tool anything, it goes back to the email screen").
+// The old default sent anything short, anything without a question mark, and anything starting with
+// show/get/open/pull to an email search on the Mail tab. Now the default is ASK (the conversation, which
+// itself searches mail, files, chats and the connected systems); a FIND needs a clear sign she wants an
+// email: an email word (email, mail, message, thread, inbox, attachment) or 'find'/'search' at the start.
+// SUPERSEDED: the comment above saying "when the rules cannot tell, it does the cheap thing (find)".
+const MAIL_WORDS = ['email', 'emails', 'mail', 'message', 'messages', 'thread', 'threads', 'inbox', 'attachment', 'attachments'];
+// 'do' | 'do-none' (a DO with no email open) | 'find' | 'ask'
 export function intentOf(text, emailOpen) {
   const t = String(text || '').trim();
   const w = wordsOf(t);
@@ -49,13 +56,11 @@ export function intentOf(text, emailOpen) {
   if (DO_FIRST.includes(first) || (first === 'write' && (w[1] === 'back' || joined.includes(' reply ')))) {
     return emailOpen ? 'do' : 'do-none';
   }
-  if (first === 'where' && ['is', 'are', "where's", 'was'].includes(w[1] || '')) return 'find';
-  if (first === "where's") return 'find';
-  if (FIND_FIRST.includes(first)) return 'find';
-  if (FIND_PHRASES.some((p) => joined.includes(' ' + p + ' '))) return 'find';
-  if (t.endsWith('?') || ASK_FIRST.includes(first)) return 'ask';
-  if (w.includes('from') || w.includes('invoice') || w.includes('attachment')) return 'find';
-  return w.length <= 6 ? 'find' : 'unsure';
+  const mailish = w.some((x) => MAIL_WORDS.includes(x)) || w.some((x) => x.includes('@'));
+  if (first === 'find' || first === 'search' || first === 'locate') return 'find';
+  if (FIND_FIRST.includes(first) && mailish) return 'find';
+  if (FIND_PHRASES.some((p) => joined.includes(' ' + p + ' ')) && mailish) return 'find';
+  return 'ask';
 }
 
 const $ = (s) => document.querySelector(s);
