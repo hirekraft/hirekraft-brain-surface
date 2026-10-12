@@ -48,7 +48,7 @@ async function readCommitments() {
 
 export async function loadMoney() {
   for (const id of ["#money-runway", "#money-commitments"]) {
-    const m = ctx.$(id); if (m && !m.childElementCount) note(m, "Reading the bank and the books.");
+    const m = ctx.$(id); if (m && !m.childElementCount) m.appendChild(line("quiet working", "Reading the bank and the books."));
   }
   const [r, c] = await Promise.all([readRunway(), readCommitments()]);
   run = r; last = c;
