@@ -11,8 +11,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail } from "./mail.js?v=2026-10-12-talk";
-import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-12-mic-backup";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail } from "./mail.js?v=2026-10-12-panel";
+import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-12-panel";
 import { attachOutputs } from "./outputs.js?v=2026-10-10-outputs";
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-10-panel"; import { initChats, loadChats } from "./chats.js?v=2026-10-11-only-missing"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-12-runway"; // Money tab (seat runway)
@@ -898,22 +898,8 @@ async function stageDrivePicker(accountKey) {
   // second copy of it put an identical control under the dock.
 }
 
-// The dock is fixed to the bottom and its height is not a constant - it grows the
-// moment the consultant says anything. The page reserved a fixed number for it, so
-// whatever sat at the foot of a screen went under it. Reserve what it actually
-// occupies instead, and keep reserving it as that changes.
-function reserveForDock() {
-  const dock = $("#dock");
-  if (!dock) return;
-  const set = () => {
-    const h = dock.getBoundingClientRect().height;
-    document.body.style.paddingBottom = `calc(${Math.ceil(h)}px + 2.5rem)`;
-  };
-  set();
-  if (typeof ResizeObserver === "function") new ResizeObserver(set).observe(dock);
-  window.addEventListener("resize", set);
-}
-reserveForDock();
+// (reserveForDock retired 2026-10-12, seat conversation-panel: the conversation is a panel on the right, not a
+// bottom dock, so nothing at the foot of a page goes under it.)
 
 function fillRecognition() {
   const ul = $("#recog");
@@ -1636,20 +1622,99 @@ function stageLoose(stage) {
   stage.appendChild(back);
 }
 
-// ── the dock ────────────────────────────────────────────────────────────────
-// It reports what this surface DID. It does not answer questions, and as of
-// 2026-09-09 it no longer offers to: the question box called nothing and replied
-// from a fixed list of client-side strings.
-
+// ── what this screen did, said in the conversation panel ─────────────────────
+// It reports what this surface DID (a source resumed, a mailbox adopted, a sign-in declined).
 function say(text, asked) {
   const log = $("#dock-turns");
   if (asked) { const q = el("div", "turn asked"); q.textContent = asked; log.appendChild(q); }
   const a = el("div", "turn said");
   a.textContent = text;
   log.appendChild(a);
-  $("#dock").classList.add("open");
-  $("#dock-log").scrollTop = $("#dock-log").scrollHeight;
+  openPanel();
+  a.scrollIntoView({ block: "nearest" });
 }
+
+// ── THE CONVERSATION PANEL (seat conversation-panel, Alex 2026-10-12) ──────────
+// SHOW only: where the one conversation is drawn and whether it is on screen. It asks nothing and keeps
+// nothing (ask() and keepTurn() do). Three states, all reversible without a refresh: open (on the right; the
+// tab reflows beside it on a wide screen, it overlays a narrow one, it is the whole screen on a phone), full
+// (widened over the tab), and put away (a tab on the right edge, named after the conversation, which reopens
+// it with the same scroll). Esc puts it away. The state is per page; nothing is stored.
+let panelScroll = 0;
+function panelTitle(t) {
+  if (!$("#panel")) return;
+  const s = String(t || "").trim();
+  const name = s ? (s.length > 48 ? s.slice(0, 46).trimEnd() + "..." : s) : "New conversation";
+  $("#panel-title").textContent = name;
+  $("#panel-tab-name").textContent = name;
+  $("#panel-tab").setAttribute("aria-label", "Open the conversation: " + name);
+}
+function panelOpen() { return !!$("#panel") && !$("#panel").hidden; }
+function openPanel() {
+  const p = $("#panel");
+  if (!p) return;
+  if (p.hidden) {
+    p.hidden = false;
+    $("#panel-tab").hidden = true;
+    document.body.dataset.panel = p.classList.contains("full") ? "full" : "open";
+    $("#panel-body").scrollTop = panelScroll;
+  }
+  drawBox();
+}
+function putAway() {
+  const p = $("#panel");
+  if (!p || p.hidden) return;
+  panelScroll = $("#panel-body").scrollTop;
+  p.hidden = true;
+  delete document.body.dataset.panel;
+  // The tab on the edge only when there is something to come back to.
+  const has = !!$("#answer-in").children.length || !!$("#dock-turns").children.length;
+  $("#panel-tab").hidden = !has;
+  if (has) $("#panel-tab").focus({ preventScroll: true });
+  drawBox();
+}
+function fullPanel(on) {
+  const p = $("#panel");
+  const full = on ?? !p.classList.contains("full");
+  p.classList.toggle("full", full);
+  $("#panel-full").setAttribute("aria-pressed", String(full));
+  $("#panel-full").setAttribute("aria-label", full ? "Back beside the tab" : "Full screen");
+  $("#panel-full").title = full ? "Back beside the tab" : "Full screen";
+  if (!p.hidden) document.body.dataset.panel = full ? "full" : "open";
+}
+(function wirePanel() {
+  if (!$("#panel")) return;
+  $("#panel-away").addEventListener("click", putAway);
+  $("#panel-full").addEventListener("click", () => fullPanel());
+  $("#panel-new").addEventListener("click", () => newChat(null));
+  $("#panel-tab").addEventListener("click", () => { openPanel(); $("#panel-input").focus({ preventScroll: true }); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !panelOpen() || e.defaultPrevented) return;
+    // Esc first closes what is open on top (a menu, the box's examples); only then the panel.
+    if (document.querySelector(".work-menu") || !$("#onebox-tips").hidden) return;
+    putAway();
+  });
+  // On a phone: pull the panel down by its handle or header to put it away.
+  let y0 = null;
+  const start = (e) => { if (window.innerWidth <= 720) y0 = e.touches[0].clientY; };
+  const move = (e) => {
+    if (y0 === null) return;
+    const dy = e.touches[0].clientY - y0;
+    if (dy > 0) $("#panel").style.transform = "translateY(" + dy + "px)";
+  };
+  const end = (e) => {
+    if (y0 === null) return;
+    const dy = (e.changedTouches[0]?.clientY ?? y0) - y0;
+    y0 = null;
+    $("#panel").style.transform = "";
+    if (dy > 90) putAway();
+  };
+  for (const h of [$("#panel-handle"), document.querySelector(".panel-head")]) {
+    h.addEventListener("touchstart", start, { passive: true });
+    h.addEventListener("touchmove", move, { passive: true });
+    h.addEventListener("touchend", end);
+  }
+})();
 
 // -- the ask ----------------------------------------------------------------
 // THE SERVER SETS THE STATE AND THIS FILE MAY NOT. lens-ask returns one of four
@@ -1658,9 +1723,8 @@ function say(text, asked) {
 // states there is no field here to present. The code reads `state` and never
 // infers one by counting records.
 //
-// The answer lands in the conversation, under the question that asked it: in the middle column
-// on Work, in the dock elsewhere. (The older wording here, that it lands in the page body above
-// the dock, was superseded on 2026-09-27 and removed on 2026-10-06 by seat chat-layout.)
+// The answer lands in the conversation panel, under the question that asked it, on every tab
+// (seat conversation-panel, 2026-10-12).
 
 const ASK_URL = `${SUPABASE_URL}/functions/v1/lens-ask`;
 let asking = false;
@@ -2272,7 +2336,9 @@ async function ask(question) {
 
   const sec = $("#s-answer");
   const mount = $("#answer-in");
+  if (!mount.children.length && !workChat) panelTitle(q);
   sec.hidden = false;
+  openPanel();
 
   // THE CONVERSATION SURVIVES. Each question appends a turn and nothing clears
   // what came before. Until now every new question ran mount.innerHTML = "", so
@@ -2310,6 +2376,7 @@ async function ask(question) {
     if (!body) { askProblem(slot, `The brain did not answer (${r.status}). Nothing was changed.`); return; }
     if (body.ok !== true) { askProblem(slot, body.error ?? `The brain refused this (${r.status}).`); return; }
     renderAsk(slot, body);
+    drawBox();   // the top box now says it continues this conversation
     speakAnswer(slot);   // read aloud when she switched it on (box.js); never for a reopened, kept answer
     // Save as test sits on every answer, for the owner (seat save-as-test). lastAsked is still the
     // previous question here, so the form knows when this one was a follow-on.
@@ -2966,8 +3033,7 @@ function goto(id, key) {
   if (id === "s-tests") loadTests();
   if (id === "s-security") loadSecurity();
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
-  workDock(id === 's-work');
-  mailDock(id === 's-lens' && lensKey === 'email');
+  onMail = id === 's-lens' && lensKey === 'email';
   if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney();
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
     import("./ledger.js?v=2026-10-12-ledger").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
@@ -3064,11 +3130,10 @@ function drawLens() {
 // readable width, and the input UNDER it. SUPERSEDES the 2026-10-08 one-box note that the box no
 // longer moves: it is still the one box, at the top of every other tab, docked under the
 // conversation here because that is where every chat puts it.
-// ONE RENDERER: on the Work tab the dock's conversation (#s-answer) and the one box (#onebox) are
-// MOVED into the middle column, and moved back when leaving, so turns are still drawn only by
-// renderAsk, asked only by ask(), routed only by box.js. No second panel or box exists.
-// Opening a chat redraws its turns FROM WHAT WAS KEPT, without asking again; the next Ask
-// continues that chat. A chat is titled from its first question (work_keep), or by its email.
+// ONE RENDERER: turns are drawn only by renderAsk, into the conversation panel, asked only by ask(),
+// routed only by box.js. Work is the list (seat conversation-panel, 2026-10-12): opening a chat redraws
+// its turns in the panel FROM WHAT WAS KEPT, on whatever tab she is on, without asking again; the next
+// question continues that chat. A chat is titled from its first question (work_keep), or by its email.
 // DELETE IS AN ARCHIVE (Alex 2026-10-01): work_discard retires the chat; it leaves her list and her
 // search and stays in the brain. SEARCH reads chat titles and her own questions, never answers, so
 // an answer withheld after her access narrowed cannot be found by its words (work_list, p_q).
@@ -3079,41 +3144,14 @@ let workInto = null;      // a project a NEW chat goes into once its first turn 
 let workView = null;      // the project shown in the middle, or null for the conversation
 let workRead = null;      // the last work_list() reply
 let workQ = '';           // what the sidebar search is looking for, or ''
-let boxHome = null;       // where the one box lives on every other tab
 
 function workSaid(text) { const s = $('#work-said'); if (s) s.textContent = text || ''; }
 
-// Moves the one conversation and the one box between their homes and the Work middle.
-function workDock(onWork) {
-  const ans = $('#s-answer'), slot = $('#work-convo');
-  const home = document.querySelector('.dock-in');
-  const box = $('#onebox'), boxSlot = $('#work-box');
-  if (!ans || !slot || !home) return;
-  if (onWork && ans.parentElement !== slot) slot.append(ans);
-  if (!onWork && ans.parentElement === slot) home.append(ans);
-  if (box && boxSlot) {
-    if (!boxHome) { boxHome = document.createComment('the one box lives here'); box.before(boxHome); }
-    if (onWork && box.parentElement !== boxSlot) boxSlot.append(box);
-    if (!onWork && box.parentElement === boxSlot) boxHome.after(box);
-  }
-  $('#dock').hidden = !!onWork;
-}
-
-// THE MAIL TAB KEEPS ITS CONVERSATIONS WITH THE EMAIL (seat email-workspace, Alex 2026-10-07: the
-// band of conversation under the Mail columns squeezed them to a strip, and an answer about one
-// email stayed on screen over the next). While Mail is open the conversation is parked, not destroyed,
-// so every other tab finds it as it was left, and what is asked on Mail is answered in the reading
-// column by mail.js (askFromMailBar).
+// On Mail an open email keeps its own conversation in the reading column (mail.js, seat email-workspace,
+// Alex 2026-10-07); everything else she asks there goes to the panel. Set by goto().
+// (workDock and mailDock, which moved or parked the conversation per tab, retired 2026-10-12 by seat
+// conversation-panel: the panel is the one place the conversation is shown, on every tab.)
 let onMail = false;
-function mailDock(on) {
-  const ans = $('#s-answer');
-  if (!ans) return;
-  let park = $('#answer-park');
-  if (!park) { park = el('div'); park.id = 'answer-park'; park.hidden = true; document.body.appendChild(park); }
-  if (on && ans.closest('#dock')) park.appendChild(ans);
-  if (!on && ans.parentElement === park) document.querySelector('.dock-in')?.append(ans);
-  onMail = on;
-}
 
 // into: { chat, about, title } keeps the turn in a chat of its own (the conversation about one email,
 // answer.js) instead of the Work chat that happens to be open; work_keep finds or makes this person's
@@ -3146,19 +3184,17 @@ async function keepTurn(slot, q, body, into) {
   }
 }
 
-function showConvo() {
-  workView = null;
-  $('#work-project-view').hidden = true; $('#work-convo').hidden = false;
-}
-
 function newChat(projectId) {
   workChat = null; lastAsked = ''; workInto = projectId ?? null;
   const mount = $('#answer-in'); if (mount) mount.innerHTML = '';
+  $('#dock-turns').innerHTML = '';
   $('#s-answer').hidden = true;
-  showConvo(); markOpen();
+  panelScroll = 0;
   const p = workInto && workRead?.projects.find((x) => x.id === workInto);
+  panelTitle(p ? `New conversation in ${p.name}` : '');
+  openPanel(); markOpen();
   drawBox();
-  $('#ask-input')?.focus();
+  $('#panel-input')?.focus();
 }
 
 async function openChat(id) {
@@ -3166,9 +3202,10 @@ async function openChat(id) {
   const { data, error } = await sb.rpc('work_open', { p_chat: id });
   if (error || !data?.ok) { workSaid(error?.message ?? data?.note ?? 'That chat could not be opened.'); return; }
   workSaid('');
-  showConvo();
   const mount = $('#answer-in'); mount.innerHTML = '';
+  $('#dock-turns').innerHTML = '';
   $('#s-answer').hidden = false;
+  panelTitle(data.chat.title); openPanel();
   for (const t of data.turns) {
     const turn = el('div', 'answer-turn');
     const asked = el('p', 'answer-asked'); asked.textContent = t.question;
@@ -3294,9 +3331,8 @@ function chatGroup(host, label, chats, projects) {
 function openProject(id) {
   workView = id;
   const p = workRead?.projects.find((x) => x.id === id);
-  if (!p) { showConvo(); return; }
-  $('#work-convo').hidden = true;
-  const v = $('#work-project-view'); v.hidden = false; v.innerHTML = '';
+  const v = $('#work-project-view');
+  if (!p) { workView = null; v.hidden = true; markOpen(); return; } v.hidden = false; v.innerHTML = '';
   const h = el('h2'); h.textContent = p.name;
   const go = el('button', 'go'); go.type = 'button'; go.textContent = `New chat in ${p.name}`;
   go.addEventListener('click', () => newChat(id));
@@ -3368,21 +3404,6 @@ async function loadWork() {
   $('#work-search')?.addEventListener('input', (e) => {
     clearTimeout(wait);
     wait = setTimeout(() => { workQ = e.target.value.trim(); loadWork(); }, 250);
-  });
-  // The sidebar folds away, as in every chat app, and remembers it in this browser.
-  const FOLD = 'tool.work.folded';
-  const fold = (on) => {
-    $('#s-work')?.classList.toggle('work-folded', on);
-    const b = $('#work-fold'); if (!b) return;
-    b.setAttribute('aria-expanded', String(!on));
-    b.setAttribute('aria-label', on ? 'Show your chats' : 'Hide your chats');
-    b.textContent = on ? 'Chats' : 'Hide';
-  };
-  try { fold(localStorage.getItem(FOLD) === '1'); } catch (_) { fold(false); }
-  $('#work-fold')?.addEventListener('click', () => {
-    const on = !$('#s-work').classList.contains('work-folded');
-    fold(on);
-    try { localStorage.setItem(FOLD, on ? '1' : '0'); } catch (_) { /* kept for this page only */ }
   });
   document.addEventListener('click', (e) => { if (!e.target.closest('.work-menu')) closeMenus(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(); });
@@ -3465,12 +3486,8 @@ initBox({
   showMail: () => { userMoved = true; if (!onMail) goto('s-lens', 'email'); },
   mailboxAddresses: () => [...mailboxes.values()].map((m) => m.address),
   readingMailboxKeys: () => [...mailboxes.values()].filter((m) => m.state === 'reading').map((m) => m.source_key),
-  // On Work the box continues the open chat or starts one, and says so.
-  placeholder: () => {
-    if ($('#s-work')?.hidden !== false) return null;
-    const p = workInto && workRead?.projects.find((x) => x.id === workInto);
-    return workChat ? 'Continue this chat, or find an email' : p ? `New chat in ${p.name}, or find an email` : null;
-  },
+  // While the panel shows a conversation, the top box continues it; New in the panel starts a fresh one.
+  continuing: () => panelOpen() && !!$('#answer-in').children.length,
 });
 
 // Once a person has chosen a screen, a late-arriving reading must not move them
