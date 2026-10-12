@@ -262,7 +262,7 @@ async function openExport(file, pick, pickSaid) {
   const marks = new Map();
   const open = () => boxes.filter((b) => !b.disabled);
   const bar = el("div"); bar.style.display = "flex"; bar.style.gap = "8px"; bar.style.flexWrap = "wrap"; bar.style.margin = "8px 0";
-  const allB = el("button", "go ghost", "Check all new"); allB.type = "button";
+  const allB = el("button", "go ghost", "Check all"); allB.type = "button";
   const bizB = el("button", "go ghost", "Check business only"); bizB.type = "button";
   const noneB = el("button", "go ghost", "Uncheck all"); noneB.type = "button";
   allB.addEventListener("click", () => { open().forEach((b) => { b.checked = true; }); count(); });
@@ -294,7 +294,6 @@ async function openExport(file, pick, pickSaid) {
     sh.addEventListener("click", () => { const show = sh.textContent === "Show them"; keptRows.forEach((li) => { li.hidden = !show; }); sh.textContent = show ? "Hide them" : "Show them"; });
     line.appendChild(sh);
     ul.before(line);
-    allB.textContent = "Check all";
   }
   count();
 
