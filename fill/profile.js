@@ -23,7 +23,7 @@ export function initProfile(c) { ctx = c; }
 
 export async function loadProfile() {
   const mount = ctx.$('#profile'); if (!mount) return;
-  if (!mount.childElementCount) mount.appendChild(line('quiet', 'Reading.'));
+  if (!mount.childElementCount) mount.appendChild(line('quiet working', 'Reading.'));
   try {
     const { data, error } = await ctx.sb.rpc('business_profile_list');
     if (error) throw error;
@@ -114,7 +114,7 @@ function statement(s) {
 function notRead(lp) {
   const b = lp?.boundary ?? {};
   const items = [];
-  if (b.messages_not_in_any_pattern_sent) items.push([ctx.countOf(b.messages_not_in_any_pattern_sent) + ' emails not looked at one by one', 'Only messages that repeat were summarised; one-off emails were not read in this pass.']);
+  if (b.messages_not_in_any_pattern_sent) items.push([ctx.countOf(b.messages_not_in_any_pattern_sent) + ' emails not looked at one by one', 'Only messages that repeat were summarized; one-off emails were not read in this pass.']);
   if (b.example_messages_read_in_part) items.push([ctx.countOf(b.example_messages_read_in_part) + ' emails read only in part', 'The opening of each was read, not the whole message.']);
   if (b.other_mailboxes) items.push(['Other mailboxes', 'Only ' + String(lp.source ?? '').split(':')[1] + ' was read in this pass.']);
   if (b.documents) items.push(['Files', 'File contents were not read in this pass; only their kinds and names.']);
