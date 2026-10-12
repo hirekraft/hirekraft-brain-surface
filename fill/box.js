@@ -249,6 +249,7 @@ function wireMic() {
 }
 
 function stopMic() {
+  mic.userStopped = true;
   if (mic.timer) { clearTimeout(mic.timer); mic.timer = null; }
   if (mic.rec) { try { mic.rec.stop(); } catch (e) { /* already stopped */ } }
   if (mic.media && mic.media.state !== 'inactive') { try { mic.media.stop(); } catch (e) { /* already stopped */ } }
@@ -261,8 +262,26 @@ function startLive() {
   rec.lang = navigator.language || 'en-US';
   rec.interimResults = true;
   rec.continuous = true;
-  mic = { on: true, rec, media: null, chunks: [], stream: null, timer: null, base: input.value.trim() };
+  const base = input.value.trim();
+  mic = { on: true, rec, media: null, chunks: [], stream: null, timer: null, base, backup: null, userStopped: false };
   let heard = false;
+  // BACKUP RECORDING (HQ 7, 2026-10-12; Alex: "it says listening, but nothing happens"). Some browsers say they
+  // listen and never return a word, with no error (their speech service unreachable or hearing nothing). So a
+  // recording runs beside the browser's listening; if no words came back when she stops, the Tool writes the
+  // recording down (lens-ask listen). If the browser stops listening on its own, the recording carries on.
+  if (CAN_RECORD) navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+    if (!mic.on) { stream.getTracks().forEach((t) => t.stop()); return; }
+    let m;
+    try { m = new MediaRecorder(stream); } catch (e) { stream.getTracks().forEach((t) => t.stop()); return; }
+    mic.backup = m; mic.stream = stream;
+    m.ondataavailable = (ev) => { if (ev.data && ev.data.size) mic.chunks.push(ev.data); };
+    m.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      mic.on = false;
+      if (heard) micLook('idle'); else writeDown(mic.chunks, m.mimeType || 'audio/webm', base);
+    };
+    m.start();
+  }).catch(() => { /* no recording; the browser's listening alone */ });
   rec.onresult = (ev) => {
     let said = '';
     for (let i = 0; i < ev.results.length; i++) said += ev.results[i][0].transcript;
@@ -279,9 +298,24 @@ function startLive() {
     if (why === 'network') liveFailed = true;
   };
   rec.onend = () => {
-    mic.on = false; mic.rec = null;
+    mic.rec = null;
+    const b = mic.backup;
+    if (heard) {
+      if (b && b.state !== 'inactive') b.stop();
+      mic.on = false;
+      micLook('idle');
+      micSaid('Check the words, change anything, then press Go.', ''); input.focus(); const n = input.value.length; try { input.setSelectionRange(n, n); } catch (e) { /* some inputs refuse */ }
+      return;
+    }
+    if (b && b.state !== 'inactive') {
+      if (mic.userStopped) { b.stop(); return; }
+      mic.media = b;
+      micLook('recording');
+      micSaid('Still recording. Speak, then press the microphone again; the Tool writes it down for you to check.', 'live');
+      return;
+    }
+    mic.on = false;
     micLook('idle');
-    if (heard) { micSaid('Check the words, change anything, then press Go.', ''); input.focus(); const n = input.value.length; try { input.setSelectionRange(n, n); } catch (e) { /* some inputs refuse */ } }
   };
   try { rec.start(); } catch (e) { mic.on = false; micSaid('The microphone could not start: ' + String((e && e.message) || e), 'stalled'); return; }
   micLook('listening');
