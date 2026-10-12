@@ -97,8 +97,10 @@ async function readExport(file) {
   if (file.name.toLowerCase().endsWith(".zip")) {
     const { default: JSZip } = await import("https://esm.sh/jszip@3.10.1");
     const zip = await JSZip.loadAsync(await file.arrayBuffer());
-    const entry = zip.file("conversations.json") || zip.file(/(^|[/])conversations[.]json$/)[0];
-    if (!entry) throw new Error("This file has no conversations.json inside. Use the export file from Claude or ChatGPT.");
+    // Claude's export now arrives split into several zips; the chats are in conversations-000.zip, and the
+    // file inside may be numbered too. Any conversations*.json is accepted.
+    const entry = zip.file("conversations.json") || zip.file(/(^|[/])conversations[^/]*[.]json$/)[0];
+    if (!entry) throw new Error("No chats inside this file. From a Claude export, use the one named conversations-000.zip.");
     text = await entry.async("string");
   } else {
     text = await file.text();
