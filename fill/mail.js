@@ -53,7 +53,6 @@ let countsAsked = false;
 let parts = null;          // the three columns once drawn
 const imagesShown = new Set(); // message ids whose remote pictures she chose to load
 const convos = new Map();      // 'mail:<source_key>:<thread_id>' -> the conversation about that email
-let general = null;            // what she asked on Mail with no email open
 let found = null;              // a find from the one box (box.js): emails from every mailbox, in the inbox column
 let findSeq = 0;
 let pendingOpen = null;        // an email an answer asked to open (lens.js emailList), waiting for the columns
@@ -363,7 +362,6 @@ function drawRead() {
   setBar();
   if (!open) {
     read.appendChild(mk('p', 'quiet', 'Choose an email to read it here.'));
-    if (general) read.appendChild(general.el);
     return;
   }
   read.appendChild(navButton('Back to the inbox', 'list', ' mailx-back'));
@@ -951,27 +949,15 @@ function drawFound(list) {
   }
 }
 
-// Called by lens.js for a question typed in the Ask bar while the Mail tab is on screen. With an
-// email open the question is about it and lands with it; with none open it lands in the reading
-// column. Returns false when the Mail tab is not on screen, so lens.js asks as it always has.
-export function askFromMailBar(text, notAboutEmail) {
+// Called by box.js for a question about the open email (the "about this email" chip): it lands with that
+// email, in the reading column. Returns false when no email is open or the Mail tab is not on screen, and the
+// question goes to the conversation panel instead. Mail's own conversation about no one email is retired
+// (seat conversation-panel, 2026-10-12): the panel is the one place a general conversation is shown.
+export function askFromMailBar(text) {
   if (!parts || !parts.wrap.isConnected || !parts.wrap.offsetParent) return false;
-  // She removed the "about this email" chip: the question goes to the Mail conversation about no one
-  // email, so the open email is put away to show it (seat one-box).
-  if (notAboutEmail && open) { open = null; drawList(); }
-  if (open && open.thread) {
-    const conv = convoFor(open.thread, true);
-    setView('read');
-    conv.ask(text);
-    return true;
-  }
-  if (!general) {
-    general = conversation(C, {
-      sourceKey: chosen, mailbox: '', thread: null, keep: { chat: null, about: null, title: null },
-      onDiscard: () => { general = null; drawRead(); },
-    });
-  }
-  if (!open) { setView('read'); drawRead(); }
-  general.ask(text);
+  if (!open || !open.thread) return false;
+  const conv = convoFor(open.thread, true);
+  setView('read');
+  conv.ask(text);
   return true;
 }
