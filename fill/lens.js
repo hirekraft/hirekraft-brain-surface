@@ -237,6 +237,10 @@ function renderWho() {
   $("#sum-head").textContent = v.all_access
     ? "What is in it."
     : "What is in it, as far as you reach.";
+  // The one-line count under the heading: what the reading itself lists, never recounted here.
+  const groups = (shape.groups ?? []).filter((g) => (g.count ?? 0) > 0);
+  const n = groups.reduce((t, g) => t + g.count, 0);
+  $("#sum-count").textContent = n ? `${n} ${n === 1 ? 'source' : 'sources'} connected, in ${groups.length} ${groups.length === 1 ? 'kind' : 'kinds'}` : '';
   // Tests are the owner's. Hiding the way in is courtesy; the brain refuses anyone else.
   const te = $("#tests-entry");
   if (te) te.hidden = !v.all_access;
@@ -467,7 +471,7 @@ function drawMembers(key, body, pfx = "") {
       const st = el("div", "state tone-plain");
       st.innerHTML = `<span class="dot"></span>Not one of the drives you chose &mdash; `
         + `an older record, kept until you decide about it`;
-      li.appendChild(st);
+      li.appendChild(badgeLine(st, ['Not chosen', 'grey']));
     } else if (key === "email" && mbxError) {
       const st = el("div", "state stalled");
       st.innerHTML = `<span class="dot"></span>Its state could not be read just now `
@@ -479,7 +483,7 @@ function drawMembers(key, body, pfx = "") {
       const st = el("div", `state ${HEALTH_CLASS[m.health] ?? ""}`);
       st.innerHTML = `<span class="dot"></span>${HEALTH[m.health] ?? m.health}`
         + (m.latest && m.health !== "reading" ? ` &middot; newest item ${fmtDay(m.latest)}` : "");
-      li.appendChild(st);
+      li.appendChild(badgeLine(st, HEALTH_WORD[m.health]));
     }
 
     list.appendChild(li);
@@ -500,10 +504,54 @@ function driveStateFor(target) {
       ?? null;
 }
 
+// ── ONE STATUS WORD PER LINE (seat conversation-panel, Alex 2026-10-12) ──────
+// The word is chosen from the STATE the brain decided (drive_state, mailbox_state, brain_shape), never from a color,
+// and green is used only where the brain says the thing is up to date. The brain's own sentence opens on click.
+const DRIVE_WORD = {
+  ready: ['Up to date', 'green'], filling: ['Reading', 'blue'], gaps: ['Needs you', 'orange'],
+  needs_signin: ['Needs you', 'orange'], shut_out: ['Needs you', 'orange'], paused: ['Needs you', 'orange'],
+  unread: ['Not read', 'grey'], failed: ['Stopped', 'orange'], behind: ['Behind', 'orange'],
+  empty: ['Empty', 'grey'], stopped: ['Stopped', 'grey'], left_out: ['Not read', 'grey'],
+};
+const MAIL_WORD = {
+  reading: ['Reading', 'blue'], closed_to_you: ['Not yours', 'grey'], unread: ['Not read', 'grey'],
+  stopped: ['Needs you', 'orange'], off: ['Off', 'grey'], not_yours: ['Not yours', 'grey'],
+};
+const HEALTH_WORD = {
+  reading: ['Reading', 'blue'], behind: ['Behind', 'orange'], paused: ['Not kept up to date', 'grey'],
+  never: ['Not read', 'grey'], refused: ['Needs you', 'orange'], unconnected: ['Not connected', 'grey'],
+};
+function badge(word, kind) { const b = el('span', 'badge b-' + kind); b.textContent = word; return b; }
+// Puts the badge first and folds the line's existing sentence behind it. Call before any action button is added:
+// the button stays on the line, visible, because a problem and its remedy belong together.
+function badgeLine(wrap, pair, count) {
+  const [word, kind] = pair ?? ['Unknown', 'grey'];
+  const full = el('span', 's-full'); full.innerHTML = wrap.innerHTML; full.hidden = true;
+  const btn = el('button', 's-badge'); btn.type = 'button';
+  btn.setAttribute('aria-expanded', 'false');
+  btn.appendChild(badge(word, kind));
+  if (count) { const c = el('span', 's-count'); c.textContent = count; btn.appendChild(c); }
+  btn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    full.hidden = !full.hidden;
+    btn.setAttribute('aria-expanded', String(!full.hidden));
+  });
+  wrap.innerHTML = '';
+  wrap.classList.add('badged');
+  wrap.append(btn, full);
+  return wrap;
+}
+function driveCount(s) {
+  if (s.state === 'filling') return `${s.done} of ${s.done + s.waiting}`;
+  if (s.files) return `${Number(s.files).toLocaleString()} ${s.files === 1 ? 'file' : 'files'} read`;
+  return '';
+}
+
 function driveLine(s) {
   const wrap = el("div", `state tone-${s.tone}`);
   wrap.innerHTML = `<span class="dot"></span><span class="s-head">${escape(s.headline)}</span>`
     + (s.detail ? ` &middot; ${escape(s.detail)}` : "");
+  badgeLine(wrap, DRIVE_WORD[s.state], driveCount(s));
   if (s.action === "sign_in") wrap.appendChild(signInAgainControl(s));
   if (s.action === "resume")  wrap.appendChild(resumeControl(s));
   return wrap;
@@ -520,9 +568,11 @@ function systemLine(m, group) {
   if (!('last_read' in m)) {
     wrap.className = `state ${HEALTH_CLASS[m.health] ?? ''}`;
     wrap.innerHTML = `<span class="dot"></span>${HEALTH[m.health] ?? escape(m.health)}`;
-    return wrap;
+    return badgeLine(wrap, HEALTH_WORD[m.health]);
   }
+  let word;
   if (m.mechanism === 'imported') {
+    word = ['Imported', 'grey'];
     const brought = `brought in on ${fmtDay(m.last_read) ?? 'a date not recorded'}`;
     const live = m.superseded_by && (group.members ?? []).find((x) => x.target === m.superseded_by);
     text = live
@@ -531,24 +581,27 @@ function systemLine(m, group) {
     if (m.items) text += ` &middot; ${Number(m.items).toLocaleString()} pieces held`;
   } else if (m.health === 'refused' || m.health === 'unconnected') {
     wrap.className = `state ${HEALTH_CLASS[m.health]}`;
+    word = HEALTH_WORD[m.health];
     text = HEALTH[m.health];
     if (m.kept && m.walk_line) text += ` &middot; ${escape(m.walk_line)}`;
   } else if (m.kept) {
     // seat records-in 2026-10-12: a KEPT system is read into the brain on a schedule, not read when asked.
     // walk_line is the walk's own sentence (first read under way, up to date, paused for the cost check, or stopped and why).
     if (m.last_read) wrap.className = 'state live';
+    word = m.last_read ? ['Reading', 'blue'] : ['Not read', 'grey'];
     text = m.last_read ? `Kept, last read ${fmtWindow(m.last_read)}` : 'Kept, first read not started yet';
     if (m.items) text += ` &middot; ${Number(m.items).toLocaleString()} pieces kept`;
     if (m.walk_line) text += ` &middot; ${escape(m.walk_line)}`;
   } else {
     const since = m.connected_at ? `Connected ${fmtDay(m.connected_at)}` : 'Connected';
     if (m.last_read) wrap.className = 'state live';
+    word = m.last_read ? ['Read live', 'blue'] : ['Not read', 'grey'];
     text = m.last_read
       ? `${since}, read when you ask, last asked ${fmtWindow(m.last_read)}`
       : `${since}, not read yet`;
   }
   wrap.innerHTML = `<span class="dot"></span><span class="s-head">${text}</span>`;
-  return wrap;
+  return badgeLine(wrap, word, m.items ? `${Number(m.items).toLocaleString()} pieces` : '');
 }
 
 // One switch, and it says so. The drive is already chosen and already read; all
@@ -596,6 +649,7 @@ function mailboxLine(mb) {
   const read = mb.last_read_at ? `, last read ${fmtWindow(mb.last_read_at)}` : '';
   wrap.innerHTML = `<span class="dot"></span><span class="s-head">${escape(mb.headline)}${read}</span>`
     + (mb.detail ? ` &middot; ${escape(mb.detail)}` : "");
+  badgeLine(wrap, MAIL_WORD[mb.state], mb.last_read_at ? `last read ${fmtWindow(mb.last_read_at)}` : '');
   if (!mb.action_label) return wrap;
 
   const b = el("button", "go ghost");
