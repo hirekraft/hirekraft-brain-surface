@@ -532,6 +532,14 @@ function systemLine(m, group) {
   } else if (m.health === 'refused' || m.health === 'unconnected') {
     wrap.className = `state ${HEALTH_CLASS[m.health]}`;
     text = HEALTH[m.health];
+    if (m.kept && m.walk_line) text += ` &middot; ${escape(m.walk_line)}`;
+  } else if (m.kept) {
+    // seat records-in 2026-10-12: a KEPT system is read into the brain on a schedule, not read when asked.
+    // walk_line is the walk's own sentence (first read under way, up to date, paused for the cost check, or stopped and why).
+    if (m.last_read) wrap.className = 'state live';
+    text = m.last_read ? `Kept, last read ${fmtWindow(m.last_read)}` : 'Kept, first read not started yet';
+    if (m.items) text += ` &middot; ${Number(m.items).toLocaleString()} pieces kept`;
+    if (m.walk_line) text += ` &middot; ${escape(m.walk_line)}`;
   } else {
     const since = m.connected_at ? `Connected ${fmtDay(m.connected_at)}` : 'Connected';
     if (m.last_read) wrap.className = 'state live';
