@@ -985,6 +985,25 @@ body { padding-bottom: var(--gap-lg); }
 .sp-grid tbody th { color: var(--ink); font-weight: var(--w-mid); position: sticky; left: 0; background: var(--paper); }
 .sp-grid tr.sp-wide th { color: var(--accent); }
 
+/* ONE WORKING SIGN (seat conversation-panel, folding in seat working-sign's job; Alex 2026-10-11: "show customer
+   that it's actually working... even when it loads the brain the first time"). Any wait puts class "working" on
+   the line that says what is happening, next to what she pressed: a small turning mark, and after 10 seconds
+   the line adds "Still working, this one takes longer." by itself. Drawn in CSS, so it cannot outlive its wait:
+   the line is replaced by the result or the reason, and the sign goes with it. Steps show a thin bar
+   (.working-bar, its width the share done). */
+.working { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 1) calc(var(--u) * 2.5); font-size: var(--t-small); color: var(--ink-3); }
+.working::before {
+  content: ""; flex: none; width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box;
+  border: 2px solid var(--act-soft); border-top-color: var(--act); animation: working-turn .8s linear infinite;
+}
+.working::after { content: "Still working, this one takes longer."; flex-basis: 100%; padding-left: calc(14px + var(--u) * 2.5); opacity: 0; height: 0; overflow: hidden; animation: working-late 0s linear 10s forwards; }
+.working.no-late::after { content: none; }
+.working-bar { flex-basis: 100%; height: 3px; border-radius: 2px; background: var(--line-2); overflow: hidden; }
+.working-bar > span { display: block; height: 100%; width: 0; background: var(--act); transition: width .2s var(--ease); }
+@keyframes working-turn { to { transform: rotate(360deg); } }
+@keyframes working-late { to { opacity: 1; height: auto; } }
+@media (prefers-reduced-motion: reduce) { .working::before { animation: none; border-top-color: var(--act-soft); border-right-color: var(--act); } }
+
 /* COMPACT HEADERS (seat conversation-panel, Alex 2026-10-12): each tab opens with one line of heading and one
    line of count; the explanation sits behind "What is this?". */
 .tab-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: calc(var(--u) * 1) calc(var(--u) * 4); margin: var(--gap) 0 var(--gap-lg); }
