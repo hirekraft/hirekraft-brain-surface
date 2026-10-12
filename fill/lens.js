@@ -15,7 +15,7 @@ import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind,
 import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-12-talk";
 import { attachOutputs } from "./outputs.js?v=2026-10-10-outputs";
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-10-panel"; import { initChats, loadChats } from "./chats.js?v=2026-10-11-only-missing"; // Chats tab (seat chat-import)
-import { initMoney, loadMoney } from "./money.js?v=2026-10-12-money2"; // Money tab (seat runway)
+import { initMoney, loadMoney } from "./money.js?v=2026-10-12-runway"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-12-profile"; // what the Tool thinks the business is (seat know-the-business)
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
