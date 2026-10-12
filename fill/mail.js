@@ -56,6 +56,7 @@ const convos = new Map();      // 'mail:<source_key>:<thread_id>' -> the convers
 let general = null;            // what she asked on Mail with no email open
 let found = null;              // a find from the one box (box.js): emails from every mailbox, in the inbox column
 let findSeq = 0;
+let pendingOpen = null;        // an email an answer asked to open (lens.js emailList), waiting for the columns
 const NL = String.fromCharCode(10);
 const TAB = String.fromCharCode(9);
 // worklens-live finds at most this many related conversations (RELATED_THREADS there), so a
@@ -142,6 +143,7 @@ export function drawMail(body) {
       drawSide();
     }).catch(() => { /* a missing count is shown as no count, never as zero */ });
   }
+  flushOpen();
 }
 
 // Her own mailbox first, if she can open it; otherwise the first one that is being read.
@@ -805,6 +807,23 @@ export function findMail(text, keys, opts) {
 }
 
 export function clearFind() { found = null; if (parts) drawList(); }
+
+// AN EMAIL OPENED FROM AN ANSWER (seat talk-to-the-tool, 2026-10-12). The conversation shows the emails an answer
+// rests on; pressing one brings her here with that email open in its own mailbox. The id may be a message id (the
+// brain keeps emails by message id): worklens-live's thread read finds the thread it belongs to. Whether she may
+// open that mailbox is decided there, by the same door as the inbox, and a refusal is shown in the reading column.
+// Held until the columns exist, because lens.js draws them after the tab change.
+export function openEmail(sourceKey, id) {
+  if (!sourceKey || !id) return;
+  pendingOpen = { sourceKey, id };
+  flushOpen();
+}
+function flushOpen() {
+  if (!pendingOpen || !parts || !parts.wrap.isConnected) return;
+  const p = pendingOpen;
+  pendingOpen = null;
+  openThread(p.id, p.sourceKey);
+}
 
 function addrOf(key) {
   const m = C.mailboxes().get(key);
