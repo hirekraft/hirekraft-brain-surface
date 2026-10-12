@@ -15,6 +15,7 @@ import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind,
 import { initBox, drawBox } from "./box.js?v=2026-10-08-refusal";
 import { attachOutputs } from "./outputs.js?v=2026-10-10-outputs";
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-10-panel"; import { initChats, loadChats } from "./chats.js?v=2026-10-11-only-missing"; // Chats tab (seat chat-import)
+import { initMoney, loadMoney } from "./money.js?v=2026-10-12-money"; // Money tab (seat runway)
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
@@ -237,9 +238,10 @@ function renderWho() {
   // Tests are the owner's. Hiding the way in is courtesy; the brain refuses anyone else.
   const te = $("#tests-entry");
   if (te) te.hidden = !v.all_access;
-  // The Security tab is the owner's (seat security-tab). Hidden is courtesy; the brain refuses anyone else.
-  const st = document.querySelector('#tabs [data-tab="security"]');
-  if (st) st.hidden = !v.all_access;
+  // Owner tabs (Security, Money) are the owner's. Hidden is courtesy; the brain refuses anyone else.
+  // 2026-10-12 seat runway: was a lookup of the Security tab by name, so a second owner tab would have shown to
+  // everyone; now every TABS entry marked owner is hidden for anyone without all access.
+  document.querySelectorAll('#tabs .tab').forEach((b) => { if (TABS.find((t) => t.key === b.dataset.tab)?.owner) b.hidden = !v.all_access; });
 }
 
 // ── the tree: structure first, then the reading lands into it ────────────────
@@ -2833,8 +2835,9 @@ function goto(id, key) {
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
   workDock(id === 's-work');
   mailDock(id === 's-lens' && lensKey === 'email');
+  if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney(); }
   if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); }
-  markTab(id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-chats' ? 'chats' : 'brain');
+  markTab(id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : 'brain');
   drawBox();
 }
 
@@ -2846,6 +2849,8 @@ function goto(id, key) {
 const TABS = [{ key: 'brain', label: 'Brain' }, { key: 'work', label: 'Work' }, { key: 'chats', label: 'Chats' },
   // Owner only, after Work (seat security-tab, Alex 2026-10-08). Shown once the reading says she is an owner.
   { key: 'security', label: 'Security', owner: true },
+  // Owner only (seat runway, Alex 2026-10-10: "more tabs for now"). Books are the owner's.
+  { key: 'money', label: 'Money', owner: true },
   ...GROUPS.map((g) => ({ key: g.key, label: g.key === 'email' ? 'Mail' : g.label }))];
 
 function markTab(key) {
@@ -2868,7 +2873,7 @@ function drawTabs() {
     b.addEventListener('click', () => {
       userMoved = true;
       if (t.key === 'brain') goto('s-summary'); else if (t.key === 'work') goto('s-work');
-      else if (t.key === 'security') goto('s-security'); else if (t.key === 'chats') goto('s-chats'); else goto('s-lens', t.key);
+      else if (t.key === 'security') goto('s-security'); else if (t.key === 'money') goto('s-money'); else if (t.key === 'chats') goto('s-chats'); else goto('s-lens', t.key);
     });
     nav.appendChild(b);
   }
