@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-10-12-panel">
+<link rel="stylesheet" href="skin.css?v=2026-10-12-badges">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -191,11 +191,16 @@
        above it on the Brain tab (Alex, 2026-10-02). The tabs are the navigation spine
        now; this section was it until then. -->
   <section class="step" id="s-summary" hidden>
-    <p class="eyebrow">Your brain</p>
-    <h2 id="sum-head">What is in it.</h2>
-    <p class="quiet">These sources are the memory — there is nothing to fill up, and this is all
-      of it. Each one says whether it is working, and what to do if it is not. Open a group to
-      see them; open a mailbox to read it.</p>
+    <!-- COMPACT HEADERS (seat conversation-panel, Alex 2026-10-12): one line of heading, one line of count;
+         the explanation behind "What is this?", in the same words. -->
+    <div class="tab-top">
+      <h2 id="sum-head">What is in it.</h2>
+      <p class="tab-count" id="sum-count" aria-live="polite"></p>
+      <details class="whatis"><summary>What is this?</summary>
+        <p class="quiet">These sources are the memory — there is nothing to fill up, and this is all
+          of it. Each one says whether it is working, and what to do if it is not. Open a group to
+          see them; open a mailbox to read it.</p></details>
+    </div>
 
     <!-- Structure renders immediately with space reserved; the reading lands into it. -->
     <div class="tree" id="tree" aria-busy="true"></div>
@@ -236,7 +241,7 @@
     </div>
 
     <p class="sovereign">This brain is yours. It sits in your own database and nothing in it
-      reaches Sense. That one arrangement has two consequences worth knowing: you can leave at
+      reaches us. That one arrangement has two consequences worth knowing: you can leave at
       any time and nothing has been moved, and you can check anything it tells you, because the
       source is still yours.</p>
   </section>
@@ -244,11 +249,13 @@
 
   <!-- ── 6. TESTS — the owner's, each in full. Seat testing-tab, 2026-10-02. ── -->
   <section class="step" id="s-tests" hidden>
-    <p class="eyebrow">Tests</p>
-    <h2>Is the Tool still giving the right answers?</h2>
-    <p class="quiet">Each test is a question you answered once. The Tool is asked it again after
-      every change, as the person the test names; anything that used to pass and now fails
-      shows first.</p>
+    <div class="tab-top">
+      <h2>Is the Tool still giving the right answers?</h2>
+      <details class="whatis"><summary>What is this?</summary>
+        <p class="quiet">Each test is a question you answered once. The Tool is asked it again after
+          every change, as the person the test names; anything that used to pass and now fails
+          shows first.</p></details>
+    </div>
     <div class="actions">
       <button class="go" id="tests-run" type="button" hidden>Run the tests now</button>
       <button class="go ghost" data-goto="s-summary">Back to your brain</button>
@@ -267,9 +274,11 @@
        each saying what it is. The file-by-file findings list (sec-audit) is retired from this tab; a single
        file is reached by asking the box. What is connected and the owner's own rules sit one click down. -->
   <section class="step" id="s-security" hidden>
-    <p class="eyebrow">Security and admin</p>
-    <h2>Who can see what in your business.</h2>
-    <p class="quiet">Only you, as the owner, see this tab. Each number opens its part.</p>
+    <div class="tab-top">
+      <h2>Who can see what in your business.</h2>
+      <details class="whatis"><summary>What is this?</summary>
+        <p class="quiet">Only you, as the owner, see this tab. Each number opens its part.</p></details>
+    </div>
     <div id="sec-gauges" aria-live="polite"></div>
 
     <h3 style="margin-top:2.5rem">Openings</h3>
@@ -332,9 +341,11 @@
        everyone else as a courtesy, not as the guard. Filled by money.js. #money-ledger belongs to seat contractor-ledger
        (where we stand with each contractor); money.js does not draw into it. -->
   <section class="step" id="s-money" hidden>
-    <p class="eyebrow">Money</p>
-    <h2>How long can we go, and what are we paying for.</h2>
-    <p class="quiet">Only you, as the owner, see this tab. Every figure opens the record it came from.</p>
+    <div class="tab-top">
+      <h2>How long can we go, and what are we paying for.</h2>
+      <details class="whatis"><summary>What is this?</summary>
+        <p class="quiet">Only you, as the owner, see this tab. Every figure opens the record it came from.</p></details>
+    </div>
 
     <h3 style="margin-top:2.5rem">How long we can go</h3>
     <div id="money-runway" aria-live="polite"></div>
@@ -404,6 +415,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-12-panel-tabs"></script>
+<script type="module" src="lens.js?v=2026-10-12-badges"></script>
 </body>
 </html>
