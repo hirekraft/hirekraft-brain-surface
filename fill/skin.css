@@ -60,7 +60,6 @@
   --measure:  62ch;
   --radius:   6px;
   --row-h:    58px;
-  --dock-h:   54px;
   /* THE PAGE USES THE WINDOW (seat chat-layout, 2026-10-06). Every tab follows these three:
      --page is how wide the page may grow, --pad its edge, --convo the conversation column. */
   --page:     1480px;
@@ -82,13 +81,7 @@ body {
   color: var(--ink-2);
   background: var(--paper);
   -webkit-font-smoothing: antialiased;
-  padding-bottom: calc(var(--dock-h) + var(--gap-lg));
-}
-/* Reserve the room the dock actually takes. One line when there is no
-   conversation, most of the lower half once there is, so the end of the page
-   is never left underneath it. */
-body:has(.dock #s-answer:not([hidden])) #main {
-  padding-bottom: 62vh;
+  padding-bottom: var(--gap-lg);
 }
 
 /* ── shell ───────────────────────────────────────────────────────────── */
@@ -358,35 +351,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* ── the consultant: a docked line that expands ──────────────────────── */
 
-/* THE CHAT IS THE WORKING HALF, 2026-09-27 at Alex's instruction.
-   It was one line at the bottom while the conversation appeared in the body
-   above it, so the place you type and the place the answer lands were at
-   opposite ends of the page. This SUPERSEDES the note in index.html that the
-   answer belongs in the body rather than the dock; that note is now removed.
-   The dock grows with the conversation and stays one line high when there is
-   none, so it is large when working and not furniture when empty. */
-.dock {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  background: var(--paper); border-top: 1px solid var(--line);
-  display: flex; flex-direction: column; max-height: 58vh;
-}
-.dock-in {
-  max-width: var(--convo); margin: 0 auto; padding: 0 var(--pad); width: 100%;
-  display: flex; flex-direction: column; min-height: 0;
-}
-/* The conversation scrolls inside the dock. (The question box left the dock for the top of every
-   tab on 2026-10-08, seat one-box; see THE ONE BOX at the end of this file.) */
-.dock .answer {
-  flex: 1 1 auto; min-height: 0; overflow-y: auto;
-  margin-bottom: 0; padding: var(--gap) 0;
-}
-
-.dock-log {
-  max-height: 0; overflow-y: auto; transition: max-height .2s var(--ease);
-}
-/* The operational log yields to the conversation rather than competing with it. */
-.dock.open .dock-log { max-height: 22vh; flex: none; }
-.dock-log-in { padding: var(--gap) 0; }
+/* What this screen itself did, said in the conversation panel (lens.js say). */
+.dock-log-in { padding: 0 0 var(--gap); }
 .turn { font-size: var(--t-small); max-width: var(--measure); }
 .turn + .turn { margin-top: var(--gap); }
 .turn.asked { color: var(--ink-4); }
@@ -394,21 +360,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .turn.said { color: var(--ink-2); }
 
 
-/* The offered questions. One compact row directly above the line you type on, so
-   they are readable without opening the log. Absent entirely when the brain has
-   nothing it can honestly be asked. */
-.dock-openers {
-  display: flex; gap: var(--u); padding: var(--u) 0 0;
-  overflow-x: auto; scrollbar-width: none;
-}
-.dock-openers::-webkit-scrollbar { display: none; }
-.opener {
-  flex: none; font: inherit; font-size: var(--t-micro); color: var(--ink-3);
-  border: 1px solid var(--line); border-radius: var(--radius);
-  background: var(--paper-2); padding: calc(var(--u) * 1.25) calc(var(--u) * 2.5);
-  cursor: pointer; white-space: nowrap;
-}
-.opener:hover { color: var(--ink); border-color: var(--ink-4); }
 
 /* The answer, in the body. Structure first: the heading and the reason land
    before the records, and space is not reserved for prose that may never exist. */
@@ -490,7 +441,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   }
   .ans-table td:empty { display: none; }
 }
-.opener-note { font-size: var(--t-micro); color: var(--ink-4); margin: 0; }
 
 /* WHAT THE ANSWER DID NOT SEE. Sits with the answer, at the answer's size, in full
    ink. Quiet rather than alarming - a red panel teaches people to dismiss it - but
@@ -696,8 +646,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* WORK (seat work-tab 2026-10-06; seat work-chat 2026-10-08). The arrangement every AI chat
    shares, in the Tool's own look: a sidebar that folds, the conversation, the one box under it.
    No colour value introduced; no other product's look. */
-.work { display: grid; grid-template-columns: minmax(12rem, 16rem) 1fr; gap: 2rem; align-items: start; }
-.work-side { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; }
+/* WORK IS THE LIST OF CONVERSATIONS (seat conversation-panel, 2026-10-12); a project opens beside it. */
+.work { display: grid; grid-template-columns: minmax(0, 34rem) minmax(0, 1fr); gap: 2rem; align-items: start; padding-top: var(--gap); }
+.work-side { min-width: 0; }
 .work-side h3 { margin: 1.4em 0 .3em; font-size: var(--t-small); font-weight: var(--w-mid);  }
 .work-head { display: flex; justify-content: space-between; align-items: baseline; }
 .work-add { background: none; border: 0; padding: 0; font: inherit; font-size: var(--t-small); color: inherit; text-decoration: underline; cursor: pointer; }
@@ -708,16 +659,12 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .work-open:hover, .work-open[aria-current='true'] { background: var(--line); }
 .work-open[aria-current='true'] { font-weight: var(--w-mid); }
 .work-main { min-width: 0; display: flex; flex-direction: column; }
-#work-convo { display: flex; flex-direction: column; min-height: 60vh; }
-#work-convo .answer { flex: 1; }
 .work-when { margin-top: .4em; }
-@media (max-width: 720px) { .work { grid-template-columns: 1fr; } .work-side { position: static; max-height: none; } }
+@media (max-width: 900px) { .work { grid-template-columns: 1fr; } }
 .work-top { display: flex; gap: .5em; align-items: center; }
-.work-top .work-newchat { flex: 1; width: auto; margin: 0; }
+.work-top .work-newchat { flex: none; width: auto; margin: 0 0 0 auto; }
+.work-title { margin: 0; }
 .work-chat .work-open { display: block; }
-.work-fold { flex: none; background: none; border: 1px solid var(--line); border-radius: var(--radius); padding: calc(var(--u) * 1.5) calc(var(--u) * 2.5); font: inherit; font-size: var(--t-small); color: var(--ink-3); cursor: pointer; }
-.work.work-folded { grid-template-columns: auto 1fr; }
-.work-folded .work-list { display: none; }
 .work-search { display: block; width: 100%; margin-top: var(--gap); font: inherit; font-size: var(--t-small); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: calc(var(--u) * 2) calc(var(--u) * 3); }
 .work-search:focus { outline: none; border-color: var(--act); }
 .work-searched { margin-top: var(--u); font-size: var(--t-micro); }
@@ -731,16 +678,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .work-item { display: block; width: 100%; text-align: left; background: none; border: 0; font: inherit; font-size: var(--t-small); color: var(--ink-2); padding: calc(var(--u) * 1.5) calc(var(--u) * 3); cursor: pointer; }
 .work-item:hover, .work-item:focus-visible { background: var(--act-soft); color: var(--ink); outline: none; }
 .work-rename { flex: 1; min-width: 0; font: inherit; color: var(--ink); padding: .25em .4em; border: 1px solid var(--act); border-radius: var(--radius); }
-/* An empty chat greets her, centred; it goes the moment there is a turn to show. */
-.work-hello { margin: auto 0; padding: 10vh var(--gap) var(--gap); text-align: center; }
-.work-hello h2 { margin-bottom: calc(var(--u) * 2); }
-.work-hello p { margin: 0 auto; max-width: var(--measure); }
-#work-convo:has(#s-answer:not([hidden])) .work-hello { display: none; }
-/* THE ONE BOX, docked under the conversation on this tab only, and it stays in reach while she
-   reads; its examples open upward because there is no room below. */
-.work-box { position: sticky; bottom: 0; z-index: 20; width: 100%; max-width: var(--convo); background: var(--paper); padding: var(--gap) 0 calc(var(--u) * 3); }
-.work-box .onebox { margin: 0; }
-.work-box .onebox-tips { top: auto; bottom: 100%; margin: 0 0 var(--u); }
 
 /* THE PAGE USES THE WINDOW, AND ASK READS LIKE A CHAT. Seat chat-layout, 2026-10-06.
    Alex's rulings that day: use the arrangement of Claude or ChatGPT, not their branding; and
@@ -764,8 +701,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .answer .ans-gap, .answer .ans-meta { max-width: none; }
 .answer-slot .recs { margin-top: var(--gap); }
 .t-save-as > .go { margin-top: var(--gap); padding: 6px 12px; font-size: var(--t-micro); }
-.work-main { align-items: center; }
-#work-convo { width: 100%; max-width: var(--convo); min-width: 0; }
+
 
 /* TODAY IN THE HEADER, on every tab: from her computer, or the zone she picks (Alex, 2026-10-06). */
 .clock {
@@ -851,14 +787,14 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
 .mailx-link { display: block; padding: var(--u) 0; font-size: var(--t-small); color: var(--act); text-align: left; text-decoration: underline; text-decoration-color: var(--act-soft); }
 .mailx-link:hover { text-decoration-color: currentColor; }
 .mailx-nav { display: none; font-size: var(--t-small); font-weight: var(--w-mid); color: var(--act); }
-@media (max-width: 1100px) {
+@container main (max-width: 1100px) {
   .mailx { grid-template-columns: minmax(16rem, 21rem) minmax(0, 1fr); }
   .mailx-side { display: none; }
   .mailx[data-view='side'] .mailx-side { display: block; }
   .mailx[data-view='side'] .mailx-list { display: none; }
   .mailx-list .mailx-nav { display: inline; }
 }
-@media (max-width: 720px) {
+@container main (max-width: 720px) {
   .mailx { grid-template-columns: minmax(0, 1fr); }
   .mailx > .mailx-list, .mailx > .mailx-read { display: none; }
   .mailx[data-view='list'] > .mailx-list, .mailx[data-view='read'] > .mailx-read { display: block; }
@@ -982,7 +918,6 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
 .ans-email-box { font-size: var(--t-small); color: var(--ink-4); white-space: nowrap; }
 .ans-email-snip { grid-column: 1 / -1; font-size: var(--t-small); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 520px) { .ans-email { grid-template-columns: minmax(0, 1fr); } }
-.dock:not(.open):not(:has(#s-answer:not([hidden]))) { display: none; }
 body { padding-bottom: var(--gap-lg); }
 
 /* A find, in the inbox column: every mailbox's emails, each labelled with its mailbox. */
@@ -1049,3 +984,69 @@ body { padding-bottom: var(--gap-lg); }
 .sp-grid thead th { color: var(--ink-3); font-weight: var(--w-mid); background: var(--paper-2); }
 .sp-grid tbody th { color: var(--ink); font-weight: var(--w-mid); position: sticky; left: 0; background: var(--paper); }
 .sp-grid tr.sp-wide th { color: var(--accent); }
+
+/* ── THE CONVERSATION PANEL (seat conversation-panel, Alex 2026-10-12; approved picture "Tool conversation
+   panel": Open, Put away, Phone). On the right, 460px; on a wide screen the tab reflows into the rest of the
+   width, below 1100px it lays over the tab, on a phone it is the whole screen with a handle to pull it down.
+   Full screen widens it over the tab. Put away leaves a tab on the right edge named after the conversation.
+   SUPERSEDES the bottom dock (2026-09-27), which had no way to shrink, close or widen. ── */
+:root { --panel-w: 460px; }
+#main { container: main / inline-size; }
+.panel {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 50; width: var(--panel-w); max-width: 100vw;
+  display: flex; flex-direction: column; background: var(--paper);
+  border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(20, 23, 28, .06);
+}
+.panel[hidden] { display: none; }
+.panel.full { width: 100vw; border-left: 0; box-shadow: none; }
+@media (min-width: 1101px) { body[data-panel="open"] { padding-right: var(--panel-w); } }
+.panel-handle { display: none; }
+.panel-head {
+  flex: none; display: flex; align-items: center; gap: calc(var(--u) * 1.5); min-height: 56px;
+  padding: 0 calc(var(--u) * 2.5) 0 calc(var(--u) * 4.5); border-bottom: 1px solid var(--line-2);
+}
+.panel-title {
+  flex: 1; min-width: 0; margin: 0; font-size: var(--t-body); font-weight: var(--w-strong); color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.panel-btn {
+  flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: var(--radius); background: none; color: var(--ink-3); cursor: pointer; padding: 0;
+}
+.panel-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.panel-btn:hover, .panel-btn:focus-visible { background: var(--act-soft); color: var(--ink); }
+.panel-btn[aria-pressed="true"] { color: var(--act); background: var(--act-soft); }
+.panel-down { display: none; }
+.panel-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: calc(var(--u) * 5) calc(var(--u) * 4.5); }
+.panel.full .panel-body > *, .panel.full .panel-foot > * { max-width: var(--convo); margin-left: auto; margin-right: auto; }
+.panel-empty { margin: 0 0 var(--gap); }
+.panel-body:has(#dock-turns > *) .panel-empty, .panel-body:has(#s-answer:not([hidden])) .panel-empty { display: none; }
+.panel .answer { margin: 0; }
+.panel .answer-asked { max-width: 85%; }
+.panel-foot { flex: none; padding: calc(var(--u) * 3) calc(var(--u) * 3.5) calc(var(--u) * 4); border-top: 1px solid var(--line-2); }
+.panel-box { min-height: 52px; border-radius: 999px; padding: calc(var(--u) * 1.5) calc(var(--u) * 1.5) calc(var(--u) * 1.5) var(--gap); flex-wrap: nowrap; }
+.panel-box input { min-width: 0; font-size: var(--t-read); }
+.panel-box .send { border-radius: 999px; }
+.panel-tab {
+  position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 45;
+  display: inline-flex; align-items: center; gap: calc(var(--u) * 2); max-width: min(18rem, 70vw); height: 44px;
+  padding: 0 calc(var(--u) * 4) 0 calc(var(--u) * 3); border: 1px solid var(--line); border-right: 0;
+  border-radius: 22px 0 0 22px; background: var(--paper); box-shadow: -4px 0 16px rgba(20, 23, 28, .08);
+  color: var(--act); font: inherit; font-size: var(--t-small); font-weight: var(--w-mid); cursor: pointer;
+}
+.panel-tab[hidden] { display: none; }
+.panel-tab svg { flex: none; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.panel-tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.panel-tab:hover, .panel-tab:focus-visible { background: var(--act-soft); }
+/* A phone: the whole screen, a handle to pull it down, the chevron puts it away; Full screen has no meaning. */
+@media (max-width: 720px) {
+  .panel { width: 100vw; border-left: 0; box-shadow: none; transition: transform .15s var(--ease); }
+  .panel-handle { display: flex; justify-content: center; padding: 10px 0 2px; flex: none; }
+  .panel-handle span { width: 40px; height: 5px; border-radius: 3px; background: var(--line); }
+  .panel-head { min-height: 48px; }
+  .panel-wide { display: none; }
+  .panel-x { display: none; }
+  .panel-down { display: block; }
+  .panel-foot { padding-bottom: calc(var(--u) * 7); }
+  body[data-panel] { overflow: hidden; }
+}
