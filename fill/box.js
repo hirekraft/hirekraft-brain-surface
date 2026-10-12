@@ -1,67 +1,45 @@
-// THE ONE BOX (seat one-box, 2026-10-08). Alex that day: "It's an important feature, something you
-// don't have anywhere else, and it is almost not visible. People should be able to just say 'I'm
-// looking for that specific email about this or that'. Maybe we just need one box, but more
-// prominent, explaining what you can do with it."
-// Capability, in her words: "I tell the Tool what I need: find it, explain it, or do it."
+// THE ONE BOX (seat one-box, 2026-10-08), NOW SPOKEN TO (seat talk-to-the-tool, 2026-10-12).
+// Alex, 2026-10-11: "Whenever I ask the tool anything, it goes back to the email screen to answer it... which
+// is odd. And I also want to be able to answer with my voice. And that's not there. So just talk to the tool."
+// Capability, in her words: "I just talk to the Tool."
 //
-// ONE BOX, AT THE TOP, ON EVERY TAB. It decides what she means and hands the request to what
-// already does it; it does none of the work itself:
-//   FIND  -> the Mail tab's inbox column becomes a list of emails from every mailbox she can open
-//            (mail.js findMail, which calls worklens-live search per mailbox and its meaning search).
-//   ASK   -> lens-ask, exactly as before: about the open email when one is open on Mail
-//            (mail.js askFromMailBar), otherwise the one conversation (lens.js ask).
-//   DO    -> the Answer flow on the open email (mail.js doFromBox).
-// WHERE INTENT IS DECIDED, AND WHY HERE (seat call, 2026-10-08): in this file, by word rules, with
-// no model. A find must start at once, and a model call first would put a round trip in front of
-// every find. When the rules cannot tell, it does the cheap thing (find) and the list offers to ask
-// instead in one line. If the rules prove too blunt, the place to improve them is intentOf() below.
+// ONE CONVERSATION DECIDES. What she says goes to the conversation, and the conversation (lens-ask) decides
+// what to do with it: answer it, show the emails it rests on (drawn inside the answer, each opening its email
+// on Mail: lens.js emailList), or, about an open email, answer it or draft the reply (lens-ask's own draft
+// step). The screen moves to Mail only when she opens an email from an answer.
+// SUPERSEDES the word rules this file carried (seat one-box, 2026-10-08, and HQ's reversed default of
+// 2026-10-11): find / ask / do decided by the first word, and anything short or without a question mark sent
+// to an email search on the Mail tab. Removed, not left beside the new path.
+// THE COST, MEASURED (edge logs, 24 h to 2026-10-12): the old instant email search answered in 3.0 s at the
+// median (8.8 s at the 90th percentile); the conversation answers in 7.3 s (13.2 s). A find now waits about
+// four seconds longer and comes back as an answer with the emails in it. Chosen deliberately: one place
+// decides, and nothing guesses from the first word. If a find must be instant again, the place is lens-ask
+// (decide first, then search live), not word rules here.
+// WHERE IT LANDS: on Mail, about the open email (the "about this email" chip), or Mail's own reading column;
+// everywhere else, the one conversation (lens.js ask).
+// THE ONE EXCEPTION is a mailbox she names as a mailbox ("open accounting@"): that opens it, so a mailbox kept
+// from her goes to the door and is refused there, recorded, and said (seat refusal-wire). A pointer, not a guess.
 // No pattern here carries a backslash (the repository write tool mangles them; STANDING-CLAUSES).
 //
+// THE MICROPHONE. Press it, speak, see the words appear as she talks, press again to stop; the words stay in the
+// box so she can fix them, then Go. The browser's own speech recognition does it where the browser has it
+// (Chrome, Edge, Safari, on the phone too). Where it does not, the browser records and lens-ask writes the
+// recording down with the voicemail reader's transcription (whisper-1), and the words land in the box the same
+// way. Where the browser can do neither, the button says so when pressed: never a dead button.
+// READ ALOUD. A switch beside it reads each new answer's opening aloud in the browser's own voice. Off by
+// default; remembered in this browser only.
+//
 // SCOPE IS A CHIP, NOT A SETTING. With a mailbox open on Mail the box shows "in <mailbox>"; with an
-// email open, "about this email". Removing a chip widens the request; choosing another mailbox or
-// email brings the chip back. With no chip, a find covers every mailbox she can open.
-// EXAMPLES are built from what she can see on this screen right now (the open email, the senders in
-// the inbox she has loaded, her mailboxes). None is written here as a fixed question, because an
-// offered question the Tool cannot answer teaches that the box is decoration (index.html, dock note).
+// email open, "about this email". Removing a chip widens the request.
+// EXAMPLES are built from what she can see on this screen right now. None is written here as a fixed
+// question, because an offered question the Tool cannot answer teaches that the box is decoration.
 
 let C = null;
 const off = { mailbox: null, email: null };   // which chip she removed, by what it named
 
-const DEFAULT_PH = 'Find an email, ask anything, or say what to do';
-const DO_FIRST = ['reply', 'respond', 'answer', 'draft', 'forward', 'fwd'];
+const DEFAULT_PH = 'Ask anything, find an email, or say what to do';
+// Used only to read a mailbox she names ("open accounting@"), never to decide what she means.
 const FIND_FIRST = ['find', 'search', 'locate', 'show', 'pull', 'open', 'get'];
-const ASK_FIRST = ['what', 'who', 'whom', 'whose', 'why', 'how', 'when', 'which', 'is', 'are', 'was',
-  'were', 'do', 'does', 'did', 'can', 'could', 'should', 'would', 'will', 'tell', 'explain', 'summarize',
-  'summarise', 'compare', 'list', 'give', 'calculate', 'total', 'count'];
-const FIND_PHRASES = ['looking for', 'that email', 'the email', 'an email', 'that message', 'the message',
-  'the thread', 'that thread', 'pull up', 'show me the'];
-
-function wordsOf(text) {
-  return String(text || '').toLowerCase().replace(/[^a-z0-9@' ]+/g, ' ').split(' ').filter(Boolean);
-}
-
-// REVERSED 2026-10-11 (HQ 7; Alex: "whenever I ask the tool anything, it goes back to the email screen").
-// The old default sent anything short, anything without a question mark, and anything starting with
-// show/get/open/pull to an email search on the Mail tab. Now the default is ASK (the conversation, which
-// itself searches mail, files, chats and the connected systems); a FIND needs a clear sign she wants an
-// email: an email word (email, mail, message, thread, inbox, attachment) or 'find'/'search' at the start.
-// SUPERSEDED: the comment above saying "when the rules cannot tell, it does the cheap thing (find)".
-const MAIL_WORDS = ['email', 'emails', 'mail', 'message', 'messages', 'thread', 'threads', 'inbox', 'attachment', 'attachments'];
-// 'do' | 'do-none' (a DO with no email open) | 'find' | 'ask'
-export function intentOf(text, emailOpen) {
-  const t = String(text || '').trim();
-  const w = wordsOf(t);
-  if (!w.length) return 'find';
-  const first = w[0], joined = ' ' + w.join(' ') + ' ';
-  if (DO_FIRST.includes(first) || (first === 'write' && (w[1] === 'back' || joined.includes(' reply ')))) {
-    return emailOpen ? 'do' : 'do-none';
-  }
-  const mailish = w.some((x) => MAIL_WORDS.includes(x)) || w.some((x) => x.includes('@'));
-  if (first === 'find' || first === 'search' || first === 'locate') return 'find';
-  if (FIND_FIRST.includes(first) && mailish) return 'find';
-  if (FIND_PHRASES.some((p) => joined.includes(' ' + p + ' ')) && mailish) return 'find';
-  return 'ask';
-}
 
 const $ = (s) => document.querySelector(s);
 
@@ -162,16 +140,12 @@ function showTips(on) {
 function submit(text) {
   const t = String(text || '').trim();
   if (!t) return;
+  stopSpeaking();
   const sc = scope();
-  const intent = intentOf(t, sc.email);
-  if (intent === 'do' && C.doFromBox(t, wordsOf(t)[0] === 'forward' || wordsOf(t)[0] === 'fwd' ? 'forward' : 'reply')) return;
-  if (intent === 'ask') {
-    if (sc.onMail && C.askFromMailBar(t, !sc.email)) return;
-    C.ask(t);
-    return;
-  }
-  find(t, intent === 'unsure', intent === 'do-none' || intent === 'do'
-    ? 'Open the email you want answered, then say it again in the box; these may be it.' : '');
+  const named = sc.mailbox ? null : namedMailbox(t);
+  if (named) { find(t, named); return; }
+  if (sc.onMail && C.askFromMailBar(t, !sc.email)) return;
+  C.ask(t);
 }
 
 // A MAILBOX SHE NAMES GOES TO THE DOOR (seat refusal-wire, 2026-10-08). Until now "open accounting@" was a
@@ -203,14 +177,10 @@ function namedMailbox(text) {
   return null;
 }
 
-// Find across the mailboxes the door lists for her (the same list the Mail tab draws), the one
-// the chip names, or the one she names (above).
-function find(text, unsure, note) {
-  const sc = scope();
-  const named = sc.mailbox ? null : namedMailbox(text);
-  const keys = sc.mailbox ? [sc.mailbox.key] : named ? [named.key] : C.readingMailboxKeys();
+// A mailbox she named: open it on Mail, the find scoped to it, so the door decides (worklens-live).
+function find(text, named) {
   C.showMail();
-  C.findMail(named ? (named.rest || 'in:inbox') : text, keys, { unsure, note, askInstead: () => { C.clearFind(); if (!C.askFromMailBar(text, true)) C.ask(text); } });
+  C.findMail(named.rest || 'in:inbox', [named.key], { askInstead: () => { C.clearFind(); C.ask(text); } });
 }
 
 export function initBox(ctx) {
@@ -226,8 +196,197 @@ export function initBox(ctx) {
   input.addEventListener('focus', () => showTips(true));
   input.addEventListener('input', () => showTips(true));
   input.addEventListener('blur', () => setTimeout(() => showTips(false), 120));
+  input.addEventListener('keydown', () => stopSpeaking());
+  wireMic();
+  wireSpeak();
   drawBox();
   ownerLines();
+}
+
+// -- THE MICROPHONE (seat talk-to-the-tool, 2026-10-12) --
+// One button, three ways to listen, chosen by what this browser can do, never by a setting:
+//   'live'   the browser's own speech recognition: the words appear in the box while she talks;
+//   'record' no recognition but a recorder: record, then lens-ask writes it down (voicemail transcription);
+//   'none'   neither: pressing says so and how to get it, the button stays.
+// Press to start, press again to stop. The words stay in the box for her to fix; nothing is sent on its own.
+const SR = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+const CAN_RECORD = typeof window !== 'undefined' && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && typeof MediaRecorder !== 'undefined';
+const WAY = SR ? 'live' : CAN_RECORD ? 'record' : 'none';
+const MAX_RECORD_MS = 120000;
+let mic = { on: false, rec: null, media: null, chunks: [], stream: null, timer: null, base: '' };
+
+function micSaid(text, tone) {
+  const p = $('#onebox-mic-said');
+  if (!p) return;
+  p.textContent = text || '';
+  p.className = 'onebox-mic-said' + (tone ? ' ' + tone : '');
+  p.hidden = !text;
+}
+
+function micLook(state) {
+  const b = $('#ask-mic');
+  if (!b) return;
+  b.dataset.state = state;
+  b.setAttribute('aria-pressed', state === 'listening' || state === 'recording' ? 'true' : 'false');
+  const label = state === 'listening' ? 'Stop listening' : state === 'recording' ? 'Stop recording'
+    : state === 'writing' ? 'Writing down what you said' : 'Speak instead of typing';
+  b.setAttribute('aria-label', label);
+  b.title = label;
+  b.disabled = state === 'writing';
+}
+
+function wireMic() {
+  const b = $('#ask-mic');
+  if (!b) return;
+  micLook('idle');
+  b.addEventListener('click', () => {
+    stopSpeaking();
+    if (mic.on) { stopMic(); return; }
+    if (WAY === 'live' && !liveFailed) startLive();
+    else if (CAN_RECORD) startRecord();
+    else micSaid('This browser cannot listen. Type your question, or open the Tool in Chrome, Edge or Safari, on a computer or your phone, to speak it.', 'stalled');
+  });
+}
+
+function stopMic() {
+  if (mic.timer) { clearTimeout(mic.timer); mic.timer = null; }
+  if (mic.rec) { try { mic.rec.stop(); } catch (e) { /* already stopped */ } }
+  if (mic.media && mic.media.state !== 'inactive') { try { mic.media.stop(); } catch (e) { /* already stopped */ } }
+}
+
+function startLive() {
+  const input = $('#ask-input');
+  let rec;
+  try { rec = new SR(); } catch (e) { micSaid('The microphone could not start: ' + String((e && e.message) || e), 'stalled'); return; }
+  rec.lang = navigator.language || 'en-US';
+  rec.interimResults = true;
+  rec.continuous = true;
+  mic = { on: true, rec, media: null, chunks: [], stream: null, timer: null, base: input.value.trim() };
+  let heard = false;
+  rec.onresult = (ev) => {
+    let said = '';
+    for (let i = 0; i < ev.results.length; i++) said += ev.results[i][0].transcript;
+    heard = heard || !!said.trim();
+    input.value = (mic.base ? mic.base + ' ' : '') + said.trim();
+  };
+  rec.onerror = (ev) => {
+    const why = ev && ev.error;
+    if (why === 'not-allowed' || why === 'service-not-allowed') micSaid('The microphone is blocked for this page. Allow it from the icon in the address bar, then press the microphone again.', 'stalled');
+    else if (why === 'no-speech') micSaid('Nothing was heard. Press the microphone and speak again.', '');
+    else if (why === 'audio-capture') micSaid('No microphone was found on this device.', 'stalled');
+    else if (why === 'network' && CAN_RECORD) micSaid('The browser could not reach its listening service. Press the microphone again and the Tool will write it down instead.', 'stalled');
+    else if (why && why !== 'aborted') micSaid('Listening stopped: ' + why + '.', 'stalled');
+    if (why === 'network') liveFailed = true;
+  };
+  rec.onend = () => {
+    mic.on = false; mic.rec = null;
+    micLook('idle');
+    if (heard) { micSaid('Check the words, change anything, then press Go.', ''); input.focus(); const n = input.value.length; try { input.setSelectionRange(n, n); } catch (e) { /* some inputs refuse */ } }
+  };
+  try { rec.start(); } catch (e) { mic.on = false; micSaid('The microphone could not start: ' + String((e && e.message) || e), 'stalled'); return; }
+  micLook('listening');
+  micSaid('Listening. Speak, then press the microphone again to stop.', 'live');
+  mic.timer = setTimeout(stopMic, MAX_RECORD_MS);
+}
+
+// If the browser's own listening service cannot be reached, the next press records instead.
+let liveFailed = false;
+
+async function startRecord() {
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (e) {
+    const n = e && e.name;
+    micSaid(n === 'NotAllowedError' ? 'The microphone is blocked for this page. Allow it from the icon in the address bar, then press the microphone again.'
+      : n === 'NotFoundError' ? 'No microphone was found on this device.'
+      : 'The microphone could not start: ' + String((e && e.message) || e), 'stalled');
+    return;
+  }
+  let media;
+  try { media = new MediaRecorder(stream); } catch (e) { stream.getTracks().forEach((t) => t.stop()); micSaid('This browser cannot record: ' + String((e && e.message) || e), 'stalled'); return; }
+  mic = { on: true, rec: null, media, chunks: [], stream, timer: null, base: $('#ask-input').value.trim() };
+  media.ondataavailable = (ev) => { if (ev.data && ev.data.size) mic.chunks.push(ev.data); };
+  media.onstop = () => { stream.getTracks().forEach((t) => t.stop()); mic.on = false; writeDown(mic.chunks, media.mimeType || 'audio/webm', mic.base); };
+  media.start();
+  micLook('recording');
+  micSaid('Recording. Speak, then press the microphone again; the Tool writes it down for you to check.', 'live');
+  mic.timer = setTimeout(stopMic, MAX_RECORD_MS);
+}
+
+async function writeDown(chunks, mime, base) {
+  const input = $('#ask-input');
+  if (!chunks.length) { micLook('idle'); micSaid('Nothing was recorded. Press the microphone and speak again.', ''); return; }
+  micLook('writing');
+  micSaid('Writing down what you said.', 'live');
+  try {
+    const blob = new Blob(chunks, { type: mime });
+    const b64 = await new Promise((ok, no) => {
+      const r = new FileReader();
+      r.onload = () => ok(String(r.result).split(',')[1] || '');
+      r.onerror = () => no(r.error);
+      r.readAsDataURL(blob);
+    });
+    const j = await C.hear(b64, mime);
+    if (j && j.state === 'heard' && j.text) {
+      input.value = (base ? base + ' ' : '') + j.text;
+      micSaid('Check the words, change anything, then press Go.', '');
+      input.focus();
+    } else {
+      micSaid((j && (j.answer || j.error)) || 'What you said could not be written down, and no reason was given.', 'stalled');
+    }
+  } catch (e) {
+    micSaid('What you said could not be written down: ' + String((e && e.message) || e), 'stalled');
+  } finally {
+    micLook('idle');
+  }
+}
+
+// -- READ ALOUD (seat talk-to-the-tool, 2026-10-12) --
+// Off by default. When on, each new answer in the conversation is read aloud from its opening, in the
+// browser's own voice; speaking or typing stops it. Remembered in this browser only; nothing is stored anywhere.
+const CAN_SPEAK = typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+const SPEAK_KEY = 'tool.readAloud';
+let speakOn = false;
+try { speakOn = localStorage.getItem(SPEAK_KEY) === '1'; } catch (e) { speakOn = false; }
+
+function speakLook() {
+  const b = $('#ask-speak');
+  if (!b) return;
+  b.setAttribute('aria-pressed', speakOn ? 'true' : 'false');
+  const label = speakOn ? 'Reading answers aloud: on' : 'Read answers aloud: off';
+  b.setAttribute('aria-label', label);
+  b.title = label;
+}
+
+function wireSpeak() {
+  const b = $('#ask-speak');
+  if (!b) return;
+  speakLook();
+  b.addEventListener('click', () => {
+    if (!CAN_SPEAK) { micSaid('This browser cannot read aloud.', 'stalled'); return; }
+    speakOn = !speakOn;
+    try { localStorage.setItem(SPEAK_KEY, speakOn ? '1' : '0'); } catch (e) { /* remembered for this page only */ }
+    speakLook();
+    if (!speakOn) stopSpeaking();
+    micSaid(speakOn ? 'New answers will be read aloud.' : 'Answers will not be read aloud.', '');
+  });
+}
+
+export function stopSpeaking() {
+  if (CAN_SPEAK) { try { window.speechSynthesis.cancel(); } catch (e) { /* nothing was speaking */ } }
+}
+
+// Called by lens.js when a new answer has been drawn in the conversation (never for a reopened, kept answer).
+// Reads the opening paragraph, which the answer is written to carry on its own.
+export function speakAnswer(slot) {
+  if (!speakOn || !CAN_SPEAK || !slot) return;
+  const lead = slot.querySelector('.ans-lead-prose, .ans-lead');
+  const text = String((lead && lead.textContent) || '').replace(/[*#|]/g, ' ').trim().slice(0, 1500);
+  if (!text) return;
+  stopSpeaking();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US';
+  try { window.speechSynthesis.speak(u); } catch (e) { /* the browser declined to speak */ }
 }
 
 // THE OWNER IS TOLD (seat refusal-wire, 2026-10-08). When the owner opens the Tool and someone was told today
