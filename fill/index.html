@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-10-10-panel">
+<link rel="stylesheet" href="skin.css?v=2026-10-12-talk">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -62,8 +62,12 @@
       <input id="ask-input" type="text" autocomplete="off" enterkeyhint="go"
              aria-label="Find an email, ask anything, or say what to do"
              placeholder="Find an email, ask anything, or say what to do">
+      <!-- Speak instead of typing, and have answers read aloud (seat talk-to-the-tool, 2026-10-12; box.js). -->
+      <button class="onebox-icon" id="ask-speak" type="button" aria-pressed="false" aria-label="Read answers aloud: off" title="Read answers aloud: off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg></button>
+      <button class="onebox-icon onebox-mic" id="ask-mic" type="button" aria-pressed="false" aria-label="Speak instead of typing" title="Speak instead of typing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2z"/></svg></button>
       <button class="send" id="ask-send" type="button">Go</button>
     </div>
+    <p class="onebox-mic-said" id="onebox-mic-said" role="status" aria-live="polite" hidden></p>
     <div class="onebox-tips" id="onebox-tips" hidden></div>
   </div>
 </div>
@@ -416,6 +420,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-12-profile"></script>
+<script type="module" src="lens.js?v=2026-10-12-profile-talk"></script>
 </body>
 </html>
