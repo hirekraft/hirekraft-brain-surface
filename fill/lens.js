@@ -11,7 +11,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail } from "./mail.js?v=2026-10-12-working";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-13-own-state";
 import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-12-panel";
 import { attachOutputs } from "./outputs.js?v=2026-10-10-outputs";
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-12-working"; // Chats tab (seat chat-import)
@@ -239,8 +239,10 @@ function renderState(state, detail) {
     blankSkeletons("could not reach");
   }
   box.appendChild(b);
-  // Every reading ends here, so an open source tab is redrawn from it (seat tool-tabs).
-  if ($('#s-lens') && !$('#s-lens').hidden) drawLens();
+  // Every reading ends here, so an open source tab is redrawn from it (seat tool-tabs), EXCEPT a tab whose screen
+  // keeps its own state (seat conversation-panel, round 4; Alex 2026-10-13: the Contacts card "is somehow always
+  // reloading"). Those draw on tab entry only; a reading may refresh what beside them comes from the reading.
+  if ($('#s-lens') && !$('#s-lens').hidden) { if (lensKey in OWN_STATE) OWN_STATE[lensKey](); else drawLens(); }
   if ($('#s-security') && !$('#s-security').hidden) drawSecConnected();
 }
 
@@ -2303,8 +2305,21 @@ async function hearSpoken(b64, mime) {
 const OUT_CTX = { askUrl: ASK_URL, key: PUBLISHABLE_KEY, session: () => sb.auth.getSession() };
 function renderAsk(slot, body) {
   drawAsk(slot, body);
+  dropEchoHeading(slot);
   try { attachOutputs(slot, body, OUT_CTX); }
   catch (e) { const p = el("p", "quiet"); p.textContent = `The chart or the file buttons could not be drawn: ${e?.message ?? e}`; slot.appendChild(p); }
+}
+// A FIRST HEADING THAT ONLY REPEATS HER QUESTION IS DROPPED (seat conversation-panel, round 4): her question already
+// shows as the bubble above. "Repeats" means at least 70% of the heading's words are words of her question, ignoring
+// small words; only the answer's first element, and only a heading.
+const SMALL_WORDS = new Set(['a', 'an', 'the', 'my', 'your', 'our', 'for', 'with', 'to', 'of', 'and', 'on', 'in', 'me', 'you', 'we']);
+const wordsOf = (t) => String(t || '').toLowerCase().split(new RegExp('[^a-z0-9]+')).filter((w) => w && !SMALL_WORDS.has(w));
+function dropEchoHeading(slot) {
+  const asked = slot.closest('.answer-turn')?.querySelector('.answer-asked')?.textContent;
+  const first = slot.querySelector('.ans-lead-prose > .ans-h:first-child, .ans-h:first-child');
+  if (!asked || !first || slot.querySelector('.ans-h') !== first) return;
+  const q = new Set(wordsOf(asked)), h = wordsOf(first.textContent);
+  if (h.length && h.filter((w) => q.has(w)).length / h.length >= 0.7) first.remove();
 }
 function drawAsk(slot, body) {
   slot.innerHTML = "";
@@ -3177,6 +3192,15 @@ function drawTabs() {
   }
 }
 
+// TABS THAT KEEP THEIR OWN STATE (seat conversation-panel, round 4). Every lensKey branch of drawLens, checked:
+//   email    keeps its own state (the open email, the inbox page, a find): a reading redraws only the mailbox column,
+//            which is the part that comes from the reading. Until now every reading rebuilt the open email, reloading
+//            its frame and losing its scroll.
+//   contacts keeps its own state (the card she looked up): a reading draws nothing. Until now every reading cleared
+//            the card and looked the person up again, so a slow lookup never stayed on screen.
+//   drives, calendar, systems, loose: drawn from the reading itself; redrawn, with keepOpen putting back what she opened.
+const OWN_STATE = { email: () => mailReading(), contacts: () => {} };
+
 function drawLens() {
   const t = TABS.find((x) => x.key === lensKey);
   const body = $('#lens-body');
@@ -3191,7 +3215,7 @@ function drawLens() {
   // every connected system and mail, drawn by contacts.js from the brain's contact_card. It does not wait for Google
   // Contacts to be connected: CATS, HubSpot and mail already hold the people.
   if (lensKey === 'contacts') {
-    import('./contacts.js?v=2026-10-13-contacts').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, isOwner: () => !!shape?.viewer?.all_access }))
+    import('./contacts.js?v=2026-10-13-own-state').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, isOwner: () => !!shape?.viewer?.all_access }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Contacts tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
