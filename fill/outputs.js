@@ -342,6 +342,7 @@ async function makePdf(turns) {
     for (const l of readLines(t.body)) text(l, 9);
   }
   doc.save(fileName(title, "pdf"));
+  return { doc, title };
 }
 
 async function makeSheet(turns) {
@@ -443,10 +444,17 @@ const WORD = { pdf: "PDF", spreadsheet: "spreadsheet", slides: "slides" };
 async function make(kind, turns, ctx, said, n, ask) {
   if (!turns.length) { said.textContent = "There is no answer here to make it from yet."; return; }
   try {
-    if (kind === "pdf") { said.textContent = "Making the PDF."; await makePdf(turns); }
+    if (kind === "pdf") {
+      said.textContent = "Making the PDF.";
+      const made = await makePdf(turns);
+      // Also shown wide beside the conversation on Work (seat conversation-panel, item 15); the download stays the file.
+      if (ctx && typeof ctx.view === "function" && made && made.doc) {
+        try { ctx.view(made.title || "PDF", made.doc.output("bloburl")); } catch (e) { /* the download is still there */ }
+      }
+    }
     else if (kind === "spreadsheet") { said.textContent = "Making the spreadsheet."; await makeSheet(turns); }
     else { said.textContent = "Writing the slides from what you were shown."; const deck = await askOutline(ctx, turns, n, ask); said.textContent = "Making the slides."; await makeSlides(turns, deck); }
-    said.textContent = "The " + WORD[kind] + " is in your downloads. It was made on this computer and is not kept anywhere else.";
+    said.textContent = "The " + WORD[kind] + " is in your downloads" + (kind === "pdf" && ctx && ctx.view ? " and open beside the conversation" : "") + ". It was made on this computer and is not kept anywhere else.";
   } catch (e) {
     said.textContent = "The " + WORD[kind] + " could not be made: " + (e && e.message ? e.message : e);
   }
