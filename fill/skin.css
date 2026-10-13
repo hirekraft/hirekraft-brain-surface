@@ -405,12 +405,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 .ans-meta { margin-top: var(--gap); font-size: var(--t-small); color: var(--ink-3); }
 
-/* Section labels inside a long answer. --t-small so they group without competing with
-   the answer itself: one thing emphasised per block, and in a section the emphasis
-   is the content, not the label. */
+/* Section labels inside a long answer, IN HER OWN CASE (seat conversation-panel, round 4; Alex 2026-10-13: "I don't
+   know why it would be in all caps", as on 2026-10-06 for his questions). A sentence-case heading, medium weight. */
 .ans-h {
-  font-size: var(--t-small); letter-spacing: .08em; text-transform: uppercase;
-  color: var(--ink-3); margin: calc(var(--u) * 8) 0 calc(var(--u) * 2);
+  font-size: var(--t-body); font-weight: var(--w-mid); color: var(--ink-2);
+  margin: calc(var(--u) * 7) 0 calc(var(--u) * 2);
 }
 .ans-prose > .ans-h:first-child, .ans-lead-prose > .ans-h:first-child { margin-top: var(--gap); }
 .ans-prose strong, .ans-lead-prose strong { font-weight: var(--w-mid); color: var(--ink); }
@@ -831,7 +830,7 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
 .answerx-said { margin-top: calc(var(--u) * 2); }
 .answerx-draft > .go { margin-top: var(--gap); }
 /* The records under every answer, grouped by where they came from (lens.js recordList). */
-.record-group { list-style: none; margin-top: var(--gap); font-size: var(--t-micro); color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
+.record-group { list-style: none; margin-top: var(--gap); font-size: var(--t-small); font-weight: var(--w-mid); color: var(--ink-3); }
 
 /* WORKSPACE (seat email-workspace, 2026-10-07; Alex that day). The conversation about an email sits
    with it in the reading column, and while she talks the email shows its sender and first lines.
