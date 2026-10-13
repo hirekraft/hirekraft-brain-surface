@@ -906,6 +906,34 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
 .onebox-mic-said { margin: var(--u) var(--gap) 0; font-size: var(--t-small); color: var(--ink-3); }
 .onebox-mic-said.live { color: var(--act); }
 .onebox-mic-said.stalled { color: var(--accent); }
+/* Add a file, a picture or screenshot, or connect something (seat add-files, 2026-10-13). The + sits in both boxes;
+   its menu drops below the top box and rises above the panel's box. Added files wait in a tray under the box. */
+.onebox-addmenu {
+  position: absolute; left: 0; top: 100%; z-index: 40; margin-top: var(--u); min-width: 18rem; max-width: calc(100vw - 32px);
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--u) 0;
+}
+.panel-foot { position: relative; }
+.panel-foot .onebox-addmenu { top: auto; bottom: 100%; left: calc(var(--u) * 3.5); margin: 0 0 var(--u); }
+.onebox-additem {
+  display: block; width: 100%; text-align: left; font: inherit; color: var(--ink); background: none; border: 0;
+  padding: calc(var(--u) * 2) var(--gap); cursor: pointer;
+}
+.onebox-additem:hover, .onebox-additem:focus-visible { background: var(--act-soft); }
+.onebox-additem .a-label { display: block; font-size: var(--t-read); }
+.onebox-additem .a-sub { display: block; font-size: var(--t-small); color: var(--ink-3); }
+.onebox-files { display: flex; flex-wrap: wrap; align-items: center; gap: var(--u) calc(var(--u) * 2); margin: var(--u) var(--gap) 0; }
+.onebox-file {
+  display: inline-flex; align-items: center; gap: calc(var(--u) * 1.5); max-width: 100%; font-size: var(--t-small);
+  color: var(--ink-2); background: var(--paper-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 4px 3px 12px;
+}
+.onebox-file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 16rem; }
+.onebox-file-size { color: var(--ink-3); white-space: nowrap; }
+.onebox-file button { font: inherit; color: inherit; background: none; border: 0; padding: 0 7px; cursor: pointer; }
+.onebox-files-note { flex-basis: 100%; margin: 0; font-size: var(--t-small); color: var(--ink-3); }
+.drop-here { outline: 2px dashed var(--act); outline-offset: 4px; }
+/* On a phone the + is one more button in the row: the field gives way so Go stays on the same line. */
+@media (max-width: 600px) { .onebox-bar input { min-width: 6rem; } }
+.answer-with { width: fit-content; max-width: 80%; margin: calc(var(--u) * -2) 0 calc(var(--u) * 3) auto; font-size: var(--t-small); color: var(--ink-3); }
 /* The emails an answer rests on, each opening on Mail (lens.js emailList). */
 .ans-emails { margin: calc(var(--u) * 3) 0; max-width: var(--measure); }
 .ans-emails-head { margin: 0 0 var(--u); font-size: var(--t-small); font-weight: var(--w-mid); color: var(--ink-2); }
