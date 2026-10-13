@@ -1246,3 +1246,64 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
 .plan-count { margin-top: calc(var(--u) * 2); }
 .plan-learned { margin-top: calc(var(--u) * 2); color: var(--ink-2); font-weight: var(--w-mid); }
 @media (max-width: 520px) { .plan-card { padding: calc(var(--u) * 3); } .plan-card .actions { flex-wrap: nowrap; } .plan-card .actions .go { flex: 1 1 0; } }
+
+/* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
+   visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
+   for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
+   become a bar at the bottom within thumb reach: Mail, Work, Drives, Calendar, Contacts, then More, which opens the
+   rest above the bar. Ask, the round button above the bar, opens the conversation from any tab in one tap.
+   Everything she taps is at least 44px. At desktop width More and Ask do not exist. ── */
+.tab-more, .tab-ask { display: none; }
+@media (max-width: 720px) {
+  body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .masthead { align-items: center; padding-top: calc(var(--u) * 2); min-height: 48px; }
+  .wordmark { display: flex; align-items: baseline; gap: calc(var(--u) * 1.5); white-space: nowrap; }
+  .wordmark span { display: inline; margin: 0; }
+  .masthead .clock { display: none; }
+  .wordmark { min-height: 44px; align-items: center; }
+  .whoami { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .whoami > * { white-space: nowrap; }
+  /* The health word stays on the one header line, between the name and the person (overrides tool-health's own
+     row below 560px, which made the header two lines again); its panel spans the screen under the header. */
+  .masthead { flex-wrap: nowrap; }
+  .masthead .health { order: 0; flex: none; flex-basis: auto; margin: 0; }
+  .masthead .health-btn { min-height: 44px; }
+  .masthead .health-panel { position: fixed; left: 16px; right: 16px; top: 56px; width: auto; max-height: 70vh; overflow-y: auto; }
+
+  .tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; margin: 0; gap: 0;
+    display: flex; flex-wrap: wrap; align-items: stretch;
+    background: var(--paper); border-top: 1px solid var(--line); border-bottom: 0;
+    padding: 0 0 env(safe-area-inset-bottom); box-shadow: 0 -4px 16px rgba(20, 23, 28, .05);
+  }
+  .tabs .tab { display: none; }
+  .tabs .tab[hidden] { display: none !important; }
+  .tabs .tab-day, .tabs .tab-more {
+    display: flex; align-items: center; justify-content: center; flex: 1 1 0; min-width: 0; min-height: 56px;
+    padding: 0 2px; margin: 0; font-size: 13px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    border-bottom: 0; border-top: 2px solid transparent;
+  }
+  .tabs .tab[aria-current='page'], .tabs .tab-more.here { color: var(--ink); font-weight: var(--w-mid); border-top-color: var(--ink); }
+  /* More open: the other tabs stack above the bar as full-width rows; the bar stays where it was. */
+  .tabs.more-open .tab:not(.tab-day):not(.tab-more):not(.tab-ask) {
+    display: flex; align-items: center; order: -1; flex: 0 0 100%; min-height: 52px; margin: 0;
+    padding: 0 var(--pad); font-size: var(--t-body); border: 0; border-bottom: 1px solid var(--line-2);
+  }
+  .tabs.more-open .tab:not(.tab-day):not(.tab-more):not(.tab-ask)[aria-current='page'] { background: var(--act-soft); }
+  .tabs.more-open .tab-more { color: var(--ink); font-weight: var(--w-mid); }
+  .tabs .tab-ask {
+    display: flex; align-items: center; justify-content: center; position: absolute; right: 16px; bottom: calc(100% + 14px);
+    width: 64px; height: 64px; border-radius: 999px; border: 0; background: var(--act); color: var(--paper);
+    font-size: var(--t-small); font-weight: var(--w-mid); box-shadow: 0 6px 18px rgba(20, 23, 28, .18);
+  }
+  .tabs.more-open .tab-ask, body[data-tab='work'] .tabs .tab-ask, body[data-panel] .tabs .tab-ask { display: none; }
+  /* The conversation and its "put away" tab sit over the bar, never under it. */
+  .panel-tab { top: auto; bottom: calc(64px + 96px + env(safe-area-inset-bottom)); transform: none; }
+
+  /* Tap targets: what she taps on a phone is at least 44px tall. */
+  .clock-zone, #ask-send, #work-search, #work-project-new, .onebox-icon, .send, .go { min-height: 44px; min-width: 44px; }
+  /* Nothing pushes the page sideways: long words and addresses wrap, media keep to the column. */
+  #main { overflow-wrap: anywhere; }
+  #main img, #main video, #main iframe, #main pre, #main svg { max-width: 100%; }
+  #main pre { overflow-x: auto; }
+}
