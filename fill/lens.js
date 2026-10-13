@@ -4048,6 +4048,77 @@ function drawClock() {
   setInterval(drawClock, 20000);
 })();
 
+// THE TOOL'S HEALTH IN THE HEADER (seat tool-health, 2026-10-13; Alex that day, decision 1003): a gauge on the
+// tool surface that shows everything is okay. One word: Healthy, Being fixed, Needs you. Tap it for one line per
+// area and what the Tool fixed on its own. Read from public.tool_health(), the one health reading; the studio's
+// alerts read the same function, so the gauge and the alert cannot disagree. A problem nobody has picked up yet
+// still says Being fixed here: the studio's on-call reads it within the half hour (design D3, tool-health report).
+// Not signed in: hidden, the sign-in page speaks. Reading failed: says so, never shows Healthy.
+(function wireHealth() {
+  const clock = $('#clock');
+  if (!clock) return;
+  const wrap = el('div', 'health'); wrap.id = 'health'; wrap.hidden = true;
+  const btn = el('button', 's-badge health-btn'); btn.type = 'button'; btn.setAttribute('aria-expanded', 'false');
+  const badge = el('span', 'badge b-grey'); badge.textContent = 'Checking';
+  btn.appendChild(badge);
+  const panel = el('div', 'health-panel'); panel.hidden = true;
+  panel.setAttribute('role', 'region'); panel.setAttribute('aria-label', 'How the Tool is doing');
+  wrap.append(btn, panel);
+  clock.after(wrap);
+  const TONE = { healthy: 'b-green', fixing: 'b-blue', needs_you: 'b-orange' };
+  const AREA_TONE = { ok: 'b-green', fixing: 'b-blue', red: 'b-blue', needs_you: 'b-orange' };
+  const AREA_WORD = { ok: 'OK', fixing: 'Being fixed', red: 'Being fixed', needs_you: 'Needs you' };
+  const close = () => { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+  btn.addEventListener('click', () => { panel.hidden = !panel.hidden; btn.setAttribute('aria-expanded', String(!panel.hidden)); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) { close(); btn.focus(); } });
+  document.addEventListener('click', (e) => { if (!panel.hidden && !wrap.contains(e.target)) close(); });
+  const at = (ts) => { try { return new Date(ts).toLocaleTimeString(undefined, { timeZone: zone(), hour: 'numeric', minute: '2-digit' }); } catch (_) { return ''; } };
+  async function readHealth() {
+    let data = null, error = null;
+    try { ({ data, error } = await sb.rpc('tool_health')); } catch (e) { error = e; }
+    if (!error && data && data.ok === false) { wrap.hidden = true; close(); return; }
+    wrap.hidden = false;
+    panel.innerHTML = '';
+    if (error || !data) {
+      badge.className = 'badge b-grey'; badge.textContent = 'Not checked';
+      btn.title = 'How the Tool is doing: not checked';
+      const p = el('p', 'health-head');
+      p.textContent = 'The Tool could not read its own health just now. It will try again in a few minutes.';
+      panel.appendChild(p);
+      return;
+    }
+    badge.className = 'badge ' + (TONE[data.overall] || 'b-grey');
+    badge.textContent = data.word;
+    btn.title = 'How the Tool is doing: ' + data.word;
+    const head = el('p', 'health-head');
+    head.textContent = data.overall === 'healthy' ? 'Everything is working.'
+      : data.overall === 'needs_you' ? 'One thing needs a person. The rest is being looked after.'
+      : 'Something is not right yet, and it is being fixed. Nothing for you to do.';
+    panel.appendChild(head);
+    const ul = el('ul', 'health-areas');
+    for (const a of data.areas || []) {
+      const li = el('li', 'health-area');
+      const b = el('span', 'badge ' + (AREA_TONE[a.state] || 'b-grey'));
+      b.textContent = AREA_WORD[a.state] || 'Not checked';
+      const name = el('b'); name.textContent = a.name;
+      const say = el('span', 'health-say'); say.textContent = a.say;
+      li.append(b, name, say);
+      ul.appendChild(li);
+    }
+    panel.appendChild(ul);
+    const fixed = data.repairs || [];
+    if (fixed.length) {
+      const h = el('p', 'health-sub'); h.textContent = 'Fixed on its own in the last day';
+      const ul2 = el('ul', 'health-fixed');
+      for (const r of fixed.slice(0, 5)) { const li = el('li'); li.textContent = r.what + (r.at ? ', ' + at(r.at) : ''); ul2.appendChild(li); }
+      panel.append(h, ul2);
+    }
+    if (data.checked_at) { const t = el('p', 'health-when'); t.textContent = 'Last checked ' + at(data.checked_at) + '.'; panel.appendChild(t); }
+  }
+  readHealth();
+  setInterval(readHealth, 5 * 60 * 1000);
+})();
+
 drawTreeFrame();                 // the frame first, instantly, with space reserved
 stageTypes();
 drawTabs();
