@@ -3187,6 +3187,14 @@ function drawLens() {
   if (lensKey === 'email') { drawMail(body); return; }
   $('#lens-head').textContent = t.label;
   body.innerHTML = '';
+  // THE CONTACTS TAB (seat contacts, 2026-10-13): a lookup of anyone or any company the business has dealt with, from
+  // every connected system and mail, drawn by contacts.js from the brain's contact_card. It does not wait for Google
+  // Contacts to be connected: CATS, HubSpot and mail already hold the people.
+  if (lensKey === 'contacts') {
+    import('./contacts.js?v=2026-10-13-contacts').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, isOwner: () => !!shape?.viewer?.all_access }))
+      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Contacts tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
+    return;
+  }
   const data = groupsFor().find((x) => x.key === lensKey);
   if (lensKey === 'drives' && data?.connected) { drawDrives(body, data); return; }
   const line = el('p', 'quiet');
