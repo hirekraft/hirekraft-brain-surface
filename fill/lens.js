@@ -12,7 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-13-own-state";
-import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-12-panel";
+import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-13-add-files";
 import { attachOutputs } from "./outputs.js?v=2026-10-13-wide";
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-12-working"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-12-working"; // Money tab (seat runway)
@@ -2435,9 +2435,12 @@ document.addEventListener("click", (e) => {
   li.scrollIntoView({ block: "center", behavior: "smooth" });
 });
 
-async function ask(question) {
+// FILES ADDED WITH THE QUESTION (seat add-files, 2026-10-13): box.js hands them over with the question; they go to
+// lens-ask with it, are named under her question here, and the answer says what was read. Nothing keeps them here.
+async function ask(question, files) {
   const q = (question ?? "").trim();
   if (!q || asking) return;
+  const added = Array.isArray(files) ? files : [];
   asking = true;
 
   const sec = $("#s-answer");
@@ -2455,9 +2458,11 @@ async function ask(question) {
   const turn = el("div", "answer-turn");
   const asked = el("p", "answer-asked"); asked.textContent = q;
   const slot = el("div", "answer-slot");
-  const wait = el("p", "answer-wait working"); wait.textContent = "Reading your records.";
+  const wait = el("p", "answer-wait working"); wait.textContent = added.length ? "Reading what you added and your records." : "Reading your records.";
   slot.appendChild(wait);
-  turn.append(asked, slot);
+  turn.append(asked);
+  if (added.length) { const w = el("p", "answer-with"); w.textContent = "With " + added.map((f) => f.name).join(", "); turn.append(w); }
+  turn.append(slot);
   mount.appendChild(turn);
   turn.scrollIntoView({ block: "start", behavior: "smooth" });
 
@@ -2476,7 +2481,7 @@ async function ask(question) {
       // is answered as the question it continues. lens-ask decides whether it does.
       // Her time zone travels with every question so lens-ask resolves 'last month' against her
       // today, never against the dates in the records (seat chat-layout, 2026-10-06).
-      body: JSON.stringify(Object.assign({ question: q, tz: zone() }, lastAsked ? { follows: lastAsked } : {})),
+      body: JSON.stringify(Object.assign({ question: q, tz: zone() }, lastAsked ? { follows: lastAsked } : {}, added.length ? { files: added } : {})),
     });
     const body = await r.json().catch(() => null);
     if (!body) { askProblem(slot, `The brain did not answer (${r.status}). Nothing was changed.`); return; }
@@ -3744,6 +3749,9 @@ initMail({
 // THE ONE BOX (seat one-box, 2026-10-08): what it needs from this page, and nothing it does itself.
 initBox({
   el, ask, hear: hearSpoken,
+  // seat add-files: whether a question is on its way (a question sent now would be dropped), and the one connect flow.
+  busy: () => asking,
+  connect: () => { userMoved = true; openConnect(); },
   // seat refusal-wire, 2026-10-08: who is viewing, and the owner's refused-attempts reader (the brain refuses anyone else).
   viewer: () => shape?.viewer ?? null,
   refusalWatch: async () => {
