@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-10-13-work-full">
+<link rel="stylesheet" href="skin.css?v=2026-10-13-add-files">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -58,6 +58,8 @@
        bottom of the page and its "asking across everything" line. -->
   <div class="onebox" id="onebox">
     <div class="onebox-bar">
+      <!-- Add a file, a picture or screenshot, or connect something (seat add-files, 2026-10-13; box.js). -->
+      <button class="onebox-icon onebox-add" id="ask-add" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Add a file or a picture, or connect something" title="Add a file or a picture, or connect something"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg></button>
       <span class="onebox-chips" id="onebox-chips"></span>
       <input id="ask-input" type="text" autocomplete="off" enterkeyhint="go"
              aria-label="Ask or tell the Tool anything"
@@ -68,6 +70,10 @@
       <button class="send" id="ask-send" type="button">Go</button>
     </div>
     <p class="onebox-mic-said" id="onebox-mic-said" role="status" aria-live="polite" hidden></p>
+    <div class="onebox-addmenu" id="ask-addmenu" role="menu" aria-label="Add" hidden></div>
+    <div class="onebox-files" id="onebox-files" role="status" aria-live="polite" hidden></div>
+    <input type="file" id="add-file" multiple hidden>
+    <input type="file" id="add-picture" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
     <div class="onebox-tips" id="onebox-tips" hidden></div>
   </div>
 </div>
@@ -414,12 +420,15 @@
   </div>
   <div class="panel-foot">
     <div class="onebox-bar panel-box">
+      <button class="onebox-icon onebox-add" id="panel-add" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Add a file or a picture, or connect something" title="Add a file or a picture, or connect something"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg></button>
       <input id="panel-input" type="text" autocomplete="off" enterkeyhint="go"
              aria-label="Ask a follow-up" placeholder="Ask a follow-up">
       <button class="onebox-icon onebox-mic" id="panel-mic" type="button" aria-pressed="false" aria-label="Speak instead of typing" title="Speak instead of typing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2z"/></svg></button>
       <button class="send" id="panel-send" type="button">Go</button>
     </div>
     <p class="onebox-mic-said" id="panel-mic-said" role="status" aria-live="polite" hidden></p>
+    <div class="onebox-addmenu" id="panel-addmenu" role="menu" aria-label="Add" hidden></div>
+    <div class="onebox-files" id="panel-files" role="status" aria-live="polite" hidden></div>
   </div>
 </aside>
 <!-- Put away: a tab on the right edge, named after the conversation; it reopens it exactly as it was. -->
@@ -430,6 +439,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-13-contacts-r3"></script>
+<script type="module" src="lens.js?v=2026-10-13-add-files"></script>
 </body>
 </html>
