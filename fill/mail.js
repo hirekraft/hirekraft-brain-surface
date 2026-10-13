@@ -145,6 +145,13 @@ export function drawMail(body) {
   flushOpen();
 }
 
+// A new reading of the brain refreshes only what comes from it here: the mailbox column with each mailbox's state
+// (seat conversation-panel, round 4). The open email, the inbox page and a find are this tab's own and stay as they are.
+export function mailReading() {
+  if (!parts || !parts.wrap.isConnected) return;
+  drawSide();
+}
+
 // Her own mailbox first, if she can open it; otherwise the first one that is being read.
 function pickDefault() {
   const rows = [...C.mailboxes().values()];
