@@ -985,6 +985,26 @@ body { padding-bottom: var(--gap-lg); }
 .sp-grid tbody th { color: var(--ink); font-weight: var(--w-mid); position: sticky; left: 0; background: var(--paper); }
 .sp-grid tr.sp-wide th { color: var(--accent); }
 
+/* DRIVES AS FOLDERS (seat conversation-panel, Alex 2026-10-12): one tile per drive, a list view one click away. */
+.drives-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); margin-bottom: var(--gap); }
+.drives-top .tab-count { flex: 1; min-width: 12rem; }
+.drives-top .go { margin: 0; }
+.drives-view { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.drives-flip { min-height: 36px; padding: 0 calc(var(--u) * 3); border: 0; background: var(--paper); color: var(--ink-3); font: inherit; font-size: var(--t-small); cursor: pointer; }
+.drives-flip[aria-pressed="true"] { background: var(--act-soft); color: var(--act); font-weight: var(--w-mid); }
+.drives-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: var(--gap); }
+.drive-tile { display: flex; flex-direction: column; gap: calc(var(--u) * 2.5); padding: var(--gap); border: 1px solid var(--line); border-radius: 10px; background: var(--paper); min-width: 0; }
+.drive-head { display: flex; align-items: center; gap: calc(var(--u) * 3); min-width: 0; }
+.drive-mark { flex: none; width: 36px; height: 36px; color: var(--act); }
+.drive-tile.is-grey .drive-mark { color: var(--ink-4); }
+.drive-names { min-width: 0; }
+.drive-name { margin: 0; font-weight: var(--w-strong); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drive-kind { margin: 0; font-size: var(--t-small); color: var(--ink-3); }
+.drive-tile .state { margin: 0; }
+.drives-older { margin-top: var(--gap-lg); font-size: var(--t-small); }
+.drives-older > summary { width: fit-content; cursor: pointer; color: var(--ink-3); }
+.drives-older .members li { padding: calc(var(--u) * 2) 0; border-bottom: 1px solid var(--line-2); }
+
 /* ONE WORKING SIGN (seat conversation-panel, folding in seat working-sign's job; Alex 2026-10-11: "show customer
    that it's actually working... even when it loads the brain the first time"). Any wait puts class "working" on
    the line that says what is happening, next to what she pressed: a small turning mark, and after 10 seconds
