@@ -173,7 +173,8 @@ function drawSide() {
     who.appendChild(mk('b', null, v.name));
     who.appendChild(document.createTextNode(', signed in'));
   } else {
-    who.textContent = C.readingState() === 'unbound' ? 'Nobody is signed in on this browser.' : 'Reading who you are.';
+    who.textContent = C.readingState() === 'unbound' ? 'Nobody is signed in on this browser.'
+      : C.readingState() === 'signedout' ? 'You are signed out.' : 'Reading who you are.';
   }
   side.appendChild(who);
 
