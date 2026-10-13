@@ -233,6 +233,12 @@ function blankSkeletons(word) {
 
 function renderWho() {
   const v = shape.viewer;
+  // THE CUSTOMER'S OWN NAME IN THE MASTHEAD, as she writes it (seat conversation-panel, Alex 2026-10-12), from the
+  // brain's business_name(). Until that read exists on this brain the masthead keeps its text; nothing is guessed.
+  sb.rpc('business_name').then(({ data, error }) => {
+    const span = document.querySelector('.wordmark span');
+    if (!error && typeof data === 'string' && data.trim() && span) span.textContent = data.trim();
+  }).catch(() => { /* the read is not there yet: the masthead stays as it was */ });
   $("#whoami").innerHTML = `<b>${escape(v.name)}</b><br>${escape(v.role ?? "")}`;
   $("#sum-head").textContent = v.all_access
     ? "What is in it."
