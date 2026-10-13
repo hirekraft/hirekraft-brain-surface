@@ -141,8 +141,25 @@ function showTips(on) {
 }
 
 function submit(text, fromPanel) {
-  const t = String(text || '').trim();
-  if (!t) return;
+  let t = String(text || '').trim();
+  if (!t && !pending.length) return;
+  // FILES GO WITH THE QUESTION (seat add-files): to the panel's conversation, which lens-ask answers with them. The
+  // mailbox-name find and the open email's own conversation do not carry files, so a question with files skips both.
+  if (pending.length || adding) {
+    const box = $(fromPanel ? '#panel-input' : '#ask-input');
+    if (adding || (C.busy && C.busy())) {
+      if (box && t) box.value = t;
+      drawTrays(adding ? 'Still adding. Press Go again in a moment.' : 'Wait for the answer above, then press Go again: your files are still here.');
+      return;
+    }
+    if (!t) t = pending.length === 1 ? 'What does the file I added say, and what matters in it?' : 'What do the files I added say, and what matters in them?';
+    const files = pending.map((f) => ({ name: f.name, mime: f.mime, b64: f.b64 }));
+    pending = [];
+    drawTrays();
+    stopSpeaking();
+    C.ask(t, files);
+    return;
+  }
   stopSpeaking();
   const sc = scope();
   const named = sc.mailbox ? null : namedMailbox(t);
@@ -209,8 +226,162 @@ export function initBox(ctx) {
   input.addEventListener('keydown', () => stopSpeaking());
   wireMic();
   wireSpeak();
+  wireAdd();
   drawBox();
   ownerLines();
+}
+
+// -- ADD A FILE OR A PICTURE (seat add-files, 2026-10-13; Alex 2026-10-12, decision 997) --
+// "Could we also have a place like in Claude to add a file, like the plus sign... a screenshot or anything... maybe even
+// a connector." The + in both boxes offers: Add a file; Add a picture or screenshot (also paste one, or drop files on the
+// box, the conversation or Work); Connect something, which opens the one connect flow (openConnect in lens.js), never a
+// second connect screen. What is added waits under the box and goes with the next question; lens-ask reads it in that
+// same turn and the answer says what it read. The limits are lens-ask's (5 files, 15 MB together, 5 MB a picture), so a
+// file that cannot go is said here at once instead of being sent to fail. Keeping files in the brain is a later step:
+// until it exists the tray says they are not kept, and nothing here stores anything.
+const ADD_MAX_FILES = 5, ADD_MAX_BYTES = 15000000, ADD_MAX_PICTURE = 5000000;
+const PICTURES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+const TRAYS = ['#onebox-files', '#panel-files'];
+let pending = [];   // { id, name, mime, size, b64 }
+let adding = 0;
+let addFrom = 'top';
+
+function sizeWord(n) { return n >= 1000000 ? (n / 1000000).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1000)) + ' KB'; }
+function stamp() {
+  const d = new Date(); const p = (x) => String(x).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' at ' + p(d.getHours()) + '.' + p(d.getMinutes()) + '.' + p(d.getSeconds());
+}
+
+function drawTrays(note) {
+  for (const sel of TRAYS) {
+    const t = $(sel);
+    if (!t) continue;
+    t.innerHTML = '';
+    if (!pending.length && !adding && !note) { t.hidden = true; continue; }
+    for (const f of pending) {
+      const c = C.el('span', 'onebox-file');
+      const n = C.el('span', 'onebox-file-name'); n.textContent = f.name; n.title = f.name;
+      const s = C.el('span', 'onebox-file-size'); s.textContent = sizeWord(f.size);
+      const x = C.el('button'); x.type = 'button'; x.textContent = 'x'; x.title = 'Remove';
+      x.setAttribute('aria-label', 'Remove ' + f.name);
+      x.addEventListener('click', () => { pending = pending.filter((p) => p.id !== f.id); drawTrays(); });
+      c.append(n, s, x);
+      t.appendChild(c);
+    }
+    const p = C.el('p', 'onebox-files-note' + (adding ? ' working' : ''));
+    p.textContent = adding ? 'Adding ' + adding + (adding === 1 ? ' file.' : ' files.')
+      : note || 'Read with your next question. Not kept in the brain yet.';
+    t.appendChild(p);
+    t.hidden = false;
+  }
+}
+
+async function addFiles(list, from) {
+  const files = [...(list || [])];
+  if (!files.length) return;
+  const refused = [];
+  for (const file of files) {
+    const isPic = PICTURES.includes(file.type);
+    let name = file.name || '';
+    if (isPic && (!name || name === 'image.png' || name === 'image.jpeg')) name = 'Screenshot ' + stamp() + '.' + (file.type.split('/')[1] || 'png');
+    if (!name) name = 'File ' + stamp();
+    const total = pending.reduce((sum, p) => sum + p.size, 0) + file.size;
+    if (pending.length >= ADD_MAX_FILES) { refused.push(name + ': up to ' + ADD_MAX_FILES + ' files go with one question'); continue; }
+    if (isPic && file.size > ADD_MAX_PICTURE) { refused.push(name + ': a picture can be up to 5 MB'); continue; }
+    if (total > ADD_MAX_BYTES) { refused.push(name + ': the files added to one question can be up to 15 MB together'); continue; }
+    adding++;
+    drawTrays();
+    try {
+      const b64 = await new Promise((ok, no) => {
+        const r = new FileReader();
+        r.onload = () => ok(String(r.result).split(',')[1] || '');
+        r.onerror = () => no(r.error);
+        r.readAsDataURL(file);
+      });
+      pending.push({ id: Math.random().toString(36).slice(2), name, mime: file.type || '', size: file.size, b64 });
+    } catch (e) {
+      refused.push(name + ': this browser could not open it (' + String((e && e.message) || e) + ')');
+    } finally {
+      adding--;
+    }
+  }
+  drawTrays(refused.length ? 'Not added: ' + refused.join('; ') + '.' : '');
+  const input = $(from === 'panel' ? '#panel-input' : '#ask-input');
+  if (input) input.focus();
+}
+
+function menuOf(which) {
+  return { m: $(which === 'panel' ? '#panel-addmenu' : '#ask-addmenu'), b: $(which === 'panel' ? '#panel-add' : '#ask-add') };
+}
+function closeMenus() {
+  for (const w of ['top', 'panel']) {
+    const { m, b } = menuOf(w);
+    if (m) m.hidden = true;
+    if (b) b.setAttribute('aria-expanded', 'false');
+  }
+}
+function openMenu(which) {
+  const { m, b } = menuOf(which);
+  if (!m || !b) return;
+  if (!m.hidden) { closeMenus(); return; }
+  closeMenus();
+  m.innerHTML = '';
+  const item = (label, sub, act) => {
+    const i = C.el('button', 'onebox-additem');
+    i.type = 'button';
+    i.setAttribute('role', 'menuitem');
+    const l = C.el('span', 'a-label'); l.textContent = label;
+    const s = C.el('span', 'a-sub'); s.textContent = sub;
+    i.append(l, s);
+    i.addEventListener('click', () => { closeMenus(); act(); });
+    m.appendChild(i);
+  };
+  item('Add a file', 'A spreadsheet, document, PDF or slides', () => { addFrom = which; $('#add-file')?.click(); });
+  item('Add a picture or screenshot', 'You can also paste a screenshot, or drop files on the conversation', () => { addFrom = which; $('#add-picture')?.click(); });
+  item('Connect something', 'Mail, drives, calendar, or a system you use', () => { if (C.connect) C.connect(); });
+  m.hidden = false;
+  b.setAttribute('aria-expanded', 'true');
+  m.querySelector('button')?.focus();
+}
+
+function wireAdd() {
+  for (const w of ['top', 'panel']) {
+    const { b } = menuOf(w);
+    if (b) b.addEventListener('click', (e) => { e.stopPropagation(); openMenu(w); });
+  }
+  for (const id of ['#add-file', '#add-picture']) {
+    const inp = $(id);
+    if (!inp) continue;
+    inp.addEventListener('change', () => { const fl = [...inp.files]; inp.value = ''; addFiles(fl, addFrom); });
+  }
+  document.addEventListener('click', (e) => { if (!e.target.closest || !e.target.closest('.onebox-addmenu')) closeMenus(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(); });
+  // PASTE: a screenshot or a copied file, into either box or anywhere on the page. A paste into another field on the
+  // page (a reply being written on Mail) is left to that field.
+  document.addEventListener('paste', (e) => {
+    const files = e.clipboardData && e.clipboardData.files;
+    if (!files || !files.length) return;
+    const at = e.target && e.target.closest ? e.target : null;
+    const inPanel = !!(at && at.closest('#panel'));
+    const inBox = !!(at && at.closest('#onebox'));
+    if (at && at.closest('input, textarea, [contenteditable]') && !inPanel && !inBox) return;
+    e.preventDefault();
+    addFiles(files, inPanel ? 'panel' : 'top');
+  });
+  // DROP: files dropped on the box, the conversation panel or Work.
+  for (const sel of ['#onebox', '#panel', '#s-work']) {
+    const z = $(sel);
+    if (!z) continue;
+    const hasFiles = (e) => !!(e.dataTransfer && [...e.dataTransfer.types].includes('Files'));
+    z.addEventListener('dragover', (e) => { if (hasFiles(e)) { e.preventDefault(); z.classList.add('drop-here'); } });
+    z.addEventListener('dragleave', (e) => { if (!z.contains(e.relatedTarget)) z.classList.remove('drop-here'); });
+    z.addEventListener('drop', (e) => {
+      z.classList.remove('drop-here');
+      if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+      e.preventDefault();
+      addFiles(e.dataTransfer.files, sel === '#onebox' ? 'top' : 'panel');
+    });
+  }
 }
 
 // -- THE MICROPHONE (seat talk-to-the-tool, 2026-10-12) --
