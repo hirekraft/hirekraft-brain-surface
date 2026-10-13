@@ -2330,6 +2330,7 @@ const OUT_CTX = { askUrl: ASK_URL, key: PUBLISHABLE_KEY, session: () => sb.auth.
 // Save as test here, for the owner. opts.q is her question when the caller has it; otherwise it is read from the
 // turn's own question line. A turn without a question line (Mail's automatic briefing) gets no actions.
 function renderAsk(slot, body, opts) {
+  drawAsk.opts = opts || null;
   drawAsk(slot, body);
   dropEchoHeading(slot);
   try { attachOutputs(slot, body, OUT_CTX); }
@@ -2343,7 +2344,7 @@ function renderAsk(slot, body, opts) {
 function answerActions(slot, body, opts) {
   if (!shape?.viewer?.all_access || !body) return;
   const st = String(body.state || "");
-  if (st.startsWith("teach_") || st === "access_instruction") return;
+  if (st.startsWith("teach_") || st.startsWith("plan") || st === "access_instruction") return;
   const q = (opts && opts.q) || slot.closest(".answer-turn")?.querySelector(".answer-asked")?.textContent || "";
   if (!q.trim()) return;
   const bar = el("div", "ans-actions");
@@ -2447,6 +2448,103 @@ function teachAnswer(slot, body, onRetry) {
     }));
   });
 }
+// PLAN FIRST (seat plan-first, 2026-10-13, decision 1000; Alex: "Lay out first what the tool is going to do... is there
+// any specific place I should look"). lens-ask v32 answers a question that combines sources, calculates or lists across
+// people or time with a plan (state 'plan'), and nothing is computed until she presses Go. Change takes her words; the
+// plan comes back revised and, for the owner, what she said is offered as "Learned: ..." to keep for that kind of
+// question (the same teach_confirm the Teach button uses). A way she has agreed several times runs after a short pause
+// unless she taps Change. The turn is kept in Work once, with the answer, not with the plan.
+function planCard(slot, body, opts) {
+  const plan = body.plan;
+  const q = (opts && opts.q) || slot.closest(".answer-turn")?.querySelector(".answer-asked")?.textContent || "";
+  const card = el("div", "plan-card");
+  if (plan.auto?.line) { const a = el("p", "ans-lead"); a.textContent = plan.auto.line; card.appendChild(a); }
+  const rows = [["What I understood", plan.understood], ["Where I'll look", null], ["How I'll put it together", plan.how]];
+  if (plan.unsure) rows.push(["What I'm not sure of", plan.unsure]);
+  for (const [k, v] of rows) {
+    const h = el("p", "plan-k"); h.textContent = k; card.appendChild(h);
+    if (v === null) {
+      const ul = el("ul", "plan-places");
+      for (const p of plan.places) { const li = el("li"); li.textContent = p; ul.appendChild(li); }
+      card.appendChild(ul);
+    } else { const p = el("p", "plan-v"); p.textContent = v; card.appendChild(p); }
+  }
+  const askLine = el("p", "plan-ask"); askLine.textContent = "Anywhere specific I should look?"; card.appendChild(askLine);
+  const acts = el("div", "actions");
+  const go = el("button", "go"); go.type = "button"; go.textContent = "Go";
+  const change = el("button", "go ghost"); change.type = "button"; change.textContent = "Change";
+  acts.append(go, change);
+  card.appendChild(acts);
+  const form = el("div", "t-form"); form.hidden = true;
+  form.innerHTML = `<label class="t-field">Where to look, or what to change
+      <textarea rows="2" class="plan-words" placeholder="For example: the rates are in the payroll spreadsheet; leave out last year's contracts."></textarea></label>
+    <div class="actions"><button class="go plan-redo" type="button">Change the plan</button></div>`;
+  card.appendChild(form);
+  const said = el("div", "t-said"); said.setAttribute("aria-live", "polite"); card.appendChild(said);
+  slot.appendChild(card);
+
+  let timer = null;
+  const stopAuto = () => { if (timer) { clearInterval(timer); timer = null; } const c = card.querySelector(".plan-count"); if (c) c.remove(); };
+  const openChange = () => { stopAuto(); form.hidden = false; setTimeout(() => form.querySelector(".plan-words").focus(), 0); };
+  change.addEventListener("click", openChange);
+  go.addEventListener("click", () => { stopAuto(); runPlan(slot, q, plan, opts, false); });
+  form.querySelector(".plan-words").addEventListener("input", stopAuto);
+  form.querySelector(".plan-redo").addEventListener("click", async (e) => {
+    const btn = e.currentTarget, w = form.querySelector(".plan-words").value.trim();
+    if (!w) { said.textContent = "Say where to look, or what to change."; return; }
+    btn.disabled = true; go.disabled = true;
+    const wait = el("p", "quiet working"); wait.textContent = "Changing the plan."; said.replaceChildren(wait);
+    const res = await askBody({ question: q, follows: opts?.follows || undefined, plan_change: { plan, words: w } });
+    btn.disabled = false; go.disabled = false;
+    if (!res || res.ok !== true || res.state !== "plan" || !res.plan) {
+      const p = el("p", "state stalled"); p.textContent = res?.answer || res?.error || "The plan could not be changed just now."; said.replaceChildren(p); return;
+    }
+    slot.innerHTML = "";
+    planCard(slot, res, opts);
+    if (res.teach?.learned) learnedLine(slot.querySelector(".plan-card .t-said"), res.teach);
+  });
+
+  if (plan.auto?.seconds) {
+    let left = Number(plan.auto.seconds) || 5;
+    const c = el("p", "quiet plan-count working"); card.insertBefore(c, acts);
+    const tick = () => { c.textContent = "Starting in " + left + " seconds. Tap Change to stop."; };
+    tick();
+    timer = setInterval(() => { left -= 1; if (left <= 0) { stopAuto(); runPlan(slot, q, plan, opts, true); } else tick(); }, 1000);
+  }
+}
+// "Learned: ..." in one line, kept for that kind of question only on her yes.
+function learnedLine(where, teach) {
+  if (!where || !teach) return;
+  const p = el("p", "plan-learned"); p.textContent = teach.learned; where.appendChild(p);
+  const acts = el("div", "actions");
+  const keep = el("button", "go ghost"); keep.type = "button"; keep.textContent = "Keep it for next time";
+  const once = el("button", "go ghost"); once.type = "button"; once.textContent = "Just this once";
+  acts.append(keep, once); where.appendChild(acts);
+  once.addEventListener("click", () => { acts.remove(); p.textContent = "Used for this question only. Nothing was kept."; });
+  keep.addEventListener("click", async () => {
+    keep.disabled = true; once.disabled = true;
+    const kept = await askBody({ teach_confirm: teach });
+    acts.remove();
+    const r = el("p", "quiet");
+    r.textContent = kept?.ok === true && kept.state === "teach_kept" ? String(kept.answer || "Kept.") : (kept?.answer || kept?.error || "Not kept.");
+    where.appendChild(r);
+  });
+}
+// Go: the agreed plan travels with the question; the answer replaces the plan in the same turn and is kept in Work.
+async function runPlan(slot, q, plan, opts, auto) {
+  if (asking) return;
+  asking = true;
+  const wait = el("p", "answer-wait working"); wait.textContent = "Looking where we agreed.";
+  slot.replaceChildren(wait);
+  try {
+    const body = await askBody({ question: q, follows: opts?.follows || undefined, go: Object.assign({}, plan, { auto: !!auto }) });
+    if (!body || body.ok !== true) { askProblem(slot, body?.error ?? "The brain did not answer. Nothing was changed."); return; }
+    renderAsk(slot, body, opts);
+    drawBox();
+    speakAnswer(slot);
+    await keepTurn(slot, q, body);
+  } finally { asking = false; }
+}
 // A FIRST HEADING THAT ONLY REPEATS HER QUESTION IS DROPPED (seat conversation-panel, round 4): her question already
 // shows as the bubble above. "Repeats" means at least 70% of the heading's words are words of her question, ignoring
 // small words; only the answer's first element, and only a heading.
@@ -2466,6 +2564,8 @@ function drawAsk(slot, body) {
   if (body.state === "access_instruction") { accessAnswer(slot, body); return; }
   // A teaching typed in the box ("next time, look in ...", lens-ask v31): read back, then kept on her yes.
   if (String(body.state || "").startsWith("teach_")) { teachAnswer(slot, body); return; }
+  // A plan before the work (lens-ask v32, seat plan-first): nothing is computed until Go.
+  if (body.state === "plan" && body.plan) { planCard(slot, body, drawAsk.opts); return; }
   const state = body.state;
   // lens-ask v17: an answer from the web or general knowledge is drawn whatever the records gave. `state`
   // still says what the records gave, and the answer says it in its own first sentence.
@@ -2620,7 +2720,8 @@ async function ask(question, files) {
       // is answered as the question it continues. lens-ask decides whether it does.
       // Her time zone travels with every question so lens-ask resolves 'last month' against her
       // today, never against the dates in the records (seat chat-layout, 2026-10-06).
-      body: JSON.stringify(Object.assign({ question: q, tz: zone() }, lastAsked ? { follows: lastAsked } : {}, added.length ? { files: added } : {})),
+      // plan_first (seat plan-first): this box can show a plan, so lens-ask may answer bigger work with one first.
+      body: JSON.stringify(Object.assign({ question: q, tz: zone(), plan_first: true }, lastAsked ? { follows: lastAsked } : {}, added.length ? { files: added } : {})),
     });
     const body = await r.json().catch(() => null);
     if (!body) { askProblem(slot, `The brain did not answer (${r.status}). Nothing was changed.`); return; }
@@ -2631,7 +2732,8 @@ async function ask(question, files) {
     drawBox();   // the top box now says it continues this conversation
     speakAnswer(slot);   // read aloud when she switched it on (box.js); never for a reopened, kept answer
     lastAsked = q;
-    await keepTurn(slot, q, body);
+    // A plan is kept with its answer after Go (runPlan), not on its own.
+    if (body.state !== "plan") await keepTurn(slot, q, body);
   } catch (e) {
     askProblem(slot, `The brain could not be reached: ${e?.message ?? e}`);
   } finally {
