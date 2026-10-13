@@ -12,6 +12,7 @@
 
 let ctx = null;   // { sb, el, $, countOf, ask, isOwner }
 let mount = null;
+let seq = 0;   // each lookup's number: one that finishes after a newer one, or after its screen was replaced, draws nothing
 const KEEP = "tool.contacts.last";
 
 const line = (cls, text) => { const p = ctx.el("p", cls); p.textContent = text; return p; };
@@ -65,6 +66,7 @@ async function find(q, person) {
   const query = String(q ?? "").trim();
   if (!query && !person) return;
   if (query) { try { localStorage.setItem(KEEP, query); } catch (_) { /* this page only */ } }
+  const mine = ++seq, here = mount;
   mount.innerHTML = "";
   const wait = line("quiet working", "Looking across CATS, HubSpot and mail.");
   mount.appendChild(wait);
@@ -72,6 +74,8 @@ async function find(q, person) {
   const slow = setTimeout(() => { wait.textContent = "Still looking. Large companies take longer."; }, 10000);
   const card = await read({ p_query: query || null, p_person: person ?? null });
   clearTimeout(slow);
+  // The screen was replaced (she left the tab and came back) or a newer lookup started: this one draws nothing.
+  if (mine !== seq || here !== mount || !here.isConnected) return;
   mount.innerHTML = "";
   draw(card, Date.now() - t0);
 }
