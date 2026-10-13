@@ -704,6 +704,26 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .answer .ans-gap, .answer .ans-meta { max-width: none; }
 .answer-slot .recs { margin-top: var(--gap); }
 .t-save-as > .go { margin-top: var(--gap); padding: 6px 12px; font-size: var(--t-micro); }
+/* ANSWER ACTIONS, ANSWER VOICE (seat teach-process, 2026-10-13). Teach and Save as test sit side by side under every
+   answer for the owner; an opened form takes the full width. The quiet sign for general knowledge or a live read is a
+   small superscript, explained once under the answer. The answer slot is a size container, so a table restacks when
+   the CONVERSATION is narrow, not only when the window is: a wide window with the panel open cut tables off. */
+.answer-slot { container-type: inline-size; }
+.ans-actions { display: flex; flex-wrap: wrap; gap: 0 calc(var(--u) * 2); align-items: flex-start; }
+.ans-actions > .t-teach, .ans-actions > .t-save-as { flex: 0 0 auto; }
+.ans-actions > :has(.t-form) { flex: 1 0 100%; }
+.t-teach > .go { margin-top: var(--gap); padding: 6px 12px; font-size: var(--t-micro); }
+.t-teach .t-back, .t-said { margin-top: calc(var(--u) * 2); }
+.cite-q { font-size: 11px; color: var(--ink-4); vertical-align: super; line-height: 0; padding: 0 1px; cursor: help; }
+.ans-mark-note { margin-top: calc(var(--u) * 2); }
+.recs-note { margin: calc(var(--u) * 2) 0; font-size: var(--t-small); }
+@container (max-width: 560px) {
+  .ans-table thead { position: absolute; left: -9999px; }
+  .ans-table tr { display: block; padding: calc(var(--u) * 3) 0; border-bottom: 1px solid var(--line); }
+  .ans-table td { display: block; border: 0; padding: calc(var(--u) / 2) 0; }
+  .ans-table td::before { content: attr(data-label) ": "; color: var(--ink-4); }
+  .ans-table td:empty { display: none; }
+}
 
 
 /* TODAY IN THE HEADER, on every tab: from her computer, or the zone she picks (Alex, 2026-10-06). */
