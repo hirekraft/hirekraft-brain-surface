@@ -1932,6 +1932,85 @@ function archiveTab(){
 }
 
 /* EVERY TAB SAYS WHAT IT IS (rewritten 2026-10-02 to Alex’s rule: one or two plain sentences on what the tab is for). */
+/* ── TO TEST (seat phone, 2026-10-13, decision 1004; Alex: "visually going to be easier for me to test and work
+   on the phone"). The screen checks still owed, grouped by where in the Tool you go to do them, each with what
+   to do and what you should see, and three answers: Passed, Failed (one line of what you saw) or Not now. A
+   question is answered in words. The answer is written back through studio-july's own sign-in gate to
+   screen_check_settle on studio-core, the only write. On a phone this is the first view. Notes typed here are
+   kept in memory, so a redraw while the page fills in never loses what was said. ── */
+let TT=null, TT_STATE="loading";
+const TT_NOTE={}, TT_DONE={}, TT_LATER={}, TT_ASK={}, TT_OPEN={};
+const TT_PLACE={phone:"On the phone",mail:"Mail",work:"Work",money:"Money",drives:"Drives",calendar:"Calendar",
+  contacts:"Contacts",brain:"Brain",chats:"Chats",security:"Security",systems:"Systems",loose:"Loose files",
+  studio:"This Studio Surface",none:"Questions, no screen"};
+const TT_ORDER=["phone","mail","work","money","drives","calendar","contacts","brain","chats","security","systems","loose","studio","none"];
+function loadToTest(){
+  TT_STATE="loading";
+  call(FN,{action:"checks"}).then(function(r){
+    if(r.status===200&&r.body&&r.body.ok){ TT=r.body; TT_STATE="done"; }
+    else { TT={error:(r.body&&r.body.error)||("the list could not be read ("+r.status+")")}; TT_STATE="failed"; }
+    if(D) paint();
+  });
+}
+function ttCard(c){
+  const id=c.id, done=TT_DONE[id], q=c.kind==="question";
+  if(done) return '<div class="tt-card tt-done" data-id="'+esc(id)+'"><b>'+esc(done)+'</b><span class="tt-ask">'+esc(c.ask)+'</span></div>';
+  const prompt=TT_ASK[id]||"";
+  return '<div class="tt-card'+(TT_LATER[id]?" tt-later":"")+'" data-id="'+esc(id)+'">'
+    + (c.guide?'<div class="tt-title">'+esc(c.guide)+'</div>':'')
+    + '<div class="tt-k">'+(q?"The question":"What to do")+'</div><div class="tt-ask">'+esc(c.ask)+'</div>'
+    + (c.expected?'<div class="tt-k">'+(q?"Why it is asked":"You should see")+'</div><div class="tt-exp">'+esc(c.expected)+'</div>':'')
+    + (c.note?'<div class="tt-k">Your earlier note</div><div class="tt-exp">'+esc(c.note)+'</div>':'')
+    + '<textarea class="tt-note" data-ttnote="'+esc(id)+'" rows="2" placeholder="'+(q?"Your answer. Tap the keyboard microphone to speak.":"Anything to add? Tap the keyboard microphone to speak.")+'">'+esc(TT_NOTE[id]||"")+'</textarea>'
+    + (prompt?'<div class="tt-prompt">'+esc(prompt)+'</div>':'')
+    + '<div class="tt-acts">'
+    + (q?'<button class="tt-b tt-pass" data-tt="answered" data-id="'+esc(id)+'">Send answer</button>'
+        :'<button class="tt-b tt-pass" data-tt="passed" data-id="'+esc(id)+'">Passed</button><button class="tt-b tt-fail" data-tt="failed" data-id="'+esc(id)+'">Failed</button>')
+    + '<button class="tt-b tt-not" data-tt="later" data-id="'+esc(id)+'">Not now</button></div>'
+    + '<div class="tt-seat">'+esc(c.seat||"")+(c.filed_at?' · filed '+esc(String(c.filed_at).slice(0,10)):'')+'</div>'
+    + '</div>';
+}
+function toTestTab(){
+  if(TT_STATE==="loading") return '<div class="empty">Reading what is still owed a look…</div>';
+  if(TT_STATE==="failed") return '<div class="empty">The list of checks could not be read: '+esc(TT.error)+'. Nothing here means nothing is owed only when this line is gone.</div>';
+  const rows=(TT&&TT.owed)||[];
+  const open=rows.filter(function(c){ return !TT_DONE[c.id]; }).length;
+  if(!rows.length) return '<div class="empty">Nothing is waiting for you to test. Every screen check has an answer.</div>';
+  const by={}; rows.forEach(function(c){ (by[c.tab]=by[c.tab]||[]).push(c); });
+  const keys=Object.keys(by).sort(function(a,b){ const x=TT_ORDER.indexOf(a), y=TT_ORDER.indexOf(b); return (x<0?99:x)-(y<0?99:y); });
+  return '<div class="tt-sum">'+open+' to look at, in '+keys.length+' places. Open a place, do what it says, and tap what happened.</div>'
+    + keys.map(function(k){
+        const list=by[k].slice().sort(function(a,b){ return (TT_LATER[a.id]?1:0)-(TT_LATER[b.id]?1:0); });
+        const left=list.filter(function(c){ return !TT_DONE[c.id]; }).length;
+        return '<details class="tt-group" data-place="'+esc(k)+'"'+((keys.length===1||TT_OPEN[k])?' open':'')+'><summary><span>'+esc(TT_PLACE[k]||k)+'</span><span class="tt-n">'+left+'</span></summary>'
+          + list.map(ttCard).join("") + '</details>';
+      }).join("");
+}
+function ttFind(id){ return ((TT&&TT.owed)||[]).filter(function(c){ return c.id===id; })[0]; }
+/* A redraw keeps the places she has open, so answering one check never closes the list under her thumb. */
+root.addEventListener("toggle",function(e){ const d=e.target; if(d&&d.classList&&d.classList.contains("tt-group")) TT_OPEN[d.dataset.place]=d.open; },true);
+root.addEventListener("input",function(e){ const t=e.target; if(t&&t.dataset&&t.dataset.ttnote) TT_NOTE[t.dataset.ttnote]=t.value; });
+root.addEventListener("click",async function(e){
+  const b=e.target.closest&&e.target.closest("[data-tt]"); if(!b) return;
+  const id=b.dataset.id, what=b.dataset.tt, c=ttFind(id); if(!c) return;
+  const note=(TT_NOTE[id]||"").trim();
+  const card=b.closest(".tt-card");
+  if((what==="failed"||what==="answered")&&!note){
+    TT_ASK[id]= what==="failed" ? "What did you see? One line, then tap Failed again." : "Type or say your answer, then tap Send answer.";
+    paint(); const ta=document.querySelector('[data-ttnote="'+id+'"]'); if(ta) ta.focus(); return;
+  }
+  card.querySelectorAll(".tt-b").forEach(function(x){ x.disabled=true; });
+  b.textContent="Saving…";
+  const r=await call(FN,{action:"check",id:id,result:what,note:note||null});
+  if(r.status===200&&r.body&&r.body.ok){
+    delete TT_ASK[id];
+    if(what==="later"){ TT_LATER[id]=true; if(note) c.note=note; delete TT_NOTE[id]; }
+    else { TT_DONE[id]=({passed:"Passed",failed:"Failed",answered:"Answered"})[what]+", saved."; delete TT_NOTE[id]; }
+  } else {
+    TT_ASK[id]="Not saved: "+((r.body&&(r.body.why||r.body.error))||("the studio answered "+r.status))+" Your note is still here.";
+  }
+  paint();
+});
 const TABBOX=[
   "The short version. How far the build has got, what needs you, and anything wrong. Open this first.",
   "What a customer can do with the Tool, in her words. Each one says whether it has passed when you tried it, and what it is built from.",
