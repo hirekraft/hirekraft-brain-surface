@@ -3484,6 +3484,8 @@ const TABS = [GROUP_TAB('email', 'Mail'), { key: 'work', label: 'Work' }, { key:
   { key: 'brain', label: 'Brain' }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
   GROUP_TAB('systems'), GROUP_TAB('loose')];
 const TAB_KEY = 'tool.tab';
+// The daily tabs: on a phone these sit in the bottom bar; the rest go under More (seat phone, 2026-10-13).
+const DAY_TABS = ['email', 'work', 'drives', 'calendar', 'contacts'];
 function goTab(key) {
   if (key === 'brain') goto('s-summary'); else if (key === 'work') goto('s-work');
   else if (key === 'security') goto('s-security'); else if (key === 'money') goto('s-money'); else if (key === 'chats') goto('s-chats'); else goto('s-lens', key);
@@ -3494,6 +3496,11 @@ function markTab(key) {
     if (b.dataset.tab === key) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
+  // On a phone the tab she is on may sit under More: More then reads as where she is (seat phone).
+  const more = $('#tabs .tab-more');
+  if (more) more.classList.toggle('here', !DAY_TABS.includes(key));
+  $('#tabs')?.classList.remove('more-open');
+  more?.setAttribute('aria-expanded', 'false');
 }
 
 function drawTabs() {
@@ -3506,10 +3513,25 @@ function drawTabs() {
     b.dataset.tab = t.key;
     b.textContent = t.label;
     if (t.owner) b.hidden = !shape?.viewer?.all_access;
+    if (DAY_TABS.includes(t.key)) b.classList.add('tab-day');
     b.addEventListener('click', () => { userMoved = true; goTab(t.key); });
     nav.appendChild(b);
   }
+  // A PHONE (seat phone, Alex 2026-10-13, decision 1004): the same buttons, not a second set. skin.css lays them out
+  // as a bar at the bottom within thumb reach: the daily tabs, then More, which opens the rest above the bar. Ask
+  // opens the conversation from any tab in one tap. Both are hidden at desktop width.
+  const more = el('button', 'tab tab-more');
+  more.type = 'button'; more.textContent = 'More';
+  more.setAttribute('aria-expanded', 'false');
+  more.addEventListener('click', () => { const open = nav.classList.toggle('more-open'); more.setAttribute('aria-expanded', String(open)); });
+  nav.appendChild(more);
+  const ask = el('button', 'tab tab-ask');
+  ask.type = 'button'; ask.textContent = 'Ask';
+  ask.setAttribute('aria-label', 'Ask or tell the Tool');
+  ask.addEventListener('click', () => { nav.classList.remove('more-open'); openPanel(); $('#panel-input')?.focus(); });
+  nav.appendChild(ask);
 }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#tabs')?.classList.remove('more-open'); });
 
 // TABS THAT KEEP THEIR OWN STATE (seat conversation-panel, round 4). Every lensKey branch of drawLens, checked:
 //   email    keeps its own state (the open email, the inbox page, a find): a reading redraws only the mailbox column,
