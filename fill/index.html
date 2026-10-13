@@ -2,10 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- ADD TO HOME SCREEN (seat phone, 2026-10-13): opens full screen like an app, on iPhone and Android. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Verrandi">
+<meta name="theme-color" content="#ffffff">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-10-13-tool-health">
+<link rel="stylesheet" href="skin.css?v=2026-10-13-phone">
 <script>
 // THE FRONT DOOR, before anything is drawn (seat front-door, 2026-10-13): no stored sign-in on this
 // browser means she goes to sign in, and comes back to this tab after. lens.js makes the real check
@@ -448,6 +455,6 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-13-tool-health"></script>
+<script type="module" src="lens.js?v=2026-10-13-phone"></script>
 </body>
 </html>
