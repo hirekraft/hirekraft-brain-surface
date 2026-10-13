@@ -1205,3 +1205,19 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
   .panel-foot { padding-bottom: calc(var(--u) * 7); }
   body[data-panel] { overflow: hidden; }
 }
+
+/* PLAN FIRST (seat plan-first, 2026-10-13): the plan shown before bigger work. Same words-first look as an answer:
+   short labels, her places as a list, Go and Change under it. Nothing new in color; --act-soft marks it as a step to agree. */
+.plan-card { max-width: var(--measure); padding: calc(var(--u) * 3) calc(var(--u) * 4); background: var(--act-soft); border-radius: var(--radius); }
+.plan-k { margin-top: calc(var(--u) * 2.5); font-size: var(--t-small); font-weight: var(--w-mid); color: var(--ink-3); }
+.plan-k:first-child, .plan-card > .ans-lead + .plan-k { margin-top: 0; }
+.plan-card > .ans-lead { margin-bottom: calc(var(--u) * 2.5); }
+.plan-v { margin-top: calc(var(--u) * 0.5); color: var(--ink); }
+.plan-places { margin: calc(var(--u) * 0.5) 0 0; padding-left: 1.2em; color: var(--ink); }
+.plan-places li { margin-top: calc(var(--u) * 0.5); overflow-wrap: anywhere; }
+.plan-ask { margin-top: calc(var(--u) * 3); font-weight: var(--w-mid); color: var(--ink); }
+.plan-card .actions { margin-top: calc(var(--u) * 2); gap: calc(var(--u) * 2); }
+.plan-card .go { margin-top: 0; }
+.plan-count { margin-top: calc(var(--u) * 2); }
+.plan-learned { margin-top: calc(var(--u) * 2); color: var(--ink-2); font-weight: var(--w-mid); }
+@media (max-width: 520px) { .plan-card { padding: calc(var(--u) * 3); } .plan-card .actions { flex-wrap: nowrap; } .plan-card .actions .go { flex: 1 1 0; } }
