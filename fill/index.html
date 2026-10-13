@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-10-13-own-state">
+<link rel="stylesheet" href="skin.css?v=2026-10-13-work-full">
 <!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
@@ -311,7 +311,8 @@
 
   <!-- 8. WORK: THE LIST OF CONVERSATIONS (seat conversation-panel, Alex 2026-10-12: "in order to actually
        continue, I have to go to the work tab... It's just not right"). Search, Projects, Pinned, then chats by
-       day. Opening one reopens it in the conversation panel on the right, on whatever tab she is on.
+       day. On other tabs, opening one reopens it in the conversation panel on the right; on Work (item 15,
+       2026-10-12) that same panel is moved into the middle column, full size, so it is still one renderer.
        SUPERSEDES the 2026-10-08 Work layout (seat work-chat) in which the conversation and the one box were
        moved into this tab's middle column (workDock): retired, so there is one place a conversation is shown. -->
   <section class='step work' id='s-work' hidden>
@@ -326,14 +327,26 @@
         <div class='work-head'><h3>Projects</h3>
           <button class='work-add' id='work-project-new' type='button' aria-label='New project'>New project</button></div>
         <ul class='work-chats' id='work-projects'></ul>
+        <div id='work-project-view' hidden></div>
         <div id='work-pinned'></div>
         <div id='work-recents'></div>
         <p class='quiet' id='work-said' aria-live='polite'></p>
       </div>
     </aside>
-    <div class='work-main'>
-      <div id='work-project-view' hidden></div>
-    </div>
+    <!-- THE CONVERSATION, FULL SIZE (seat conversation-panel, item 15; Alex 2026-10-12 17:51 PT: "in the work tab, it
+         should actually be the main panel... like we're doing and working right now here in Claude"). On Work the one
+         conversation panel moves here (lens.js workPanel), so there is still one renderer; the top box is hidden on
+         this tab and the panel's own box is where she types. -->
+    <div class='work-main' id='work-convo-slot'></div>
+    <!-- What an answer produced, wide beside the conversation: a table, a chart, a PDF. Opened only when there is
+         something to look at; closed, the conversation takes the width. -->
+    <aside class='work-view' id='work-view' hidden aria-label='What the answer produced'>
+      <div class='work-view-head'>
+        <h2 class='work-view-title' id='work-view-title'></h2>
+        <button class='panel-btn' id='work-view-close' type='button' aria-label='Close' title='Close'><svg viewBox='0 0 24 24' aria-hidden='true'><path d='M6 6l12 12M18 6L6 18'/></svg></button>
+      </div>
+      <div class='work-view-body' id='work-view-body'></div>
+    </aside>
   </section>
 
   <!-- 9b. MONEY (seat runway, Alex 2026-10-10: "how much do we have, how much longer can we go... what subscriptions").
@@ -384,8 +397,10 @@
 <aside class="panel" id="panel" aria-label="Conversation" hidden>
   <div class="panel-handle" id="panel-handle" aria-hidden="true"><span></span></div>
   <div class="panel-head">
+    <button class="panel-btn panel-list" id="panel-list" type="button" aria-label="Your conversations" title="Your conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
     <h2 class="panel-title" id="panel-title">New conversation</h2>
     <button class="panel-btn" id="panel-new" type="button" aria-label="New conversation" title="New conversation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="panel-btn panel-to-work" id="panel-work" type="button" aria-label="Open in Work" title="Open in Work, full size"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14"/></svg></button>
     <button class="panel-btn panel-wide" id="panel-full" type="button" aria-pressed="false" aria-label="Full screen" title="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="panel-btn" id="panel-away" type="button" aria-label="Put away" title="Put away (Esc)"><svg class="panel-x" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><svg class="panel-down" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
   </div>
@@ -415,6 +430,6 @@
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-13-own-state"></script>
+<script type="module" src="lens.js?v=2026-10-13-work-full"></script>
 </body>
 </html>
