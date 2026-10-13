@@ -13,7 +13,7 @@ import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-13-own-state";
 import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-12-panel";
-import { attachOutputs } from "./outputs.js?v=2026-10-10-outputs";
+import { attachOutputs } from "./outputs.js?v=2026-10-13-wide";
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-12-working"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-12-working"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-12-working"; // what the Tool thinks the business is (seat know-the-business)
@@ -1739,6 +1739,7 @@ function panelOpen() { return !!$("#panel") && !$("#panel").hidden; }
 function openPanel() {
   const p = $("#panel");
   if (!p) return;
+  if (p.classList.contains("in-work")) { drawBox(); return; }   // on Work the conversation is the page itself
   if (p.hidden) {
     p.hidden = false;
     $("#panel-tab").hidden = true;
@@ -1749,7 +1750,7 @@ function openPanel() {
 }
 function putAway() {
   const p = $("#panel");
-  if (!p || p.hidden) return;
+  if (!p || p.hidden || p.classList.contains("in-work")) return;
   panelScroll = $("#panel-body").scrollTop;
   p.hidden = true;
   delete document.body.dataset.panel;
@@ -1773,6 +1774,9 @@ function fullPanel(on) {
   $("#panel-away").addEventListener("click", putAway);
   $("#panel-full").addEventListener("click", () => fullPanel());
   $("#panel-new").addEventListener("click", () => newChat(null));
+  $("#panel-work")?.addEventListener("click", () => { userMoved = true; goTab('work'); });
+  $("#panel-list")?.addEventListener("click", () => $("#s-work")?.classList.toggle("list-open"));
+  $("#work-view-close")?.addEventListener("click", closeWide);
   $("#panel-tab").addEventListener("click", () => { openPanel(); $("#panel-input").focus({ preventScroll: true }); });
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || !panelOpen() || e.defaultPrevented) return;
@@ -2302,12 +2306,15 @@ async function hearSpoken(b64, mime) {
 // ANSWERS BECOME CHARTS AND FILES (seat work-outputs, 2026-10-10). Every answer drawn anywhere passes here once,
 // so its chart and the PDF / Spreadsheet / Slides buttons come with it, kept answers and the email conversation
 // included. outputs.js builds files in the browser from the body drawn here and sends nothing.
-const OUT_CTX = { askUrl: ASK_URL, key: PUBLISHABLE_KEY, session: () => sb.auth.getSession() };
+const OUT_CTX = { askUrl: ASK_URL, key: PUBLISHABLE_KEY, session: () => sb.auth.getSession(),
+  // A PDF made from an answer also shows wide beside the conversation (seat conversation-panel, item 15).
+  view: (title, url) => { const f = el('iframe', 'wide-pdf'); f.src = url; f.dataset.blob = url; f.title = title; showWide(title, f); } };
 function renderAsk(slot, body) {
   drawAsk(slot, body);
   dropEchoHeading(slot);
   try { attachOutputs(slot, body, OUT_CTX); }
   catch (e) { const p = el("p", "quiet"); p.textContent = `The chart or the file buttons could not be drawn: ${e?.message ?? e}`; slot.appendChild(p); }
+  wideButtons(slot);
 }
 // A FIRST HEADING THAT ONLY REPEATS HER QUESTION IS DROPPED (seat conversation-panel, round 4): her question already
 // shows as the bubble above. "Repeats" means at least 70% of the heading's words are words of her question, ignoring
@@ -3139,6 +3146,7 @@ function goto(id, key) {
   if (id === "s-security") loadSecurity();
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
   onMail = id === 's-lens' && lensKey === 'email';
+  workPanel(id === 's-work');
   if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney();
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
     import("./ledger.js?v=2026-10-12-working").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
@@ -3146,6 +3154,7 @@ function goto(id, key) {
   if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); }
   const tabNow = id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : 'brain';
   markTab(tabNow);
+  document.body.dataset.tab = tabNow;
   // Remembered so the Tool opens where she was (seat conversation-panel); first-run screens are not tabs.
   if (!['s-intro', 's-kinds'].includes(id)) { try { localStorage.setItem(TAB_KEY, tabNow); } catch (_) { /* this page only */ } }
   drawBox();
@@ -3346,6 +3355,66 @@ let workQ = '';           // what the sidebar search is looking for, or ''
 
 function workSaid(text) { const s = $('#work-said'); if (s) s.textContent = text || ''; }
 
+// THE CONVERSATION, FULL SIZE ON WORK (seat conversation-panel, item 15). On Work the one panel element moves into the
+// middle of the page (#work-convo-slot) and becomes the conversation at reading width; leaving Work it goes back to the
+// right edge, open if there is a conversation. One renderer: the same element, moved, never a copy.
+let panelHome = null;
+function workPanel(onWork) {
+  const p = $('#panel'), slot = $('#work-convo-slot');
+  if (!p || !slot) return;
+  if (onWork && p.parentElement !== slot) {
+    if (!panelHome) { panelHome = document.createComment('the conversation panel lives here'); p.before(panelHome); }
+    slot.appendChild(p);
+    p.classList.add('in-work'); p.classList.remove('full'); p.style.transform = '';
+    p.hidden = false; $('#panel-tab').hidden = true;
+    delete document.body.dataset.panel;
+    // On a phone, arriving with nothing open shows the list; with a conversation open, the conversation.
+    const has = !!$('#answer-in').children.length || !!$('#dock-turns').children.length;
+    $('#s-work')?.classList.toggle('list-open', !has);
+    drawBox();
+  } else if (!onWork && p.parentElement === slot) {
+    panelHome.after(p);
+    p.classList.remove('in-work');
+    p.hidden = true;
+    closeWide();
+    const has = !!$('#answer-in').children.length || !!$('#dock-turns').children.length;
+    // On a phone the sheet would cover the tab she just chose: leave it on the edge, one tap away.
+    if (has) { openPanel(); if (window.innerWidth <= 720) putAway(); } else drawBox();
+  }
+}
+
+// WIDE VIEW BESIDE THE CONVERSATION (seat conversation-panel, item 15): a table or chart from an answer, or a PDF made
+// from it, shown wide on the right of Work. Asked for from another tab, it opens Work first. Closed, the conversation
+// takes the width. What it shows is a copy of what is already drawn in the answer, never a new reading.
+function showWide(title, node) {
+  if ($('#s-work')?.hidden) { userMoved = true; goTab('work'); }
+  const v = $('#work-view'), body = $('#work-view-body');
+  if (!v || !body) return;
+  body.innerHTML = '';
+  body.appendChild(node);
+  $('#work-view-title').textContent = title || 'From the answer';
+  v.hidden = false;
+  $('#s-work').classList.add('viewing');
+}
+function closeWide() {
+  const v = $('#work-view');
+  if (!v || v.hidden) return;
+  const f = v.querySelector('iframe[data-blob]');
+  if (f) { try { URL.revokeObjectURL(f.dataset.blob); } catch (_) { /* gone already */ } }
+  v.hidden = true; $('#work-view-body').innerHTML = '';
+  $('#s-work')?.classList.remove('viewing');
+}
+// "Open wide" under every table and chart in an answer.
+function wideButtons(slot) {
+  const asked = slot.closest('.answer-turn')?.querySelector('.answer-asked')?.textContent || '';
+  for (const box of slot.querySelectorAll('.ans-table-wrap, .out-chart')) {
+    if (box.nextElementSibling?.classList.contains('wide-open')) continue;
+    const b = el('button', 'wide-open'); b.type = 'button'; b.textContent = 'Open wide';
+    b.addEventListener('click', () => showWide(asked, box.cloneNode(true)));
+    box.after(b);
+  }
+}
+
 // On Mail an open email keeps its own conversation in the reading column (mail.js, seat email-workspace,
 // Alex 2026-10-07); everything else she asks there goes to the panel. Set by goto().
 // (workDock and mailDock, which moved or parked the conversation per tab, retired 2026-10-12 by seat
@@ -3391,7 +3460,7 @@ function newChat(projectId) {
   panelScroll = 0;
   const p = workInto && workRead?.projects.find((x) => x.id === workInto);
   panelTitle(p ? `New conversation in ${p.name}` : '');
-  openPanel(); markOpen();
+  openPanel(); markOpen(); closeWide(); $('#s-work')?.classList.remove('list-open');
   drawBox();
   $('#panel-input')?.focus();
 }
@@ -3406,6 +3475,7 @@ async function openChat(id) {
   $('#dock-turns').innerHTML = '';
   $('#s-answer').hidden = false;
   panelTitle(data.chat.title); openPanel();
+  closeWide(); $('#s-work')?.classList.remove('list-open');
   for (const t of data.turns) {
     const turn = el('div', 'answer-turn');
     const asked = el('p', 'answer-asked'); asked.textContent = t.question;
