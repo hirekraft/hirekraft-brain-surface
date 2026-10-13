@@ -143,7 +143,17 @@ const escape = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
 // Both helpers swallow their own errors and never reject, so starting them
 // before the unbound check cannot produce an unhandled rejection. A signed-out
 // caller spends two cheap gated calls whose results are then ignored.
-async function readBrain() {
+// A reading's fingerprint: what the screen draws from it, without what she cannot see change (the reading's own
+// timestamp, a walk's lease). Two readings with the same fingerprint draw the same screen (seat conversation-panel).
+const UNSEEN_KEY = new RegExp('lease|^read_at$', 'i');
+function readingPrint() {
+  return JSON.stringify([shape, [...mailboxes.values()], [...driveStates.values()]],
+    (k, v) => (k && UNSEEN_KEY.test(k) ? undefined : v));
+}
+let lastPrint = null;
+
+// Returns true when it drew, false when the new reading draws nothing new (onlyIfChanged), so the caller knows.
+async function readBrain(opts = {}) {
   const tree = $("#tree");
   try {
     const mbx = readMailboxes();
@@ -151,10 +161,18 @@ async function readBrain() {
     const { data, error } = await sb.rpc("brain_shape");
     if (error) throw error;
 
-    if (data?.state === "unbound") { renderState("unbound"); routeOnState("unbound"); return; }
+    if (data?.state === "unbound") { renderState("unbound"); routeOnState("unbound"); return true; }
 
     shape = data;
     await Promise.all([mbx, drv]);
+    const print = readingPrint();
+    if (opts.onlyIfChanged && print === lastPrint) {
+      // Nothing she can see changed: only the time of the reading moves.
+      const line = $("#live-state .quiet");
+      if (line) line.textContent = `Read live from your brain at ${fmtWindow(shape.read_at)}. Every figure above comes from that reading.`;
+      return false;
+    }
+    lastPrint = print;
     renderWho();
     fillTree();
     fillAttention();
@@ -162,10 +180,13 @@ async function readBrain() {
     fillAdoptable();
     renderState("live");
     routeOnState("live");
+    return true;
   } catch (e) {
     // Never fabricate and never hang. Say the reading did not come back.
     renderState("unreachable", e?.message ?? String(e));
     routeOnState("unknown");
+    lastPrint = null;
+    return true;
   } finally {
     tree.setAttribute("aria-busy", "false");
   }
@@ -422,6 +443,7 @@ function drawMembers(key, body, pfx = "") {
       list.appendChild(h);
     }
     const li = el("li");
+    li.dataset.key = m.target ?? m.name;
     const btn = el("button", "member");
     btn.type = "button";
 
@@ -682,7 +704,8 @@ function mailboxLine(mb) {
 // replaces it: a row's own line says what is true. Clicking a connected row without a lens does nothing.
 function drawConnectOffer(li, m, group) {
   const open = $(".placeholder", li);
-  if (open) { open.remove(); return; }
+  const btn = $(".member", li);
+  if (open) { open.remove(); btn?.setAttribute('aria-expanded', 'false'); return; }
 
   const box = el("div", "placeholder");
 
@@ -697,13 +720,14 @@ function drawConnectOffer(li, m, group) {
           ? "Connecting stores a permission in your own workspace and nothing else. A system "
             + "of record is read at the moment you ask something of it, never copied out."
           : "Connecting stores a permission in your own workspace. Nothing is moved and "
-            + "nothing is reorganised."}</p>`;
+            + "nothing is reorganized."}</p>`;
     const go = el("button", "go");
     go.type = "button";
     go.textContent = `Connect ${m.name}`;
     go.addEventListener("click", (ev) => { ev.stopPropagation(); openConnect(group.key); });
     box.appendChild(go);
     li.appendChild(box);
+    btn?.setAttribute('aria-expanded', 'true');
   }
 }
 
@@ -3231,6 +3255,7 @@ function drawDrives(body, data) {
   const grid = el('ul', 'drives-grid');
   for (const { m, s } of mine) {
     const li = el('li', 'drive-tile' + ((DRIVE_WORD[s.state] ?? [])[1] === 'grey' ? ' is-grey' : ''));
+    li.dataset.key = s.source_key;
     const head = el('div', 'drive-head');
     head.innerHTML = `<svg class="drive-mark" aria-hidden="true"><use href="#i-drive"/></svg>`;
     const names = el('div', 'drive-names');
@@ -3244,11 +3269,11 @@ function drawDrives(body, data) {
   body.appendChild(grid);
 
   if (older.length) {
-    const d = el('details', 'drives-older');
+    const d = el('details', 'drives-older'); d.dataset.key = 'drives-older';
     const sum = el('summary'); sum.textContent = `Show ${older.length} older ${older.length === 1 ? 'connection' : 'connections'} you did not choose`;
     const ul = el('ul', 'members');
     for (const m of older) {
-      const li = el('li');
+      const li = el('li'); li.dataset.key = m.target ?? m.name;
       const p = el('p', 'drive-name'); p.textContent = m.name;
       const st = el('div', 'state tone-plain');
       st.innerHTML = `<span class="dot"></span>Not one of the drives you chose &mdash; an older record, kept until you decide about it`;
@@ -3742,13 +3767,64 @@ if (location.hash.startsWith('#mail')) {
    change as new mail, so this lens takes the same bell. The re-ask goes through
    brain_shape() - the one gated reading - and a group the person has opened is
    redrawn from the new reading rather than snapped shut. */
+// WHAT SHE OPENED STAYS OPEN (seat conversation-panel, round 2; Alex 2026-10-12: on Systems a row "shows me
+// briefly, and then it disappears again"; on Drives the older connections "just disappear again quickly"). Since
+// the walks write their progress every two minutes, the bell rang constantly and every redraw rebuilt rows shut.
+// Now: (1) a reading that draws nothing new draws nothing (readingPrint); (2) at most one redraw every 4 seconds,
+// and none while she is typing in a form on the page; (3) every redraw goes through keepOpen, which puts back
+// what she had open (folds, opened status sentences, an opened row, scroll), keyed by the row it sits in.
+const REDRAW_GAP = 4000;
+let lastRedraw = 0;
 async function refreshBrain() {
-  await readBrain();
-  document.querySelectorAll('#tree [aria-expanded="true"]').forEach((row) => {
-    const key = row.id.replace(/^row-/, "");
-    const body = $("#body-" + key);
-    if (body && !body.hidden) drawMembers(key, body);
+  const wait = REDRAW_GAP - (Date.now() - lastRedraw);
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  const a = document.activeElement;
+  if (a && a.matches('input, textarea, select') && a.closest('#main')) { setTimeout(refreshBrain, REDRAW_GAP); return; }
+  await keepOpen($('#main'), async () => {
+    const drew = await readBrain({ onlyIfChanged: true });
+    if (!drew) return;
+    document.querySelectorAll('#tree [aria-expanded="true"]').forEach((row) => {
+      const key = row.id.replace(/^row-/, "");
+      const body = $("#body-" + key);
+      if (body && !body.hidden) drawMembers(key, body);
+    });
   });
+  lastRedraw = Date.now();
+}
+
+// One helper for every redraw: note what is open under root, redraw, put it back. A thing is known by the nearest
+// row or section around it (data-key, else id) and its place among its kind there, never by its words.
+const OPENABLE = 'details, .s-badge, .member';
+function openKey(node) {
+  const host = node.parentElement?.closest('[data-key], [id]');
+  if (!host) return null;
+  const kind = node.matches('details') ? 'details' : node.matches('.s-badge') ? '.s-badge' : '.member';
+  const same = [...host.querySelectorAll(kind)].filter((n) => n.parentElement?.closest('[data-key], [id]') === host);
+  return (host.dataset.key ?? host.id) + '|' + kind + '|' + same.indexOf(node);
+}
+async function keepOpen(root, redraw) {
+  if (!root) return redraw();
+  const open = new Set();
+  root.querySelectorAll('details[open], .s-badge[aria-expanded="true"], .member[aria-expanded="true"]')
+    .forEach((n) => { const k = openKey(n); if (k) open.add(k); });
+  const scrolled = [];
+  root.querySelectorAll('[id], [data-key], .mailx-side, .mailx-list, .mailx-read').forEach((n) => {
+    if (n.scrollTop > 0) scrolled.push([n.id || n.dataset.key || n.className, n.scrollTop]);
+  });
+  const y = window.scrollY;
+  await redraw();
+  root.querySelectorAll(OPENABLE).forEach((n) => {
+    const k = openKey(n);
+    if (!k || !open.has(k)) return;
+    if (n.matches('details')) n.open = true;
+    else if (n.getAttribute('aria-expanded') !== 'true') n.click();
+  });
+  for (const [k, top] of scrolled) {
+    const n = root.querySelector('#' + CSS.escape(k)) ?? root.querySelector(`[data-key="${CSS.escape(k)}"]`)
+      ?? root.getElementsByClassName(String(k).split(' ')[0])[0];
+    if (n) n.scrollTop = top;
+  }
+  window.scrollTo({ top: y });
 }
 
 sb.auth.getSession().then(({ data }) => {
