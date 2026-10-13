@@ -645,9 +645,13 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* WORK (seat work-tab 2026-10-06; seat work-chat 2026-10-08). The arrangement every AI chat
    shares, in the Tool's own look: a sidebar that folds, the conversation, the one box under it.
    No colour value introduced; no other product's look. */
-/* WORK IS THE LIST OF CONVERSATIONS (seat conversation-panel, 2026-10-12); a project opens beside it. */
-.work { display: grid; grid-template-columns: minmax(0, 34rem) minmax(0, 1fr); gap: 2rem; align-items: start; padding-top: var(--gap); }
-.work-side { min-width: 0; }
+/* WORK IS THE CONVERSATION, FULL SIZE (seat conversation-panel, item 15; Alex 2026-10-12 17:51 PT). Left a slim list of
+   conversations; middle the conversation (the one panel, moved here); right a wide view of what an answer produced, only
+   when open. The page fits the window like Mail: each column scrolls by itself. SUPERSEDES the 2026-10-12 Work layout
+   (the list as the page, the conversation in the side panel). */
+.work { display: grid; grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr); gap: 0; align-items: stretch; }
+.work.viewing { grid-template-columns: minmax(13rem, 15rem) minmax(22rem, 1fr) minmax(24rem, 1.15fr); }
+.work-side { min-width: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--gap) var(--gap) var(--gap) 0; border-right: 1px solid var(--line-2); }
 .work-side h3 { margin: 1.4em 0 .3em; font-size: var(--t-small); font-weight: var(--w-mid);  }
 .work-head { display: flex; justify-content: space-between; align-items: baseline; }
 .work-add { background: none; border: 0; padding: 0; font: inherit; font-size: var(--t-small); color: inherit; text-decoration: underline; cursor: pointer; }
@@ -657,10 +661,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .work-open { flex: 1; min-width: 0; display: flex; justify-content: space-between; gap: .5em; text-align: left; background: none; border: 0; padding: .3em .4em; color: inherit; font: inherit; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: var(--radius); }
 .work-open:hover, .work-open[aria-current='true'] { background: var(--line); }
 .work-open[aria-current='true'] { font-weight: var(--w-mid); }
-.work-main { min-width: 0; display: flex; flex-direction: column; }
+.work-main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .work-when { margin-top: .4em; }
-@media (max-width: 900px) { .work { grid-template-columns: 1fr; } }
-.work-top { display: flex; gap: .5em; align-items: center; }
+
+.work-top { display: flex; flex-wrap: wrap; gap: .5em; align-items: center; }
 .work-top .work-newchat { flex: none; width: auto; margin: 0 0 0 auto; }
 .work-title { margin: 0; }
 .work-chat .work-open { display: block; }
@@ -983,6 +987,42 @@ body { padding-bottom: var(--gap-lg); }
 .sp-grid thead th { color: var(--ink-3); font-weight: var(--w-mid); background: var(--paper-2); }
 .sp-grid tbody th { color: var(--ink); font-weight: var(--w-mid); position: sticky; left: 0; background: var(--paper); }
 .sp-grid tr.sp-wide th { color: var(--accent); }
+
+/* WORK FILLS THE WINDOW (seat conversation-panel, item 15): no top box here (the conversation's own box is where she
+   types), the three columns take the height between the tabs and the bottom of the window. */
+body[data-tab="work"] .onebox { display: none; }
+html body[data-tab="work"]:has(#s-work:not([hidden])) { height: 100dvh; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 0; }
+html body[data-tab="work"]:has(#s-work:not([hidden])) > .shell { width: 100%; }
+html body[data-tab="work"]:has(#s-work:not([hidden])) #main { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; }
+html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margin-top: calc(var(--u) * 2); border-top: 1px solid var(--line-2); }
+.panel.in-work { position: static; width: auto; max-width: none; flex: 1; min-height: 0; border-left: 0; box-shadow: none; z-index: auto; }
+.panel.in-work .panel-handle, .panel.in-work #panel-away, .panel.in-work #panel-full, .panel.in-work #panel-work { display: none; }
+.panel.in-work .panel-body > *, .panel.in-work .panel-foot > * { max-width: var(--convo); margin-left: auto; margin-right: auto; }
+.panel.in-work .panel-head { padding-left: var(--gap); }
+.panel .panel-list { display: none; }
+.work-view { min-width: 0; min-height: 0; display: flex; flex-direction: column; border-left: 1px solid var(--line); background: var(--paper); }
+.work-view[hidden] { display: none; }
+.work-view-head { flex: none; display: flex; align-items: center; gap: var(--u); min-height: 56px; padding: 0 calc(var(--u) * 2.5) 0 var(--gap); border-bottom: 1px solid var(--line-2); }
+.work-view-title { flex: 1; min-width: 0; margin: 0; font-size: var(--t-body); font-weight: var(--w-strong); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.work-view-body { flex: 1; min-height: 0; overflow: auto; padding: var(--gap); }
+.work-view-body .ans-table-wrap { margin: 0; }
+.work-view-body .out-chart { max-width: none; margin: 0; }
+.wide-pdf { display: block; width: 100%; height: 100%; min-height: 60vh; border: 0; }
+.wide-open { display: inline-block; margin-top: var(--u); padding: 0; border: 0; background: none; font: inherit; font-size: var(--t-small); color: var(--act); text-decoration: underline; cursor: pointer; }
+.work-view .wide-open { display: none; }
+@media (max-width: 1100px) {
+  .work.viewing { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+  .work.viewing .work-side { display: none; }
+}
+/* A phone: Work is the conversation, full screen; the list is one tap back (the arrow in the conversation's header). */
+@media (max-width: 720px) {
+  .work, .work.viewing { grid-template-columns: minmax(0, 1fr); }
+  .work-side { display: none; border-right: 0; padding-right: 0; }
+  .work.list-open .work-side { display: block; }
+  .work.list-open .work-main, .work.list-open .work-view { display: none; }
+  .work.viewing:not(.list-open) .work-main { display: none; }
+  .panel.in-work .panel-list { display: inline-flex; }
+}
 
 /* DRIVES AS FOLDERS (seat conversation-panel, Alex 2026-10-12): one tile per drive, a list view one click away. */
 .drives-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); margin-bottom: var(--gap); }
