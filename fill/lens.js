@@ -11,7 +11,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-13-own-state";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-13-front-door";
 import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-13-add-files";
 import { attachOutputs } from "./outputs.js?v=2026-10-13-wide";
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-12-working"; // Chats tab (seat chat-import)
@@ -22,9 +22,36 @@ const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
 const PUBLISHABLE_KEY = "sb_publishable_joP87JJiePfN3k1uPoxxVA_DLGT1zv5";
 
+// THE FRONT DOOR (seat front-door, 2026-10-13; Alex on a phone never signed in saw the tabs drawn and
+// "permission denied for function brain_shape"). (1) With no session she is sent to sign in, and back to
+// the tab she asked for after, before anything is read or drawn. (2) Every database call goes through
+// doorFetch, the one client every tab is handed: a refusal for want of a session becomes the signed-out
+// line in the masthead, any other permission refusal a plain sentence. No screen shows the database's words.
+let signedIn = false;
+const signinHref = () => "../login/?next=" + encodeURIComponent("fill/" + location.search + location.hash);
+const REFUSED = new RegExp("permission denied|jwt|not authenticated|42501|PGRST30", "i");
+async function doorFetch(input, init) {
+  const r = await fetch(input, init);
+  if ((r.status !== 401 && r.status !== 403) || !String(input?.url ?? input).includes("/rest/v1/")) return r;
+  const body = await r.clone().json().catch(() => null);
+  if (!body || !REFUSED.test(`${body.code ?? ""} ${body.message ?? ""}`)) return r;
+  // A token the brain calls expired (PGRST301/303) is a session that has ended, same as no session at all.
+  const ended = !signedIn || new RegExp("jwt|PGRST30", "i").test(`${body.code ?? ""} ${body.message ?? ""}`);
+  if (ended) showSignedOut();
+  const message = ended ? "You are signed out." : "You do not have access to this.";
+  return new Response(JSON.stringify({ code: body.code, message, details: null, hint: null }),
+    { status: r.status, statusText: r.statusText, headers: { "content-type": "application/json" } });
+}
+
 const sb = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
   auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true, flowType: "pkce" },
+  global: { fetch: doorFetch },
 });
+{
+  const { data } = await sb.auth.getSession();
+  signedIn = !!data?.session;
+  if (!signedIn) { location.replace(signinHref()); await new Promise(() => {}); }   // nothing below runs
+}
 
 const $ = (s, r = document) => r.querySelector(s);
 const el = (t, c) => { const n = document.createElement(t); if (c) n.className = c; return n; };
@@ -182,7 +209,8 @@ async function readBrain(opts = {}) {
     routeOnState("live");
     return true;
   } catch (e) {
-    // Never fabricate and never hang. Say the reading did not come back.
+    // Never fabricate and never hang. Say the reading did not come back. Signed out is not a failure.
+    if (!signedIn) { showSignedOut(); lastPrint = null; return true; }
     renderState("unreachable", e?.message ?? String(e));
     routeOnState("unknown");
     lastPrint = null;
@@ -221,6 +249,11 @@ function renderState(state, detail) {
     b.className = "quiet";
     b.textContent = `Read live from your brain at ${fmtWindow(shape.read_at)}. `
       + `Every figure above comes from that reading.`;
+  } else if (state === "signedout") {
+    b.className = "banner bad";
+    b.innerHTML = `You are signed out. <a class="out-btn" href="${escape(signinHref())}">Sign in</a>`;
+    who.innerHTML = `<span class="quiet">signed out</span> <a class="out-btn" href="${escape(signinHref())}">Sign in</a>`;
+    blankSkeletons("signed out");
   } else if (state === "unbound") {
     b.className = "banner bad";
     b.innerHTML = `This browser is not signed in to a brain identity, so there is nothing to show. `
@@ -3520,6 +3553,7 @@ function drawLens() {
   if (!data) {
     line.textContent = readingState === null ? 'Reading your brain. This fills in when the reading lands.'
       : readingState === 'unbound' ? 'Nobody is signed in on this browser, so there is nothing to show.'
+      : readingState === 'signedout' ? 'You are signed out, so there is nothing to show. Sign in at the top.'
       : 'Your brain could not be read just now, so nothing here is a claim either way.';
     body.appendChild(line);
     return;
@@ -4229,4 +4263,11 @@ async function keepOpen(root, redraw) {
 sb.auth.getSession().then(({ data }) => {
   const jwt = data?.session?.access_token;
   if (jwt) onBrainChange(sb, jwt, refreshBrain, { label: "brain" });
+});
+// A session that ends mid-use (expired and not renewed, or signed out in another tab) shows the one
+// signed-out line, never a raw error (seat front-door).
+function showSignedOut() { if (readingState !== "signedout") renderState("signedout"); }
+sb.auth.onAuthStateChange((event, session) => {
+  signedIn = !!session;
+  if (event === "SIGNED_OUT") showSignedOut();
 });
