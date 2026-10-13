@@ -736,6 +736,31 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .clock-zone:hover { color: var(--ink); }
 #clock-pick { font: inherit; font-size: var(--t-micro); max-width: 16rem; }
 
+/* THE TOOL'S HEALTH IN THE HEADER (seat tool-health, 2026-10-13). Reuses the Systems badge colors above; no new
+   color values. The panel opens under the word; on a phone it spans the screen below the header. */
+.health { position: relative; flex: none; align-self: center; }
+.health[hidden], .health-panel[hidden] { display: none; }
+.health-panel {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 40;
+  width: min(26rem, calc(100vw - 32px)); background: var(--paper); color: var(--ink-2);
+  border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(20, 23, 28, .12);
+  padding: calc(var(--u) * 4); font-size: var(--t-small); text-align: left;
+}
+.health-head { margin: 0 0 calc(var(--u) * 3); color: var(--ink); font-weight: var(--w-mid); }
+.health-areas, .health-fixed { list-style: none; margin: 0; padding: 0; display: grid; gap: calc(var(--u) * 2.5); }
+.health-area { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); column-gap: calc(var(--u) * 2); row-gap: 2px; align-items: baseline; }
+.health-area .badge { grid-row: span 2; align-self: start; justify-self: start; }
+.health-area b { font-weight: var(--w-mid); color: var(--ink); }
+.health-say { grid-column: 2; color: var(--ink-3); }
+.health-sub { margin: calc(var(--u) * 4) 0 calc(var(--u) * 2); font-size: var(--t-micro); color: var(--ink-3); }
+.health-fixed li { color: var(--ink-3); }
+.health-when { margin: calc(var(--u) * 3) 0 0; font-size: var(--t-micro); color: var(--ink-4); }
+@media (max-width: 560px) {
+  .masthead { flex-wrap: wrap; }
+  .health { order: 3; flex-basis: 100%; display: flex; justify-content: flex-end; margin-top: calc(var(--u) * -1); }
+  .health-panel { width: calc(100vw - 32px); }
+}
+
 /* MAIL (seat mail-redesign, 2026-10-07; Alex 2026-10-06). An inbox you can work in, across the
    whole window: mailboxes on the left, the inbox in the middle, the open email on the right.
    THE SCREEN FITS THE WINDOW (seat reading, 2026-10-07; Alex that day: "a waste of real
