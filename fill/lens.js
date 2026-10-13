@@ -1891,8 +1891,11 @@ function titleFor(e) {
 
 // Inline: [3] becomes a citation, **text** becomes emphasis, the rest is a text node.
 // ORIGINS (lens-ask v17, seat answer-like-claude, Alex 2026-10-07). [w2] is a web page from this answer's own
-// search, drawn as a mark that opens it in the list below; [g] is the model's general knowledge, drawn as a
-// quiet words-mark. Only [n] is a record of the company. Split by hand, not by pattern, so this file stays
+// search, drawn as a mark that opens it in the list below; [g] is the model's general knowledge. Only [n] is a
+// record of the company. QUIET MARKS (seat teach-process, 2026-10-13, Alex 2026-10-12: answers should read "more
+// like what you would say when I ask you"): [g] and [bN] are a small superscript sign with their meaning on hover,
+// explained ONCE under the answer by markNote, instead of "(general knowledge)" / "(read live)" on every line. The
+// label is kept (decision 2026-10-07: general knowledge is never presented as a company fact); only its volume moved. Split by hand, not by pattern, so this file stays
 // writable (see PATTERNS ARE BUILT, below).
 function inlineInto(parent, text) {
   const s = String(text);
@@ -1903,15 +1906,15 @@ function inlineInto(parent, text) {
       const j = s.indexOf("]", i);
       const inner = j > i ? s.slice(i + 1, j) : "";
       if (inner === "g") {
-        flush(); spaceBefore(parent);
-        const m = el("span", "cite-g"); m.textContent = "(general knowledge)"; m.title = "From general knowledge, not from your records";
+        flush();
+        const m = el("sup", "cite-q"); m.textContent = QUIET_MARK.g; m.dataset.k = "g"; m.title = QUIET_SAYS.g;
         parent.appendChild(m); i = j + 1; continue;
       }
       // [b2] (lens-ask v22/v23): a figure read live from a connected system (QuickBooks, Wise, HubSpot) when she
-      // asked; which system is named in the first line under the answer. Drawn as words, like [g].
+      // asked; which system is named in the first line under the answer. A quiet sign, like [g].
       if (inner[0] === "b" && inner.length > 1 && inner.length <= 3 && String(Number(inner.slice(1))) === inner.slice(1)) {
-        flush(); spaceBefore(parent);
-        const m = el("span", "cite-g"); m.textContent = "(read live)"; m.title = "Read live from a connected system when you asked; the line under the answer names it";
+        flush();
+        const m = el("sup", "cite-q"); m.textContent = QUIET_MARK.b; m.dataset.k = "b"; m.title = QUIET_SAYS.b;
         parent.appendChild(m); i = j + 1; continue;
       }
       const n = inner.slice(1);
@@ -1924,6 +1927,18 @@ function inlineInto(parent, text) {
     plain += s[i]; i++;
   }
   flush();
+}
+const QUIET_MARK = { g: "†", b: "‡" };
+const QUIET_SAYS = { g: "From what I know in general, not from your business",
+                     b: "Read from your connected accounts just now" };
+// One line under the answer for each kind of quiet sign it carries, so the meaning is said once.
+function markNote(slot) {
+  for (const k of ["g", "b"]) {
+    if (!slot.querySelector('sup.cite-q[data-k="' + k + '"]')) continue;
+    const p = el("p", "ans-meta ans-mark-note");
+    p.textContent = QUIET_MARK[k] + " " + QUIET_SAYS[k] + ".";
+    slot.appendChild(p);
+  }
 }
 function spaceBefore(parent) {
   const prev = parent.lastChild;
@@ -2075,11 +2090,12 @@ function sourceName(s) {
   return s || "Other records";
 }
 
-function recordList(evidence, summaryText) {
+function recordList(evidence, summaryText, notes) {
   const wrap = el("details", "recs");
   const sum = el("summary", "recs-sum");
   sum.textContent = `${summaryText} (${evidence.length})`;
   wrap.appendChild(sum);
+  for (const n of Array.isArray(notes) ? notes : []) { const p = el("p", "quiet recs-note"); p.textContent = String(n); wrap.appendChild(p); }
 
   const ul = el("ul", "records");
   // GROUPED BY WHERE IT CAME FROM, newest first in each (seat answer, 2026-10-07: Alex asked for
@@ -2309,12 +2325,127 @@ async function hearSpoken(b64, mime) {
 const OUT_CTX = { askUrl: ASK_URL, key: PUBLISHABLE_KEY, session: () => sb.auth.getSession(),
   // A PDF made from an answer also shows wide beside the conversation (seat conversation-panel, item 15).
   view: (title, url) => { const f = el('iframe', 'wide-pdf'); f.src = url; f.dataset.blob = url; f.title = title; showWide(title, f); } };
-function renderAsk(slot, body) {
+// ONE RENDERER, ONE SET OF ANSWER ACTIONS (seat teach-process, 2026-10-13). Save as test used to be added by ask()
+// after this call, so answers on Mail and reopened chats had none. Now every answer drawn anywhere gets Teach and
+// Save as test here, for the owner. opts.q is her question when the caller has it; otherwise it is read from the
+// turn's own question line. A turn without a question line (Mail's automatic briefing) gets no actions.
+function renderAsk(slot, body, opts) {
   drawAsk(slot, body);
   dropEchoHeading(slot);
   try { attachOutputs(slot, body, OUT_CTX); }
   catch (e) { const p = el("p", "quiet"); p.textContent = `The chart or the file buttons could not be drawn: ${e?.message ?? e}`; slot.appendChild(p); }
   wideButtons(slot);
+  markNote(slot);
+  answerActions(slot, body, opts);
+}
+// OWNER ONLY, as a courtesy: lens-ask refuses a non-owner's teaching (teach_refused) and stored_test_create refuses
+// a non-owner's test, each with a reason. Not drawn under a teaching exchange itself or a who-sees-what preview.
+function answerActions(slot, body, opts) {
+  if (!shape?.viewer?.all_access || !body) return;
+  const st = String(body.state || "");
+  if (st.startsWith("teach_") || st === "access_instruction") return;
+  const q = (opts && opts.q) || slot.closest(".answer-turn")?.querySelector(".answer-asked")?.textContent || "";
+  if (!q.trim()) return;
+  const bar = el("div", "ans-actions");
+  bar.append(teachButton(q), saveAsTest(q, opts?.follows ?? null));
+  slot.appendChild(bar);
+}
+
+// TEACH WHERE TO LOOK (seat teach-process, 2026-10-13; Alex 2026-10-12 23:25 PT: "If I say there's a bill rate and a
+// pay rate for <contractor>, go out and find it. You should find it in an SOW..."). She says, in her words, where
+// answers to this KIND of question live and how to put them together. lens-ask reads it back in one sentence
+// (teach_readback); nothing is kept until she says yes (teach_confirm). What she taught then steers every later
+// question of that kind. Typing "next time, look in ..." in the box does the same. One exchange, drawn by
+// teachAnswer, whichever way it started.
+function teachButton(q) {
+  const wrap = el("div", "t-teach");
+  const open = el("button", "go ghost");
+  open.type = "button";
+  open.textContent = "Teach";
+  open.title = "Tell the Tool where answers like this one live";
+  open.addEventListener("click", () => { open.hidden = true; wrap.appendChild(teachForm(q)); }, { once: true });
+  wrap.appendChild(open);
+  return wrap;
+}
+function teachForm(q) {
+  const box = el("div", "t-form");
+  box.innerHTML = `
+    <p class="quiet">For questions like this one, where should I look first, and how do I put it together?
+      Say it the way you would tell a new assistant.</p>
+    <label class="t-field">Where the answer lives
+      <textarea rows="3" class="t-words" placeholder="For example: it is in the signed agreement with the client, the invoices both ways, and the rates spreadsheet."></textarea></label>
+    <div class="actions"><button class="go t-read" type="button">Read it back to me</button></div>
+    <div class="t-back" aria-live="polite"></div>`;
+  const words = box.querySelector(".t-words");
+  setTimeout(() => words.focus(), 0);
+  box.querySelector(".t-read").addEventListener("click", async (e) => {
+    const btn = e.currentTarget, back = box.querySelector(".t-back");
+    const w = words.value.trim();
+    if (!w) { back.textContent = "Say where to look first."; return; }
+    btn.disabled = true; back.innerHTML = ""; const wait = el("p", "quiet working"); wait.textContent = "Reading it back."; back.appendChild(wait);
+    const res = await askBody({ teach: { words: w, question: q } });
+    back.innerHTML = "";
+    teachAnswer(back, res, () => { btn.disabled = false; words.focus(); });
+    if (res?.state !== "teach_readback") btn.disabled = false;
+  });
+  return box;
+}
+// lens-ask with her own sign-in, for a body that is not an ordinary question. Never throws.
+async function askBody(payload) {
+  try {
+    const { data } = await sb.auth.getSession();
+    const jwt = data?.session?.access_token;
+    if (!jwt) return { ok: false, error: "You are not signed in on this browser. Sign in and try again." };
+    const r = await fetch(ASK_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${jwt}`, apikey: PUBLISHABLE_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify(Object.assign({ tz: zone() }, payload)),
+    });
+    return (await r.json().catch(() => null)) ?? { ok: false, error: `The Tool did not answer (${r.status}).` };
+  } catch (e) { return { ok: false, error: `The Tool could not be reached: ${e?.message ?? e}` }; }
+}
+// One teaching exchange. teach_readback: her words read back with Yes / Not quite. Yes keeps it (teach_kept) and
+// offers to save her known answer as a test, linked to what she taught (teach_attach). Every other teach_ state is
+// the server's own sentence. onRetry lets the form take her corrected words.
+function teachAnswer(slot, body, onRetry) {
+  if (!body || body.ok !== true) {
+    const p = el("p", "state stalled"); p.textContent = body?.error ?? "Nothing came back. Nothing was kept."; slot.appendChild(p); return;
+  }
+  const lead = el("p", "ans-lead"); lead.textContent = String(body.answer || body.state_reason || "");
+  slot.appendChild(lead);
+  if (body.state !== "teach_readback" || !body.teach) return;
+  const acts = el("div", "actions");
+  const yes = el("button", "go"); yes.type = "button"; yes.textContent = "Yes, keep it";
+  const no = el("button", "go ghost"); no.type = "button"; no.textContent = "Not quite";
+  acts.append(yes, no);
+  slot.appendChild(acts);
+  const said = el("div", "t-said"); said.setAttribute("aria-live", "polite"); slot.appendChild(said);
+  no.addEventListener("click", () => {
+    acts.remove();
+    const p = el("p", "quiet"); p.textContent = "Nothing was kept. Say it again in your own words and I will read it back.";
+    said.replaceChildren(p);
+    if (onRetry) onRetry(); else $("#panel-input")?.focus();
+  });
+  yes.addEventListener("click", async () => {
+    yes.disabled = true; no.disabled = true;
+    const w = el("p", "quiet working"); w.textContent = "Keeping it."; said.replaceChildren(w);
+    const kept = await askBody({ teach_confirm: body.teach });
+    said.innerHTML = "";
+    if (!kept || kept.ok !== true || kept.state !== "teach_kept") {
+      teachAnswer(said, kept); yes.disabled = false; no.disabled = false; return;
+    }
+    acts.remove();
+    const p = el("p", "ans-lead"); p.textContent = String(kept.answer || "Kept."); said.appendChild(p);
+    const q = String(body.teach.question || "").trim();
+    if (!q || !kept.teach?.id) return;
+    const offer = el("p", "quiet"); offer.textContent = "If you know the right answer to that question, save it as a test, so I check myself against it after every change.";
+    said.appendChild(offer);
+    said.appendChild(saveAsTest(q, null, async (testId) => {
+      const linked = await askBody({ teach_attach: { id: kept.teach.id, test: testId } });
+      const l = el("p", "quiet"); l.textContent = linked?.ok === true ? String(linked.answer || "The test is kept with what you taught.") : (linked?.error ?? "The test was saved but not linked.");
+      said.appendChild(l);
+    }));
+  });
 }
 // A FIRST HEADING THAT ONLY REPEATS HER QUESTION IS DROPPED (seat conversation-panel, round 4): her question already
 // shows as the bubble above. "Repeats" means at least 70% of the heading's words are words of her question, ignoring
@@ -2333,6 +2464,8 @@ function drawAsk(slot, body) {
   if (body.state === "answered" && body.table && typeof body.table === "object") { tableAnswer(slot, body); return; }
   // A typed instruction about who sees what (lens-ask v14): its line and the preview card.
   if (body.state === "access_instruction") { accessAnswer(slot, body); return; }
+  // A teaching typed in the box ("next time, look in ...", lens-ask v31): read back, then kept on her yes.
+  if (String(body.state || "").startsWith("teach_")) { teachAnswer(slot, body); return; }
   const state = body.state;
   // lens-ask v17: an answer from the web or general knowledge is drawn whatever the records gave. `state`
   // still says what the records gave, and the answer says it in its own first sentence.
@@ -2391,7 +2524,13 @@ function drawAsk(slot, body) {
     // The audit line (records looked at, closeness, floor) is gone from the page by
     // Alex's ruling of 2026-09-25: the reader is not only Alex, and it was the working.
     // The figures stay in body.retrieval for anyone measuring.
-    slot.appendChild(recordList(ev, answered && state === "answered" ? "The records this came from" : "What came back"));
+    // What was read and where she taught me to look go INSIDE the sources fold (seat teach-process, 2026-10-13):
+    // provenance one tap away, never stamped on the answer. Both sentences are the server's.
+    const notes = [];
+    if (typeof body.reach === "string" && body.reach) notes.push(body.reach);
+    const taught = Array.isArray(body.about?.taught) ? body.about.taught.filter(Boolean) : [];
+    if (taught.length) notes.push("I looked first where you taught me to look for " + taught.join(", ") + ".");
+    slot.appendChild(recordList(ev, answered && state === "answered" ? "Where this comes from" : "What came back", notes));
   }
 
   // 5. THE WEB (lens-ask v17): each page this answer's search used, by its title, opening in a new tab.
@@ -2486,12 +2625,11 @@ async function ask(question, files) {
     const body = await r.json().catch(() => null);
     if (!body) { askProblem(slot, `The brain did not answer (${r.status}). Nothing was changed.`); return; }
     if (body.ok !== true) { askProblem(slot, body.error ?? `The brain refused this (${r.status}).`); return; }
-    renderAsk(slot, body);
+    // Save as test and Teach are drawn by renderAsk for the owner (seat teach-process). lastAsked is still the
+    // previous question here, so the test form knows when this one was a follow-on.
+    renderAsk(slot, body, { q, follows: lastAsked });
     drawBox();   // the top box now says it continues this conversation
     speakAnswer(slot);   // read aloud when she switched it on (box.js); never for a reopened, kept answer
-    // Save as test sits on every answer, for the owner (seat save-as-test). lastAsked is still the
-    // previous question here, so the form knows when this one was a follow-on.
-    if (shape?.viewer?.all_access) slot.appendChild(saveAsTest(q, lastAsked));
     lastAsked = q;
     await keepTurn(slot, q, body);
   } catch (e) {
@@ -2544,6 +2682,7 @@ function rightAnswerText(t) {
   if (Array.isArray(k.names)) return `${k.names.length} named: ${k.names.join(", ")}.${asOf}`;
   if (typeof k.period === 'string') return `The answer says it means ${k.period}.${asOf}`;
   if (Array.isArray(k.state_in)) return `The Tool must reply: ${k.state_in.join(" or ")}.`;
+  if (Array.isArray(k.phrases)) return `The answer must give ${k.phrases.join(", ")}.${asOf}`;
   return "Stored in a shape this screen does not recognize.";
 }
 
@@ -2593,13 +2732,30 @@ function answerForm(t, li) {
   li.appendChild(box);
 }
 
-// A number is a count, anything else is a list of names, one per line. One reading of what was
-// typed, used by the answer form on a test and by Save as test (seat save-as-test, 2026-10-02).
+// A number is a count; lines that each carry a figure ("bill rate 95") are the figures the answer must give, checked
+// by value (judge 'says', seat teach-process 2026-10-13); anything else is a list of names, one per line. One reading
+// of what was typed, used by the answer form on a test and by Save as test (seat save-as-test, 2026-10-02).
 function parseAnswer(raw) {
   const lines = String(raw ?? "").split(String.fromCharCode(10)).map((s) => s.trim()).filter(Boolean);
   if (!lines.length) return null;
   const isNumber = lines.length === 1 && String(Number(lines[0])) === lines[0] && Number(lines[0]) >= 0;
-  return isNumber ? { judge: "count", known: { n: Number(lines[0]) } } : { judge: "set", known: { names: lines } };
+  if (isNumber) return { judge: "count", known: { n: Number(lines[0]) } };
+  const figs = lines.map(figuresIn);
+  if (figs.every((f) => f.length)) return { judge: "says", known: { phrases: figs.flat().slice(0, 20) } };
+  return { judge: "set", known: { names: lines } };
+}
+// The figures in a line, as plain number strings: "$1,234.50/hr" gives "1234.50". Digits, with commas and one point
+// inside; scanned by hand so this file stays writable (see PATTERNS ARE BUILT).
+function figuresIn(line) {
+  const out = []; let cur = "";
+  const end = () => { const t = cur.split(",").join(""); const v = t.endsWith(".") ? t.slice(0, -1) : t; if (v && String(Number(v)) !== "NaN") out.push(v); cur = ""; };
+  for (const ch of String(line)) {
+    if (ch >= "0" && ch <= "9") cur += ch;
+    else if ((ch === "," || ch === ".") && cur) cur += ch;
+    else if (cur) end();
+  }
+  if (cur) end();
+  return out;
 }
 
 // SAVE AS TEST (seat save-as-test, 2026-10-02, Alex's rulings of that day). On every answer, for
@@ -2609,12 +2765,12 @@ function parseAnswer(raw) {
 // offers it only if the brain's label check passes it; he can change it, and the brain checks it
 // again when he saves. The brain adds "(up to and including <date>)" to the stored question, so
 // later records cannot change its right answer.
-function saveAsTest(q, follows) {
+function saveAsTest(q, follows, onSaved) {
   const wrap = el("div", "t-save-as");
   const open = el("button", "go ghost");
   open.type = "button";
   open.textContent = "Save as test";
-  open.addEventListener("click", () => { open.hidden = true; wrap.appendChild(saveForm(q, follows)); }, { once: true });
+  open.addEventListener("click", () => { open.hidden = true; wrap.appendChild(saveForm(q, follows, onSaved)); }, { once: true });
   wrap.appendChild(open);
   return wrap;
 }
@@ -2635,16 +2791,17 @@ async function suggestLabelFor(q) {
   return body ?? { ok: false, error: `No reply (${r.status}).` };
 }
 
-function saveForm(q, follows) {
+function saveForm(q, follows, onSaved) {
   const box = el("div", "t-form");
   box.innerHTML = `
     <p class="quiet">Keep this question as a test. Give the right answer as it stands on a date.
-      The question is kept up to that date, so records arriving later do not change it.</p>
+      The question is kept up to that date, so records arriving later do not change it.
+      For figures, put each on its own line; they are checked by value, the words around them are not.</p>
     ${follows ? `<p class="quiet">This question followed an earlier one. Make it stand on its own before saving.</p>` : ""}
     <label class="t-field">The question
       <textarea rows="2" class="t-q"></textarea></label>
     <label class="t-field">The right answer
-      <textarea rows="3" class="t-answer" placeholder="A number, or names one per line"></textarea></label>
+      <textarea rows="3" class="t-answer" placeholder="A number, names one per line, or the figures one per line"></textarea></label>
     <label class="t-field">True as of
       <input type="date" class="t-asof"></label>
     <label class="t-field">Label. The only part of a test the studio sees: lowercase words, no names, figures or dates.
@@ -2686,6 +2843,11 @@ function saveForm(q, follows) {
       said.after(go);
       btn.hidden = true;
       if (testsRead) await loadTests();
+      // Linked to what she just taught (seat teach-process). An older brain sends no id: say so, never guess one.
+      if (onSaved) {
+        if (data.id) await onSaved(data.id);
+        else { const n = el("p", "quiet"); n.textContent = "Saved, but it could not be linked to what you taught: your brain needs an update for that."; go.after(n); }
+      }
     } catch (err) {
       said.textContent = `Not saved: ${err?.message ?? err}`;
       btn.disabled = false;
