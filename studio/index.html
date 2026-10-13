@@ -335,6 +335,33 @@
   .flag{font-family:var(--mono);font-size:10px;color:var(--amber);background:var(--amber-bg);border-radius:4px;padding:1px 5px}
   .chip.ok{color:var(--green);background:var(--green-bg)}.chip.bad{color:var(--red);background:var(--red-bg)}
   .prt{padding:7px 0;border-bottom:1px solid var(--hair-2)}.prt:last-child{border-bottom:none}
+  /* TO TEST (seat phone, 2026-10-13): the owed screen checks, made to be worked through on a phone. */
+  .tt-sum{margin:6px 0 14px;color:var(--ink-2);font-size:14px}
+  .tt-group{background:var(--raise);border:1px solid var(--hair);border-radius:10px;margin:0 0 10px;box-shadow:var(--sh-1)}
+  .tt-group>summary{display:flex;justify-content:space-between;align-items:center;min-height:52px;padding:0 16px;cursor:pointer;font-weight:600;font-size:15px;list-style:none}
+  .tt-group>summary::-webkit-details-marker{display:none}
+  .tt-n{min-width:28px;text-align:center;padding:2px 8px;border-radius:999px;background:var(--amber-bg);color:var(--amber);font-size:13px}
+  .tt-card{border-top:1px solid var(--hair-2);padding:14px 16px 16px}
+  .tt-card.tt-later{opacity:.75}
+  .tt-title{font-weight:600;margin-bottom:6px}
+  .tt-k{margin-top:10px;font-size:12px;color:var(--ink-3);text-transform:none}
+  .tt-ask,.tt-exp{margin-top:2px;font-size:15px;line-height:1.45;color:var(--ink);overflow-wrap:anywhere}
+  .tt-exp{color:var(--ink-2)}
+  .tt-note{display:block;width:100%;margin-top:12px;min-height:48px;padding:10px 12px;border:1px solid var(--hair);border-radius:8px;font:inherit;font-size:16px;background:var(--bg);resize:vertical}
+  .tt-prompt{margin-top:8px;color:var(--red);font-size:14px}
+  .tt-acts{display:flex;gap:8px;margin-top:10px}
+  .tt-b{flex:1 1 0;min-height:48px;border-radius:8px;border:1px solid var(--hair);background:var(--raise);font:inherit;font-size:15px;font-weight:600;cursor:pointer;color:var(--ink)}
+  .tt-pass{background:var(--green-bg);border-color:var(--green-line);color:var(--green)}
+  .tt-fail{background:var(--red-bg);border-color:var(--red-line);color:var(--red)}
+  .tt-b:disabled{opacity:.6}
+  .tt-seat{margin-top:8px;font-size:12px;color:var(--ink-3)}
+  .tt-done{display:flex;flex-direction:column;gap:2px;color:var(--green)}
+  .tt-done .tt-ask{color:var(--ink-3);font-size:13px}
+  @media(max-width:720px){
+    nav.sections .sec[data-i="8"]{order:-1}
+    nav.sections .sec{min-height:44px}
+    .wrap{overflow-x:hidden}
+  }
 </style>
 </head>
 <body>
@@ -346,7 +373,7 @@ const root = document.getElementById("root");
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const tok    = () => { try{ return localStorage.getItem("studio_token")||""; }catch{ return ""; } };
 const setTok = t  => { try{ t?localStorage.setItem("studio_token",t):localStorage.removeItem("studio_token"); }catch{} };
-let D=null, DOCS=[], TAB="0";
+let D=null, DOCS=[], TAB=(window.matchMedia&&window.matchMedia("(max-width: 720px)").matches)?"8":"0";   // a phone opens on To test (seat phone)
 let RUN=null;               // what the studio runs on, filled in whenever it arrives
 let RUN_STATE="loading";
 let CUST=null;              // the customer half, filled in whenever it arrives
@@ -437,6 +464,7 @@ async function boot(){
     MAP_STATE=(MAP&&!MAP.error)?"done":"failed";
     if(D) paint();
   });
+  loadToTest();
   const pStudio=call(FN,{action:"studio"});
   const pCust  =call(FN,{action:"customers"});
   const pDocs  =call(FN,{action:"docs"});
@@ -584,7 +612,7 @@ function render(){
         + '<span class="ds" style="flex:2">'+esc(g.caveat)+'</span></div>'):"")
   + '</div>'
   + '<nav class="sections" id="nav">'
-  +   ["Front","Capabilities","Mechanisms","Being built now","Written record","Principles","Archive","Testing"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(String(i)===TAB)+'" data-i="'+i+'">'+s+'</button>').join("")
+  +   ["Front","Capabilities","Mechanisms","Being built now","Written record","Principles","Archive","Testing","To test"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(String(i)===TAB)+'" data-i="'+i+'">'+s+'</button>').join("")
   + '</nav>'
   + '<main>'
   +   '<section class="view" data-active="'+(TAB==="0")+'" data-i="0">'+xbox(0)+frontMap()+'</section>'
@@ -595,6 +623,7 @@ function render(){
   +   '<section class="view" data-active="'+(TAB==="5")+'" data-i="5">'+xbox(5)+principles()+'</section>'
   +   '<section class="view" data-active="'+(TAB==="6")+'" data-i="6">'+xbox(6)+archiveTab()+'</section>'
   +   '<section class="view" data-active="'+(TAB==="7")+'" data-i="7">'+xbox(7)+testingTab()+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="8")+'" data-i="8">'+xbox(8)+toTestTab()+'</section>'
   +   '<div class="foot">'+esc(footerLine())+'<br/>Served by '+esc(D.served_by.fn)+' · the Studio’s own numbers and each customer’s, kept apart · this is the only address that serves the studio · nothing on this page is stored.</div>'
   + '</main></div>'
   + '<div class="ov" id="ov"><div class="dr" id="drw">'+ipdocs()+'</div></div>';
@@ -2019,7 +2048,8 @@ const TABBOX=[
   "Decisions, seat write-ups, the governing documents, and the places the record contradicts itself.",
   "The numbered rules the build is judged against, and the decisions behind each.",
   "Past work, kept so it can be reused, and out of the running system.",
-  "Every stored test, and whether a change broke one. Tests are shown here by label only; the question, the right answer and what came back are on the Tool screen, for the owner."
+  "Every stored test, and whether a change broke one. Tests are shown here by label only; the question, the right answer and what came back are on the Tool screen, for the owner.",
+  "What is still waiting for you to look at, grouped by where you go. Do what it says, then tap Passed, Failed or Not now."
 ];
 function xbox(i){ return '<div class="xbox">'+esc(TABBOX[i]||"")+'</div>'; }
 
