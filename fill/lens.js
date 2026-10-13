@@ -1650,6 +1650,7 @@ async function beginConnect(provider, scope, mailbox, btn, restore, hint) {
         owner_only: "Connecting on behalf of the firm is an owner-level act, and this identity is not an owner.",
         not_wired:  "That provider is not wired up, so there is nothing to consent to yet.",
         no_mailbox: "No address to connect. Pick a mailbox, or type one.",
+        own_address_only: "A Google sign-in for calendar and contacts can only be started for your own address.",
       }[data?.reason] ?? `It stopped short: ${data?.reason ?? "unknown"}.`);
     }
 
@@ -1666,6 +1667,13 @@ async function beginConnect(provider, scope, mailbox, btn, restore, hint) {
     giveBack();
     stageStopped(`The connect could not be started: ${e?.message ?? e}`);
   }
+}
+
+// The one Google sign-in per person (seat calendar-contacts): always the signed-in person's own address,
+// through the same path as every other connect.
+function googleConnect(btn, restore) {
+  const me = shape?.viewer?.email || null;
+  return beginConnect({ name: "Google", type: "google" }, "individual", me, btn, restore, me);
 }
 
 function consentButton(provider, scope, groupKey) {
@@ -3492,6 +3500,15 @@ function drawLens() {
   // THE CONTACTS TAB (seat contacts, 2026-10-13): a lookup of anyone or any company the business has dealt with, from
   // every connected system and mail, drawn by contacts.js from the brain's contact_card. It does not wait for Google
   // Contacts to be connected: CATS, HubSpot and mail already hold the people.
+  // YOUR GOOGLE SIGN-IN (seat calendar-contacts, 2026-10-13): each person's own sign-in for calendar, contacts and
+  // added files, drawn by google.js on Systems (above the systems) and on Calendar (instead of "Nothing connected").
+  if (lensKey === 'systems' || lensKey === 'calendar') {
+    const g = el('div');
+    body.appendChild(g);
+    import('./google.js?v=2026-10-13-google-signin').then((G) => G.drawGoogleSignin(g, { sb, el, connect: googleConnect }))
+      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'Your Google sign-in could not be shown: ' + String(e?.message ?? e); g.appendChild(p); });
+    if (lensKey === 'calendar') return;
+  }
   if (lensKey === 'contacts') {
     import('./contacts.js?v=2026-10-13-contacts-r3').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, isOwner: () => !!shape?.viewer?.all_access }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Contacts tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
@@ -4073,6 +4090,14 @@ readBrain();                     // then the live reading lands into the frame
   }
   if (failed) {
     return say(`The connection did not complete: ${failed}. Nothing was stored.`);
+  }
+
+  // The per-person Google sign-in (seat calendar-contacts): no drive picker, nothing to adopt. Its card says what
+  // Google allowed; nothing is read from it until the calendar and contacts readers are switched on.
+  if (done.startsWith("google:")) {
+    goto("s-lens", "systems");
+    return say(`Your Google sign-in is saved for ${done.replace(/^google:/, "")}. Systems shows what Google `
+      + `allowed. Nothing from your calendar or address book has been read yet.`);
   }
 
   // A source key is not a sentence. Say it the way the person would.
