@@ -40,7 +40,8 @@
 // is one click on the conversation. With no email open, a question asked here is answered in the
 // reading column too, so nothing on the Mail tab ever draws a band of conversation under the columns.
 
-import { conversation } from './answer.js?v=2026-10-12-working';
+import { conversation } from './answer.js?v=2026-10-22-dates';
+import { fmtDate } from './dates.js?v=2026-10-22-dates';
 
 const LIVE = '/functions/v1/worklens-live';
 
@@ -92,9 +93,9 @@ const mk = (tag, cls, text) => {
 function when(iso) {
   if (!iso) return '';
   const d = new Date(iso), now = new Date();
-  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  if (d.getFullYear() === now.getFullYear()) return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  if (fmtDate(d) === fmtDate(now)) return fmtDate(d, 'time');
+  if (fmtDate(d, 'year') === fmtDate(now, 'year')) return fmtDate(d, 'short');
+  return fmtDate(d);
 }
 
 async function live(action, extra) {
