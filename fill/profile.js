@@ -11,12 +11,13 @@
 // bottom, because a profile that looks complete when it is not is the failure this capability most risks.
 // Lives in the Brain tab's "Read it back to me" section (s-recognition), above the list of what is connected.
 
+import { fmtDate } from './dates.js?v=2026-10-22-dates';
 let ctx = null;   // { sb, el, $, countOf }
 let last = null;
 let saying = '';
 
 const line = (cls, text) => { const p = ctx.el('p', cls); p.textContent = text; return p; };
-const day = (d) => d ? new Date(String(d).slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+const day = (d) => fmtDate(d, 'day');
 const gmailLink = (e) => 'https://mail.google.com/mail/?authuser=' + encodeURIComponent(e.mailbox) + '#all/' + encodeURIComponent(e.mail_id);
 
 export function initProfile(c) { ctx = c; }
