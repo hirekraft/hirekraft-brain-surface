@@ -16,6 +16,8 @@
 //
 // Not a list of every person: a lookup. Type a name, an email address or a company.
 
+import { fmtDate } from "./dates.js?v=2026-10-22-dates";
+
 let ctx = null;   // { sb, el, $, countOf, ask, isOwner }
 let mount = null;
 let seq = 0;   // each lookup's number: one that finishes after a newer one, or after its screen was replaced, draws nothing
@@ -24,7 +26,7 @@ const SHOW_FIRST = 10;
 
 const line = (cls, text) => { const p = ctx.el("p", cls); p.textContent = text; return p; };
 const head4 = (text) => { const h = ctx.el("h4"); h.textContent = text; h.style.margin = "calc(var(--u) * 4) 0 var(--u)"; return h; };
-const day = (d) => d ? new Date(String(d).slice(0, 10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "undated";
+const day = (d) => fmtDate(d, "day", "undated");
 const ago = (n) => n == null ? "" : Number(n) === 0 ? "today" : Number(n) === 1 ? "yesterday" : ctx.countOf(Number(n)) + " days ago";
 const FACT_WORDS = { title: "Title", employer: "Works at", location: "Where", status: "Status", stage: "Stage in HubSpot",
   left_company: "Has left the company", email: "Email", phone: "Phone", skills: "Skills" };
@@ -37,7 +39,7 @@ const sourceOf = (s) => String(s ?? "").startsWith("cats:tables") ? "CATS (2025 
 export function drawContacts(body, c) {
   ctx = c; body.innerHTML = "";
   const top = ctx.el("div", "tab-top");
-  top.appendChild(line("tab-count", "Anyone you have dealt with, from CATS, HubSpot, mail, drives, Slack and brought-in chats, as they are now."));
+  top.appendChild(line("tab-count", "Anyone you have dealt with, from CATS, HubSpot, mail, drives, Slack, brought-in chats and your own calendar and address book, as they are now."));
   const what = ctx.el("details", "whatis");
   const ws = ctx.el("summary"); ws.textContent = "What is this?"; what.appendChild(ws);
   what.appendChild(line("quiet", "Type a name, an email address or a company. The Tool searches every connected system the way you would by hand: CATS, HubSpot, every mailbox, every drive, Slack and brought-in chats, by the exact name and every address it knows. It shows the newest of each fact with where and when it came from, says when two sources disagree or a fact is old, and puts everything that happened in one timeline. Records with the same full name elsewhere are offered as possibly the same person; nothing is joined until you say so."));
@@ -80,7 +82,7 @@ async function find(q, person) {
   if (query) { try { localStorage.setItem(KEEP, query); } catch (_) { /* this page only */ } }
   const mine = ++seq, here = mount;
   mount.innerHTML = "";
-  mount.appendChild(line("quiet working", "Searching CATS, HubSpot, every mailbox, every drive, Slack and brought-in chats."));
+  mount.appendChild(line("quiet working", "Searching CATS, HubSpot, every mailbox, every drive, Slack, brought-in chats and your own calendar."));
   const t0 = Date.now();
   const card = await read({ p_query: query || null, p_person: person ?? null });
   // The screen was replaced (she left the tab and came back) or a newer lookup started: this one draws nothing.
@@ -120,13 +122,30 @@ function head(title, sub, ms, asOf) {
   const h = ctx.el("div", "contact-head");
   const n = ctx.el("h3"); n.textContent = title; n.style.margin = "var(--gap) 0 0"; h.appendChild(n);
   if (sub) h.appendChild(line("", sub));
-  h.appendChild(line("quiet", "As of " + new Date(asOf ?? Date.now()).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + (ms ? ", read in " + (ms / 1000).toFixed(1) + " s" : "") + "."));
+  h.appendChild(line("quiet", "As of " + fmtDate(asOf ?? new Date(), "whenShort") + (ms ? ", read in " + (ms / 1000).toFixed(1) + " s" : "") + "."));
   mount.appendChild(h);
 }
 
 function lastContact(c) {
   if (!c.last_contact?.at) { mount.appendChild(line("notice", "No dated contact found in what you can see.")); return; }
   mount.appendChild(line("notice", "Last contact " + ago(c.last_contact.days_ago) + ", " + day(c.last_contact.at) + ", by " + c.last_contact.channel + "."));
+}
+
+// NEXT MEETING AND LAST MET (seat calendar-contacts, 2026-10-22): from the asker's OWN calendar only (the brain's
+// meetings_for_identity, every meeting through the door, read at the moment of asking). Someone whose calendar is not
+// read sees nothing here; the card's not-read line says so.
+function meetings(c) {
+  const m = c.meetings;
+  if (!m || m.calendar !== true) return;
+  const at = (x) => x.all_day ? fmtDate(String(x.at).slice(0, 10), "day") : fmtDate(x.at, "when");
+  const said = (label, x) => label + " " + at(x) + (x.title ? ": " + x.title : "") + ".";
+  const parts = [];
+  if (m.next) parts.push(said("Next meeting", m.next));
+  if (m.last) parts.push(said("Last met", m.last));
+  if (!parts.length) parts.push(m.note ?? "No meetings with them in your calendar.");
+  mount.appendChild(line("notice", parts.join(" ")));
+  const n = Number(m.past ?? 0), u = Number(m.upcoming ?? 0);
+  if (n || u) mount.appendChild(line("quiet", ctx.countOf(n) + " past and " + ctx.countOf(u) + " upcoming in your calendar. Only you see these."));
 }
 
 // ONE FACTS TABLE, used for every card: one row per fact, one label per row. A fact is a list of observations, newest first;
@@ -243,6 +262,7 @@ function drawPerson(c, ms) {
   const sub = [what, (c.roles ?? []).join(" · "), c.people_joined > 1 ? "one person across " + c.people_joined + " records (" + (c.joined_by ?? []).join(", ") + ")" : "", c.from_mail_only ? "known from mail only" : ""].filter(Boolean).join(" · ");
   head(c.name, sub, ms, c.as_of);
   lastContact(c);
+  meetings(c);
   const act = ctx.el("div", "actions");
   const prep = ctx.el("button", "go"); prep.type = "button"; prep.textContent = "Prep me for a call";
   prep.addEventListener("click", () => ctx.ask("Prep me for my call with " + c.name));
@@ -291,6 +311,7 @@ function drawCompany(c, ms) {
   const co = c.company ?? {};
   head(co.name, [co.status, co.location, co.website, (co.in ?? []).length ? "in " + co.in.join(", ") : ""].filter(Boolean).join(" · "), ms, c.as_of);
   lastContact(c);
+  meetings(c);
   const t = c.history?.totals ?? {};
   const said = [["jobs", "jobs"], ["put_forward_per_older_job_records", "people put forward (older job records)"], ["pipeline_entries", "people in the pipeline"], ["contacts", "contacts"], ["activities", "logged calls, emails and meetings"]]
     .filter(([k]) => Number(t[k] ?? 0) > 0).map(([k, w]) => ctx.countOf(t[k]) + " " + w);
