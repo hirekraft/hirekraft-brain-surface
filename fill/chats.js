@@ -8,6 +8,7 @@
 // All records go through chat-import -> chat_import_save; reading goes through chat_list / chat_open,
 // which apply the one door. Nothing here decides who may see what.
 
+import { fmtDate } from "./dates.js?v=2026-10-22-dates";
 let ctx = null;            // { sb, el, $, zone, url, key }
 let parsed = [];           // chats read from her export, in memory only
 const NL = String.fromCharCode(10);
@@ -19,9 +20,7 @@ export function initChats(c) { ctx = c; }
 function el(tag, cls, text) { const e = ctx.el(tag, cls); if (text != null) e.textContent = text; return e; }
 function day(iso) {
   if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d)) return "";
-  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: ctx.zone() });
+  return fmtDate(iso, "day");
 }
 function said(host, text, flagged) {
   host.innerHTML = "";
