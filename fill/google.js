@@ -4,7 +4,9 @@
 // This part only SHOWS the caller's own state, from the brain's google_signin_state(), and hands
 // the button to lens.js's one connect path (beginConnect); it starts nothing itself.
 // Shown on the Systems tab and the Calendar tab. Owner and everyone else see the same thing:
-// their own sign-in, never anyone else's.
+// their own sign-in, never anyone else's. Every date goes through fill/dates.js.
+
+import { fmtDate } from './dates.js?v=2026-10-22-dates';
 
 const WORDS = {
   'calendar.readonly': 'your calendar',
@@ -54,10 +56,9 @@ export async function drawGoogleSignin(box, { sb, el, connect }) {
   const granted = (s.granted ?? []).filter((g) => WORDS[g]);
   const missing = ASKED.filter((g) => !granted.includes(g));
   if (s.state === 'granted') {
-    const when = s.granted_at ? new Date(s.granted_at).toLocaleDateString() : '';
+    const when = fmtDate(s.granted_at);
     p.textContent = `You signed in to Google as ${s.email}${when ? ' on ' + when : ''}. `
-      + (granted.length ? `Google allowed ${list(granted.map((g) => WORDS[g]))}. ` : 'Google did not say what it allowed. ')
-      + 'Reading your calendar and address book is not switched on yet, so nothing from them has been read.';
+      + (granted.length ? `Google allowed ${list(granted.map((g) => WORDS[g]))}.` : 'Google did not say what it allowed.');
   } else {
     p.textContent = (s.state === 'asked' ? 'You started a Google sign-in that did not finish. ' : '')
       + 'One Google sign-in lets the Tool read your own calendar and address book, which only you see, '
@@ -65,6 +66,25 @@ export async function drawGoogleSignin(box, { sb, el, connect }) {
       + `You sign in on Google's page as ${s.email}; a sign-in as any other account is refused and nothing is kept.`;
   }
   card.appendChild(p);
+
+  // WHAT HAS BEEN READ (round 4, 2026-10-22): the walk's own line for your calendar and your address book, from the
+  // brain (google_signin_state.reading), with when it last read and the reason when a read stopped.
+  if (s.state === 'granted') {
+    const reading = Array.isArray(s.reading) ? s.reading : [];
+    if (!reading.length) {
+      const r = el('p', 'quiet');
+      r.textContent = 'Reading your calendar and address book starts within a few minutes of signing in.';
+      card.appendChild(r);
+    }
+    for (const r of reading) {
+      const q = el('p', r.failed ? 'notice flagged' : 'quiet');
+      const what = r.what === 'calendar' ? 'Your calendar' : 'Your address book';
+      const said = r.failed ? 'the last read stopped: ' + r.failed : (r.paused || r.line || 'waiting for its first read.');
+      const last = r.last_read_at ? ' Last read ' + fmtDate(r.last_read_at, 'when') + '.' : '';
+      q.textContent = what + ': ' + said + last;
+      card.appendChild(q);
+    }
+  }
 
   if (s.state === 'granted' && missing.length) {
     const m = el('p', 'quiet');
