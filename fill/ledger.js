@@ -6,15 +6,16 @@
 // server's and every row says which record it came from. Refused is never drawn as empty.
 // Drawn into #money-ledger on the Money tab (runway left that mount for it). Owner only, like the tab.
 
+import { fmtDate } from "./dates.js?v=2026-10-22-dates";
 let ctx = null;   // { sb, el, $, countOf }
 let data = null;
 
 const line = (cls, text) => { const p = ctx.el("p", cls); p.textContent = text; return p; };
 const note = (mount, text, flagged) => mount.appendChild(line(flagged ? "notice flagged" : "quiet", text));
 const money = (n) => n == null ? "" : Number(n).toLocaleString("en-US", { style: "currency", currency: "USD" });
-const day = (d) => d ? new Date(String(d).slice(0, 10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
-const mon = (m) => m ? new Date(m + "-15T12:00:00").toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "";
-const when = (t) => t ? new Date(t).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+const day = (d) => fmtDate(d, "day");
+const mon = (m) => fmtDate(m, "month");
+const when = (t) => fmtDate(t, "whenShort");
 
 export function initLedger(c) { ctx = c; }
 
