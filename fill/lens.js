@@ -9,14 +9,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// ONE WAY THE SCREEN WRITES A DATE, and the one time zone (seat calendar-contacts, 2026-10-22): fill/dates.js.
+import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-13-front-door";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-22-dates";
 import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-13-add-files";
-import { attachOutputs } from "./outputs.js?v=2026-10-13-wide";
-import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-12-working"; // Chats tab (seat chat-import)
-import { initMoney, loadMoney } from "./money.js?v=2026-10-12-working"; // Money tab (seat runway)
-import { initProfile, loadProfile } from "./profile.js?v=2026-10-12-working"; // what the Tool thinks the business is (seat know-the-business)
+import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
+import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-22-dates"; // Chats tab (seat chat-import)
+import { initMoney, loadMoney } from "./money.js?v=2026-10-22-dates"; // Money tab (seat runway)
+import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
 // Public by design: it names the project, it grants nothing. All authority is in the JWT.
@@ -122,17 +124,9 @@ const PICKERS = {
 
 // ── formatting ───────────────────────────────────────────────────────────────
 
-const fmtWindow = (iso) => {
-  if (!iso) return null;
-  const d = new Date(iso);
-  const date = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
-  return `${date}, ${time}`;
-};
-
-const fmtDay = (iso) => iso
-  ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-  : null;
+// Both go through fill/dates.js (American, in the header's time zone). They used to follow the browser's language.
+const fmtWindow = (iso) => iso ? fmtDate(iso, "when") : null;
+const fmtDay = (iso) => iso ? fmtDate(iso, "day") : null;
 
 // Health is stated in words. Healthy is quiet; anything else says what it is.
 const HEALTH = {
@@ -410,8 +404,7 @@ function fillTree(sel = "#tree", pfx = "") {
     }
     // "back to Mar 2024" - the month the memory reaches back to, not a full date.
     const span = data.span
-      ? ` &middot; back to ${new Date(data.span).toLocaleDateString(undefined,
-          { month: "short", year: "numeric" })}`
+      ? ` &middot; back to ${fmtDate(data.span, "month")}`
       : "";
     cell.innerHTML =
       `<span>${data.count} ${escape(data.noun)}</span> &middot; <span class="state">${alive}</span>`
@@ -606,7 +599,7 @@ function badgeLine(wrap, pair, count) {
 }
 function driveCount(s) {
   if (s.state === 'filling') return `${s.done} of ${s.done + s.waiting}`;
-  if (s.files) return `${Number(s.files).toLocaleString()} ${s.files === 1 ? 'file' : 'files'} read`;
+  if (s.files) return `${Number(s.files).toLocaleString('en-US')} ${s.files === 1 ? 'file' : 'files'} read`;
   return '';
 }
 
@@ -641,7 +634,7 @@ function systemLine(m, group) {
     text = live
       ? `Older copy, ${brought}; ${escape(live.name)} is now read directly`
       : `Brought in on ${fmtDay(m.last_read) ?? 'a date not recorded'}, not updated since`;
-    if (m.items) text += ` &middot; ${Number(m.items).toLocaleString()} pieces held`;
+    if (m.items) text += ` &middot; ${Number(m.items).toLocaleString('en-US')} pieces held`;
   } else if (m.health === 'refused' || m.health === 'unconnected') {
     wrap.className = `state ${HEALTH_CLASS[m.health]}`;
     word = HEALTH_WORD[m.health];
@@ -653,7 +646,7 @@ function systemLine(m, group) {
     if (m.last_read) wrap.className = 'state live';
     word = m.last_read ? ['Reading', 'blue'] : ['Not read', 'grey'];
     text = m.last_read ? `Kept, last read ${fmtWindow(m.last_read)}` : 'Kept, first read not started yet';
-    if (m.items) text += ` &middot; ${Number(m.items).toLocaleString()} pieces kept`;
+    if (m.items) text += ` &middot; ${Number(m.items).toLocaleString('en-US')} pieces kept`;
     if (m.walk_line) text += ` &middot; ${escape(m.walk_line)}`;
   } else {
     const since = m.connected_at ? `Connected ${fmtDay(m.connected_at)}` : 'Connected';
@@ -664,7 +657,7 @@ function systemLine(m, group) {
       : `${since}, not read yet`;
   }
   wrap.innerHTML = `<span class="dot"></span><span class="s-head">${text}</span>`;
-  return badgeLine(wrap, word, m.items ? `${Number(m.items).toLocaleString()} pieces` : '');
+  return badgeLine(wrap, word, m.items ? `${Number(m.items).toLocaleString('en-US')} pieces` : '');
 }
 
 // One switch, and it says so. The drive is already chosen and already read; all
@@ -3117,7 +3110,7 @@ async function accessCall(fn, args) {
   if (error) throw error;
   return data;
 }
-const countOf = (n) => Number(n ?? 0).toLocaleString();
+const countOf = (n) => Number(n ?? 0).toLocaleString('en-US');   // American, like every date (fill/dates.js)
 
 // One change, previewed, then confirmed or left. p: { action: "withhold", person_id, kind,
 // source } or { action: "restore", rule_id }. Drawn into `mount`; returns the card.
@@ -3459,7 +3452,7 @@ function goto(id, key) {
   workPanel(id === 's-work');
   if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney();
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
-    import("./ledger.js?v=2026-10-12-working").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
+    import("./ledger.js?v=2026-10-22-dates").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
   if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); }
   const tabNow = id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : 'brain';
@@ -3560,12 +3553,12 @@ function drawLens() {
   if (lensKey === 'systems' || lensKey === 'calendar') {
     const g = el('div');
     body.appendChild(g);
-    import('./google.js?v=2026-10-13-google-signin').then((G) => G.drawGoogleSignin(g, { sb, el, connect: googleConnect }))
+    import('./google.js?v=2026-10-22-dates').then((G) => G.drawGoogleSignin(g, { sb, el, connect: googleConnect }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'Your Google sign-in could not be shown: ' + String(e?.message ?? e); g.appendChild(p); });
     if (lensKey === 'calendar') return;
   }
   if (lensKey === 'contacts') {
-    import('./contacts.js?v=2026-10-13-contacts-r3').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, isOwner: () => !!shape?.viewer?.all_access }))
+    import('./contacts.js?v=2026-10-22-dates').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, isOwner: () => !!shape?.viewer?.all_access }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Contacts tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
@@ -3826,7 +3819,7 @@ async function openChat(id) {
     if (t.withheld || t.answer?.state === 'withheld') { const p = el('p', 'quiet'); p.textContent = t.answer?.note ?? 'No longer shown.'; slot.appendChild(p); }
     else { try { renderAsk(slot, t.answer); } catch (e) { const p = el('p', 'quiet'); p.textContent = `This kept answer could not be drawn: ${e?.message ?? e}`; slot.appendChild(p); } }
     const when = el('p', 'quiet work-when');
-    when.textContent = `As shown on ${new Date(t.asked_at).toLocaleString()}. Not asked again.`;
+    when.textContent = `As shown on ${fmtDate(t.asked_at, 'when')}. Not asked again.`;
     slot.appendChild(when);
   }
   workChat = data.chat.id; workInto = null;
@@ -3929,7 +3922,7 @@ function dayGroup(iso, now) {
   if (diff === 1) return 'Yesterday';
   if (diff <= 7) return 'Previous 7 days';
   if (diff <= 30) return 'Previous 30 days';
-  try { return d.toLocaleDateString(undefined, { timeZone: z, month: 'long', year: 'numeric' }); } catch (_) { return key(d).slice(0, 7); }
+  return fmtDate(d, 'monthLong', key(d).slice(0, 7));
 }
 
 function chatGroup(host, label, chats, projects) {
@@ -4026,21 +4019,15 @@ async function loadWork() {
 // TODAY IN THE HEADER (seat chat-layout, 2026-10-06, Alex's ruling that day). The date, time and
 // time zone come from this computer, or from a zone she picks here, kept in this browser. The
 // same zone travels with every question (ask), so the Tool and the header agree on today.
-const TZ_KEY = 'tool.timezone';
-function ownZone() {
-  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (_) { return 'UTC'; }
-}
-function zone() {
-  try { const z = localStorage.getItem(TZ_KEY); if (z) return z; } catch (_) { /* storage off: the computer's */ }
-  return ownZone();
-}
+// The zone itself (this computer's, or the one she picked, kept under TZ_KEY) now lives in fill/dates.js with the one
+// date formatter, so every date on screen and the header agree (seat calendar-contacts, 2026-10-22).
 function drawClock() {
   const when = $('#clock-when'), zbtn = $('#clock-zone');
   if (!when || !zbtn) return;
   const z = zone(), now = new Date();
   try {
-    const day = now.toLocaleDateString(undefined, { timeZone: z, weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    const time = now.toLocaleTimeString(undefined, { timeZone: z, hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+    const day = fmtDate(now, 'long');
+    const time = fmtDate(now, 'timeZone');
     when.textContent = `${day}, ${time}`;
   } catch (_) { when.textContent = now.toString(); }
   zbtn.textContent = z.split('_').join(' ') + (z === ownZone() ? '' : ' (your setting)');
@@ -4094,7 +4081,7 @@ function drawClock() {
   btn.addEventListener('click', () => { panel.hidden = !panel.hidden; btn.setAttribute('aria-expanded', String(!panel.hidden)); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) { close(); btn.focus(); } });
   document.addEventListener('click', (e) => { if (!panel.hidden && !wrap.contains(e.target)) close(); });
-  const at = (ts) => { try { return new Date(ts).toLocaleTimeString(undefined, { timeZone: zone(), hour: 'numeric', minute: '2-digit' }); } catch (_) { return ''; } };
+  const at = (ts) => fmtDate(ts, 'time');
   async function readHealth() {
     let data = null, error = null;
     try { ({ data, error } = await sb.rpc('tool_health')); } catch (e) { error = e; }
