@@ -12,6 +12,7 @@
 // PARTS, top to bottom: how long we can go, what we pay for, where we stand with each contractor (#money-ledger, drawn
 // by seat contractor-ledger; this file leaves that mount alone), and what was not read.
 
+import { fmtDate } from "./dates.js?v=2026-10-22-dates";
 let ctx = null;   // { sb, el, $, countOf, zone }
 let last = null;  // money_commitments
 let run = null;   // money-runway
@@ -20,8 +21,8 @@ const line = (cls, text) => { const p = ctx.el("p", cls); p.textContent = text; 
 const note = (mount, text, flagged) => mount.appendChild(line(flagged ? "notice flagged" : "quiet", text));
 const money = (n) => n == null ? "" : Number(n).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const cur = (n, c) => n == null ? "" : Number(n).toLocaleString("en-US", { style: "currency", currency: c || "USD" });
-const day = (d) => d ? new Date(String(d).slice(0, 10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
-const when = (t) => t ? new Date(t).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+const day = (d) => fmtDate(d, "day");
+const when = (t) => fmtDate(t, "whenShort");
 
 export function initMoney(c) { ctx = c; }
 
