@@ -13,6 +13,7 @@
 // Libraries load on first use only, pinned: jspdf 2.5.1, xlsx 0.18.5, pptxgenjs 3.12.0, from jsDelivr.
 // Patterns are not used in this file, so it stays writable by the estate's file tool (STANDING-CLAUSES).
 
+import { fmtDate } from "./dates.js?v=2026-10-22-dates";
 const NL = String.fromCharCode(10);
 const LIBS = {
   pdf: { url: "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js", get: () => window.jspdf && window.jspdf.jsPDF },
@@ -308,7 +309,7 @@ function latin(s) {
   return o;
 }
 function titleFor(turns) { return turns.length === 1 ? (turns[0].q || "Answer") : "Conversation"; }
-function made() { return "Made " + new Date().toLocaleString() + " from what was on your screen. Nothing else is in this file."; }
+function made() { return "Made " + fmtDate(new Date(), "when") + " from what was on your screen. Nothing else is in this file."; }
 
 async function makePdf(turns) {
   const JsPDF = await lib("pdf");
@@ -359,7 +360,7 @@ async function makeSheet(turns) {
     ws["!cols"] = widths.map((w) => ({ wch: w }));
     X.utils.book_append_sheet(wb, ws, n);
   };
-  const answer = [["Made", new Date().toLocaleString()], []];
+  const answer = [["Made", fmtDate(new Date(), "when")], []];
   const later = [];
   const sources = [["Number", "Source", "Where", "Date", "Link"]];
   const read = [];
@@ -410,7 +411,7 @@ async function makeSlides(turns, deck) {
   const ink = "14171C", dim = "60666F";
   let s = p.addSlide();
   s.addText(deck.title || titleFor(turns), { x: 0.6, y: 2.3, w: 12, h: 1.3, fontSize: 36, bold: true, color: ink });
-  s.addText("Made " + new Date().toLocaleDateString() + " from a conversation with your business records", { x: 0.6, y: 3.7, w: 12, h: 0.5, fontSize: 14, color: dim });
+  s.addText("Made " + fmtDate(new Date(), "day") + " from a conversation with your business records", { x: 0.6, y: 3.7, w: 12, h: 0.5, fontSize: 14, color: dim });
   for (const sl of deck.slides) {
     s = p.addSlide();
     s.addText(sl.title, { x: 0.6, y: 0.4, w: 12, h: 0.8, fontSize: 28, bold: true, color: ink });
