@@ -23,6 +23,7 @@
 // Keeping is lens.js keepTurn; drawing an answer is lens.js renderAsk. Nothing here decides who may
 // do what. No colour, size or spacing here; those are in skin.css under ANSWER and WORKSPACE.
 
+import { fmtDate } from './dates.js?v=2026-10-22-dates';
 const ASK = '/functions/v1/lens-ask';
 const SEND = '/functions/v1/mail-send';
 const NL = String.fromCharCode(10);
@@ -259,7 +260,7 @@ export function conversation(C, o) {
         const slot = row(k.question, k.question !== BRIEF_Q);
         if (k.withheld || (k.answer && k.answer.state === 'withheld')) slot.appendChild(mk('p', 'quiet', (k.answer && k.answer.note) || 'No longer shown.'));
         else { try { C.renderAsk(slot, k.answer); } catch (e) { slot.appendChild(mk('p', 'quiet', 'This kept answer could not be drawn: ' + ((e && e.message) || e))); } }
-        slot.appendChild(mk('p', 'quiet work-when', 'As shown on ' + new Date(k.asked_at).toLocaleString() + '. Not asked again.'));
+        slot.appendChild(mk('p', 'quiet work-when', 'As shown on ' + fmtDate(k.asked_at, 'when') + '. Not asked again.'));
         turns.push({ q: k.question, a: String((k.answer && (k.answer.answer || k.answer.state_reason)) || '').slice(0, 1500) });
       }
       markKept();
