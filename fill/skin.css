@@ -1158,6 +1158,12 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
 .badge.b-blue { background: var(--act-soft); color: #1a47a8; }
 .badge.b-orange { background: #fbe7de; color: #8f3010; }
 .badge.b-grey { background: var(--paper-2); color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line); }
+.badge.b-red { background: #fbe0e0; color: #8a1c1c; }
+/* The AI balance in the header and the cost under an answer (seat model-costs, 2026-10-22): present when looked at, quiet. */
+.ai-bal { position: relative; flex: none; align-self: center; }
+.ai-bal[hidden] { display: none; }
+.ai-bal .ai-short { display: none; }
+.ans-cost { margin: calc(var(--u) * 2) 0 0; font-size: var(--t-micro); }
 .s-badge { display: inline-flex; align-items: baseline; gap: calc(var(--u) * 2); background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
 .s-badge .s-count { font-size: var(--t-micro); color: var(--ink-3); }
 .s-badge:hover .badge, .s-badge:focus-visible .badge { box-shadow: inset 0 0 0 1px currentColor; }
@@ -1268,6 +1274,10 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
   .masthead { flex-wrap: nowrap; }
   .masthead .health { order: 0; flex: none; flex-basis: auto; margin: 0; }
   .masthead .health-btn { min-height: 44px; }
+  .masthead .ai-bal { order: 0; flex: none; margin: 0; }
+  .masthead .ai-bal-btn { min-height: 44px; }
+  .masthead .ai-bal .ai-long { display: none; }
+  .masthead .ai-bal .ai-short { display: inline; }
   .masthead .health-panel { position: fixed; left: 16px; right: 16px; top: 56px; width: auto; max-height: 70vh; overflow-y: auto; }
 
   .tabs {
