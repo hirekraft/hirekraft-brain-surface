@@ -357,6 +357,12 @@
   .tt-seat{margin-top:8px;font-size:12px;color:var(--ink-3)}
   .tt-done{display:flex;flex-direction:column;gap:2px;color:var(--green)}
   .tt-done .tt-ask{color:var(--ink-3);font-size:13px}
+  /* WHAT'S NEW (seat test-list, 2026-10-23): first on every size, and its lines. */
+  nav.sections .sec[data-i="8"]{order:-1}
+  .wn-line{background:var(--raise);border:1px solid var(--hair);border-radius:10px;padding:12px 16px;margin:0 0 8px;font-size:15px;line-height:1.45;overflow-wrap:anywhere}
+  .wn-q{color:var(--ink-3);font-size:13px}
+  .wn-exam{margin:8px 0 12px}.wn-h{font-weight:600;margin:10px 0 6px}
+  a.wn-a{display:flex;align-items:center;justify-content:center;text-decoration:none}
   @media(max-width:720px){
     nav.sections .sec[data-i="8"]{order:-1}
     nav.sections .sec{min-height:44px}
@@ -373,7 +379,7 @@ const root = document.getElementById("root");
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const tok    = () => { try{ return localStorage.getItem("studio_token")||""; }catch{ return ""; } };
 const setTok = t  => { try{ t?localStorage.setItem("studio_token",t):localStorage.removeItem("studio_token"); }catch{} };
-let D=null, DOCS=[], TAB=(window.matchMedia&&window.matchMedia("(max-width: 720px)").matches)?"8":"0";   // a phone opens on To test (seat phone)
+let D=null, DOCS=[], TAB="8";   // opens on What's new, on a phone and on a computer (seat test-list, 2026-10-23; was: a phone opens on To test, seat phone)
 let RUN=null;               // what the studio runs on, filled in whenever it arrives
 let RUN_STATE="loading";
 let CUST=null;              // the customer half, filled in whenever it arrives
@@ -612,7 +618,7 @@ function render(){
         + '<span class="ds" style="flex:2">'+esc(g.caveat)+'</span></div>'):"")
   + '</div>'
   + '<nav class="sections" id="nav">'
-  +   ["Front","Capabilities","Mechanisms","Being built now","Written record","Principles","Archive","Testing","To test"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(String(i)===TAB)+'" data-i="'+i+'">'+s+'</button>').join("")
+  +   ["Front","Capabilities","Mechanisms","Being built now","Written record","Principles","Archive","Testing","What's new"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(String(i)===TAB)+'" data-i="'+i+'">'+s+'</button>').join("")
   + '</nav>'
   + '<main>'
   +   '<section class="view" data-active="'+(TAB==="0")+'" data-i="0">'+xbox(0)+frontMap()+'</section>'
@@ -1961,61 +1967,132 @@ function archiveTab(){
 }
 
 /* EVERY TAB SAYS WHAT IT IS (rewritten 2026-10-02 to Alex’s rule: one or two plain sentences on what the tab is for). */
-/* ── TO TEST (seat phone, 2026-10-13, decision 1004; Alex: "visually going to be easier for me to test and work
-   on the phone"). The screen checks still owed, grouped by where in the Tool you go to do them, each with what
-   to do and what you should see, and three answers: Passed, Failed (one line of what you saw) or Not now. A
-   question is answered in words. The answer is written back through studio-july's own sign-in gate to
-   screen_check_settle on studio-core, the only write. On a phone this is the first view. Notes typed here are
-   kept in memory, so a redraw while the page fills in never loses what was said. ── */
-let TT=null, TT_STATE="loading";
+/* ── WHAT'S NEW AND WHAT TO TEST (seat test-list, 2026-10-23; Alex: "keep a list of everything we're doing and
+   I can test it"). Replaces the To test view of seat phone (2026-10-13), which listed every owed check by tab and
+   had grown to 147. Everything here is whats_new() on studio-core through studio-july, never a list written into
+   this page: READY TO TEST (owed screen checks grouped by the capability each proves, in the customer's words,
+   newest first, with Works / Doesn't / Not now), QUESTIONS (owed questions, answered in words), BEING BUILT
+   (seats running now and what each lands), DECIDED, NOT BUILT YET (decided capabilities with no seat running).
+   The Tool's To-test view reads the same whats_new() and writes through the same screen_check_settle, so a check
+   answered in one place leaves both. Works writes "passed", Doesn't writes "failed" with one line of what was
+   seen. RUN MY OWN TEST does not run anything here: the studio holds no key to a customer brain (Testing tab,
+   2026-10-02), so HireKraft questions are asked in the Tool, where an answer shows its cost and has Save as test;
+   the exam brain's scores per setup are read from exam/results. Notes typed here are kept in memory, so a redraw
+   while the page fills in never loses what was said. ── */
+let TT=null, TT_STATE="loading", EXAM=null, EXAM_STATE="loading", RT_PICK="";
 const TT_NOTE={}, TT_DONE={}, TT_LATER={}, TT_ASK={}, TT_OPEN={};
 const TT_PLACE={phone:"On the phone",mail:"Mail",work:"Work",money:"Money",drives:"Drives",calendar:"Calendar",
   contacts:"Contacts",brain:"Brain",chats:"Chats",security:"Security",systems:"Systems",loose:"Loose files",
-  studio:"This Studio Surface",none:"Questions, no screen"};
-const TT_ORDER=["phone","mail","work","money","drives","calendar","contacts","brain","chats","security","systems","loose","studio","none"];
+  studio:"This Studio Surface",none:"No screen"};
 function loadToTest(){
   TT_STATE="loading";
-  call(FN,{action:"checks"}).then(function(r){
+  call(FN,{action:"whatsnew"}).then(function(r){
     if(r.status===200&&r.body&&r.body.ok){ TT=r.body; TT_STATE="done"; }
     else { TT={error:(r.body&&r.body.error)||("the list could not be read ("+r.status+")")}; TT_STATE="failed"; }
     if(D) paint();
   });
+  call(FN,{action:"exam"}).then(function(r){
+    EXAM=(r.status===200&&r.body&&r.body.ok)?r.body:{seen:false,why:(r.body&&r.body.error)||("the exam scores could not be read ("+r.status+")")};
+    EXAM_STATE="done";
+    if(D) paint();
+  });
+}
+function wnWhen(t){
+  if(!t) return "";
+  const d=new Date(t); if(isNaN(d)) return String(t).slice(0,16);
+  return d.toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
 }
 function ttCard(c){
   const id=c.id, done=TT_DONE[id], q=c.kind==="question";
   if(done) return '<div class="tt-card tt-done" data-id="'+esc(id)+'"><b>'+esc(done)+'</b><span class="tt-ask">'+esc(c.ask)+'</span></div>';
   const prompt=TT_ASK[id]||"";
   return '<div class="tt-card'+(TT_LATER[id]?" tt-later":"")+'" data-id="'+esc(id)+'">'
-    + (c.guide?'<div class="tt-title">'+esc(c.guide)+'</div>':'')
+    + '<div class="tt-k">Where</div><div class="tt-ask">'+esc(TT_PLACE[c.tab]||c.tab||"")+(c.guide?' · '+esc(c.guide):'')+'</div>'
     + '<div class="tt-k">'+(q?"The question":"What to do")+'</div><div class="tt-ask">'+esc(c.ask)+'</div>'
     + (c.expected?'<div class="tt-k">'+(q?"Why it is asked":"You should see")+'</div><div class="tt-exp">'+esc(c.expected)+'</div>':'')
     + (c.note?'<div class="tt-k">Your earlier note</div><div class="tt-exp">'+esc(c.note)+'</div>':'')
-    + '<textarea class="tt-note" data-ttnote="'+esc(id)+'" rows="2" placeholder="'+(q?"Your answer. Tap the keyboard microphone to speak.":"Anything to add? Tap the keyboard microphone to speak.")+'">'+esc(TT_NOTE[id]||"")+'</textarea>'
+    + '<textarea class="tt-note" data-ttnote="'+esc(id)+'" rows="2" placeholder="'+(q?"Your answer. Tap the keyboard microphone to speak.":"What you saw, if it does not work. Tap the keyboard microphone to speak.")+'">'+esc(TT_NOTE[id]||"")+'</textarea>'
     + (prompt?'<div class="tt-prompt">'+esc(prompt)+'</div>':'')
     + '<div class="tt-acts">'
     + (q?'<button class="tt-b tt-pass" data-tt="answered" data-id="'+esc(id)+'">Send answer</button>'
-        :'<button class="tt-b tt-pass" data-tt="passed" data-id="'+esc(id)+'">Passed</button><button class="tt-b tt-fail" data-tt="failed" data-id="'+esc(id)+'">Failed</button>')
+        :'<button class="tt-b tt-pass" data-tt="passed" data-id="'+esc(id)+'">Works</button><button class="tt-b tt-fail" data-tt="failed" data-id="'+esc(id)+'">Doesn&#39;t</button>')
     + '<button class="tt-b tt-not" data-tt="later" data-id="'+esc(id)+'">Not now</button></div>'
-    + '<div class="tt-seat">'+esc(c.seat||"")+(c.filed_at?' · filed '+esc(String(c.filed_at).slice(0,10)):'')+'</div>'
+    + '<div class="tt-seat">'+esc(c.seat||"")+(c.filed_at?' · filed '+esc(wnWhen(c.filed_at)):'')+'</div>'
     + '</div>';
 }
-function toTestTab(){
-  if(TT_STATE==="loading") return '<div class="empty">Reading what is still owed a look…</div>';
-  if(TT_STATE==="failed") return '<div class="empty">The list of checks could not be read: '+esc(TT.error)+'. Nothing here means nothing is owed only when this line is gone.</div>';
-  const rows=(TT&&TT.owed)||[];
-  const open=rows.filter(function(c){ return !TT_DONE[c.id]; }).length;
-  if(!rows.length) return '<div class="empty">Nothing is waiting for you to test. Every screen check has an answer.</div>';
-  const by={}; rows.forEach(function(c){ (by[c.tab]=by[c.tab]||[]).push(c); });
-  const keys=Object.keys(by).sort(function(a,b){ const x=TT_ORDER.indexOf(a), y=TT_ORDER.indexOf(b); return (x<0?99:x)-(y<0?99:y); });
-  return '<div class="tt-sum">'+open+' to look at, in '+keys.length+' places. Open a place, do what it says, and tap what happened.</div>'
-    + keys.map(function(k){
-        const list=by[k].slice().sort(function(a,b){ return (TT_LATER[a.id]?1:0)-(TT_LATER[b.id]?1:0); });
-        const left=list.filter(function(c){ return !TT_DONE[c.id]; }).length;
-        return '<details class="tt-group" data-place="'+esc(k)+'"'+((keys.length===1||TT_OPEN[k])?' open':'')+'><summary><span>'+esc(TT_PLACE[k]||k)+'</span><span class="tt-n">'+left+'</span></summary>'
-          + list.map(ttCard).join("") + '</details>';
-      }).join("");
+function wnGroup(key,title,list,open){
+  const left=list.filter(function(c){ return !TT_DONE[c.id]; }).length;
+  const sorted=list.slice().sort(function(a,b){ return (TT_LATER[a.id]?1:0)-(TT_LATER[b.id]?1:0); });
+  return '<details class="tt-group" data-place="'+esc(key)+'"'+((open||TT_OPEN[key])?' open':'')+'><summary><span>'+esc(title)+'</span><span class="tt-n">'+left+'</span></summary>'
+    + sorted.map(ttCard).join("") + '</details>';
 }
-function ttFind(id){ return ((TT&&TT.owed)||[]).filter(function(c){ return c.id===id; })[0]; }
+function wnExam(){
+  if(EXAM_STATE==="loading") return '<div class="empty">Reading the exam scores…</div>';
+  if(!EXAM||EXAM.seen===false) return '<div class="empty">The exam scores could not be read: '+esc((EXAM&&EXAM.why)||"")+'. This is not the same as no scores.</div>';
+  const setups=EXAM.setups||[];
+  if(!setups.length) return '<div class="empty">The exam has not been run on any setup yet.</div>';
+  const num=function(v){ return (v===undefined||v===null)?"?":esc(v); };
+  const usd=function(v){ return (v===undefined||v===null)?"?":"$"+Number(v).toFixed(Number(v)<0.1?3:2); };
+  return setups.map(function(s){
+    return '<div class="wn-exam"><div class="wn-h">Setup '+esc(s.setup)+'</div>'
+      + (s.why?'<div class="empty">Could not be read: '+esc(s.why)+'</div>':'')
+      + (s.businesses||[]).map(function(b){
+          if(b.why) return '<div class="wn-line">'+esc(b.business)+': could not be read ('+esc(b.why)+')</div>';
+          const so=b.sorting, an=b.answering, co=b.cost;
+          return '<div class="wn-line"><b>'+esc(b.name)+'</b>'
+            + (so?'<br/>Sorting: kind right '+num(so.kind_right)+' of '+num(so.items)+' ('+num(so.kind_right_business_as_one)+' counting conversation and record as one); sensitive floor <b>'+esc(so.floor||"?")+'</b>'+(so.floor_failures?' ('+num(so.floor_failures)+' missed)':'')+(so.models&&so.models.length?' · '+esc(so.models.join(", ")):''):'<br/>Sorting: not run.')
+            + (an?'<br/>Answers: '+num(an.passed)+' of '+num(an.questions)+' right'+(an.controls_discriminate===false?' (the controls did not discriminate, so this cannot be trusted)':'')+(an.ms_median?' · median '+esc(Math.round(an.ms_median/100)/10)+' s':''):'<br/>Answers: not run on this setup.')
+            + (co?'<br/>Cost: '+usd(co.per_answer)+' an answer, '+usd(co.per_item)+' an item read':'')
+            + '</div>';
+        }).join("")
+      + '</div>';
+  }).join("");
+}
+function wnRunOwn(){
+  const pick=function(k,label){ return '<button class="tt-b'+(RT_PICK===k?' tt-pass':'')+'" data-rt="'+k+'">'+label+'</button>'; };
+  let body="";
+  if(RT_PICK==="hirekraft") body='<div class="wn-line">HireKraft questions are asked in the Tool: the studio holds no key to a customer&#39;s brain, by design. Type your question in the box there. Under the answer you see what it cost, and Save as test keeps it with your known answer; it is then re-run after every change and shows on the Testing tab here by its label.</div>'
+    + '<div class="tt-acts"><a class="tt-b tt-pass wn-a" href="'+esc(TOOL_SURFACE)+'#work" target="_blank" rel="noopener">Open the Tool</a></div>';
+  if(RT_PICK==="exam") body='<div class="wn-line">Asking the exam brain your own question is not built yet: it has no sign-in for you in the Tool. Its scores per setup, from the exam runs:</div>'+wnExam();
+  return '<div class="tt-acts">'+pick("hirekraft","HireKraft")+pick("exam","Exam brain")+'</div>'+body;
+}
+function toTestTab(){
+  if(TT_STATE==="loading") return '<div class="empty">Reading what is new and what is waiting for you…</div>';
+  if(TT_STATE==="failed") return '<div class="empty">What is new could not be read: '+esc(TT.error)+'. Nothing here means nothing is owed only when this line is gone.</div>';
+  const ready=TT.ready||[], qs=TT.questions||[], building=TT.building||[], decided=TT.decided||[];
+  const all=[]; ready.forEach(function(g){ (g.checks||[]).forEach(function(c){ c.kind="screen"; all.push(c); }); });
+  const open=all.filter(function(c){ return !TT_DONE[c.id]; }).length;
+  qs.forEach(function(c){ c.kind="question"; });
+  let h='<div class="tt-sum">Refreshed '+esc(wnWhen(TT.as_of))+'. Last change in the record '+esc(wnWhen(TT.last_change))+'.</div>';
+  h+='<div class="blk">Ready to test <span class="ct">'+open+'</span><span class="ln"></span></div>';
+  h+= ready.length ? '<div class="tt-sum">Open one, do what it says, and tap Works or Doesn&#39;t. Newest first.</div>'
+      + ready.map(function(g,i){ return wnGroup("c:"+(g.capability||i), g.wording, g.checks||[], ready.length===1); }).join("")
+      : '<div class="empty">Nothing is waiting for you to test.</div>';
+  if(qs.length) h+=wnGroup("questions","Questions waiting for your answer",qs,false);
+  h+='<div class="blk">Being built <span class="ct">'+building.length+'</span><span class="ln"></span></div>';
+  h+= building.length ? building.map(function(b){
+        const lands=(b.lands||[]).map(function(l){ return esc(l.wording); }).join(" ");
+        return '<div class="wn-line"><b>'+esc(b.seat)+'</b> <span class="wn-q">since '+esc(wnWhen(b.since))+'</span><br/>'
+          + (lands?'When it lands: '+lands:'No capability row names this seat yet, so what it lands is not on record.')+'</div>';
+      }).join("") : '<div class="empty">No seat is running right now.</div>';
+  h+='<div class="blk">Decided, not built yet <span class="ct">'+decided.length+'</span><span class="ln"></span></div>';
+  h+= decided.length ? decided.map(function(d){
+        const seats=(d.seats||[]);
+        return '<div class="wn-line">'+esc(d.wording)+'<br/><span class="wn-q">Decision '+esc(d.decision)+' · '
+          + (seats.length?'built by seat '+esc(seats.join(", then ")):'no seat named yet')+'</span></div>';
+      }).join("") : '<div class="empty">Nothing decided is waiting to be built.</div>';
+  h+='<div class="blk">Run my own test<span class="ln"></span></div>'+wnRunOwn();
+  return h;
+}
+function ttFind(id){
+  const out=[]; ((TT&&TT.ready)||[]).forEach(function(g){ (g.checks||[]).forEach(function(c){ out.push(c); }); });
+  ((TT&&TT.questions)||[]).forEach(function(c){ out.push(c); });
+  return out.filter(function(c){ return c.id===id; })[0];
+}
+root.addEventListener("click",function(e){
+  const b=e.target.closest&&e.target.closest("[data-rt]"); if(!b) return;
+  RT_PICK = RT_PICK===b.dataset.rt ? "" : b.dataset.rt; paint();
+});
 /* A redraw keeps the places she has open, so answering one check never closes the list under her thumb. */
 root.addEventListener("toggle",function(e){ const d=e.target; if(d&&d.classList&&d.classList.contains("tt-group")) TT_OPEN[d.dataset.place]=d.open; },true);
 root.addEventListener("input",function(e){ const t=e.target; if(t&&t.dataset&&t.dataset.ttnote) TT_NOTE[t.dataset.ttnote]=t.value; });
@@ -2034,7 +2111,7 @@ root.addEventListener("click",async function(e){
   if(r.status===200&&r.body&&r.body.ok){
     delete TT_ASK[id];
     if(what==="later"){ TT_LATER[id]=true; if(note) c.note=note; delete TT_NOTE[id]; }
-    else { TT_DONE[id]=({passed:"Passed",failed:"Failed",answered:"Answered"})[what]+", saved."; delete TT_NOTE[id]; }
+    else { TT_DONE[id]=({passed:"Works",failed:"Doesn't",answered:"Answered"})[what]+", saved."; delete TT_NOTE[id]; }
   } else {
     TT_ASK[id]="Not saved: "+((r.body&&(r.body.why||r.body.error))||("the studio answered "+r.status))+" Your note is still here.";
   }
@@ -2049,7 +2126,7 @@ const TABBOX=[
   "The numbered rules the build is judged against, and the decisions behind each.",
   "Past work, kept so it can be reused, and out of the running system.",
   "Every stored test, and whether a change broke one. Tests are shown here by label only; the question, the right answer and what came back are on the Tool screen, for the owner.",
-  "What is still waiting for you to look at, grouped by where you go. Do what it says, then tap Passed, Failed or Not now."
+  "What is new, what is waiting for you to test, what is being built and what is decided but not built yet, all from the record. Do what a check says, then tap Works, Doesn't or Not now."
 ];
 function xbox(i){ return '<div class="xbox">'+esc(TABBOX[i]||"")+'</div>'; }
 
