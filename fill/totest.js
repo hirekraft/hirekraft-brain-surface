@@ -15,6 +15,12 @@ const NOTE = {}, DONE = {}, SAY = {};
 
 export function initToTest(c) { ctx = c; }
 
+// The studio list, read once and shared: the Tool's consultant (news.js) puts a check beside the guide entry it proves.
+export async function readList() {
+  const r = await studio({ action: 'whatsnew' });
+  return r.status === 200 && r.body?.ok ? r.body : null;
+}
+
 async function studio(body) {
   const c = new AbortController(); const t = setTimeout(() => c.abort(), 20000);
   try {
@@ -41,7 +47,8 @@ export async function loadToTest() {
   draw();
 }
 
-function card(c, question) {
+// One check, with Works / Doesn't / Not now. Exported so the consultant's what's new draws the same card.
+export function card(c, question, redraw = draw) {
   const el = ctx.el;
   const d = el('div', 'tt-card'); d.dataset.id = c.id;
   if (DONE[c.id]) { d.classList.add('tt-done'); const b = el('b'); b.textContent = DONE[c.id]; const a = el('span', 'tt-ask'); a.textContent = c.ask; d.append(b, a); return d; }
@@ -57,7 +64,7 @@ function card(c, question) {
   d.appendChild(ta);
   if (SAY[c.id]) d.appendChild(v(SAY[c.id], 'tt-prompt'));
   const acts = el('div', 'tt-acts');
-  const btn = (label, what, cls) => { const b = el('button', 'go ' + cls); b.type = 'button'; b.textContent = label; b.addEventListener('click', () => settle(c, what, b, acts)); return b; };
+  const btn = (label, what, cls) => { const b = el('button', 'go ' + cls); b.type = 'button'; b.textContent = label; b.addEventListener('click', () => settle(c, what, b, acts, redraw)); return b; };
   if (question) acts.append(btn('Send answer', 'answered', ''), btn('Not now', 'later', 'ghost'));
   else acts.append(btn('Works', 'passed', ''), btn("Doesn't", 'failed', 'ghost'), btn('Not now', 'later', 'ghost'));
   d.appendChild(acts);
@@ -65,11 +72,11 @@ function card(c, question) {
   return d;
 }
 
-async function settle(c, what, b, acts) {
+async function settle(c, what, b, acts, redraw = draw) {
   const note = (NOTE[c.id] || '').trim();
   if ((what === 'failed' || what === 'answered') && !note) {
     SAY[c.id] = what === 'failed' ? "What did you see? One line, then tap Doesn't again." : 'Type your answer, then tap Send answer.';
-    draw(); return;
+    redraw(); return;
   }
   acts.querySelectorAll('button').forEach((x) => { x.disabled = true; });
   b.textContent = 'Saving'; b.classList.add('working');
@@ -81,7 +88,7 @@ async function settle(c, what, b, acts) {
   } else {
     SAY[c.id] = 'Not saved: ' + (r.body?.why || r.body?.error || ('the studio answered ' + r.status)) + ' Your note is still here.';
   }
-  draw();
+  redraw();
 }
 
 function draw() {
