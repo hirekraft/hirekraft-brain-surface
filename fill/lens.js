@@ -302,6 +302,8 @@ function renderWho() {
   if (te) te.hidden = !v.all_access;
   const tt = $("#totest-entry");   // the test list (seat test-list): the owner's; studio-july refuses anyone else
   if (tt) tt.hidden = !v.all_access;
+  // What is new, said once by the consultant in the conversation (seat test-list round 2); nothing when nothing is new.
+  import("./news.js?v=2026-10-23-test-list-2").then((N) => N.showNews({ sb, el, $, openPanel, owner: !!v.all_access })).catch(() => {});
   // Owner tabs (Security, Money) are the owner's. Hidden is courtesy; the brain refuses anyone else.
   // 2026-10-12 seat runway: was a lookup of the Security tab by name, so a second owner tab would have shown to
   // everyone; now every TABS entry marked owner is hidden for anyone without all access.
@@ -3515,7 +3517,7 @@ function goto(id, key) {
   window.scrollTo({ top: 0 });
   if (id === "s-connect" && !$("#connect-stage").children.length) stageTypes();
   if (id === "s-tests") loadTests();
-  if (id === "s-totest") import("./totest.js?v=2026-10-23-test-list").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + String(e?.message ?? e); });   // seat test-list
+  if (id === "s-totest") import("./totest.js?v=2026-10-23-test-list-2").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + String(e?.message ?? e); });   // seat test-list
   if (id === "s-security") loadSecurity();
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
   onMail = id === 's-lens' && lensKey === 'email';
