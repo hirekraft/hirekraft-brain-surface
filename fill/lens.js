@@ -18,6 +18,7 @@ import { onBrainChange } from "../doorbell.js";
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-22-dates";
 import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-13-add-files";
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
+import { foundCard } from "./find.js?v=2026-10-23-find-first"; // find first, then work on what was found (seat find-first)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-22-dates"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-22-dates"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
@@ -2433,6 +2434,8 @@ async function hearSpoken(b64, mime) {
 // ANSWERS BECOME CHARTS AND FILES (seat work-outputs, 2026-10-10). Every answer drawn anywhere passes here once,
 // so its chart and the PDF / Spreadsheet / Slides buttons come with it, kept answers and the email conversation
 // included. outputs.js builds files in the browser from the body drawn here and sends nothing.
+// FIND FIRST (seat find-first): what find.js needs from here, the same functions every answer uses.
+const findCtx = (opts) => ({ el, askBody, renderAsk, keepTurn, rpc: (name, args) => sb.rpc(name, args), q: (opts && opts.q) || "" });
 const OUT_CTX = { askUrl: ASK_URL, key: PUBLISHABLE_KEY, session: () => sb.auth.getSession(),
   // A PDF made from an answer also shows wide beside the conversation (seat conversation-panel, item 15).
   view: (title, url) => { const f = el('iframe', 'wide-pdf'); f.src = url; f.dataset.blob = url; f.title = title; showWide(title, f); } };
@@ -2592,6 +2595,22 @@ function planCard(slot, body, opts) {
       card.appendChild(ul);
     } else { const p = el("p", "plan-v"); p.textContent = v; card.appendChild(p); }
   }
+  // THE CHEAPER PATH, OFFERED ONCE (seat find-first, brief item 7b): a plan over everything about one party offers to bring
+  // together just that material first. It never refuses the broad way: Go still runs the plan as it is.
+  if (plan.find_first && plan.find) {
+    const cheap = el("div", "plan-find");
+    const t = el("p", "plan-v"); t.textContent = "Cheaper first: I can bring together " + plan.find_first + ", then answer from that.";
+    const b = el("button", "go ghost"); b.type = "button"; b.textContent = "Bring it together first";
+    b.addEventListener("click", async () => {
+      stopAuto(); b.disabled = true; go.disabled = true;
+      const wait = el("p", "answer-wait working"); wait.textContent = "Bringing it together."; slot.replaceChildren(wait);
+      const res = await askBody({ question: q, find: plan.find });
+      if (!res || res.ok !== true) { askProblem(slot, res?.error ?? "That could not be brought together just now."); return; }
+      renderAsk(slot, res, opts);
+      await keepTurn(slot, q, res);
+    });
+    cheap.append(t, b); card.appendChild(cheap);
+  }
   const askLine = el("p", "plan-ask"); askLine.textContent = "Anywhere specific I should look?"; card.appendChild(askLine);
   const acts = el("div", "actions");
   const go = el("button", "go"); go.type = "button"; go.textContent = "Go";
@@ -2689,6 +2708,8 @@ function drawAsk(slot, body) {
   if (String(body.state || "").startsWith("teach_")) { teachAnswer(slot, body); return; }
   // A plan before the work (lens-ask v32, seat plan-first): nothing is computed until Go.
   if (body.state === "plan" && body.plan) { planCard(slot, body, drawAsk.opts); return; }
+  // A found set (lens-ask, seat find-first): the material itself as cards, checked; one press works on what is kept.
+  if (body.state === "found" && body.found) { foundCard(slot, body, findCtx(drawAsk.opts)); return; }
   const state = body.state;
   // lens-ask v17: an answer from the web or general knowledge is drawn whatever the records gave. `state`
   // still says what the records gave, and the answer says it in its own first sentence.
