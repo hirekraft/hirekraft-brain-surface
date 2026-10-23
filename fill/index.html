@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#ffffff">
 <title>Tool — your brain</title>
 <meta name="description" content="A working memory of your business.">
-<link rel="stylesheet" href="skin.css?v=2026-10-22-costs">
+<link rel="stylesheet" href="skin.css?v=2026-10-23-test-list">
 <script>
 // THE FRONT DOOR, before anything is drawn (seat front-door, 2026-10-13): no stored sign-in on this
 // browser means she goes to sign in, and comes back to this tab after. lens.js makes the real check
@@ -259,6 +259,8 @@ try {
       <button class="go ghost" data-goto="s-intro">What this is</button>
       <!-- Shown to the owner only; the brain refuses anyone else whatever this says. -->
       <button class="go ghost" data-goto="s-tests" id="tests-entry" hidden>Tests</button>
+      <!-- The owner's test list, the same one the Studio Surface shows (seat test-list, 2026-10-23). -->
+      <button class="go ghost" data-goto="s-totest" id="totest-entry" hidden>To test</button>
       <!-- Who sees what moved to the Security tab (seat security-tab, Alex 2026-10-08). -->
     </div>
 
@@ -268,6 +270,22 @@ try {
       source is still yours.</p>
   </section>
 
+
+  <!-- ── TO TEST — what is waiting for the owner to try, the same list as the Studio Surface's What's new.
+       Seat test-list, 2026-10-23. Drawn by totest.js from studio-july; nothing is kept in the brain. ── -->
+  <section class="step" id="s-totest" hidden>
+    <div class="tab-top">
+      <h2>What is new, and waiting for you to test</h2>
+      <details class="whatis"><summary>What is this?</summary>
+        <p class="quiet">Each check is something new in the Tool: where to go, what to do and what you should
+          see. Tap Works or Doesn't; the answer goes to the studio, and the check leaves this list and the Studio
+          Surface's at once.</p></details>
+    </div>
+    <div class="actions">
+      <button class="go ghost" data-goto="s-summary">Back to your brain</button>
+    </div>
+    <div id="totest" aria-live="polite"></div>
+  </section>
 
   <!-- ── 6. TESTS — the owner's, each in full. Seat testing-tab, 2026-10-02. ── -->
   <section class="step" id="s-tests" hidden>
@@ -455,6 +473,6 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-23-read-estimate"></script>
+<script type="module" src="lens.js?v=2026-10-23-test-list"></script>
 </body>
 </html>
