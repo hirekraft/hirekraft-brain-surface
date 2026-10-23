@@ -16,9 +16,10 @@ function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-22-dates";
-import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-13-add-files";
+import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-23-watches";
+import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
-import { foundCard } from "./find.js?v=2026-10-23-find-first"; // find first, then work on what was found (seat find-first)
+import { foundCard } from "./find.js?v=2026-10-23-watches"; // find first, then work on what was found (seat find-first)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-22-dates"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-22-dates"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
@@ -308,6 +309,9 @@ function renderWho() {
   if (tt) tt.hidden = !v.all_access;
   // What is new, said once by the consultant in the conversation (seat test-list round 2); nothing when nothing is new.
   import("./news.js?v=2026-10-23-test-list-2").then((N) => N.showNews({ sb, el, $, openPanel, owner: !!v.all_access })).catch(() => {});
+  // What her watches found since she last looked, said once in the conversation (seat watches); nothing when nothing is new.
+  initWatches({ sb, el, $, openPanel });
+  showWatches().catch(() => {});
   // Owner tabs (Security, Money) are the owner's. Hidden is courtesy; the brain refuses anyone else.
   // 2026-10-12 seat runway: was a lookup of the Security tab by name, so a second owner tab would have shown to
   // everyone; now every TABS entry marked owner is hidden for anyone without all access.
@@ -4302,6 +4306,8 @@ initMail({
 // THE ONE BOX (seat one-box, 2026-10-08): what it needs from this page, and nothing it does itself.
 initBox({
   el, ask, hear: hearSpoken,
+  // seat watches 2026-10-23: "tell me when ...", "what are you watching", "stop watching ..." are kept as watches, not asked.
+  watch: (t) => watchFromBox(t),
   // seat add-files: whether a question is on its way (a question sent now would be dropped), and the one connect flow.
   busy: () => asking,
   connect: () => { userMoved = true; openConnect(); },
