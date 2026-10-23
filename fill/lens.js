@@ -11,6 +11,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // ONE WAY THE SCREEN WRITES A DATE, and the one time zone (seat calendar-contacts, 2026-10-22): fill/dates.js.
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
+import { removeControl, drawReadView } from "./sources.js?v=2026-10-23-sources-basics"; // remove a source, what the Tool has read (seat sources-basics)
+function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain }; }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-22-dates";
@@ -197,6 +199,7 @@ async function readBrain(opts = {}) {
     renderWho();
     fillTree();
     fillAttention();
+    drawReadView($('#read-view'), srcDeps());
     fillRecognition();
     fillAdoptable();
     renderState("live");
@@ -457,6 +460,15 @@ function drawMembers(key, body, pfx = "") {
     body.appendChild(choose);
   }
 
+  // ADD A MAILBOX (seat sources-basics, 2026-10-23): the existing connect-by-address flow.
+  if (key === "email") {
+    const add = el("button", "go");
+    add.type = "button";
+    add.textContent = "Add a mailbox";
+    add.style.marginBottom = "1.2rem";
+    add.addEventListener("click", () => openConnect("email"));
+    body.appendChild(add);
+  }
   const list = el("ul", "members");
   // Mailboxes from more than one company are grouped under their domain, so they are
   // told apart at a glance (Alex, 2026-10-06). One domain needs no heading.
@@ -537,7 +549,9 @@ function drawMembers(key, body, pfx = "") {
       st.innerHTML = `<span class="dot"></span>Its state could not be read just now `
         + `(${escape(mbxError)}), so this line is not a claim either way.`;
       li.appendChild(st);
-    } else if (key === 'systems') {
+    } else if (key === 'systems' || key === 'calendar' || key === 'contacts') {
+      // seat sources-basics 2026-10-23: calendar and contacts are kept systems with their own walk line (the brain
+      // used to send both groups as "Nothing connected yet" although both were read).
       li.appendChild(systemLine(m, data));
     } else {
       const st = el("div", `state ${HEALTH_CLASS[m.health] ?? ""}`);
@@ -545,6 +559,11 @@ function drawMembers(key, body, pfx = "") {
         + (m.latest && m.health !== "reading" ? ` &middot; newest item ${fmtDay(m.latest)}` : "");
       li.appendChild(badgeLine(st, HEALTH_WORD[m.health]));
     }
+
+    // REMOVE (seat sources-basics, 2026-10-23), owner only: the brain refuses anyone else.
+    const removable = shape?.viewer?.all_access && ['email', 'drives', 'calendar', 'contacts'].includes(key)
+      && (key === 'drives' ? driveStateFor(m.target)?.source_key : m.target);
+    if (removable) li.appendChild(removeControl(removable, m.full ?? m.name, srcDeps()));
 
     list.appendChild(li);
   }
