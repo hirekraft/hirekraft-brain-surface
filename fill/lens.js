@@ -3566,7 +3566,9 @@ const GROUP_TAB = (k, label) => ({ key: k, label: label ?? GROUPS.find((g) => g.
 const TABS = [GROUP_TAB('email', 'Mail'), { key: 'work', label: 'Work' }, { key: 'money', label: 'Money', owner: true },
   GROUP_TAB('drives', 'Drives'), GROUP_TAB('calendar'), GROUP_TAB('contacts'),
   { key: 'brain', label: 'Brain' }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
-  GROUP_TAB('systems'), GROUP_TAB('loose')];
+  GROUP_TAB('systems'), GROUP_TAB('loose'),
+  // THE AI TAB (seat ai-tab, 2026-10-23, decision 1007; working name, Alex may rename): owner only, drawn by fill/ai.js.
+  { key: 'ai', label: 'AI', owner: true }];
 const TAB_KEY = 'tool.tab';
 // The daily tabs: on a phone these sit in the bottom bar; the rest go under More (seat phone, 2026-10-13).
 const DAY_TABS = ['email', 'work', 'drives', 'calendar', 'contacts'];
@@ -3624,7 +3626,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#tabs')
 //   contacts keeps its own state (the card she looked up): a reading draws nothing. Until now every reading cleared
 //            the card and looked the person up again, so a slow lookup never stayed on screen.
 //   drives, calendar, systems, loose: drawn from the reading itself; redrawn, with keepOpen putting back what she opened.
-const OWN_STATE = { email: () => mailReading(), contacts: () => {} };
+const OWN_STATE = { email: () => mailReading(), contacts: () => {}, ai: () => {} };
 
 function drawLens() {
   const t = TABS.find((x) => x.key === lensKey);
@@ -3647,6 +3649,14 @@ function drawLens() {
     import('./google.js?v=2026-10-22-dates').then((G) => G.drawGoogleSignin(g, { sb, el, connect: googleConnect }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'Your Google sign-in could not be shown: ' + String(e?.message ?? e); g.appendChild(p); });
     if (lensKey === 'calendar') return;
+  }
+  // THE AI TAB (seat ai-tab, 2026-10-23): which AI does each kind of work, its test score, its cost, the other choices,
+  // one press to change. Owner only (lens-ask refuses anyone else; the tab is hidden for them too). Keeps its own state:
+  // a reading does not redraw it (OWN_STATE), so an open choice is not lost.
+  if (lensKey === 'ai') {
+    import('./ai.js?v=2026-10-23-ai-tab').then((A) => A.drawAI(body, { el, askBody, ask, isOwner: () => !!shape?.viewer?.all_access }))
+      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The AI tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
+    return;
   }
   if (lensKey === 'contacts') {
     import('./contacts.js?v=2026-10-22-dates').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, isOwner: () => !!shape?.viewer?.all_access }))
