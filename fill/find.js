@@ -11,8 +11,9 @@
 // the brain (find_signal_add, as her own sign-in), and her later finds come out in that order: counting, not a model. A label
 // she sets is kept as her example for that item; it does not change who may see it (seat find-first's report says why).
 // The first time she unchecks or relabels, one line says the Tool learns from it; never again unless she asks.
-// "Tell me when new ones arrive" keeps the find as a watch (find_watch_add) for the watches seat to read; until that is
-// built the button says so rather than promising an alert. What it learned is one list, each line removable.
+// "Tell me when new ones arrive" keeps the find as a watch (find_watch_add); seat watches (2026-10-23) reads it every
+// 10 minutes and says new matching email in the conversation (fill/watches.js). Superseded 2026-10-23 by seat watches:
+// the line saying alerts were not built yet. What it learned is one list, each line removable.
 // No regex literals (STANDING-CLAUSES: the write tool).
 
 import { fmtDate } from "./dates.js?v=2026-10-22-dates";
@@ -148,7 +149,7 @@ export function foundCard(slot, body, ctx) {
     let r = null;
     try { const x = await ctx.rpc("find_watch_add", { p_spec: spec, p_seen: items.map((it) => it.key) }); r = x.error ? { ok: false, reason: x.error.message } : x.data; } catch (e) { r = { ok: false, reason: String(e?.message || e) }; }
     const p = el("p", "quiet");
-    p.textContent = r?.ok ? "Saved as a watch. The Tool does not tell you about new ones yet: that part is being built, and this watch is kept for it."
+    p.textContent = r?.ok ? 'Saved as a watch. When new email on this arrives from someone you have written to before, the conversation says so the next time you open the Tool. Ask "what are you watching" to see or remove it.'
       : "Not saved: " + String(r?.reason || "no reason was given") + ".";
     watch.replaceWith(p);
   });
