@@ -1335,6 +1335,7 @@ function stageProviders(groupKey, p) {
   stage.innerHTML = "";
 
   if (p.loose) return stageLoose(stage);
+  readCostNote(stage, groupKey);
   if (p.address) return stageAddress(stage);
 
   const grid = el("div", "tiles");
@@ -1723,23 +1724,76 @@ function stageStopped(msg) {
   $("#connect-stage").appendChild(n);
 }
 
-// Loose files: the gate is wired as an affordance. The estimate itself is the one
-// piece deliberately not built here, and it says so rather than showing a number
-// nobody calculated.
+// WHAT READING WILL COST, BEFORE IT IS READ (seat read-estimate, 2026-10-23). The figure comes from lens-ask
+// {read_estimate}: what one email or file actually cost to read in this business (the vendor's meter), times what is
+// counted. Owner only; anyone else sees nothing here. No measurement, no figure: the reason is shown instead.
+// Superseded 2026-10-23: the 'Not finished in this build: the cost figure itself is not calculated yet' notice that
+// stood here since the Loose files tile was drawn. The figure is real now; keeping a drop is the part still to build.
+const money2 = (n) => '$' + Number(n || 0).toFixed(2);
+const perItem = (n) => '$' + Number(n || 0).toFixed(Number(n) < 0.1 ? 3 : 2);
+async function readEstimate(q) { return await askBody({ read_estimate: q }); }
+function estimateLine(r, what) {
+  const e = r?.estimate, b = r?.balance || {};
+  if (!r || r.ok !== true) return r?.error && !String(r.error).startsWith('not_owner') ? `No figure: ${r.error}` : null;
+  if (!e || e.ok !== true) return `No figure: ${e?.reason ?? 'it could not be worked out'}.`;
+  const bal = b.balance_left_usd !== undefined && b.balance_left_usd !== null ? ` Your AI balance is ${money2(b.balance_left_usd)}.` : '';
+  return what(e) + bal;
+}
+async function readCostNote(stage, groupKey) {
+  if (groupKey !== 'email' && groupKey !== 'drives') return;
+  const n = el('p', 'quiet working no-late'); n.textContent = 'Working out what reading costs here';
+  stage.appendChild(n);
+  const r = await readEstimate({});
+  n.classList.remove('working', 'no-late');
+  const line = estimateLine(r, (e) => groupKey === 'email'
+    ? `Reading mail costs about ${perItem(e.per_message_usd)} a message with its attachments, measured from your own reading. `
+      + `Once a mailbox is pointed at, it is counted first (free, nothing is read) and the box can tell you the figure: ask 'what would it cost to read this mailbox back to 2024?'.`
+    : `Reading a drive costs about ${perItem(e.per_file_usd)} a file, measured from your own reading; pictures and video are not read and cost nothing.`);
+  if (!line) { n.remove(); return; }
+  n.textContent = line + ' Today reading starts as soon as a source is connected; approving the figure first is the next step.';
+}
+
+// Loose files: the owner picks files; this page counts them and their kinds (nothing is uploaded to count them) and
+// shows what reading them would cost. Keeping a drop in the brain is not built yet, and it says so.
+const NOT_READ = /^(image|video)[/]/;
 function stageLoose(stage) {
-  const n = el("div", "notice");
-  n.innerHTML = `<b>Large drops are checked before they are read.</b> A drop is scanned for its `
-    + `size and shape first, and what reading it costs is shown for your approval before anything `
-    + `is read. Nothing expensive happens quietly.`;
-  const flag = el("div", "notice flagged");
-  flag.innerHTML = `<b>Not finished in this build:</b> the scan and the approval step exist, but the `
-    + `cost figure itself is not calculated yet. Rather than show an invented number, this stops `
-    + `here — dropping files stays switched off until the estimate is real.`;
-  stage.append(n, flag);
-  const back = el("button", "go ghost");
-  back.type = "button"; back.textContent = "Back to all sources";
-  back.addEventListener("click", stageTypes);
-  stage.appendChild(back);
+  const n = el('div', 'notice');
+  n.innerHTML = `<b>See what reading a set of files costs, before anything is read.</b> Pick the files: they are counted `
+    + `here, on this computer, and nothing is sent or read to count them.`;
+  const pick = el('input', ''); pick.type = 'file'; pick.multiple = true; pick.hidden = true;
+  const go = el('button', 'go'); go.type = 'button'; go.textContent = 'Pick files to count';
+  go.addEventListener('click', () => pick.click());
+  const out = el('div', '');
+  pick.addEventListener('change', async () => {
+    const files = [...pick.files]; pick.value = '';
+    if (!files.length) return;
+    const readable = files.filter((f) => !NOT_READ.test(f.type || ''));
+    const skipped = files.length - readable.length;
+    const mb = files.reduce((a, f) => a + f.size, 0) / 1000000;
+    out.innerHTML = '';
+    const w = el('p', 'working'); w.textContent = `Counting ${files.length} ${files.length === 1 ? 'file' : 'files'}`;
+    out.appendChild(w);
+    const r = await readEstimate({ drop_files: readable.length });
+    w.remove();
+    const line = estimateLine(r, (e) => {
+      const d = (e.sources || [])[0] || {};
+      return `${readable.length} ${readable.length === 1 ? 'file' : 'files'} to read (${mb.toFixed(1)} MB in all)`
+        + (skipped ? `, and ${skipped} ${skipped === 1 ? 'picture or video' : 'pictures or videos'} that would not be read` : '')
+        + `. Reading them costs about ${money2(d.first_read_usd)}, between ${money2(d.first_read_low_usd)} and ${money2(d.first_read_high_usd)}. `
+        + `A drop is read once, so nothing comes after it.`;
+    });
+    const p = el('div', line && !line.startsWith('No figure') ? 'notice' : 'notice flagged');
+    p.textContent = line || 'No figure: you are not the owner, so what reading costs is not shown.';
+    const later = el('p', 'quiet');
+    later.textContent = 'Keeping a set of files in the brain is not built yet, so nothing is read from here. '
+      + 'To have files read now, add them to a question with the + in the box: they are read with that question and not kept.';
+    out.append(p, later);
+  });
+  const back = el('button', 'go ghost');
+  back.type = 'button'; back.textContent = 'Back to all sources';
+  back.addEventListener('click', stageTypes);
+  const acts = el('div', 'actions'); acts.append(go, back);
+  stage.append(n, pick, acts, out);
 }
 
 // ── what this screen did, said in the conversation panel ─────────────────────
