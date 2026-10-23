@@ -1344,6 +1344,13 @@ a.find-title:hover { text-decoration: underline; }
 .turn.news .news-try { color: var(--ink-3); }
 .turn.news .news-check .tt-card { border: 1px solid var(--line); border-radius: 8px; margin-top: 8px; padding: 10px 12px 12px; }
 .turn.news > .go { margin-top: 12px; min-height: 44px; }
+/* What her watches found (seat watches, 2026-10-23): the found card's look, with Done and Not useful under it. */
+.watch-chip { cursor: default; flex: 0 1 auto; max-width: 100%; box-sizing: border-box; white-space: normal; overflow-wrap: anywhere; }
+.watch-acts { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); margin-top: calc(var(--u) * 1.5); }
+.watch-acts .go { margin-top: 0; min-height: 40px; }
+.watch-watches li > div { flex: 1 1 220px; min-width: 0; }
+.watch-watches .find-meta { margin-top: 2px; }
+.watch-add { margin-top: calc(var(--u) * 3); }
 
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
@@ -1410,6 +1417,9 @@ a.find-title:hover { text-decoration: underline; }
   .find-check, .find-chip, .find-label, .find-own input { min-height: 44px; min-width: 44px; }
   .find-labels, .find-lesson { padding-left: 0; }
   .find-acts .go, .find-foot .go { flex: 1 1 100%; }
+  /* seat watches 2026-10-23: Done, Not useful, Remove and Add are full-width presses on a phone. */
+  .watch-acts .go, .watch-watches .go, .watch-add .go { flex: 1 1 100%; min-height: 44px; }
+  .watch-add input { min-height: 44px; font-size: 16px; }
   /* seat ai-tab 2026-10-23: the money tiles two by two, and every press on the AI tab at least 44px. */
   .ai-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ai-step { padding: calc(var(--u) * 3); }
