@@ -1164,6 +1164,38 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
 .ai-bal[hidden] { display: none; }
 .ai-bal .ai-short { display: none; }
 .ans-cost { margin: calc(var(--u) * 2) 0 0; font-size: var(--t-micro); }
+/* THE AI TAB (seat ai-tab, 2026-10-23): the money at the top, then one card per kind of work with its model, its test
+   score, its cost and the other choices. Quiet: the only colored things are the badges and the press that changes it. */
+.ai-tab { max-width: 880px; }
+.ai-lede { margin: 0 0 var(--gap); }
+.ai-top { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); margin: 0 0 var(--gap); }
+.ai-tile { display: flex; flex-direction: column; gap: 2px; padding: calc(var(--u) * 3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); min-width: 0; }
+.ai-tile-label { font-size: var(--t-small); color: var(--ink-3); }
+.ai-tile-value { font-size: 20px; font-weight: var(--w-mid); color: var(--ink); }
+.ai-tile-note { font-size: var(--t-micro); color: var(--ink-3); }
+.ai-basis, .ai-reach, .ai-coming-line { margin: calc(var(--u) * 2) 0; }
+.ai-step { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); padding: calc(var(--u) * 4); margin: 0 0 var(--gap); }
+.ai-step-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: calc(var(--u) * 2); }
+.ai-step-title { margin: 0; font-size: var(--t-body); font-weight: var(--w-mid); color: var(--ink); }
+.ai-step-cost { font-size: var(--t-small); color: var(--ink-2); }
+.ai-does { margin: calc(var(--u) * 1) 0 calc(var(--u) * 2); color: var(--ink-2); font-size: var(--t-small); }
+.ai-runs, .ai-score { margin: calc(var(--u) * 1) 0; font-size: var(--t-small); color: var(--ink-2); }
+.ai-label { color: var(--ink-3); }
+.ai-floor { margin: calc(var(--u) * 2) 0; }
+.ai-step .go, .ai-asks .go, .ai-tab > .go { margin-top: calc(var(--u) * 2); }
+.ai-alts { margin-top: calc(var(--u) * 2); border-top: 1px solid var(--line-2); }
+.ai-alts[hidden] { display: none; }
+.ai-alt { padding: calc(var(--u) * 3) 0; border-bottom: 1px solid var(--line-2); }
+.ai-alt-head { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 1.5); }
+.ai-alt-line { margin: calc(var(--u) * 1) 0 0; font-size: var(--t-small); color: var(--ink-2); }
+.ai-why { margin: calc(var(--u) * 1.5) 0 0; font-size: var(--t-small); color: var(--ink-3); }
+.ai-confirm { margin-top: calc(var(--u) * 3); padding: calc(var(--u) * 3); background: var(--act-soft); border-radius: var(--radius); }
+.ai-effect { margin: 0; color: var(--ink); font-size: var(--t-small); }
+.ai-confirm .go { margin-top: calc(var(--u) * 2); }
+.ai-result { margin: calc(var(--u) * 2) 0 0; font-size: var(--t-small); color: var(--ink); }
+.ai-h { margin: var(--gap-lg) 0 calc(var(--u) * 2); font-size: var(--t-body); font-weight: var(--w-mid); color: var(--ink); }
+.ai-coming { display: flex; flex-wrap: wrap; align-items: baseline; gap: calc(var(--u) * 2); margin: 0 0 calc(var(--u) * 2); font-size: var(--t-small); }
+.ai-asks { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); }
 .s-badge { display: inline-flex; align-items: baseline; gap: calc(var(--u) * 2); background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
 .s-badge .s-count { font-size: var(--t-micro); color: var(--ink-3); }
 .s-badge:hover .badge, .s-badge:focus-visible .badge { box-shadow: inset 0 0 0 1px currentColor; }
@@ -1336,6 +1368,10 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
   .clock-zone, #ask-send, .work-search, #work-project-new, .onebox-icon, .send, .go { min-height: 44px; min-width: 44px; }
   /* seat sources-basics 2026-10-23: what the Tool has read, and Remove on a source row. */
   #read-view .work-add, #read-view .s-badge, .remove-src .a-fix { min-height: 44px; }
+  /* seat ai-tab 2026-10-23: the money tiles two by two, and every press on the AI tab at least 44px. */
+  .ai-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ai-step { padding: calc(var(--u) * 3); }
+  .ai-tab .go { min-height: 44px; width: 100%; justify-content: center; text-align: center; }
   /* 16px in every box she types into: below that an iPhone zooms the page in when the box is tapped. */
   .work-search, .onebox-bar input, .panel-box input, textarea { font-size: 16px; }
   /* Nothing pushes the page sideways: long words and addresses wrap, media keep to the column. */
