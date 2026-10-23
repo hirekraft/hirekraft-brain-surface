@@ -1334,6 +1334,8 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
 
   /* Tap targets: what she taps on a phone is at least 44px tall. */
   .clock-zone, #ask-send, .work-search, #work-project-new, .onebox-icon, .send, .go { min-height: 44px; min-width: 44px; }
+  /* seat sources-basics 2026-10-23: what the Tool has read, and Remove on a source row. */
+  #read-view .work-add, #read-view .s-badge, .remove-src .a-fix { min-height: 44px; }
   /* 16px in every box she types into: below that an iPhone zooms the page in when the box is tapped. */
   .work-search, .onebox-bar input, .panel-box input, textarea { font-size: 16px; }
   /* Nothing pushes the page sideways: long words and addresses wrap, media keep to the column. */
