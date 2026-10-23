@@ -1253,6 +1253,22 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
 .plan-learned { margin-top: calc(var(--u) * 2); color: var(--ink-2); font-weight: var(--w-mid); }
 @media (max-width: 520px) { .plan-card { padding: calc(var(--u) * 3); } .plan-card .actions { flex-wrap: nowrap; } .plan-card .actions .go { flex: 1 1 0; } }
 
+/* ── TO TEST (seat test-list, 2026-10-23): the owner's test list, the same as the Studio Surface's What's new. ── */
+.tt-group { border: 1px solid var(--line); border-radius: 10px; margin: 0 0 10px; background: var(--paper); }
+.tt-group > summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; padding: 8px 16px; cursor: pointer; font-weight: var(--w-strong); list-style: none; }
+.tt-group > summary::-webkit-details-marker { display: none; }
+.tt-n { min-width: 28px; text-align: center; padding: 2px 8px; border-radius: 999px; background: var(--act-soft); color: var(--act); font-size: var(--t-micro); }
+.tt-card { border-top: 1px solid var(--line-2); padding: 14px 16px 16px; }
+.tt-k { margin-top: 10px; font-size: var(--t-micro); color: var(--ink-3); }
+.tt-ask, .tt-exp { margin-top: 2px; line-height: 1.45; overflow-wrap: anywhere; }
+.tt-exp { color: var(--ink-2); }
+.tt-note { display: block; width: 100%; box-sizing: border-box; margin-top: 12px; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 16px; resize: vertical; }
+.tt-prompt { margin-top: 8px; color: var(--accent); font-size: var(--t-small); }
+.tt-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.tt-acts .go { min-height: 44px; margin: 0; }
+.tt-seat { margin-top: 8px; font-size: var(--t-micro); color: var(--ink-4); }
+.tt-done { color: var(--ink-3); display: flex; flex-direction: column; gap: 2px; }
+
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
    for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
