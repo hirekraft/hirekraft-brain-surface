@@ -15,6 +15,14 @@
 // its reason; refused is never drawn as empty. The box answers the same questions from the same card (lens-ask).
 //
 // Not a list of every person: a lookup. Type a name, an email address or a company.
+//
+// Seat contacts-match (2026-10-23, decisions 1002, 1011, 1012): the card is built with no AI at all. Records that may be
+// the same person are found by matching (the same phone number, the same LinkedIn profile, names that differ only by
+// accents, the owner's own address book) and each one asks "Same person? Yes / No"; her answer is kept and becomes a rule
+// (a No on two people sharing only a phone number marks that number as shared). The card now also shows the conversations
+// both ways (what the business wrote too), money items from the books, and a plain list of what is not read or not
+// matched yet. "Summarize these" is the one place an AI reads anything here, only when she presses it, over exactly the
+// conversations shown.
 
 import { fmtDate } from "./dates.js?v=2026-10-22-dates";
 
@@ -42,7 +50,7 @@ export function drawContacts(body, c) {
   top.appendChild(line("tab-count", "Anyone you have dealt with, from CATS, HubSpot, mail, drives, Slack, brought-in chats and your own calendar and address book, as they are now."));
   const what = ctx.el("details", "whatis");
   const ws = ctx.el("summary"); ws.textContent = "What is this?"; what.appendChild(ws);
-  what.appendChild(line("quiet", "Type a name, an email address or a company. The Tool searches every connected system the way you would by hand: CATS, HubSpot, every mailbox, every drive, Slack and brought-in chats, by the exact name and every address it knows. It shows the newest of each fact with where and when it came from, says when two sources disagree or a fact is old, and puts everything that happened in one timeline. Records with the same full name elsewhere are offered as possibly the same person; nothing is joined until you say so."));
+  what.appendChild(line("quiet", "Type a name, an email address or a company. The Tool searches every connected system the way you would by hand: CATS, HubSpot, every mailbox, every drive, Slack and brought-in chats, by the exact name and every address it knows. It shows the newest of each fact with where and when it came from, says when two sources disagree or a fact is old, and puts everything that happened in one timeline. Records that may be the same person (the same phone number, the same LinkedIn profile, the same name written differently) are matched and shown with a Same person? Yes / No; nothing is joined on a suggestion alone, and your answer is kept. Your own address book counts as your word. No AI is used to build the card."));
   top.appendChild(what);
   body.appendChild(top);
 
@@ -214,45 +222,133 @@ function refusedLines(c) {
   if (Number(c.files?.refused ?? 0)) mount.appendChild(line("quiet", ctx.countOf(c.files.refused) + " files or chats naming them are not open to you: " + String(c.files.refused_reason ?? "").replace("refused: ", "") + "."));
 }
 
-// POSSIBLY THE SAME PERSON: every record or address found under the same full name, with its evidence. The owner joins them
-// all with one press; an unchecked one is the odd one out and is not suggested again. Nothing is joined on its own.
+// POSSIBLY THE SAME PERSON (seat contacts-match): every record or address the matching found, strongest first, each with
+// what it rests on, and one small question each: "Same person? Yes / No". Her answer is kept and never asked again; a Yes
+// puts them on one card, a No keeps them apart (and a No on two records sharing only a phone number marks that number as
+// shared, so it never suggests anyone again). Only the owner answers; nothing is joined on a suggestion alone.
+const STRENGTH_WORDS = { sure: "The same person", strong: "Likely the same person", medium: "Possibly the same person",
+  weak: "Probably not the same person", "name only": "Only the name is the same" };
 function maybeSame(c) {
   const rows = c.maybe_same ?? [];
   if (!rows.length) return;
-  mount.appendChild(head4("Possibly the same person (" + rows.length + ")"));
+  mount.appendChild(head4("Same person? (" + rows.length + ")"));
   const owner = ctx.isOwner() && c.person;
-  mount.appendChild(line("quiet", owner ? "Found under the same full name elsewhere. Check the ones that are this person; nothing is joined until you press the button."
-                                         : "Found under the same full name elsewhere. Only the owner can say whether they are the same person."));
+  mount.appendChild(line("quiet", owner ? "Found by matching across your systems, strongest first. Your answer is kept, and is never asked again."
+                                         : "Found by matching across your systems. Only the owner can say whether they are the same person."));
   const ul = ctx.el("ul", "members");
-  const boxes = [];
   for (const p of rows) {
-    const li = ctx.el("li"); li.style.padding = "calc(var(--u) * 1) 0";
-    const text = (p.kind === "mail" ? String(p.address ?? "") + ": " : "") + [p.evidence, p.kind === "mail" ? "" : "in " + p.in, p.title, p.employer ? "at " + p.employer : ""].filter(Boolean).join(", ");
+    const li = ctx.el("li"); li.style.padding = "calc(var(--u) * 1) 0"; li.style.borderTop = "1px solid var(--line-2)";
+    const who = (p.kind === "mail" ? String(p.address ?? "") : [p.title, p.employer ? "at " + p.employer : "", p.in ? "in " + p.in : ""].filter(Boolean).join(", "));
+    li.appendChild(line("", [STRENGTH_WORDS[p.strength] ?? "", who].filter(Boolean).join(": ")));
+    if (p.evidence) li.appendChild(line("quiet", "Why: " + p.evidence + "."));
     if (owner) {
-      const lab = ctx.el("label"); const cb = ctx.el("input"); cb.type = "checkbox"; cb.checked = true;
-      lab.append(cb, document.createTextNode(" " + text)); li.appendChild(lab); boxes.push([cb, p]);
-    } else li.textContent = text;
+      const act = ctx.el("div", "actions"); act.style.display = "flex"; act.style.gap = "var(--u)"; act.style.flexWrap = "wrap";
+      const ask = ctx.el("span", "quiet"); ask.textContent = "Same person?"; ask.style.alignSelf = "center";
+      const yes = ctx.el("button", "go"); yes.type = "button"; yes.textContent = "Yes";
+      const no = ctx.el("button", "go ghost"); no.type = "button"; no.textContent = "No";
+      const answer = async (same) => {
+        yes.disabled = true; no.disabled = true;
+        const said = line("quiet working", "Keeping your answer."); act.replaceChildren(said);
+        let r = null;
+        try {
+          const call = p.kind === "mail"
+            ? ctx.sb.rpc("contact_join", same ? { p_person: c.person, p_addresses: p.addresses ?? [p.address] } : { p_person: c.person, p_not_addresses: p.addresses ?? [p.address] })
+            : ctx.sb.rpc("contact_same_set", { p_a: c.person, p_b: p.person, p_same: same, p_evidence: (same ? "Yes" : "No") + " from the card: " + (p.evidence ?? "") });
+          const { data, error } = await call;
+          r = error ? { ok: false, note: "Not kept: " + error.message } : data;
+        } catch (e) { r = { ok: false, note: "Not kept: " + String(e?.message ?? e) }; }
+        said.className = "quiet"; said.textContent = String(r?.note ?? r?.reason ?? "");
+        if (r?.ok && same) setTimeout(() => find("", c.person), 600);
+      };
+      yes.addEventListener("click", () => answer(true));
+      no.addEventListener("click", () => answer(false));
+      act.append(ask, yes, no);
+      li.appendChild(act);
+    }
     ul.appendChild(li);
   }
   mount.appendChild(ul);
-  if (!owner) return;
+}
+
+// CONVERSATIONS BOTH WAYS (seat contacts-match): the brain's one conversation gatherer, by every address the card knows,
+// so what the business wrote shows beside what they wrote. Newest conversation first; each says who wrote last. One press
+// asks an AI to summarize exactly these, and only then is anything read by an AI.
+function conversations(c, about) {
+  const v = c.conversations;
+  if (!v || !Array.isArray(v.threads)) return;
+  mount.appendChild(head4("Conversations (newest first)"));
+  if (!v.threads.length) { mount.appendChild(line("quiet", String(v.note ?? "No email conversations with them in the last 12 months in what you can see."))); return; }
+  mount.appendChild(line("quiet", ctx.countOf(v.messages_found ?? 0) + " messages in " + ctx.countOf(v.threads_found ?? v.threads.length) + " conversations over the last 12 months, both what they wrote and what your side wrote."));
+  const ul = ctx.el("ul", "members");
+  for (const t of v.threads) {
+    const li = ctx.el("li"); li.style.padding = "calc(var(--u) * 1) 0"; li.style.borderTop = "1px solid var(--line-2)";
+    const span = t.from && t.to && day(t.from) !== day(t.to) ? day(t.from) + " to " + day(t.to) : day(t.to ?? t.from);
+    li.appendChild(line("", String(t.thread ?? "(no subject)")));
+    li.appendChild(line("quiet", [span, ctx.countOf(t.messages ?? 0) + (Number(t.messages) === 1 ? " message" : " messages"),
+      t.newest_by ? "last " + t.newest_by : "", Number(t.mailboxes ?? 0) > 1 ? "in " + ctx.countOf(t.mailboxes) + " mailboxes" : ""].filter(Boolean).join(" · ")));
+    if (t.opening) li.appendChild(line("quiet", String(t.opening).slice(0, 240) + (String(t.opening).length >= 240 ? "..." : "")));
+    ul.appendChild(li);
+  }
+  mount.appendChild(ul);
+  if (!ctx.askBody || !ctx.renderAsk) return;
   const act = ctx.el("div", "actions");
-  const join = ctx.el("button", "go"); join.type = "button"; join.textContent = "These are all the same person";
-  const sync = () => { const n = boxes.filter(([cb]) => cb.checked).length;
-    join.textContent = n === boxes.length ? "These are all the same person" : n ? "Join the " + n + " checked" : "None of these are the same person"; };
-  boxes.forEach(([cb]) => cb.addEventListener("change", sync));
-  join.addEventListener("click", async () => {
-    const said = line("quiet working", "Keeping your answer."); act.replaceChildren(said);
-    const pick = (on, kind) => boxes.filter(([cb, p]) => cb.checked === on && p.kind === kind).map(([, p]) => p);
-    const args = { p_person: c.person,
-      p_people: pick(true, "record").map((p) => p.person), p_addresses: pick(true, "mail").flatMap((p) => p.addresses ?? [p.address]),
-      p_not_people: pick(false, "record").map((p) => p.person), p_not_addresses: pick(false, "mail").flatMap((p) => p.addresses ?? [p.address]) };
-    const { data, error } = await ctx.sb.rpc("contact_join", args);
-    said.className = "quiet"; said.textContent = error ? "Not kept: " + error.message : (data?.note ?? data?.reason ?? "");
-    if (!error && data?.ok) setTimeout(() => find("", c.person), 500);
+  const sum = ctx.el("button", "go ghost"); sum.type = "button"; sum.textContent = "Summarize these";
+  const out = ctx.el("div"); out.setAttribute("aria-live", "polite");
+  sum.addEventListener("click", async () => {
+    sum.disabled = true;
+    const wait = line("answer-wait working", "An AI is reading the " + v.threads.length + (v.threads.length === 1 ? " conversation" : " conversations") + " shown, and nothing else.");
+    out.replaceChildren(wait);
+    const slow = setTimeout(() => { wait.textContent += " Still reading: longer conversations take a little more time."; }, 10000);
+    let res = null;
+    try {
+      res = await ctx.askBody({ question: "Summarize my conversations with " + about, over: { ask: "summarize",
+        items: v.threads.map((t) => ({ key: "thread:" + t.thread, kind: "email", what: "Email conversation", title: t.thread, where: "Mail", date: t.to, piece_ids: t.piece_ids ?? [] })) } });
+    } catch (e) { res = { ok: false, error: String(e?.message ?? e) }; }
+    clearTimeout(slow);
+    sum.disabled = false;
+    out.replaceChildren();
+    if (!res || res.ok !== true) { out.appendChild(line("notice flagged", res?.error || "That could not be done just now. Press it again.")); return; }
+    ctx.renderAsk(out, res, { q: "Summarize my conversations with " + about });
   });
-  act.appendChild(join);
+  act.appendChild(sum);
   mount.appendChild(act);
+  mount.appendChild(out);
+}
+
+// MONEY ITEMS (seat contacts-match): what the books kept in the Tool say is open with them, and what the matching found
+// (a payment on the wrong invoice, corrected or not). Only people QuickBooks lets see the books see this; for anyone else
+// the not-yet list says how many were kept out and why.
+const money = (n, cur) => { const x = Number(n); if (!Number.isFinite(x)) return String(n ?? "");
+  try { return new Intl.NumberFormat("en-US", { style: "currency", currency: cur || "USD" }).format(x); } catch (_) { return x.toFixed(2); } };
+const KIND_WORDS = { invoice: "Invoice", bill: "Bill to pay", "credit memo": "Credit memo" };
+function moneyItems(c) {
+  const m = c.money;
+  if (!m || (!(m.open ?? []).length && !(m.findings ?? []).length)) return;
+  mount.appendChild(head4("Money (from your books)"));
+  const ul = ctx.el("ul", "members");
+  for (const o of m.open ?? []) {
+    const li = ctx.el("li"); li.style.padding = "calc(var(--u) * 1) 0"; li.style.borderTop = "1px solid var(--line-2)";
+    const t = [KIND_WORDS[o.kind] ?? o.kind, o.number ? String(o.number) : "", "open " + money(o.balance, o.currency) + (o.total && o.total !== o.balance ? " of " + money(o.total, o.currency) : ""),
+      o.due ? "due " + day(o.due) : "", o.overdue ? "overdue" : ""].filter(Boolean).join(", ");
+    if (o.url) { const a = ctx.el("a"); a.href = o.url; a.target = "_blank"; a.rel = "noopener"; a.textContent = t; li.appendChild(a); } else li.textContent = t;
+    ul.appendChild(li);
+  }
+  for (const f of m.findings ?? []) {
+    const li = ctx.el("li"); li.style.padding = "calc(var(--u) * 1) 0"; li.style.borderTop = "1px solid var(--line-2)";
+    li.textContent = (f.open ? "To look at: " : "Settled: ") + String(f.finding ?? f.kind) + (f.checked_at ? " (checked " + day(f.checked_at) + ")" : "");
+    ul.appendChild(li);
+  }
+  mount.appendChild(ul);
+  if (m.books_read) mount.appendChild(line("quiet", "Your books were last read " + fmtDate(m.books_read, "whenShort") + ". QuickBooks stays the record."));
+}
+
+function notYet(c) {
+  const rows = (c.not_yet ?? []).filter(Boolean);
+  if (!rows.length) return;
+  mount.appendChild(head4("Not read or not matched yet"));
+  const ul = ctx.el("ul", "members");
+  for (const r of rows) { const li = ctx.el("li"); li.className = "quiet"; li.textContent = String(r); ul.appendChild(li); }
+  mount.appendChild(ul);
 }
 
 function drawPerson(c, ms) {
@@ -276,6 +372,8 @@ function drawPerson(c, ms) {
 
   maybeSame(c);
   if (Object.keys(f).length) { mount.appendChild(head4("Who they are now")); mount.appendChild(factsTable(f)); }
+  conversations(c, c.name);
+  moneyItems(c);
   if ((c.holders ?? []).length) mount.appendChild(line("quiet", "Who here holds the relationship: " + c.holders.map((h) => h.who + (h.messages ? " (" + ctx.countOf(h.messages) + " emails)" : "") + (h.in ? " (owner in " + h.in + ")" : "")).join("; ") + "."));
 
   mount.appendChild(head4("Everything that happened (newest first)"));
@@ -285,6 +383,7 @@ function drawPerson(c, ms) {
     (c.mail?.lines ?? []).map((l) => ({ at: l.at, where: "Mail (" + l.mailbox + ")", what: [l.direction, l.line].filter(Boolean).join(": ") }))
   ).sort((a, b) => String(b.at ?? "").localeCompare(String(a.at ?? "")));
   timeline(rows);
+  notYet(c);
   searchedLine(c);
   refusedLines(c);
 }
@@ -310,6 +409,8 @@ function correct(c, act) {
 function drawCompany(c, ms) {
   const co = c.company ?? {};
   head(co.name, [co.status, co.location, co.website, (co.in ?? []).length ? "in " + co.in.join(", ") : ""].filter(Boolean).join(" · "), ms, c.as_of);
+  const aka = (co.also_called ?? []).filter((n) => n && n !== co.name);
+  if (aka.length) mount.appendChild(line("quiet", "Also known as " + aka.join(", ") + " (the same web address)."));
   lastContact(c);
   meetings(c);
   const t = c.history?.totals ?? {};
@@ -333,14 +434,18 @@ function drawCompany(c, ms) {
     li.appendChild(b); ul.appendChild(li);
   }
   mount.appendChild(ul);
+  conversations(c, co.name);
+  moneyItems(c);
   mount.appendChild(head4("Everything that happened (newest first)"));
   const m = c.mail ?? {};
   const rows = [].concat(
     (c.history?.lines ?? []).map((l) => ({ at: l.at, where: sourceOf(l.source), what: l.line })),
-    (m.lines ?? []).map((l) => ({ at: l.at, where: "Mail (" + l.mailbox + ")", what: l.line }))
+    (m.lines ?? []).map((l) => ({ at: l.at, where: "Mail (" + l.mailbox + ")", what: l.line })),
+    (c.conversations?.messages ?? []).filter((l) => l.direction === "from your side").map((l) => ({ at: l.at, where: "Mail (" + l.mailbox + ")", what: "from your side: " + l.thread }))
   ).sort((a, b) => String(b.at ?? "").localeCompare(String(a.at ?? "")));
   timeline(rows);
   if (!(m.lines ?? []).length && m.matched_by) mount.appendChild(line("quiet", "Mail: " + m.matched_by + "."));
+  notYet(c);
   if (c.not_read) mount.appendChild(line("quiet", String(c.not_read)));
   refusedLines(c);
 }
