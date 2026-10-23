@@ -3684,7 +3684,7 @@ function drawLens() {
     return;
   }
   if (lensKey === 'contacts') {
-    import('./contacts.js?v=2026-10-22-dates').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, isOwner: () => !!shape?.viewer?.all_access }))
+    import('./contacts.js?v=2026-10-23-contacts-match').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, askBody, renderAsk, isOwner: () => !!shape?.viewer?.all_access }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Contacts tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
