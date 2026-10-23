@@ -161,6 +161,9 @@ function submit(text, fromPanel) {
     return;
   }
   stopSpeaking();
+  // A WATCH SHE ASKS FOR (seat watches, 2026-10-23): "tell me when anyone mentions a late payment" is kept as a watch
+  // in the brain, not answered; "what are you watching" lists them. Everything else goes on as before.
+  if (C.watch && C.watch(t)) return;
   const sc = scope();
   const named = sc.mailbox ? null : namedMailbox(t);
   if (named) { find(t, named); return; }
