@@ -2371,7 +2371,19 @@ function renderAsk(slot, body, opts) {
   catch (e) { const p = el("p", "quiet"); p.textContent = `The chart or the file buttons could not be drawn: ${e?.message ?? e}`; slot.appendChild(p); }
   wideButtons(slot);
   markNote(slot);
+  costLine(slot, body);
   answerActions(slot, body, opts);
+}
+// WHAT THIS ANSWER COST (seat model-costs, 2026-10-22): one quiet grey line under the answer, owner only. lens-ask
+// puts the cost on the owner's replies only, so nobody else ever receives it. Less than a cent is said in words.
+// Work whose price did not come back is said, never counted as free.
+function costLine(slot, body) {
+  const c = body && body.cost;
+  if (!c || typeof c.usd !== "number") return;
+  const p = el("p", "quiet ans-cost");
+  p.textContent = (c.usd < 0.005 ? "This answer cost less than a cent." : "This answer cost $" + c.usd.toFixed(2) + ".")
+    + (Number(c.unpriced_calls) > 0 ? " Part of the work for it has no price yet." : "");
+  slot.appendChild(p);
 }
 // OWNER ONLY, as a courtesy: lens-ask refuses a non-owner's teaching (teach_refused) and stored_test_create refuses
 // a non-owner's test, each with a reason. Not drawn under a teaching exchange itself or a who-sees-what preview.
@@ -4126,6 +4138,42 @@ function drawClock() {
   }
   readHealth();
   setInterval(readHealth, 5 * 60 * 1000);
+})();
+
+// THE AI BALANCE IN THE HEADER (seat model-costs, 2026-10-22). Owner only: lens-ask answers {costs:true} for the owner
+// and refuses anyone else, and then nothing is drawn. Quiet: grey; amber when a top-up is near; red only when reading
+// has stopped at zero. Tapping it asks the conversation what the Tool has cost this month and for what. No billing page.
+(function wireCosts() {
+  const after = $('#health') || $('#clock');
+  if (!after) return;
+  const wrap = el('div', 'ai-bal'); wrap.hidden = true;
+  const btn = el('button', 's-badge ai-bal-btn'); btn.type = 'button';
+  const badge = el('span', 'badge b-grey');
+  const long = el('span', 'ai-long'); const short = el('span', 'ai-short');
+  badge.append(long, short); btn.appendChild(badge); wrap.appendChild(btn);
+  after.after(wrap);
+  const money = (n) => { const x = Number(n); return '$' + (Math.abs(x) < 10 ? x.toFixed(2) : Math.round(x).toLocaleString('en-US')); };
+  btn.addEventListener('click', () => ask('What has the Tool cost this month, and for what?'));
+  async function read() {
+    const r = await askBody({ costs: true });
+    if (!r || r.ok !== true || !r.costs) { wrap.hidden = true; return; }
+    const v = r.costs, b = v.balance || {};
+    let tone = 'b-grey';
+    if (b.state === 'stopped_at_zero') { long.textContent = 'AI reading stopped: balance used up'; short.textContent = 'AI stopped'; tone = 'b-red'; }
+    else if (b.state === 'no_prepaid_account' || b.balance_left_usd === undefined || b.balance_left_usd === null) {
+      long.textContent = 'AI ' + money(v.this_month_usd) + ' this month'; short.textContent = 'AI ' + money(v.this_month_usd);
+    } else {
+      long.textContent = 'AI balance ' + money(b.balance_left_usd) + ' left'; short.textContent = 'AI ' + money(b.balance_left_usd);
+      if (b.state === 'low' || b.state === 'answers_within_margin') tone = 'b-orange';
+    }
+    badge.className = 'badge ' + tone;
+    btn.title = 'What the Tool has cost: ' + money(v.this_month_usd) + ' this month'
+      + (v.projected_month_usd !== null && v.projected_month_usd !== undefined ? ', about ' + money(v.projected_month_usd) + ' for the whole month' : '')
+      + '. Tap to ask what for.';
+    wrap.hidden = false;
+  }
+  read();
+  setInterval(read, 10 * 60 * 1000);
 })();
 
 drawTreeFrame();                 // the frame first, instantly, with space reserved
