@@ -105,14 +105,14 @@ const PICKERS = {
   },
   calendar: {
     head: "Which calendar?", sub: "Meetings, and who was in them.",
-    options: [{ name: "Google Calendar", wired: false }, { name: "Outlook Calendar", wired: false }],
+    options: [{ name: "Google Calendar", wired: false, via: "google" }, { name: "Outlook Calendar", wired: false }],
   },
   contacts: {
     head: "Which directory?", sub: "So the people already known from mail can be checked against a list.",
-    options: [{ name: "Google Contacts", wired: false }, { name: "Phone", wired: false }],
+    options: [{ name: "Google Contacts", wired: false, via: "google" }, { name: "Phone", wired: false }],
   },
   systems: {
-    head: "Which system?", sub: "These are reached at the moment you ask, not copied.",
+    head: "Which system?", sub: "Each says on its own line whether the Tool keeps a copy, checked for changes every few minutes, or asks it at the moment you ask. Nothing is ever written back.",
     options: [{ name: "QuickBooks", type: "qbo", wired: true, account: true },
               { name: "Wise",       key: "wise", account: true },
               { name: "HubSpot",    key: "hubspot", account: true },
@@ -773,8 +773,9 @@ function drawConnectOffer(li, m, group) {
     box.innerHTML =
       `<h3>${escape(m.name)} is not connected yet.</h3>`
       + `<p class="quiet">${group.key === "systems"
-          ? "Connecting stores a permission in your own workspace and nothing else. A system "
-            + "of record is read at the moment you ask something of it, never copied out."
+          ? "Connecting stores a permission in your own workspace and nothing else. The Tool then either "
+            + "keeps a copy of its records, checked for changes every few minutes, or asks it at the moment you "
+            + "ask; its line says which. Nothing is ever written back."
           : "Connecting stores a permission in your own workspace. Nothing is moved and "
             + "nothing is reorganized."}</p>`;
     const go = el("button", "go");
@@ -1375,7 +1376,7 @@ function stageProviders(groupKey, p) {
       + `border:1px solid currentColor;border-radius:3px;font-size:11px;font-weight:500">`
       + `${escape(o.name[0])}</span>`
       + `<span class="t-name">${escape(o.name)}</span>`
-      + `<span class="t-sub">${o.wired || o.key ? "ready" : "not connected yet"}</span>`;
+      + `<span class="t-sub">${o.wired || o.key ? "ready" : o.via ? "with your Google sign-in" : "not connected yet"}</span>`;
     b.addEventListener("click", () =>
       o.key ? stageKey(groupKey, o) : o.wired ? stageScope(groupKey, o) : stageNotWired(stage, o));
     grid.appendChild(b);
@@ -1390,6 +1391,14 @@ function stageProviders(groupKey, p) {
 
 function stageNotWired(stage, o) {
   const n = el("div", "notice flagged");
+  // tidy-truth 2026-10-24: Google Calendar and Google Contacts were offered here as "not built" although seat
+  // calendar-contacts reads them through each person's Google sign-in (google.js, on Systems). Say where it is.
+  if (o.via === "google") {
+    n.innerHTML = `<b>${escape(o.name)} is read through your Google sign-in.</b> Open Systems and sign in under `
+      + `Your calendar and contacts. Each person signs in for their own calendar and address book, which only they see.`;
+    stage.appendChild(n);
+    return;
+  }
   n.innerHTML = `<b>${escape(o.name)} is not connected yet.</b> It is not built, so nothing here `
     + `pretends it is. Providers get added when a customer needs one — say the word and it gets `
     + `built, rather than sitting on a roadmap.`;
@@ -4419,8 +4428,8 @@ readBrain();                     // then the live reading lands into the frame
   const named  = done.replace(/^gmail:/, "").replace(/^drive:oauth:/, "");
   say(isSystem
     ? `QuickBooks is connected. The permission is stored in your own workspace, and that `
-      + `is all that changed - nothing has been copied out of it. QuickBooks is a system of `
-      + `record, so it is read at the moment you ask something of it, not before.`
+      + `is all that changed: nothing has been read or copied yet, and nothing is ever written back. `
+      + `Its line under Systems says how it is read from here.`
     : isMail
     ? `${named} is connected. The permission is stored in your own workspace.`
     : `Google Drive is connected for ${named}. The permission is stored in your own `
