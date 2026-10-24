@@ -152,16 +152,21 @@ try {
     <div class="kinds">
       <div class="kind">
         <h3>Read and remembered</h3>
-        <p>Mail, files, calendar. Tool reads these and keeps reading them, so what is in them
-          becomes part of the memory: what happened, when, who was involved, and how one thing
-          relates to another.</p>
+        <p>Mail, files, calendar and contacts, and the records of systems the Tool keeps a copy of,
+          like your books, CRM or applicant tracker. Tool reads these and keeps them current, so what
+          is in them becomes part of the memory: what happened, when, who was involved, and how one
+          thing relates to another. New mail is read from the day you connect it; older mail waits
+          until you choose how much of it to read.</p>
         <p><b>Why it matters:</b> this is the kind it can reason over in depth, and connect
           across. Depth comes from here.</p>
       </div>
       <div class="kind secondary">
         <h3>Reached and used</h3>
-        <p>QuickBooks, and tools like it. Tool does not copy these. It reaches them at the
-          moment you ask, so the figure is whatever the system says right then.</p>
+        <!-- tidy-truth 2026-10-24: this said QuickBooks is never copied; since seat records-match (2026-10-23)
+             the Tool keeps a copy of QuickBooks, CATS, HubSpot and Slack. Banks are still asked live. -->
+        <p>Bank accounts, and any system the Tool does not keep a copy of. Tool reaches these at the
+          moment you ask, so the figure is whatever the system says right then. Reports from your
+          books are asked for at that moment too. Nothing is ever written back.</p>
         <p><b>Why it matters:</b> current, but shallow — it knows only what it went and asked
           for. The number comes from here.</p>
       </div>
@@ -476,6 +481,6 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-24-read-approval"></script>
+<script type="module" src="lens.js?v=2026-10-24-tidy-truth"></script>
 </body>
 </html>
