@@ -6,6 +6,10 @@
 //     watches; if she leaves, the brain finishes it in the background (cron source-forget-drain).
 //   drawReadView: one line per source from the brain's sources_read(), which is built from the same readings as the
 //     rows on the tab (mailbox_state, drive_state, source_state), so the summary and the rows cannot disagree.
+//   readChooser (seat read-approval, 2026-10-24, decision 1012): under that line, for a mailbox whose older mail waits,
+//     the owner's choices with their prices: make all of it findable, or have it understand the last 6 months, 18
+//     months, 3 years or all. One press each, through the brain's source_read_approve (owner only; it refuses anyone
+//     else). Prices come from lens-ask {read_estimate}, which only the owner gets; anyone else sees the line, no choices.
 // Dates go through lens.js's fmtWindow, which is fill/dates.js. No regex literals (STANDING-CLAUSES: the write tool).
 
 export function removeControl(sourceKey, name, { sb, el, refreshBrain }) {
@@ -91,7 +95,7 @@ const READ_WORD = {
 };
 const KIND_WORD = { mailbox: 'Mailbox', drive: 'Drive', calendar: 'Calendar', contacts: 'Contacts', system: 'System' };
 
-export async function drawReadView(box, { sb, el, escape, badgeLine, fmtWindow }) {
+export async function drawReadView(box, { sb, el, escape, badgeLine, fmtWindow, readEstimate, refreshBrain }) {
   if (!box) return;
   let rows;
   try {
@@ -135,5 +139,99 @@ export async function drawReadView(box, { sb, el, escape, badgeLine, fmtWindow }
   }
   show.addEventListener('click', () => { ul.hidden = !ul.hidden; });
   head.appendChild(show);
-  box.append(head, ul);
+  box.append(head);
+  if (readEstimate) {
+    for (const r of rows) {
+      if (r.kind === 'mailbox' && r.state === 'still_reading') box.appendChild(readChooser(r.source_key, r.name, { sb, el, readEstimate, refreshBrain }));
+    }
+  }
+  box.appendChild(ul);
+}
+
+// CHOOSE HOW THE OLDER MAIL IS READ (seat read-approval, 2026-10-24). Nothing older than the connection is read until
+// the owner presses one of these. Findable: each message is fingerprinted so it can be found by meaning, no AI reads it.
+// Understand: the sorting model reads it as it reads new mail. The balance is checked before the press is offered; the
+// AI meter itself still refuses any call once the balance runs out.
+const usd = (n) => '$' + (Number(n) < 10 ? Number(n || 0).toFixed(2) : Math.round(Number(n)).toLocaleString('en-US'));
+const WINDOWS = [[6, 'the last 6 months'], [18, 'the last 18 months'], [36, 'the last 3 years'], [null, 'all of it']];
+function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrain }) {
+  const box = el('div', 'read-choose');
+  const note = el('p', 'quiet working no-late');
+  note.textContent = `Working out what reading the older mail of ${name} would cost`;
+  box.appendChild(note);
+  (async () => {
+    const first = await readEstimate({ source_key: sourceKey }).catch(() => null);
+    const e0 = first?.ok === true && first.estimate?.ok === true ? first.estimate.sources?.[0] : null;
+    const plan = e0?.read_plan;
+    // Not the owner, no figure, or nothing waits: no choices here (the line above already says what is read).
+    if (!e0 || !plan || e0.state === 'no_count') { box.remove(); return; }
+    const runs = await Promise.all(WINDOWS.map(([m]) => m === null ? first
+      : readEstimate({ source_key: sourceKey, months: m }).catch(() => null)));
+    const balance = Number(first.balance?.balance_left_usd ?? first.estimate?.balance?.balance_left_usd);
+    const known = Number.isFinite(balance);
+    const from = (k) => (plan[k] ? new Date(plan[k] === '-infinity' ? -8.64e15 : plan[k]).getTime() : null);
+    const understoodFrom = from('understand_from');
+    const findableFrom = from('findable_from');
+    const monthsAgo = (m) => (m === null ? -8.64e15 : Date.now() - m * 30.44 * 86400000);
+    const choices = [];
+    if ((findableFrom === null || findableFrom > -8.64e15) && understoodFrom !== -8.64e15) {
+      const p = e0.findable_usd;
+      if (p !== null && p !== undefined) choices.push({ mode: 'findable', months: null, price: Number(p),
+        label: `Make all of it findable (about ${usd(p)})` });
+    }
+    WINDOWS.forEach(([m, words], i) => {
+      if (understoodFrom !== null && understoodFrom <= monthsAgo(m)) return;
+      const s = runs[i]?.ok === true && runs[i].estimate?.ok === true ? runs[i].estimate.sources?.[0] : null;
+      if (!s || s.first_read_usd === undefined) return;
+      choices.push({ mode: 'understand', months: m, price: Number(s.first_read_usd),
+        label: `Have it understand ${words} (about ${usd(s.first_read_usd)}, between ${usd(s.first_read_low_usd)} and ${usd(s.first_read_high_usd)})`,
+        alt: s.first_read_alt_usd });
+    });
+    if (!choices.length) { box.remove(); return; }
+    note.className = 'quiet';
+    note.textContent = `Older mail of ${name}: choose how the Tool reads it. Findable means you can find any of it by meaning; `
+      + 'no AI reads it, so it is not sorted or summarized and its files are not read. Understanding reads it the way new mail is read.'
+      + (known ? ` Your AI balance is ${usd(balance)}.` : '');
+    const acts = el('div', 'actions');
+    const out = el('p', 'quiet');
+    const buttons = [];
+    for (const c of choices) {
+      const b = el('button', c.mode === 'findable' ? 'go' : 'go ghost');
+      b.type = 'button';
+      b.style.marginTop = '0';
+      b.textContent = c.label;
+      const over = known && c.price > balance;
+      b.disabled = over;
+      if (over) b.title = `More than your AI balance of ${usd(balance)}`;
+      b.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        buttons.forEach((x) => { x.disabled = true; });
+        out.className = 'working';
+        out.textContent = `Starting: ${c.label.split(' (')[0].toLowerCase()}`;
+        try {
+          const { data, error } = await sb.rpc('source_read_approve', { p_source_key: sourceKey, p_mode: c.mode, p_months: c.months, p_confirm: true });
+          if (error) throw error;
+          out.className = 'quiet';
+          out.textContent = data?.note ?? 'It did not start, and no reason was given.';
+          if (data?.ok) await refreshBrain();
+          else buttons.forEach((x, i) => { x.disabled = known && choices[i].price > balance; });
+        } catch (e) {
+          out.className = 'quiet';
+          out.textContent = `It did not start: ${e?.message ?? e}`;
+          buttons.forEach((x, i) => { x.disabled = known && choices[i].price > balance; });
+        }
+      });
+      buttons.push(b);
+      acts.appendChild(b);
+    }
+    box.append(acts, out);
+    const alt = choices.find((c) => c.mode === 'understand' && c.months === null)?.alt;
+    const tail = el('p', 'quiet');
+    tail.textContent = (alt !== undefined && alt !== null
+      ? `A cheaper model would understand all of it for about ${usd(alt)}, but it has not passed the sorting test yet, so it is not offered. ` : '')
+      + (choices.some((c) => known && c.price > balance) ? 'A choice that costs more than your balance cannot be pressed until the balance is topped up. ' : '')
+      + 'New mail keeps being read as usual whatever you choose.';
+    box.appendChild(tail);
+  })();
+  return box;
 }
