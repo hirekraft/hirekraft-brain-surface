@@ -36,6 +36,38 @@ function said() {
 }
 function markSaid() { saidHere = true; try { localStorage.setItem(SAID_KEY, "1"); } catch (_) { /* this browser keeps nothing */ } }
 
+// COPIES OF ONE DOCUMENT (seat versions-reuse, 2026-10-23). The brain groups near-identical files and attachments into one
+// family and a find shows each family once; this line says whether this is the latest copy and how many others she can open.
+// What changed compares it with the copy just before or after it, reading both through the door like any item she keeps.
+function familyLine(ctx, main, it) {
+  const f = it.family;
+  if (!f || Number(f.copies) < 2) return;
+  const others = Number(f.copies) - 1;
+  const line = el("p", "find-meta find-family");
+  line.textContent = (f.is_latest ? "Latest copy" : "Not the latest: a newer copy is dated " + fmtDate(f.latest_date, "day"))
+    + "; " + others + (others === 1 ? " other copy" : " other copies") + " you can open.";
+  main.appendChild(line);
+  const o = f.other;
+  if (!o || !Array.isArray(o.piece_ids) || !o.piece_ids.length) return;
+  const b = el("button", "go ghost find-changed"); b.type = "button"; b.textContent = "What changed";
+  const out = el("div", "find-changes"); out.setAttribute("aria-live", "polite");
+  b.addEventListener("click", async () => {
+    b.disabled = true;
+    const wait = el("p", "answer-wait working"); wait.textContent = "Comparing the two copies.";
+    out.replaceChildren(wait);
+    const mine = { key: it.key, kind: it.kind, what: it.what, title: it.title, where: it.where, date: it.date,
+      piece_ids: Array.isArray(f.self_piece_ids) && f.self_piece_ids.length ? f.self_piece_ids : it.piece_ids };
+    const theirs = { key: o.key, kind: it.kind, what: it.what, title: (o.newer ? "The newer copy" : "The earlier copy"), where: it.where, date: o.date, piece_ids: o.piece_ids };
+    const res = await ctx.askBody({ question: "What changed between these two copies?", over: { ask: "changes", items: o.newer ? [theirs, mine] : [mine, theirs] } });
+    b.disabled = false;
+    const sub = el("div", "find-answer");
+    out.replaceChildren(sub);
+    if (!res || res.ok !== true) { const p = el("p", "state stalled"); p.textContent = res?.error || "The copies could not be compared just now. Press it again."; sub.appendChild(p); return; }
+    ctx.renderAsk(sub, res, { q: "What changed between these two copies?" });
+  });
+  main.append(b, out);
+}
+
 async function signal(ctx, rows) {
   if (!rows.length) return null;
   try { const { data, error } = await ctx.rpc("find_signal_add", { p_signals: rows }); return error ? null : data; } catch (_) { return null; }
@@ -92,6 +124,7 @@ export function foundCard(slot, body, ctx) {
       it.places > 1 ? "in " + it.places + " mailboxes" : "", it.linked ? "linked to them" : ""].filter(Boolean).join(" · ");
     const snip = el("p", "find-snip"); snip.textContent = String(it.snippet || "");
     main.append(top, meta, snip);
+    familyLine(ctx, main, it);
     li.append(lab, main);
     const toggle = () => { keep.set(it.key, box.checked); li.classList.toggle("off", !box.checked); if (!box.checked) lesson(ctx, li); };
     box.addEventListener("change", toggle);
