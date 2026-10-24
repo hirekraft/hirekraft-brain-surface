@@ -11,8 +11,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // ONE WAY THE SCREEN WRITES A DATE, and the one time zone (seat calendar-contacts, 2026-10-22): fill/dates.js.
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
-import { removeControl, drawReadView } from "./sources.js?v=2026-10-23-sources-basics"; // remove a source, what the Tool has read (seat sources-basics)
-function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain }; }
+import { removeControl, drawReadView } from "./sources.js?v=2026-10-24-read-approval"; // remove a source, what the Tool has read (seat sources-basics)
+function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-22-dates";
@@ -1778,7 +1778,11 @@ async function readCostNote(stage, groupKey) {
       + `Once a mailbox is pointed at, it is counted first (free, nothing is read) and the box can tell you the figure: ask 'what would it cost to read this mailbox back to 2024?'.`
     : `Reading a drive costs about ${perItem(e.per_file_usd)} a file, measured from your own reading; pictures and video are not read and cost nothing.`);
   if (!line) { n.remove(); return; }
-  n.textContent = line + ' Today reading starts as soon as a source is connected; approving the figure first is the next step.';
+  // Superseded 2026-10-24 (seat read-approval): 'Today reading starts as soon as a source is connected; approving the
+  // figure first is the next step.' A mailbox now holds its older mail until the owner chooses; a drive does not yet.
+  n.textContent = line + (groupKey === 'email'
+    ? ' When a mailbox is connected, new mail is read from then on; its older mail waits until you choose, on the Brain tab, whether to make it findable or have it understood, each with its price.'
+    : ' A drive is still read in full as soon as it is connected; choosing first is built for mailboxes so far.');
 }
 
 // Loose files: the owner picks files; this page counts them and their kinds (nothing is uploaded to count them) and
