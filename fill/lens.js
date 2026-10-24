@@ -19,7 +19,7 @@ import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind,
 import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-23-watches";
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
-import { foundCard } from "./find.js?v=2026-10-23-watches"; // find first, then work on what was found (seat find-first)
+import { foundCard } from "./find.js?v=2026-10-24-versions-reuse"; // find first, then work on what was found (seat find-first)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-22-dates"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-22-dates"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
@@ -2456,7 +2456,37 @@ function renderAsk(slot, body, opts) {
   wideButtons(slot);
   markNote(slot);
   costLine(slot, body);
+  reusedLine(slot, body, opts);
   answerActions(slot, body, opts);
+}
+// GIVEN AGAIN (seat versions-reuse, 2026-10-23, decision 1011 item 6). lens-ask v38 may answer a question nearly the same as
+// one answered before for someone with exactly her access, when nothing that answer read has changed since: it comes back at
+// once and costs nothing. Said under the answer, with one press to have it worked out again.
+function reusedLine(slot, body, opts) {
+  const r = body && body.reused;
+  if (!r) return;
+  const q = (opts && opts.q) || slot.closest(".answer-turn")?.querySelector(".answer-asked")?.textContent || "";
+  const box = el("div", "ans-reused");
+  const p = el("p", "quiet");
+  p.textContent = "Answered " + String(r.when || "earlier") + "; nothing it used has changed since, so it is shown again at no cost.";
+  box.appendChild(p);
+  if (q.trim()) {
+    const b = el("button", "go ghost");
+    b.type = "button";
+    b.textContent = "Ask fresh";
+    b.title = "Work this answer out again from your records";
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      const wait = el("p", "quiet working"); wait.textContent = "Asking fresh. This takes about 10 to 30 seconds.";
+      box.appendChild(wait);
+      const res = await askBody({ question: q, tz: zone(), plan_first: true, fresh: true });
+      if (!res || res.ok !== true) { wait.classList.remove("working"); wait.textContent = (res && res.error) || "The fresh answer could not be had just now."; b.disabled = false; return; }
+      slot.innerHTML = "";
+      renderAsk(slot, res, opts);
+    });
+    box.appendChild(b);
+  }
+  slot.appendChild(box);
 }
 // WHAT THIS ANSWER COST (seat model-costs, 2026-10-22): one quiet grey line under the answer, owner only. lens-ask
 // puts the cost on the owner's replies only, so nobody else ever receives it. Less than a cent is said in words.
@@ -2465,7 +2495,8 @@ function costLine(slot, body) {
   const c = body && body.cost;
   if (!c || typeof c.usd !== "number") return;
   const p = el("p", "quiet ans-cost");
-  p.textContent = (c.usd < 0.005 ? "This answer cost less than a cent." : "This answer cost $" + c.usd.toFixed(2) + ".")
+  p.textContent = c.reused === true ? "Given again: no AI was asked, so it cost nothing" + (typeof c.saved_usd === "number" && c.saved_usd >= 0.005 ? " (the first time it cost $" + c.saved_usd.toFixed(2) + ")." : ".")
+    : (c.usd < 0.005 ? "This answer cost less than a cent." : "This answer cost $" + c.usd.toFixed(2) + ".")
     + (Number(c.unpriced_calls) > 0 ? " Part of the work for it has no price yet." : "");
   slot.appendChild(p);
 }
