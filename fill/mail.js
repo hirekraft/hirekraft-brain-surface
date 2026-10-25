@@ -699,6 +699,8 @@ function actions(t) {
   };
   btn('Answer', true, () => { note.textContent = ''; convoFor(t, true).start('reply'); });
   btn('Forward', false, () => { note.textContent = ''; convoFor(t, true).start('forward'); });
+  // FROM AN EMAIL (seat thoughtgram, 2026-10-25): a thought linked to this email and its topic, said or typed in the box.
+  if (C.thought) btn('Add a thought', false, () => { note.textContent = ''; C.thought({ source: chosen, source_id: open && open.thread ? open.thread.thread_id : '', subject: t.subject || '' }); });
   btn('Ask about this', false, () => {
     const i = document.getElementById('ask-input');
     if (i) i.focus();
