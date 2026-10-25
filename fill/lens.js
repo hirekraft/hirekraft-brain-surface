@@ -11,7 +11,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // ONE WAY THE SCREEN WRITES A DATE, and the one time zone (seat calendar-contacts, 2026-10-22): fill/dates.js.
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
-import { removeControl, drawReadView } from "./sources.js?v=2026-10-24-read-approval"; // remove a source, what the Tool has read (seat sources-basics)
+import { removeControl, drawReadView } from "./sources.js?v=2026-10-25-pace-and-boundary"; // remove a source, what the Tool has read (seat sources-basics)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
