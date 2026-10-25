@@ -15,11 +15,12 @@ import { removeControl, drawReadView } from "./sources.js?v=2026-10-25-pace-and-
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-22-dates";
-import { initBox, drawBox, speakAnswer } from "./box.js?v=2026-10-23-watches";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-25-thoughtgram";
+import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-25-thoughtgram";
+import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts } from "./thoughts.js?v=2026-10-25-thoughtgram"; // thoughtgrams and the Thoughts tab (seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
-import { foundCard } from "./find.js?v=2026-10-24-versions-reuse"; // find first, then work on what was found (seat find-first)
+import { foundCard } from "./find.js?v=2026-10-25-thoughtgram"; // find first, then work on what was found (seat find-first)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-22-dates"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-22-dates"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
@@ -312,6 +313,8 @@ function renderWho() {
   // What her watches found since she last looked, said once in the conversation (seat watches); nothing when nothing is new.
   initWatches({ sb, el, $, openPanel });
   showWatches().catch(() => {});
+  // A call that just ended: the consultant asks once whether to leave a thought on it (seat thoughtgram).
+  afterCall().catch(() => {});
   // Owner tabs (Security, Money) are the owner's. Hidden is courtesy; the brain refuses anyone else.
   // 2026-10-12 seat runway: was a lookup of the Security tab by name, so a second owner tab would have shown to
   // everyone; now every TABS entry marked owner is hidden for anyone without all access.
@@ -2921,6 +2924,7 @@ async function ask(question, files) {
     // Save as test and Teach are drawn by renderAsk for the owner (seat teach-process). lastAsked is still the
     // previous question here, so the test form knows when this one was a follow-on.
     renderAsk(slot, body, { q, follows: lastAsked });
+    afterAnswer(q, body, slot);   // a 'why did we' with no thought of hers under it: said once (seat thoughtgram)
     drawBox();   // the top box now says it continues this conversation
     speakAnswer(slot);   // read aloud when she switched it on (box.js); never for a reopened, kept answer
     lastAsked = q;
@@ -3614,8 +3618,8 @@ function goto(id, key) {
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
     import("./ledger.js?v=2026-10-22-dates").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
-  if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); }
-  const tabNow = id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : 'brain';
+  if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); }
+  const tabNow = id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : 'brain';
   markTab(tabNow);
   document.body.dataset.tab = tabNow;
   // Remembered so the Tool opens where she was (seat conversation-panel); first-run screens are not tabs.
@@ -3632,7 +3636,8 @@ function goto(id, key) {
 // Contacts), then Brain, Chats, Security, Systems, Loose files. Owner-only tabs are shown once the reading says
 // she is an owner (Security: seat security-tab, 2026-10-08; Money: seat runway, 2026-10-10).
 const GROUP_TAB = (k, label) => ({ key: k, label: label ?? GROUPS.find((g) => g.key === k).label });
-const TABS = [GROUP_TAB('email', 'Mail'), { key: 'work', label: 'Work' }, { key: 'money', label: 'Money', owner: true },
+// THE THOUGHTS TAB (seat thoughtgram, 2026-10-25, decision 1017): beside Mail, a client by topic; drawn by fill/thoughts.js.
+const TABS = [GROUP_TAB('email', 'Mail'), { key: 'thoughts', label: 'Thoughts' }, { key: 'work', label: 'Work' }, { key: 'money', label: 'Money', owner: true },
   GROUP_TAB('drives', 'Drives'), GROUP_TAB('calendar'), GROUP_TAB('contacts'),
   { key: 'brain', label: 'Brain' }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
   GROUP_TAB('systems'), GROUP_TAB('loose'),
@@ -3640,10 +3645,10 @@ const TABS = [GROUP_TAB('email', 'Mail'), { key: 'work', label: 'Work' }, { key:
   { key: 'ai', label: 'AI', owner: true }];
 const TAB_KEY = 'tool.tab';
 // The daily tabs: on a phone these sit in the bottom bar; the rest go under More (seat phone, 2026-10-13).
-const DAY_TABS = ['email', 'work', 'drives', 'calendar', 'contacts'];
+const DAY_TABS = ['email', 'work', 'drives', 'calendar', 'contacts'];   // Thoughts sits under More on a phone: a seventh slot clipped its name and Calendar's (seat thoughtgram, measured at 390 px)
 function goTab(key) {
   if (key === 'brain') goto('s-summary'); else if (key === 'work') goto('s-work');
-  else if (key === 'security') goto('s-security'); else if (key === 'money') goto('s-money'); else if (key === 'chats') goto('s-chats'); else goto('s-lens', key);
+  else if (key === 'security') goto('s-security'); else if (key === 'money') goto('s-money'); else if (key === 'chats') goto('s-chats'); else if (key === 'thoughts') goto('s-thoughts'); else goto('s-lens', key);
 }
 
 function markTab(key) {
@@ -4346,12 +4351,18 @@ initMail({
   // with the same two functions as the Ask bar, so there is one way an answer looks and is kept.
   renderAsk, keepTurn, zone,
   scopeChanged: () => drawBox(),
+  thought: (email) => thoughtOnEmail(email),   // Add a thought on an open email (seat thoughtgram)
 });
+// THOUGHTGRAMS (seat thoughtgram, 2026-10-25): what fill/thoughts.js needs from this page.
+initThoughts({ sb, el, $, openPanel, askBody, startThought, foundCard, findCtx,
+  goThoughts: (id) => { userMoved = true; goto('s-thoughts', id); } });
 // THE ONE BOX (seat one-box, 2026-10-08): what it needs from this page, and nothing it does itself.
 initBox({
   el, ask, hear: hearSpoken,
   // seat watches 2026-10-23: "tell me when ...", "what are you watching", "stop watching ..." are kept as watches, not asked.
   watch: (t) => watchFromBox(t),
+  // seat thoughtgram: "note for the brain: ..." opens the thought card; a thought left in thought mode is read back there.
+  thought: (t) => thoughtFromBox(t), keepThought: (t, o) => keepThought(t, o),
   // seat add-files: whether a question is on its way (a question sent now would be dropped), and the one connect flow.
   busy: () => asking,
   connect: () => { userMoved = true; openConnect(); },
