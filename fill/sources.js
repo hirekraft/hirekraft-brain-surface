@@ -142,7 +142,8 @@ export async function drawReadView(box, { sb, el, escape, badgeLine, fmtWindow, 
   box.append(head);
   if (readEstimate) {
     for (const r of rows) {
-      if (r.kind === 'mailbox' && r.state === 'still_reading') box.appendChild(readChooser(r.source_key, r.name, { sb, el, readEstimate, refreshBrain }));
+      // A drive connected from 2026-10-25 waits the same way (seat pace-and-boundary): its older files, by last change.
+      if ((r.kind === 'mailbox' || r.kind === 'drive') && r.state === 'still_reading') box.appendChild(readChooser(r.source_key, r.name, { sb, el, readEstimate, refreshBrain }, r.kind));
     }
   }
   box.appendChild(ul);
@@ -154,10 +155,14 @@ export async function drawReadView(box, { sb, el, escape, badgeLine, fmtWindow, 
 // AI meter itself still refuses any call once the balance runs out.
 const usd = (n) => '$' + (Number(n) < 10 ? Number(n || 0).toFixed(2) : Math.round(Number(n)).toLocaleString('en-US'));
 const WINDOWS = [[6, 'the last 6 months'], [18, 'the last 18 months'], [36, 'the last 3 years'], [null, 'all of it']];
-function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrain }) {
+// A drive is priced as a whole (its files are counted, not windowed by month), so it offers findable or understand, all of it.
+function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrain }, kind = 'mailbox') {
+  const drive = kind === 'drive';
+  const older = drive ? 'older files' : 'older mail';
+  const windows = drive ? [[null, 'all of it']] : WINDOWS;
   const box = el('div', 'read-choose');
   const note = el('p', 'quiet working no-late');
-  note.textContent = `Working out what reading the older mail of ${name} would cost`;
+  note.textContent = `Working out what reading the ${older} of ${name} would cost`;
   box.appendChild(note);
   (async () => {
     const first = await readEstimate({ source_key: sourceKey }).catch(() => null);
@@ -165,7 +170,7 @@ function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrain }) {
     const plan = e0?.read_plan;
     // Not the owner, no figure, or nothing waits: no choices here (the line above already says what is read).
     if (!e0 || !plan || e0.state === 'no_count') { box.remove(); return; }
-    const runs = await Promise.all(WINDOWS.map(([m]) => m === null ? first
+    const runs = await Promise.all(windows.map(([m]) => m === null ? first
       : readEstimate({ source_key: sourceKey, months: m }).catch(() => null)));
     const balance = Number(first.balance?.balance_left_usd ?? first.estimate?.balance?.balance_left_usd);
     const known = Number.isFinite(balance);
@@ -179,7 +184,7 @@ function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrain }) {
       if (p !== null && p !== undefined) choices.push({ mode: 'findable', months: null, price: Number(p),
         label: `Make all of it findable (about ${usd(p)})` });
     }
-    WINDOWS.forEach(([m, words], i) => {
+    windows.forEach(([m, words], i) => {
       if (understoodFrom !== null && understoodFrom <= monthsAgo(m)) return;
       const s = runs[i]?.ok === true && runs[i].estimate?.ok === true ? runs[i].estimate.sources?.[0] : null;
       if (!s || s.first_read_usd === undefined) return;
@@ -189,8 +194,9 @@ function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrain }) {
     });
     if (!choices.length) { box.remove(); return; }
     note.className = 'quiet';
-    note.textContent = `Older mail of ${name}: choose how the Tool reads it. Findable means you can find any of it by meaning; `
-      + 'no AI reads it, so it is not sorted or summarized and its files are not read. Understanding reads it the way new mail is read.'
+    note.textContent = `${drive ? 'Older files' : 'Older mail'} of ${name}: choose how the Tool reads ${drive ? 'them' : 'it'}. Findable means you can find any of it by meaning; `
+      + (drive ? 'no AI reads it, so it is not sorted or summarized, and a scanned file waits for understanding. Understanding reads the files the way new files are read.'
+        : 'no AI reads it, so it is not sorted or summarized and its files are not read. Understanding reads it the way new mail is read.')
       + (known ? ` Your AI balance is ${usd(balance)}.` : '');
     const acts = el('div', 'actions');
     const out = el('p', 'quiet');
@@ -230,7 +236,7 @@ function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrain }) {
     tail.textContent = (alt !== undefined && alt !== null
       ? `A cheaper model would understand all of it for about ${usd(alt)}, but it has not passed the sorting test yet, so it is not offered. ` : '')
       + (choices.some((c) => known && c.price > balance) ? 'A choice that costs more than your balance cannot be pressed until the balance is topped up. ' : '')
-      + 'New mail keeps being read as usual whatever you choose.';
+      + (drive ? 'New and changed files keep being read as usual whatever you choose.' : 'New mail keeps being read as usual whatever you choose.');
     box.appendChild(tail);
   })();
   return box;
