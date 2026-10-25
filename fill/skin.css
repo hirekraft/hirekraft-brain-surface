@@ -1352,6 +1352,37 @@ a.find-title:hover { text-decoration: underline; }
 .watch-watches .find-meta { margin-top: 2px; }
 .watch-add { margin-top: calc(var(--u) * 3); }
 
+/* Thoughtgrams and the Thoughts tab (seat thoughtgram, 2026-10-25, decision 1017: an early concept, kept plain to revise). */
+.thought-text { display: block; width: 100%; box-sizing: border-box; margin-top: calc(var(--u) * 1.5); font: inherit; color: var(--ink);
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: calc(var(--u) * 1.5) calc(var(--u) * 2); resize: vertical; }
+.thought-out { margin-top: calc(var(--u) * 1.5); }
+.thought-out p, .thought-pick p { margin: 4px 0 0; }
+.thought-pick { margin-top: calc(var(--u) * 1.5); }
+.thought-newtopic { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: calc(var(--u) * 1.25) calc(var(--u) * 2); min-height: 40px; box-sizing: border-box; max-width: 100%; margin: calc(var(--u) * 1) calc(var(--u) * 1) 0 0; }
+.thought-teach { color: var(--ink-3); }
+.thought-top { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; justify-content: space-between; margin-bottom: calc(var(--u) * 2); }
+.thought-views { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1); }
+.thought-views .go { margin-top: 0; }
+.thought-views .go[aria-pressed='true'] { background: var(--act-soft); color: var(--ink); border-color: var(--ink-3); }
+.thought-top > .go { margin-top: 0; }
+.thought-list, .thought-thread, .thought-open { list-style: none; margin: 0; padding: 0; }
+.thought-open { list-style: disc; padding-left: 1.25em; }
+.thought-card, .thought-item { padding: calc(var(--u) * 2.5) 0; border-top: 1px solid var(--line); }
+.thought-card:last-child, .thought-item:last-child { border-bottom: 1px solid var(--line); }
+.thought-card p, .thought-item p { margin: 4px 0 0; }
+.thought-title { font: inherit; font-weight: var(--w-mid); color: var(--act); background: none; border: 0; padding: 0; text-align: left; cursor: pointer; min-height: 32px; }
+.thought-said { white-space: pre-wrap; }
+.thought-superseded .thought-said, .thought-retracted .thought-said { color: var(--ink-3); }
+.thought-picture { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); padding: calc(var(--u) * 2) calc(var(--u) * 2.5); margin: calc(var(--u) * 1.5) 0; }
+.thought-picture p { margin: 4px 0 0; }
+.thought-h { margin: calc(var(--u) * 2) 0 0; }
+.thought-about { margin-top: calc(var(--u) * 3); }
+.thought-fold { margin-top: calc(var(--u) * 2); }
+.thought-fold summary { cursor: pointer; color: var(--act); min-height: 32px; }
+.thought-intro p { margin: 8px 0 0; max-width: 70ch; }
+.thought-back { margin-top: 0; }
+
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
    for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
@@ -1429,5 +1460,10 @@ a.find-title:hover { text-decoration: underline; }
   /* Nothing pushes the page sideways: long words and addresses wrap, media keep to the column. */
   #main { overflow-wrap: anywhere; }
   #main img, #main video, #main iframe, #main pre, #main svg { max-width: 100%; }
+  /* seat thoughtgram 2026-10-25: the Thoughts tab and the thought card, thumb-sized. */
+  .thought-title, .thought-fold summary { min-height: 44px; display: flex; align-items: center; }
+  .thought-views .go, .thought-top > .go, .thought-turn .go, .thought-card .go, .thought-item .go, .thought-picture ~ .actions .go { min-height: 44px; }
+  .thought-newtopic { width: 100%; min-height: 44px; margin-right: 0; }
+  .thought-top > .go { width: 100%; }
   #main pre { overflow-x: auto; }
 }
