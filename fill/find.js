@@ -18,7 +18,7 @@
 
 import { fmtDate } from "./dates.js?v=2026-10-22-dates";
 
-const KIND = { email: "Email", attachment: "Attachment", file: "File", record: "Record", chat: "Chat", meeting: "Meeting", piece: "Item" };
+const KIND = { email: "Email", attachment: "Attachment", file: "File", record: "Record", chat: "Chat", meeting: "Meeting", thought: "Your thought", piece: "Item" };
 const SENS = { hr: "people", comp: "pay", compensation: "pay", legal: "legal", finance: "money", financial: "money", restricted: "restricted", personal: "personal" };
 const LABELS = ["Client mail", "Supplier", "Invoice or payment", "Contract", "Candidate or contractor", "Internal", "Personal", "Not business"];
 const SAID_KEY = "tool.find.learn-said";
