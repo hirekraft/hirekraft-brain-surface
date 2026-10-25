@@ -39,6 +39,19 @@
 
 let C = null;
 const off = { mailbox: null, email: null };   // which chip she removed, by what it named
+// LEAVING A THOUGHT (seat thoughtgram, 2026-10-25, decisions 1015-1017). Leave a thought (the + menu in both boxes, the
+// Thoughts tab, an open email) puts the box in thought mode, shown as a chip: what she then says or types is not asked,
+// it goes to the thought card (fill/thoughts.js) to be read back, corrected and kept. Removing the chip asks again.
+let thinking = null;      // { email?, topic? } while she is leaving a thought
+let thinkHeard = false;   // she spoke it (the words are kept, never the audio)
+const THINK_PH = 'Say or type your thought. It is kept for you, not answered';
+export function startThought(opts, which) {
+  thinking = opts && typeof opts === 'object' ? opts : {};
+  thinkHeard = false;
+  drawBox();
+  const i = $(which === 'panel' ? '#panel-input' : '#ask-input');
+  if (i) i.focus();
+}
 
 const DEFAULT_PH = 'Ask or tell the Tool anything';
 // Used only to read a mailbox she names ("open accounting@"), never to decide what she means.
@@ -75,8 +88,11 @@ export function drawBox() {
   const sc = scope();
   host.innerHTML = '';
   if (sc.mailbox) host.appendChild(chip('in ' + sc.mailbox.address, () => { off.mailbox = sc.mailbox.key; }));
-  if (sc.email) host.appendChild(chip('about this email', () => { off.email = sc.raw.threadKey; }));
-  input.placeholder = sc.email ? 'Ask about this email, have it answered, or find another'
+  if (sc.email && !thinking) host.appendChild(chip('about this email', () => { off.email = sc.raw.threadKey; }));
+  if (thinking) host.appendChild(chip(thinking.email ? 'a thought on this email' : thinking.topicTitle ? 'a thought on ' + thinking.topicTitle : 'leaving a thought', () => { thinking = null; }));
+  const pin = $('#panel-input');
+  if (pin) pin.placeholder = thinking ? THINK_PH : (pin.dataset.ph || (pin.dataset.ph = pin.placeholder));
+  input.placeholder = thinking ? THINK_PH : sc.email ? 'Ask about this email, have it answered, or find another'
     : C.continuing && C.continuing() ? 'Continue the conversation on the right, or press New there' : DEFAULT_PH;
 }
 
@@ -161,6 +177,9 @@ function submit(text, fromPanel) {
     return;
   }
   stopSpeaking();
+  // A THOUGHT SHE LEAVES (seat thoughtgram): in thought mode, or said as "note for the brain: ...", it is kept, not asked.
+  if (thinking) { const o = thinking; thinking = null; const heard = thinkHeard; thinkHeard = false; drawBox(); if (C.keepThought) C.keepThought(t, Object.assign({}, o, { heard })); return; }
+  if (C.thought && C.thought(t)) return;
   // A WATCH SHE ASKS FOR (seat watches, 2026-10-23): "tell me when anyone mentions a late payment" is kept as a watch
   // in the brain, not answered; "what are you watching" lists them. Everything else goes on as before.
   if (C.watch && C.watch(t)) return;
@@ -339,6 +358,7 @@ function openMenu(which) {
     i.addEventListener('click', () => { closeMenus(); act(); });
     m.appendChild(i);
   };
+  item('Leave a thought', 'Say or type what you think about something you are working on; kept with its topic, for you only', () => startThought({}, which));
   item('Add a file', 'A spreadsheet, document, PDF or slides', () => { addFrom = which; $('#add-file')?.click(); });
   item('Add a picture or screenshot', 'You can also paste a screenshot, or drop files on the conversation', () => { addFrom = which; $('#add-picture')?.click(); });
   item('Connect something', 'Mail, drives, calendar, or a system you use', () => { if (C.connect) C.connect(); });
@@ -435,6 +455,7 @@ function pressMic(m) {
   stopSpeaking();
   if (mic.on) { if (m === at) stopMic(); return; }
   micSaid('', ''); at = m;
+  if (thinking) thinkHeard = true;
   if (WAY === 'live' && !liveFailed) startLive();
   else if (CAN_RECORD) startRecord();
   else micSaid('This browser cannot listen. Type your question, or open the Tool in Chrome, Edge or Safari, on a computer or your phone, to speak it.', 'stalled');
