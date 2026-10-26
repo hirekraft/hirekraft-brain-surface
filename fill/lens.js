@@ -21,6 +21,7 @@ import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer,
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
 import { foundCard } from "./find.js?v=2026-10-25-thoughtgram"; // find first, then work on what was found (seat find-first)
+import { closeCard } from "./close.js?v=2026-10-26-month-end"; // the month-end check, corrected cell by cell (seat month-end)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-22-dates"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-22-dates"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
@@ -2761,6 +2762,8 @@ function drawAsk(slot, body) {
   if (body.state === "plan" && body.plan) { planCard(slot, body, drawAsk.opts); return; }
   // A found set (lens-ask, seat find-first): the material itself as cards, checked; one press works on what is kept.
   if (body.state === "found" && body.found) { foundCard(slot, body, findCtx(drawAsk.opts)); return; }
+  // The month-end check (lens-ask v40, seat month-end): the table from the books, mail and files, each cell markable.
+  if (body.state === "answered" && body.close && Array.isArray(body.close.rows)) { closeCard(slot, body, findCtx(drawAsk.opts)); return; }
   const state = body.state;
   // lens-ask v17: an answer from the web or general knowledge is drawn whatever the records gave. `state`
   // still says what the records gave, and the answer says it in its own first sentence.
