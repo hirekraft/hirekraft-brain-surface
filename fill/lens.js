@@ -3731,7 +3731,7 @@ function drawLens() {
   // one press to change. Owner only (lens-ask refuses anyone else; the tab is hidden for them too). Keeps its own state:
   // a reading does not redraw it (OWN_STATE), so an open choice is not lost.
   if (lensKey === 'ai') {
-    import('./ai.js?v=2026-10-23-ai-tab').then((A) => A.drawAI(body, { el, askBody, ask, isOwner: () => !!shape?.viewer?.all_access }))
+    import('./ai.js?v=2026-10-26-ai-tab-plain').then((A) => A.drawAI(body, { el, askBody, ask, isOwner: () => !!shape?.viewer?.all_access }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The AI tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
