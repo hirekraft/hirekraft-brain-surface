@@ -368,6 +368,11 @@ async function drawMine(q) {
     list.appendChild(el("p", "quiet", "Private chats other people brought in (you cannot open these until they share them): " +
       r.private_counts.map((p) => `${p.person} ${p.chats}`).join(", ") + "."));
   }
+  // MADE FROM LOCKED STAYS LOCKED (seat locks-and-basics, decision 1022): shared chats built from things you cannot open
+  // are counted, never silently missing.
+  const locked = Number(r.shared_locked || 0);
+  if (locked) list.appendChild(el("p", "quiet", `${locked} shared ${locked === 1 ? "chat is" : "chats are"} not shown to you: ` +
+    `${locked === 1 ? "it was" : "they were"} made from emails or files you cannot open yourself.`));
 }
 
 async function openChat(id) {
@@ -379,14 +384,49 @@ async function openChat(id) {
   card.appendChild(el("h3", null, r.title));
   card.appendChild(el("p", "quiet", [r.mine ? (r.shared_at ? `Shared with the company ${day(r.shared_at)}` : "Private to you") : `Shared by ${r.brought_by}`,
     CAME[r.came_from] || r.came_from, r.exact ? "exact text" : "condensed", day(r.started_at || r.brought_in_at)].filter(Boolean).join(" · ")));
+  if (r.mine) {
+    const n = Number(r.sources_known || 0);
+    const line = r.made_from_state === "recorded"
+      ? (n ? `Made from ${n} ${n === 1 ? "item" : "items"} HireKraft found for you. Anyone you share it with sees it only if they can open all of them.` : "")
+      : r.made_from_state === "untied"
+        ? "Saved from your AI assistant. HireKraft could not tie it item by item to what it handed over, so sharing it asks you first."
+        : "HireKraft does not know what this was made from, so sharing it asks you first.";
+    if (line) card.appendChild(el("p", "quiet", line + (r.past_lock ? " You shared it after being shown what is private in it." : "")));
+  }
   const acts = el("div"); acts.style.display = "flex"; acts.style.gap = "8px"; acts.style.margin = "8px 0";
   const msg = el("div");
   if (r.mine) {
     const sh = el("button", r.shared_at ? "go ghost" : "go", r.shared_at ? "Unshare" : "Share with the company"); sh.type = "button";
+    // SHARING SHOWS WHAT IS PRIVATE FIRST (seat locks-and-basics, decision 1022). The brain decides (chat_share): if anyone
+    // it would reach cannot open everything it was made from, or what it was made from is not known, the first press
+    // shares nothing and says what is private and to whom; only "Share anyway" shares it, and that choice is recorded.
     sh.addEventListener("click", async () => {
       sh.disabled = true;
       const s = await rpc("chat_share", { p_chat: id, p_share: !r.shared_at });
-      if (s?.ok) { await openChat(id); drawMine(); } else { sh.disabled = false; said(msg, s?.note || "That did not work.", true); }
+      if (s?.ok) { await openChat(id); drawMine(); return; }
+      sh.disabled = false;
+      if (s?.reason !== "needs_confirm") { said(msg, s?.note || "That did not work.", true); return; }
+      msg.innerHTML = "";
+      const box = el("div", "notice flagged");
+      box.appendChild(el("p", null, "Not shared yet. " + (s.note || "")));
+      const who = Array.isArray(s.private_to) ? s.private_to : [];
+      if (who.length) {
+        box.appendChild(el("p", "quiet", "What is in it that these people cannot open themselves:"));
+        const ul = el("ul"); ul.style.paddingLeft = "1.2em";
+        who.forEach((p) => ul.appendChild(el("li", null, `${p.person}: ${p.items} ${p.items === 1 ? "item" : "items"} (` +
+          (Array.isArray(p.sources) ? p.sources.map((x) => `${x.items} from ${x.source}`).join(", ") : "") + ")")));
+        box.appendChild(ul);
+      }
+      const row2 = el("div"); row2.style.display = "flex"; row2.style.gap = "8px"; row2.style.flexWrap = "wrap";
+      const yes = el("button", "go", "Share anyway"); yes.type = "button";
+      const no = el("button", "go ghost", "Keep it private"); no.type = "button";
+      yes.addEventListener("click", async () => {
+        yes.disabled = true; no.disabled = true;
+        const t = await rpc("chat_share", { p_chat: id, p_share: true, p_confirm: true });
+        if (t?.ok) { await openChat(id); drawMine(); } else { yes.disabled = false; no.disabled = false; said(msg, t?.note || "That did not work.", true); }
+      });
+      no.addEventListener("click", () => { msg.innerHTML = ""; msg.appendChild(el("p", "quiet", "Kept private. Nothing was shared.")); });
+      row2.append(yes, no); box.appendChild(row2); msg.appendChild(box);
     });
     const rm = el("button", "go ghost", "Remove"); rm.type = "button";
     rm.addEventListener("click", async () => {
