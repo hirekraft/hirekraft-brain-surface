@@ -21,8 +21,19 @@
 // accents, the owner's own address book) and each one asks "Same person? Yes / No"; her answer is kept and becomes a rule
 // (a No on two people sharing only a phone number marks that number as shared). The card now also shows the conversations
 // both ways (what the business wrote too), money items from the books, and a plain list of what is not read or not
-// matched yet. "Summarize these" is the one place an AI reads anything here, only when she presses it, over exactly the
-// conversations shown.
+// matched yet.
+//
+// Seat contact-card (2026-10-26, decision 1023, Alex 10:49 PT: "it's not just showing some emails... This is useless"):
+// THE CARD FINDS, THEN THINKS. Decision 996's presentation (the search results ARE the card) is superseded; 996 still
+// decides WHAT is searched. The top of the card now answers, in order: who this person is to the business now (newest
+// evidence wins, each point numbered to its source), what is going on now (open matters, dated, next step), the
+// relationship briefly (a paragraph and dated milestones, who and what is connected), last contact and last meeting, then
+// Prep me for a call and Correct a fact. One click down: conversations one line per conversation, the records, same person?,
+// money, the folded timeline and the sources searched. The summary is one AI reading of exactly what was found (lens-ask
+// body.card), kept with its date for this viewer while what they can open is unchanged, and rebuilt only when something
+// newer about the person arrives or the owner presses Refresh; the owner sees what each build cost. When the business has
+// AI thinking off, the card shows what was found, organized, and a priced Build the summary button. "Summarize these"
+// (seat contacts-match) is retired: the summary at the top is that reading, done once and kept.
 
 import { fmtDate } from "./dates.js?v=2026-10-22-dates";
 
@@ -50,7 +61,7 @@ export function drawContacts(body, c) {
   top.appendChild(line("tab-count", "Anyone you have dealt with, from CATS, HubSpot, mail, drives, Slack, brought-in chats and your own calendar and address book, as they are now."));
   const what = ctx.el("details", "whatis");
   const ws = ctx.el("summary"); ws.textContent = "What is this?"; what.appendChild(ws);
-  what.appendChild(line("quiet", "Type a name, an email address or a company. The Tool searches every connected system the way you would by hand: CATS, HubSpot, every mailbox, every drive, Slack and brought-in chats, by the exact name and every address it knows. It shows the newest of each fact with where and when it came from, says when two sources disagree or a fact is old, and puts everything that happened in one timeline. Records that may be the same person (the same phone number, the same LinkedIn profile, the same name written differently) are matched and shown with a Same person? Yes / No; nothing is joined on a suggestion alone, and your answer is kept. Your own address book counts as your word. No AI is used to build the card."));
+  what.appendChild(line("quiet", "Type a name, an email address or a company. The Tool first finds everything about them the way you would by hand: CATS, HubSpot, every mailbox, every drive, Slack and brought-in chats, by the exact name and every address it knows. Then an AI reads only what was found and writes the top of the card: who they are to you now (the newest evidence wins), what is going on, and how the relationship went, each point with the number of what it rests on. The summary is kept and rebuilt only when something new about them arrives or you press Refresh; the owner sees what each one cost. Conversations, records and every source searched are one press down. Conversations where they were only copied, and files that only mention their name, count for less and stay down there."));
   top.appendChild(what);
   body.appendChild(top);
 
@@ -84,9 +95,11 @@ async function read(args) {
   }
 }
 
+let asked = { query: "", person: null };   // what the card on screen was looked up by: the summary is built for the same
 async function find(q, person) {
   const query = String(q ?? "").trim();
   if (!query && !person) return;
+  asked = { query, person: person ?? null };
   if (query) { try { localStorage.setItem(KEEP, query); } catch (_) { /* this page only */ } }
   const mine = ++seq, here = mount;
   mount.innerHTML = "";
@@ -271,48 +284,146 @@ function maybeSame(c) {
 }
 
 // CONVERSATIONS BOTH WAYS (seat contacts-match): the brain's one conversation gatherer, by every address the card knows,
-// so what the business wrote shows beside what they wrote. Newest conversation first; each says who wrote last. One press
-// asks an AI to summarize exactly these, and only then is anything read by an AI.
-function conversations(c, about) {
+// so what the business wrote shows beside what they wrote; each says who wrote last. ONE LINE PER CONVERSATION (seat
+// contact-card): the brain ranks them by their part in it (they wrote it or it was written to them first, then those they
+// were only copied on), never one line per message. The one-press "Summarize these" is retired (2026-10-26): the summary
+// at the top of the card is that reading.
+function conversations(c) {
   const v = c.conversations;
   if (!v || !Array.isArray(v.threads)) return;
-  mount.appendChild(head4("Conversations (newest first)"));
+  mount.appendChild(head4("Conversations"));
   if (!v.threads.length) { mount.appendChild(line("quiet", String(v.note ?? "No email conversations with them in the last 12 months in what you can see."))); return; }
-  mount.appendChild(line("quiet", ctx.countOf(v.messages_found ?? 0) + " messages in " + ctx.countOf(v.threads_found ?? v.threads.length) + " conversations over the last 12 months, both what they wrote and what your side wrote."));
+  const copied = Number(v.threads_copied_only ?? 0);
+  mount.appendChild(line("quiet", ctx.countOf(v.threads_found ?? v.threads.length) + " conversations over the last 12 months" + (copied ? ", " + ctx.countOf(copied) + " where they were only copied (listed last)" : "") + "."));
   const ul = ctx.el("ul", "members");
   for (const t of v.threads) {
     const li = ctx.el("li"); li.style.padding = "calc(var(--u) * 1) 0"; li.style.borderTop = "1px solid var(--line-2)";
     const span = t.from && t.to && day(t.from) !== day(t.to) ? day(t.from) + " to " + day(t.to) : day(t.to ?? t.from);
-    li.appendChild(line("", String(t.thread ?? "(no subject)")));
-    li.appendChild(line("quiet", [span, ctx.countOf(t.messages ?? 0) + (Number(t.messages) === 1 ? " message" : " messages"),
-      t.newest_by ? "last " + t.newest_by : "", Number(t.mailboxes ?? 0) > 1 ? "in " + ctx.countOf(t.mailboxes) + " mailboxes" : ""].filter(Boolean).join(" · ")));
-    if (t.opening) li.appendChild(line("quiet", String(t.opening).slice(0, 240) + (String(t.opening).length >= 240 ? "..." : "")));
+    li.textContent = String(t.thread ?? "(no subject)") + " · " + [span, ctx.countOf(t.messages ?? 0) + (Number(t.messages) === 1 ? " message" : " messages"),
+      t.newest_by ? "last " + t.newest_by : "", t.role === "copied" ? "they were copied" : ""].filter(Boolean).join(" · ");
     ul.appendChild(li);
   }
   mount.appendChild(ul);
-  if (!ctx.askBody || !ctx.renderAsk) return;
+  if (v.note) mount.appendChild(line("quiet", String(v.note)));
+}
+
+// THE SUMMARY AT THE TOP (seat contact-card, decision 1023). One AI reading of exactly what was found, kept for this viewer.
+// The brain says whether a kept one is fresh, stale (something newer arrived) or not for this access; the business's
+// choice decides whether a missing or stale one builds by itself (thinking on) or waits for Build (finding only).
+const money2 = (n) => { const x = Number(n); return !Number.isFinite(x) ? "" : x < 0.01 ? "under 1 cent" : "$" + x.toFixed(2); };
+function summary(c, slot) {
+  const k = c.kept;
+  const owner = ctx.isOwner();
+  if (k && k.card && (k.state === "fresh" || k.state === "stale")) {
+    drawSummary(slot, k, owner, c);
+    if (k.state === "stale") {
+      const note = line("ai2-small", "Something newer about them arrived" + (c.newest_at ? " (" + day(c.newest_at) + ")" : "") + " after this summary was written.");
+      slot.prepend(note);
+      if (c.thinking) build(c, slot, note);
+    }
+    return;
+  }
+  if (k && k.state === "access_changed") slot.appendChild(line("ai2-small", String(k.note)));
+  if (c.thinking) { build(c, slot); return; }
+  // FINDING ONLY: what was found, organized, and a priced button
+  slot.appendChild(line("ai2-label", "Found about them, newest first"));
+  const ul = ctx.el("ul", "members");
+  for (const r of (c.timeline ?? []).slice(0, 6)) { const li = ctx.el("li"); li.style.padding = "calc(var(--u) * 1) 0"; li.textContent = day(r.at) + " · " + String(r.where ?? "") + " · " + String(r.what ?? ""); ul.appendChild(li); }
+  slot.appendChild(ul);
+  buildButton(c, slot, "Build the summary");
+}
+
+function buildButton(c, slot, label) {
   const act = ctx.el("div", "actions");
-  const sum = ctx.el("button", "go ghost"); sum.type = "button"; sum.textContent = "Summarize these";
-  const out = ctx.el("div"); out.setAttribute("aria-live", "polite");
-  sum.addEventListener("click", async () => {
-    sum.disabled = true;
-    const wait = line("answer-wait working", "An AI is reading the " + v.threads.length + (v.threads.length === 1 ? " conversation" : " conversations") + " shown, and nothing else.");
-    out.replaceChildren(wait);
-    const slow = setTimeout(() => { wait.textContent += " Still reading: longer conversations take a little more time."; }, 10000);
-    let res = null;
-    try {
-      res = await ctx.askBody({ question: "Summarize my conversations with " + about, over: { ask: "summarize",
-        items: v.threads.map((t) => ({ key: "thread:" + t.thread, kind: "email", what: "Email conversation", title: t.thread, where: "Mail", date: t.to, piece_ids: t.piece_ids ?? [] })) } });
-    } catch (e) { res = { ok: false, error: String(e?.message ?? e) }; }
-    clearTimeout(slow);
-    sum.disabled = false;
-    out.replaceChildren();
-    if (!res || res.ok !== true) { out.appendChild(line("notice flagged", res?.error || "That could not be done just now. Press it again.")); return; }
-    ctx.renderAsk(out, res, { q: "Summarize my conversations with " + about });
-  });
-  act.appendChild(sum);
-  mount.appendChild(act);
-  mount.appendChild(out);
+  const b = ctx.el("button", "go"); b.type = "button";
+  const p = c.price?.usd != null ? " (about " + money2(c.price.usd) + ")" : "";
+  b.textContent = label + p;
+  b.addEventListener("click", () => { act.remove(); build(c, slot, null, true); });
+  act.appendChild(b);
+  slot.appendChild(act);
+  if (p) slot.appendChild(line("ai2-small", "The price is the middle of the last " + ctx.countOf(c.price.builds) + " summaries built here. Nothing is spent until you press."));
+}
+
+async function build(c, slot, replaceNote, refresh) {
+  if (!ctx.askBody) return;
+  const mine = seq, n = Number(c.conversations?.threads?.length ?? 0);
+  const wait = line("ai2-small working", "An AI is reading what was found about them (" + ctx.countOf(Math.min(n, 14)) + (Math.min(n, 14) === 1 ? " conversation" : " conversations") + ", their records and meetings) and nothing else.");
+  if (replaceNote) replaceNote.replaceWith(wait); else slot.prepend(wait);
+  const slow = setTimeout(() => { wait.textContent += " Still reading: this takes a little longer for someone with a lot of history."; }, 10000);
+  const who = c.kind === "company" ? { query: asked.query || c.company?.name } : (asked.person || c.person ? { person: asked.person || c.person } : { query: asked.query });
+  let res = null;
+  try { res = await ctx.askBody({ question: "Contact card", card: Object.assign(who, { refresh: !!refresh || c.kept?.state === "stale" }) }); }
+  catch (e) { res = { ok: false, error: String(e?.message ?? e) }; }
+  clearTimeout(slow);
+  if (mine !== seq || !slot.isConnected) return;
+  if (!res || res.ok !== true || !res.card?.card) {
+    wait.className = "notice flagged";
+    wait.textContent = res?.answer || res?.error || "The summary could not be written just now.";
+    if (!c.kept?.card) { slot.querySelectorAll(".actions").forEach((x) => x.remove()); buildButton(c, slot, "Try again"); }
+    return;
+  }
+  slot.replaceChildren();
+  drawSummary(slot, res.card, ctx.isOwner(), c, res.cost?.usd);
+}
+
+function drawSummary(slot, k, owner, c, paid) {
+  const s = k.card ?? {};
+  const cite = (arr) => (arr ?? []).length ? " [" + arr.join(", ") + "]" : "";
+  const w = s.who_now ?? {};
+  const top = ctx.el("div", "ai2-block");
+  top.style.marginTop = "var(--gap)";
+  top.appendChild(line("ai2-label", w.basis === "last known" ? "Last known" + (w.as_of ? ", as of " + day(w.as_of) : "") : "Who they are to you now"));
+  top.appendChild(line("ai2-big ai2-mid", String(w.line || [w.title, w.company].filter(Boolean).join(" at ") || "Not clear from what was found")));
+  if (w.how_started) top.appendChild(line("ai2-sentence", String(w.how_started) + cite(w.sources)));
+  slot.appendChild(top);
+  const go = s.going_on ?? [];
+  const now = ctx.el("div", "ai2-block");
+  now.appendChild(line("ai2-h", "What is going on now"));
+  if (!go.length) now.appendChild(line("ai2-small", "Nothing open was found."));
+  for (const g of go) {
+    const row = ctx.el("div", "ai2-row");
+    const wt = line("ai2-row-title", String(g.what) + cite(g.sources)); wt.style.margin = "0";
+    const wd = line("ai2-row-usd", g.since ? day(g.since) : ""); wd.style.margin = "0";
+    row.append(wt, wd);
+    if (g.next) row.appendChild(line("ai2-row-said", "Next: " + String(g.next)));
+    now.appendChild(row);
+  }
+  slot.appendChild(now);
+  const rel = s.relationship ?? {};
+  const rb = ctx.el("div", "ai2-block");
+  rb.appendChild(line("ai2-h", "The relationship"));
+  if (rel.summary) rb.appendChild(line("ai2-sentence", String(rel.summary)));
+  const ms = rel.milestones ?? [];
+  if (ms.length) {
+    const ul = ctx.el("ul", "members"); ul.style.marginTop = "calc(var(--u) * 2)";
+    for (const x of ms) { const li = ctx.el("li"); li.style.padding = "calc(var(--u) * 1) 0"; li.textContent = (x.at ? day(x.at) + " · " : "") + String(x.what) + cite(x.sources); ul.appendChild(li); }
+    rb.appendChild(ul);
+  }
+  const con = rel.connected ?? [];
+  if (con.length) rb.appendChild(line("ai2-line", "Connected: " + con.map((x) => String(x.who) + (x.how ? " (" + x.how + ")" : "")).join("; ") + "."));
+  slot.appendChild(rb);
+  if (s.missing) slot.appendChild(line("ai2-small", String(s.missing)));
+  // where each number came from, one press down
+  const src = ctx.el("details", "whatis");
+  const sm = ctx.el("summary"); sm.style.padding = "calc(var(--u) * 3) 0"; sm.textContent = "Where the numbers come from (" + ctx.countOf((s.citations ?? []).length) + ")"; src.appendChild(sm);
+  for (const x of s.citations ?? []) {
+    const p = ctx.el("p", "quiet");
+    const t = "[" + x.n + "] " + String(x.doc ?? "") + " · " + String(x.where ?? "") + (x.date ? " · " + day(x.date) : "");
+    if (x.open_url) { const a = ctx.el("a"); a.href = x.open_url; a.target = "_blank"; a.rel = "noopener"; a.textContent = t; p.appendChild(a); } else p.textContent = t;
+    src.appendChild(p);
+  }
+  for (const l of s.completeness ?? []) src.appendChild(line("quiet", String(l)));
+  slot.appendChild(src);
+  const cost = paid ?? k.cost_usd;
+  const said = "Written by AI " + fmtDate(k.built_at, "whenShort") + " from " + ctx.countOf(k.items ?? (s.citations ?? []).length) + " things found" + (owner && cost != null ? ", cost " + money2(cost) : "") + ". It is rebuilt when something new about them arrives.";
+  const act = ctx.el("div", "actions"); act.style.alignItems = "center"; act.style.flexWrap = "wrap";
+  act.appendChild(line("ai2-small", said));
+  if (owner) {
+    const again = ctx.el("button", "go ghost"); again.type = "button"; again.textContent = "Refresh";
+    again.addEventListener("click", () => { act.remove(); build(c, slot, null, true); });
+    act.appendChild(again);
+  }
+  slot.appendChild(act);
 }
 
 // MONEY ITEMS (seat contacts-match): what the books kept in the Tool say is open with them, and what the matching found
@@ -351,12 +462,22 @@ function notYet(c) {
   mount.appendChild(ul);
 }
 
+// ONE PRESS DOWN: everything the summary was written from, and what the Tool did not read.
+function below(label) {
+  const d = ctx.el("details", "whatis"); d.style.marginTop = "var(--gap-lg)";
+  const s = ctx.el("summary"); s.style.padding = "calc(var(--u) * 3) 0"; s.textContent = label; d.appendChild(s);
+  mount.appendChild(d);
+  const keep = mount; mount = d;
+  return () => { mount = keep; };
+}
+
 function drawPerson(c, ms) {
   const f = c.facts ?? {};
-  const now = (k) => asList(f[k])[0]?.value;
-  const what = [now("title"), now("employer") ? "at " + now("employer") : ""].filter(Boolean).join(" ");
-  const sub = [what, (c.roles ?? []).join(" · "), c.people_joined > 1 ? "one person across " + c.people_joined + " records (" + (c.joined_by ?? []).join(", ") + ")" : "", c.from_mail_only ? "known from mail only" : ""].filter(Boolean).join(" · ");
+  const sub = [c.people_joined > 1 ? "one person across " + c.people_joined + " records (" + (c.joined_by ?? []).join(", ") + ")" : "", c.from_mail_only ? "known from mail only" : ""].filter(Boolean).join(" · ");
   head(c.name, sub, ms, c.as_of);
+  const slot = ctx.el("div"); slot.setAttribute("aria-live", "polite");
+  mount.appendChild(slot);
+  summary(c, slot);
   lastContact(c);
   meetings(c);
   const act = ctx.el("div", "actions");
@@ -370,11 +491,15 @@ function drawPerson(c, ms) {
   }
   mount.appendChild(act);
 
+  const nSame = (c.maybe_same ?? []).length;
+  const back = below("Conversations, records and sources" + (nSame ? " · Same person? (" + nSame + ")" : ""));
+  conversations(c);
   maybeSame(c);
-  if (Object.keys(f).length) { mount.appendChild(head4("Who they are now")); mount.appendChild(factsTable(f)); }
-  conversations(c, c.name);
+  if (Object.keys(f).length) { mount.appendChild(head4("What their records say")); mount.appendChild(factsTable(f)); }
   moneyItems(c);
   if ((c.holders ?? []).length) mount.appendChild(line("quiet", "Who here holds the relationship: " + c.holders.map((h) => h.who + (h.messages ? " (" + ctx.countOf(h.messages) + " emails)" : "") + (h.in ? " (owner in " + h.in + ")" : "")).join("; ") + "."));
+  const named = (c.files?.lines ?? []).filter((l) => l.role === "mentioned").length;
+  if (named) mount.appendChild(line("quiet", ctx.countOf(named) + (named === 1 ? " file or message only mentions" : " files or messages only mention") + " their name (a list, a register, a message about them); they are not in the timeline or the summary."));
 
   mount.appendChild(head4("Everything that happened (newest first)"));
   // Older cards carried no timeline: build one from the parts they have, so nothing is left out.
@@ -386,6 +511,7 @@ function drawPerson(c, ms) {
   notYet(c);
   searchedLine(c);
   refusedLines(c);
+  back();
 }
 
 function correct(c, act) {
@@ -411,6 +537,9 @@ function drawCompany(c, ms) {
   head(co.name, [co.status, co.location, co.website, (co.in ?? []).length ? "in " + co.in.join(", ") : ""].filter(Boolean).join(" · "), ms, c.as_of);
   const aka = (co.also_called ?? []).filter((n) => n && n !== co.name);
   if (aka.length) mount.appendChild(line("quiet", "Also known as " + aka.join(", ") + " (the same web address)."));
+  const slot = ctx.el("div"); slot.setAttribute("aria-live", "polite");
+  mount.appendChild(slot);
+  summary(c, slot);
   lastContact(c);
   meetings(c);
   const t = c.history?.totals ?? {};
@@ -434,18 +563,25 @@ function drawCompany(c, ms) {
     li.appendChild(b); ul.appendChild(li);
   }
   mount.appendChild(ul);
-  conversations(c, co.name);
+  const back = below("Conversations, records and sources");
+  conversations(c);
   moneyItems(c);
   mount.appendChild(head4("Everything that happened (newest first)"));
   const m = c.mail ?? {};
+  // seat contact-card: one line per conversation and one per older subject, never one per message
+  const threadKey = (s) => { let t = String(s ?? "").toLowerCase().trim(); for (;;) { const p = ["re:", "fw:", "fwd:", "aw:"].find((x) => t.startsWith(x)); if (!p) return t; t = t.slice(p.length).trim(); } };
+  const listed = new Set((c.conversations?.threads ?? []).map((t) => threadKey(t.thread)));
+  const olderBySubject = new Map();
+  for (const l of m.lines ?? []) { const k = threadKey(l.line); if (listed.has(k)) continue; const o = olderBySubject.get(k); if (!o) olderBySubject.set(k, { at: l.at, where: "Mail (" + l.mailbox + ")", what: l.line, n: 1 }); else { o.n++; if (String(l.at) > String(o.at)) o.at = l.at; } }
   const rows = [].concat(
     (c.history?.lines ?? []).map((l) => ({ at: l.at, where: sourceOf(l.source), what: l.line })),
-    (m.lines ?? []).map((l) => ({ at: l.at, where: "Mail (" + l.mailbox + ")", what: l.line })),
-    (c.conversations?.messages ?? []).filter((l) => l.direction === "from your side").map((l) => ({ at: l.at, where: "Mail (" + l.mailbox + ")", what: "from your side: " + l.thread }))
+    [...olderBySubject.values()].map((o) => ({ at: o.at, where: o.where, what: o.what + (o.n > 1 ? " (" + o.n + " messages)" : "") })),
+    (c.conversations?.threads ?? []).map((t) => ({ at: t.to, where: "Mail", what: String(t.thread) + " (" + ctx.countOf(t.messages ?? 0) + (Number(t.messages) === 1 ? " message)" : " messages)") }))
   ).sort((a, b) => String(b.at ?? "").localeCompare(String(a.at ?? "")));
   timeline(rows);
   if (!(m.lines ?? []).length && m.matched_by) mount.appendChild(line("quiet", "Mail: " + m.matched_by + "."));
   notYet(c);
   if (c.not_read) mount.appendChild(line("quiet", String(c.not_read)));
   refusedLines(c);
+  back();
 }
