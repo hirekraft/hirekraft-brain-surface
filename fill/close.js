@@ -43,8 +43,9 @@ export function closeCard(slot, body, ctx) {
     wrap.appendChild(how);
   }
   const cellEls = new Map();
-  const ex = rows.filter((r) => r.status !== "verified");
+  const ex = rows.filter((r) => r.status === "exception");
   const ok = rows.filter((r) => r.status === "verified");
+  const ne = rows.filter((r) => r.status === "not_expected");
   if (ex.length) {
     const h = el("p", "close-h"); h.textContent = ex.length === 1 ? "Needs you" : "Need you (" + ex.length + ")"; wrap.appendChild(h);
     for (const r of ex) wrap.appendChild(rowCard(r, false));
@@ -52,6 +53,11 @@ export function closeCard(slot, body, ctx) {
   if (ok.length) {
     const h = el("p", "close-h"); h.textContent = "Verified (" + ok.length + "): the sources agree"; wrap.appendChild(h);
     for (const r of ok) wrap.appendChild(rowCard(r, true));
+  }
+  if (ne.length) {
+    const h = el("p", "close-h"); h.textContent = "Not expected this month, and nothing arrived (" + ne.length + "). If someone here should have worked, mark Should be there wrong.";
+    wrap.appendChild(h);
+    for (const r of ne) wrap.appendChild(rowCard(r, true));
   }
   const m = c.month || {};
   const ml = el("p", "close-month");
@@ -79,7 +85,7 @@ export function closeCard(slot, body, ctx) {
   function rowCard(r, folded) {
     const card = el(folded ? "details" : "div", "close-row" + (folded ? " is-verified" : " is-exception"));
     const head = el(folded ? "summary" : "p", "close-name");
-    head.textContent = r.name + (folded ? ": " + [r.cells?.approved?.show, r.cells?.paid?.show].filter(Boolean).join("; ") : "");
+    head.textContent = r.name + (!folded ? "" : r.status === "not_expected" ? ": " + (r.cells?.expected?.why || "not expected") : ": " + [r.cells?.approved?.show, r.cells?.paid?.show].filter(Boolean).join("; "));
     card.appendChild(head);
     if (!folded && Array.isArray(r.flags) && r.flags.length) {
       const ul = el("ul", "close-flags");
