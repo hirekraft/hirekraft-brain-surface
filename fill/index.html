@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Verrandi">
 <meta name="theme-color" content="#ffffff">
 <title>Tool — your brain</title>
-<meta name="description" content="A working memory of your business.">
+<meta name="description" content="Your business's own memory.">
 <link rel="stylesheet" href="skin.css?v=2026-10-26-month-end">
 <script>
 // THE FRONT DOOR, before anything is drawn (seat front-door, 2026-10-13): no stored sign-in on this
@@ -117,21 +117,32 @@ try {
 
   <!-- ── 1. INTRO — the concept first, then facts that can be checked ── -->
   <section class="step" id="s-intro" hidden>
-    <h1>A working memory of your business.</h1>
-    <p class="lede">Tool reads what your business already runs on — your mail, your files, your
-      records — and builds one current understanding of it. You can ask it questions and act on
-      what it tells you.</p>
+    <!-- locks-and-basics 2026-10-26 (decision 1022): the one sentence and the security lines of "Verrandi: the basics".
+         Each line is checked against what runs: the privacy check line says what happens to items not yet checked
+         (the floor in the door), because a check on every item on arrival is decided but not yet running. -->
+    <h1>Your business's own memory.</h1>
+    <p class="lede">Verrandi gives your business its own memory: everything from your email, files and records in one
+      place you own, which you can search, understand and ask anything, without changing how anyone works.</p>
 
     <ul class="facts">
       <li><svg class="mark" style="width:16px;height:16px"><use href="#i-check"/></svg>
-        <span>It reads. It does not move anything. Your mail, files and records stay where they
-          are, in your accounts, unchanged.</span></li>
+        <span>It reads; it changes nothing. Your mail, files and records stay where they are, in your accounts,
+          unchanged. Nobody else has to use it.</span></li>
       <li><svg class="mark" style="width:16px;height:16px"><use href="#i-check"/></svg>
-        <span>Everything it tells you traces back to the source it came from, in your own
-          systems, so you can check it yourself.</span></li>
+        <span>Same keys as today. Everyone finds, understands and asks about only what they can already open in
+          your email, drives and systems.</span></li>
       <li><svg class="mark" style="width:16px;height:16px"><use href="#i-check"/></svg>
-        <span>It lives in your own database and answers to your own logins. Each person reaches
-          only what they already reach at work.</span></li>
+        <span>Sensitive things stay with the right people. Anything not yet checked for privacy goes only to the
+          owner and to whoever owns where it came from.</span></li>
+      <li><svg class="mark" style="width:16px;height:16px"><use href="#i-check"/></svg>
+        <span>Made from locked stays locked. When it keeps something new, like a saved chat, it remembers what it was
+          made from; someone else sees it only if they can open all of that. Sharing beyond that is your choice, after
+          it shows you what is private in it.</span></li>
+      <li><svg class="mark" style="width:16px;height:16px"><use href="#i-check"/></svg>
+        <span>Every fact traceable. What it tells you points back to the source in your own systems, and it says
+          plainly what it did not read.</span></li>
+      <li><svg class="mark" style="width:16px;height:16px"><use href="#i-check"/></svg>
+        <span>It is yours. It lives in your own database and stays yours, even if you stop using Verrandi.</span></li>
     </ul>
 
     <p class="pull">Audit us with infrastructure we don't own. Every claim points back into your
@@ -481,6 +492,6 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-26-two-doors"></script>
+<script type="module" src="lens.js?v=2026-10-26-locks"></script>
 </body>
 </html>
