@@ -2318,7 +2318,9 @@ function tableAnswer(slot, body) {
   const cols = Array.isArray(t.columns) ? t.columns : [];
   const rows = Array.isArray(t.rows) ? t.rows : [];
   if (rows.length) {
-    const head = ["Name", "Via"].concat(cols);
+    // A fact search (lens-ask v43, seat super-search) names its own first two columns (Invoice and Customer, Subject and From).
+    const two = Array.isArray(t.head) && t.head.length === 2 ? t.head.map(String) : ["Name", "Via"];
+    const head = two.concat(cols);
     const box = el("div", "ans-table-wrap");
     const tb = el("table", "ans-table");
     const thead = el("thead"), htr = el("tr");
@@ -2327,9 +2329,9 @@ function tableAnswer(slot, body) {
     const body2 = el("tbody");
     for (const r of rows) {
       const tr = el("tr");
-      const name = el("td"); name.dataset.label = "Name";
+      const name = el("td"); name.dataset.label = two[0];
       name.appendChild(openName(r.name, r.open_url));
-      const via = el("td"); via.dataset.label = "Via"; via.textContent = r.via || "direct";
+      const via = el("td"); via.dataset.label = two[1]; via.textContent = r.via || (t.head ? "" : "direct");
       tr.append(name, via);
       for (const c of cols) {
         const td = el("td"); td.dataset.label = c;
