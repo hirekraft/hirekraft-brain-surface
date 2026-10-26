@@ -379,7 +379,7 @@ const root = document.getElementById("root");
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const tok    = () => { try{ return localStorage.getItem("studio_token")||""; }catch{ return ""; } };
 const setTok = t  => { try{ t?localStorage.setItem("studio_token",t):localStorage.removeItem("studio_token"); }catch{} };
-let D=null, DOCS=[], TAB="8";   // opens on What's new, on a phone and on a computer (seat test-list, 2026-10-23; was: a phone opens on To test, seat phone)
+const OPEN_TAB='8'; let SIGNED_OUT=false, LOAD_GAP=''; let D=null, DOCS=[], TAB=OPEN_TAB||"8";   // opens on What's new, on a phone and on a computer (seat test-list, 2026-10-23; was: a phone opens on To test, seat phone)
 let RUN=null;               // what the studio runs on, filled in whenever it arrives
 /* VERRANDI: THE BASICS (seat locks-and-basics, 2026-10-26, decision 1022; Alex: "whenever I ask you for the basics of the
    tool, you can bring that up right away. And also put that in the studio surface."). Read LIVE from the decision itself
@@ -393,7 +393,7 @@ let CUST_STATE="loading";   // loading | done — never inferred from CUST being
 
 /* Every call ends in a stated outcome. A silent form is indistinguishable from
    never having tried, which is the failure this estate has paid for repeatedly. */
-async function call(url,body,auth){
+/* SIGN-IN AND SLOW ANSWERS (seat surface-current, 2026-10-26, HQ brief item 4). On 2026-10-26 Alex saw No answer within 20 seconds in his normal browser and the page fell back to the sign-in form, as if he were signed out; the server answered every call in under 3 seconds, so the cause was on the browser side and is not proven. Now: a call that times out or loses its connection is tried once more by itself; a 401 on a signed-in call says at once that the sign-in ended; and when the studio half still cannot be read, the page opens with what did load and a plain line naming what did not (see boot). */ async function call(url,body,auth){ const authed=(auth!==false&&!!tok()); let r=await callOnce(url,body,auth); if(r.status===0&&authed&&!SIGNED_OUT){ if(!D){ const m=root.querySelector('.gate .msg'); if(m) m.textContent='Still reading the studio. Trying once more'+String.fromCharCode(8230); } r=await callOnce(url,body,auth); } if(r.status===401&&authed&&!SIGNED_OUT){ SIGNED_OUT=true; D=null; setTok(''); gate('Your sign-in ended. Sign in again.',true); } return r; } async function callOnce(url,body,auth){
   const c=new AbortController(); const t=setTimeout(()=>c.abort(),20000);
   try{
     const r=await fetch(url,{method:"POST",signal:c.signal,
@@ -447,7 +447,7 @@ function gate(msg,bad){
       none of which depend on a customer. Two requests now, rendered independently: the
       page draws as soon as the Studio half answers, and the customer half fills in when
       it arrives or reports its own failure, per customer. */
-function paint(){
+function paint(){ if(SIGNED_OUT||!D) return;
   try { render(); }
   catch(e){
     root.innerHTML='<div class="wrap"><div class="masthead"><div class="brand">'
@@ -458,7 +458,7 @@ function paint(){
   }
 }
 
-async function boot(){
+async function boot(){ SIGNED_OUT=false; LOAD_GAP='';
   if(!tok()) return gate("");
   root.innerHTML='<div class="gate"><div class="msg">reading the studio…</div></div>';
 
@@ -497,9 +497,9 @@ async function boot(){
   });
   pDocs.then(dl=>{ DOCS=(dl.status===200&&dl.body.ok)?(dl.body.documents||[]):[]; if(D) paint(); });
 
-  const j=await pStudio;
+  const j=await pStudio; if(SIGNED_OUT) return;
   if(j.status===401){ setTok(""); return gate("Your session ended. Sign in again.",true); }
-  if(j.status!==200){
+  if(j.status!==200&&j.status!==401){ LOAD_GAP=(j.body&&j.body.error)||('the studio answered '+j.status); D=stubStudio(); paint(); return; }   if(j.status!==200){   /* reached only on a 401 with no sign-in sent, which boot already prevents */
     // The Studio half is the page's backbone, but a customer may still be readable and
     // worth naming, so report what the other half said rather than declaring nothing known.
     const c=await pCust;
@@ -586,7 +586,7 @@ function render(){
      render() still referenced it — that ReferenceError is what hung the page. Defined
      here, once, for the sections that render one customer's line. */
   const srcs=(ln.seen?(ln.sources||[]):[]).concat(D.absent_sources||[]);
-  const g=gaugeBits(), ig=D.integrity||{};
+  let g; try{ g=gaugeBits(); }catch(e){ g={legs:[],worst:null,cls:function(){ return 'bad'; },missing:['the studio’s own numbers'],worstLeg:null,how:'',corpus:null,caveat:''}; } const ig=D.integrity||{};
   const seats=counter(ig.seats&&ig.seats.closed_total, !!(ig.seats));
 
   root.innerHTML=
@@ -631,16 +631,16 @@ function render(){
   + '<nav class="sections" id="nav">'
   +   ["Front","Capabilities","Mechanisms","Being built now","Written record","Principles","Archive","Testing","What's new"].map((s,i)=>'<button class="sec" role="tab" aria-selected="'+(String(i)===TAB)+'" data-i="'+i+'">'+s+'</button>').join("")
   + '</nav>'
-  + '<main>'
-  +   '<section class="view" data-active="'+(TAB==="0")+'" data-i="0">'+xbox(0)+frontMap()+'</section>'
-  +   '<section class="view" data-active="'+(TAB==="1")+'" data-i="1">'+xbox(1)+capsTab()+'</section>'
-  +   '<section class="view" data-active="'+(TAB==="2")+'" data-i="2">'+xbox(2)+mechsTab()+'</section>'
-  +   '<section class="view" data-active="'+(TAB==="3")+'" data-i="3">'+xbox(3)+buildTab()+'</section>'
-  +   '<section class="view" data-active="'+(TAB==="4")+'" data-i="4">'+xbox(4)+writtenTab()+'</section>'
-  +   '<section class="view" data-active="'+(TAB==="5")+'" data-i="5">'+xbox(5)+principles()+'</section>'
-  +   '<section class="view" data-active="'+(TAB==="6")+'" data-i="6">'+xbox(6)+archiveTab()+'</section>'
-  +   '<section class="view" data-active="'+(TAB==="7")+'" data-i="7">'+xbox(7)+testingTab()+'</section>'
-  +   '<section class="view" data-active="'+(TAB==="8")+'" data-i="8">'+xbox(8)+toTestTab()+'</section>'
+  + (LOAD_GAP?'<div class=empty style=margin:12px>Opened with what could be read. Not read just now: the studio’s own numbers (freshness, the seat record, the documents): '+esc(String(LOAD_GAP).replace(/[.]+$/,''))+'. Everything else below is current; reload to try again.</div>':'')   + '<main>'
+  +   '<section class="view" data-active="'+(TAB==="0")+'" data-i="0">'+xbox(0)+openBasics('0')+safe(frontMap)+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="1")+'" data-i="1">'+xbox(1)+openBasics('1')+safe(capsTab)+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="2")+'" data-i="2">'+xbox(2)+openBasics('2')+safe(mechsTab)+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="3")+'" data-i="3">'+xbox(3)+openBasics('3')+safe(buildTab)+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="4")+'" data-i="4">'+xbox(4)+openBasics('4')+safe(writtenTab)+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="5")+'" data-i="5">'+xbox(5)+openBasics('5')+safe(principles)+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="6")+'" data-i="6">'+xbox(6)+openBasics('6')+safe(archiveTab)+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="7")+'" data-i="7">'+xbox(7)+openBasics('7')+safe(testingTab)+'</section>'
+  +   '<section class="view" data-active="'+(TAB==="8")+'" data-i="8">'+xbox(8)+openBasics('8')+safe(toTestTab)+'</section>'
   +   '<div class="foot">'+esc(footerLine())+'<br/>Served by '+esc(D.served_by.fn)+' · the Studio’s own numbers and each customer’s, kept apart · this is the only address that serves the studio · nothing on this page is stored.</div>'
   + '</main></div>'
   + '<div class="ov" id="ov"><div class="dr" id="drw">'+ipdocs()+'</div></div>';
@@ -1845,7 +1845,7 @@ function frontBasics(){
     + (fund.length&&fund.length!==8?'<div class="empty">Decision 1022 lists '+fund.length+' fundamentals, not the eight expected; shown as written.</div>':'')
     + fold('The rest of the basics', more);
 }
-function frontMap(){
+/* THE BASICS ON OPENING (seat surface-current, 2026-10-26, HQ brief item 2): the one sentence and the eight fundamentals lead whichever tab the page opens on (OPEN_TAB, What’s new), through the same frontBasics(); Front keeps them at its top. safe() draws one tab: if a tab cannot be drawn it says so there, and the rest of the page still draws. stubStudio() stands in for the studio half when it could not be read, so the page opens with what did load. */ function openBasics(i){ return (i===OPEN_TAB&&i!=='0')?frontBasics():''; } function safe(fn){ try{ return fn(); }catch(e){ return '<div class=empty>This part could not be drawn: '+esc(String((e&&e.message)||e))+'. The rest of the page is unaffected.</div>'; } } function stubStudio(){ return {absent_sources:[],integrity:{seats:{},examination:{}},visitor:'',served_by:{fn:'studio-july'},freshness:{},footer:'',as_of:null,parts:{counts:{}},dissolved:{},principles:{},seat_board:{},ip_docs:[],sweep:{},doctrine:[]}; } function frontMap(){
   if(!D) return "";
   const S=(D.seat_board)||{}, run=S.running||[], stop=S.stopped||[];
   const pr=D.principles||{};
@@ -2170,7 +2170,7 @@ const TABBOX=[
   "The numbered rules the build is judged against, and the decisions behind each.",
   "Past work, kept so it can be reused, and out of the running system.",
   "Every stored test, and whether a change broke one. Tests are shown here by label only; the question, the right answer and what came back are on the Tool screen, for the owner.",
-  "What is new, what is waiting for you to test, what is being built and what is decided but not built yet, all from the record. Do what a check says, then tap Works, Doesn't or Not now."
+  "The basics first, then what is new, what is waiting for you to test, what is being built and what is decided but not built yet, all from the record. Do what a check says, then tap Works, Doesn't or Not now."
 ];
 function xbox(i){ return '<div class="xbox">'+esc(TABBOX[i]||"")+'</div>'; }
 
