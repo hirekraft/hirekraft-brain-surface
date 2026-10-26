@@ -1383,6 +1383,36 @@ a.find-title:hover { text-decoration: underline; }
 .thought-intro p { margin: 8px 0 0; max-width: 70ch; }
 .thought-back { margin-top: 0; }
 
+/* THE MONTH-END CHECK (seat month-end 2026-10-26, decisions 1019 and 1020): what does not tie first, verified rows
+   folded to one line, every cell markable Right or Wrong with the right value. */
+.close-set { display: flex; flex-direction: column; gap: calc(var(--u) * 3); }
+.close-h { font-weight: var(--w-mid); color: var(--ink); margin: calc(var(--u) * 2) 0 0; }
+.close-note { color: var(--ink-2); margin: 0; }
+.close-row { border: 1px solid var(--line); border-radius: var(--radius); padding: calc(var(--u) * 3); background: #fff; }
+.close-row.is-exception { border-left: 3px solid var(--accent); }
+.close-row.is-verified > summary { cursor: pointer; color: var(--ink-2); min-height: 32px; }
+.close-name { font-weight: var(--w-mid); color: var(--ink); margin: 0 0 calc(var(--u) * 2); }
+.close-flags { margin: 0 0 calc(var(--u) * 3); padding-left: 1.2em; color: var(--accent); }
+.close-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: calc(var(--u) * 2); margin-top: calc(var(--u) * 2); }
+.close-cell { border: 1px solid var(--line-2); border-radius: var(--radius); padding: calc(var(--u) * 2); background: var(--paper-2); min-width: 0; }
+.close-cell.is-doubt { border-color: var(--accent); }
+.close-cell.is-right { border-color: #2e7d4f; }
+.close-cell.is-wrong { border-color: var(--accent); background: #fff; }
+.close-k { font-size: var(--t-small); color: var(--ink-3); margin: 0; }
+.close-v { color: var(--ink); margin: calc(var(--u) * 1) 0; overflow-wrap: anywhere; }
+.close-why, .close-state { font-size: var(--t-small); margin: 0; }
+.close-src { font-size: var(--t-small); color: var(--ink-3); margin: calc(var(--u) * 1) 0; overflow-wrap: anywhere; }
+.close-ref { color: var(--act); }
+.close-act, .close-fix { display: flex; gap: calc(var(--u) * 2); flex-wrap: wrap; margin-top: calc(var(--u) * 2); }
+.close-btn { padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--act); background: #fff; color: var(--act); cursor: pointer; font: inherit; }
+.close-btn:hover { background: var(--act-soft); }
+.close-gold { background: var(--act); color: #fff; }
+.close-gold:hover { background: var(--act); color: #fff; opacity: 0.92; }
+.close-fix[hidden] { display: none; }
+.close-input { flex: 1 1 140px; min-width: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius); font: inherit; }
+.close-month { font-weight: var(--w-mid); color: var(--ink); margin: 0; }
+.close-keep { display: flex; flex-direction: column; gap: calc(var(--u) * 2); }
+
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
    for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
@@ -1466,4 +1496,10 @@ a.find-title:hover { text-decoration: underline; }
   .thought-newtopic { width: 100%; min-height: 44px; margin-right: 0; }
   .thought-top > .go { width: 100%; }
   #main pre { overflow-x: auto; }
+  /* seat month-end 2026-10-26: the month-end check, one cell under another, every press thumb-sized. */
+  .close-grid { grid-template-columns: 1fr; }
+  .close-btn, .close-input, .close-row.is-verified > summary { min-height: 44px; }
+  .close-input { font-size: 16px; }
+  .close-act .close-btn { flex: 1 1 0; }
+  .close-gold { width: 100%; }
 }
