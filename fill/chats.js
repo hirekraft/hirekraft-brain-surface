@@ -200,7 +200,15 @@ function build(host) {
 const CONNECTOR_URL = "https://uvdoompnnypmneyrvtas.supabase.co/functions/v1/connector-mcp";
 async function drawConnector(host) {
   host.innerHTML = "";
-  host.appendChild(el("p", null, "Add HireKraft to your own Claude, then say “save this to HireKraft” in any chat to keep it here, private to you, or “ask HireKraft” to get an answer from what you can see."));
+  host.appendChild(el("p", null, "Add HireKraft to your own Claude and it works from your business: it finds your emails, files, records, contacts and meetings and thinks over them itself, so HireKraft pays only for finding. It sees only what you can see here."));
+  // seat two-doors (2026-10-26, decision 1021): what the connector does now, in her words. Nothing here sends, books or deletes.
+  const can = el(`ul`);
+  for (const s of [`“Using HireKraft, find everything about Acme payments since June and tell me if anything looks wrong.”`,
+    `“Who is Dana at Acme?” or “What meetings do I have next week?”`,
+    `“How do thoughtgrams work in HireKraft?” It answers from HireKraft's own guide and your setup.`,
+    `“Save this to HireKraft”, “save this document to HireKraft”, or “leave a thought in HireKraft: ...”. Each lands here or in Thoughts, private to you.`,
+    `“Ask HireKraft for its own answer” when you want HireKraft's AI to do the thinking; that one is paid by the business.`]) can.appendChild(el(`li`, null, s));
+  host.appendChild(can);
   const addr = el("div"); addr.style.display = "flex"; addr.style.gap = "8px"; addr.style.alignItems = "center";
   const code = el("code", null, CONNECTOR_URL); code.style.wordBreak = "break-all";
   const copy = el("button", "go ghost", "Copy"); copy.type = "button";
@@ -209,9 +217,9 @@ async function drawConnector(host) {
   const ol = el("ol");
   for (const s of ["In your Claude: Settings, Connectors, Add custom connector. Paste the address above.",
     "Claude opens a HireKraft page. Sign in with your usual emailed code and press Allow.",
-    "In any chat, say “save this to HireKraft”. It appears below, marked “from your Claude”."]) ol.appendChild(el("li", null, s));
+    "In any chat, ask about your business or say “save this to HireKraft”. Saved chats and documents appear below, marked “from your Claude”."]) ol.appendChild(el("li", null, s));
   host.appendChild(ol);
-  host.appendChild(el("p", "quiet", "On a Claude Team or Enterprise seat, only the workspace owner can add it; you then press Connect. Saves from a chatbot are marked condensed, because the chatbot chooses what to pass. ChatGPT can ask on a Pro plan; saving from ChatGPT needs a Business or Enterprise workspace with developer mode on."));
+  host.appendChild(el("p", "quiet", "On a Claude Team or Enterprise seat, only the workspace owner can add it; you then press Connect. Saves from a chatbot are marked condensed, because the chatbot chooses what to pass. What HireKraft hands your Claude is then kept under your own Claude account. Items found by meaning only, not yet read for sensitivity, go only to the owner and to whoever owns their source. ChatGPT can ask on a Pro plan; saving from ChatGPT needs a Business or Enterprise workspace with developer mode on."));
   const st = el("p", "quiet", "Checking your connection."); host.appendChild(st);
   let on = null;
   // The sign-in system's OpenID document lists a registration endpoint only once chatbot sign-in is on.
