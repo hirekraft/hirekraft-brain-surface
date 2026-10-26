@@ -1168,11 +1168,64 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
    score, its cost and the other choices. Quiet: the only colored things are the badges and the press that changes it. */
 .ai-tab { max-width: 880px; }
 .ai-lede { margin: 0 0 var(--gap); }
-.ai-top { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); margin: 0 0 var(--gap); }
-.ai-tile { display: flex; flex-direction: column; gap: 2px; padding: calc(var(--u) * 3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); min-width: 0; }
-.ai-tile-label { font-size: var(--t-small); color: var(--ink-3); }
-.ai-tile-value { font-size: 20px; font-weight: var(--w-mid); color: var(--ink); }
-.ai-tile-note { font-size: var(--t-micro); color: var(--ink-3); }
+/* THE AI TAB IN THE OWNER'S ORDER (seat ai-tab-plain, 2026-10-26). These are the HOUSE RULES for every tab once
+   Alex approves them on screen: one idea per block; whitespace instead of boxes, no gray note panels (a block earns a
+   border only if it is something to act on); numbers big, labels small; color only for meaning and always with words
+   (--act for the running cost and the balance, --accent only when the balance runs low); at most one chart, labeled
+   in words; mobile first. SUPERSEDES the four money tiles (.ai-top, .ai-tile), removed here. */
+.ai2-block { margin: 0 0 var(--gap-lg); }
+.ai2-label { margin: 0; font-size: var(--t-small); color: var(--ink-3); }
+.ai2-big { margin: 2px 0 0; font-size: var(--t-hero); line-height: var(--lead-tight); font-weight: var(--w-mid); color: var(--ink); font-variant-numeric: tabular-nums; }
+.ai2-mid { font-size: var(--t-head); }
+.ai2-warn { color: var(--accent); }
+.ai2-sentence { margin: calc(var(--u) * 2) 0 0; max-width: var(--measure); font-size: var(--t-body); line-height: var(--lead); color: var(--ink); }
+.ai2-of { margin: 0; font-size: var(--t-small); color: var(--ink-3); }
+.ai2-bar { position: relative; height: 10px; margin: calc(var(--u) * 3) 0 calc(var(--u) * 2); border-radius: 999px; background: var(--line-2); overflow: hidden; max-width: 420px; }
+.ai2-bar-fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--act); }
+.ai2-bar-low .ai2-bar-fill { background: var(--accent); }
+.ai2-warn-line { margin: 0 0 var(--u); font-size: var(--t-small); color: var(--accent); font-weight: var(--w-mid); }
+.ai2-line { margin: calc(var(--u) * 1) 0 0; max-width: var(--measure); font-size: var(--t-small); color: var(--ink-2); }
+.ai2-pass { color: var(--ink); }
+.ai2-small { margin: calc(var(--u) * 1) 0 0; max-width: var(--measure); font-size: var(--t-small); color: var(--ink-3); }
+.ai2-h { margin: 0 0 calc(var(--u) * 2); font-size: var(--t-body); font-weight: var(--w-mid); color: var(--ink); }
+.ai2-lines { max-width: 560px; }
+.ai2-row { display: grid; grid-template-columns: 1fr auto; column-gap: var(--gap); padding: calc(var(--u) * 2) 0; }
+.ai2-row-title { font-weight: var(--w-mid); color: var(--ink); }
+.ai2-row-usd { font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; }
+.ai2-row-said { grid-column: 1 / -1; margin: 2px 0 0; font-size: var(--t-small); color: var(--ink-3); }
+.ai2-total { border-top: 1px solid var(--ink-3); margin-top: var(--u); }
+.ai2-total .ai2-row-title, .ai2-total .ai2-row-usd { font-weight: var(--w-strong); }
+.ai2-chart-frame { width: 100%; max-width: 760px; }
+.ai2-chart { display: block; width: 100%; height: auto; }
+.ai2-run { fill: var(--act); }
+.ai2-one { stroke: var(--ink-4); stroke-width: 1; }
+.ai2-stripe-bg { fill: var(--paper-2); }
+.ai2-stripe-line { stroke: var(--ink-4); stroke-width: 2; }
+.ai2-hit { fill: transparent; }
+.ai2-day:focus { outline: none; }
+.ai2-day:focus .ai2-hit, .ai2-day:hover .ai2-hit { fill: var(--act-soft); }
+.ai2-axis { stroke: var(--ink-4); stroke-width: 1; }
+.ai2-grid { stroke: var(--line); stroke-width: 1; }
+.ai2-tick { font-size: 11px; fill: var(--ink-3); font-family: var(--font); }
+.ai2-note { font-size: 12px; fill: var(--ink); font-family: var(--font); }
+.ai2-key { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 4); margin: calc(var(--u) * 2) 0 0; font-size: var(--t-small); color: var(--ink-2); }
+.ai2-key-run::before, .ai2-key-one::before { content: ''; display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; border-radius: 2px; }
+.ai2-key-run::before { background: var(--act); }
+.ai2-key-one::before { background: repeating-linear-gradient(45deg, var(--ink-4) 0 2px, var(--paper-2) 2px 5px); box-shadow: inset 0 0 0 1px var(--ink-4); }
+.ai2-table, .ai2-more { margin-top: calc(var(--u) * 3); }
+.ai2-more-sum { width: fit-content; cursor: pointer; color: var(--act); min-height: 44px; display: flex; align-items: center; }
+.ai2-more { border-top: 1px solid var(--line-2); padding-top: calc(var(--u) * 2); }
+.ai2-more-body { padding-top: calc(var(--u) * 2); }
+.ai2-days { border-collapse: collapse; font-size: var(--t-small); font-variant-numeric: tabular-nums; margin-top: calc(var(--u) * 2); }
+.ai2-days th, .ai2-days td { padding: 4px 12px 4px 0; text-align: right; color: var(--ink-2); }
+.ai2-days th:first-child, .ai2-days td:first-child { text-align: left; }
+.ai2-days th { color: var(--ink-3); font-weight: var(--w-mid); }
+.ai2-asks { margin-top: var(--gap-lg); }
+@media (min-width: 900px) {
+  .ai-tab { max-width: 980px; }
+  .ai2-how, .ai2-bal { display: inline-block; vertical-align: top; width: calc(50% - var(--gap)); }
+  .ai2-how { margin-right: calc(var(--gap) * 2); }
+}
 .ai-basis, .ai-reach, .ai-coming-line { margin: calc(var(--u) * 2) 0; }
 .ai-step { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); padding: calc(var(--u) * 4); margin: 0 0 var(--gap); }
 .ai-step-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: calc(var(--u) * 2); }
@@ -1481,8 +1534,7 @@ a.find-title:hover { text-decoration: underline; }
   /* seat watches 2026-10-23: Done, Not useful, Remove and Add are full-width presses on a phone. */
   .watch-acts .go, .watch-watches .go, .watch-add .go { flex: 1 1 100%; min-height: 44px; }
   .watch-add input { min-height: 44px; font-size: 16px; }
-  /* seat ai-tab 2026-10-23: the money tiles two by two, and every press on the AI tab at least 44px. */
-  .ai-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* seat ai-tab 2026-10-23: every press on the AI tab at least 44px (the money tiles retired by seat ai-tab-plain 2026-10-26). */
   .ai-step { padding: calc(var(--u) * 3); }
   .ai-tab .go { min-height: 44px; width: 100%; justify-content: center; text-align: center; }
   /* 16px in every box she types into: below that an iPhone zooms the page in when the box is tapped. */
