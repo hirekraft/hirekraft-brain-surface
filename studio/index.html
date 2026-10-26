@@ -381,6 +381,12 @@ const tok    = () => { try{ return localStorage.getItem("studio_token")||""; }ca
 const setTok = t  => { try{ t?localStorage.setItem("studio_token",t):localStorage.removeItem("studio_token"); }catch{} };
 let D=null, DOCS=[], TAB="8";   // opens on What's new, on a phone and on a computer (seat test-list, 2026-10-23; was: a phone opens on To test, seat phone)
 let RUN=null;               // what the studio runs on, filled in whenever it arrives
+/* VERRANDI: THE BASICS (seat locks-and-basics, 2026-10-26, decision 1022; Alex: "whenever I ask you for the basics of the
+   tool, you can bring that up right away. And also put that in the studio surface."). Read LIVE from the decision itself
+   on every load through the existing record action, never copied into this page: if the decision cannot be read, or no
+   longer carries the basics, the Front says so instead of showing anything in its place. */
+const BASICS_ID="82b72e89-b868-4e3b-b5af-d296d3195492";   // decision 1022 in studio-core decision_log
+let BASICS=null;            // null while reading; {error} when it could not be read; else the record
 let RUN_STATE="loading";
 let CUST=null;              // the customer half, filled in whenever it arrives
 let CUST_STATE="loading";   // loading | done — never inferred from CUST being empty
@@ -471,6 +477,11 @@ async function boot(){
     if(D) paint();
   });
   loadToTest();
+  call(FN,{action:"record",kind:"decisions",id:BASICS_ID}).then(r=>{
+    BASICS=(r.status===200&&r.body&&r.body.ok&&typeof r.body.body==="string")?r.body
+      :{error:(r.body&&r.body.error)||("decision 1022 could not be read ("+r.status+")")};
+    if(D) paint();
+  });
   const pStudio=call(FN,{action:"studio"});
   const pCust  =call(FN,{action:"customers"});
   const pDocs  =call(FN,{action:"docs"});
@@ -1801,11 +1812,44 @@ function redItems(){
   }
   return out;
 }
+const BNL=String.fromCharCode(10);
+function mdInline(t){ return esc(t).split("**").map(function(p,i){ return i%2?"<b>"+p+"</b>":p; }).join(""); }
+function basicsPart(t, head){
+  const i=t.indexOf("## "+head); if(i<0) return "";
+  const rest=t.slice(i+3+head.length), j=rest.indexOf(BNL+"## ");
+  return j<0?rest:rest.slice(0,j);
+}
+function frontBasics(){
+  const head='<div class="blk">Verrandi: the basics<span class="ln"></span></div>';
+  if(BASICS===null) return head+'<div class="empty">Reading the basics from decision 1022…</div>';
+  if(BASICS.error) return head+'<div class="empty">The basics could not be read just now, so nothing is shown in their place: '+esc(BASICS.error)+'</div>';
+  const b=String(BASICS.body), k=b.indexOf("# Verrandi: the basics");
+  if(k<0) return head+'<div class="empty">Decision 1022 no longer carries "Verrandi: the basics", so nothing is shown in its place. HQ records where the basics now live.</div>';
+  const t=b.slice(k), am=t.indexOf("AMENDED"), tt=am<0?t:t.slice(0,am);
+  const one=basicsPart(tt,"In one sentence").trim();
+  const fund=basicsPart(tt,"The fundamentals").split(BNL).map(function(l){ return l.trim(); })
+    .filter(function(l){ return l.length>3 && l.charAt(0)>="1" && l.charAt(0)<="9" && l.indexOf(". ")>0 && l.indexOf(". ")<4; });
+  const thirty=basicsPart(tt,"In thirty seconds").split(BNL+BNL).map(function(x){ return x.trim(); }).filter(Boolean);
+  const rows=basicsPart(tt,"On one page").split(BNL).filter(function(l){ return l.trim().indexOf("| **")===0; }).map(function(l){
+    const c=l.split("|"); return '<p style="margin:6px 0">'+mdInline(String(c[1]||"").trim())+': '+mdInline(String(c[2]||"").trim())+'</p>'; });
+  const rule=tt.indexOf("Rule of thumb:"), ruleTxt=rule<0?"":tt.slice(rule).split(BNL)[0];
+  const more='<p style="margin:0 0 6px"><b>In thirty seconds</b></p>'+thirty.map(function(x){ return '<p style="margin:6px 0">'+mdInline(x)+'</p>'; }).join("")
+    + '<p style="margin:14px 0 6px"><b>On one page</b></p>'+rows.join("")
+    + (ruleTxt?'<p style="margin:10px 0">'+mdInline(ruleTxt)+'</p>':'')
+    + (am<0?'':'<p style="margin:10px 0;color:var(--ink-3)">'+mdInline(t.slice(am).split(BNL)[0])+'</p>')
+    + '<p style="margin:10px 0;color:var(--ink-3)">Read live from decision 1022 ('+esc(String(BASICS.when||""))+'), '+esc(String(BASICS.chars||""))+' characters, at the moment this page loaded.</p>';
+  return head
+    + (one?'<p style="font-size:17px;line-height:1.5;margin:4px 0 12px">'+mdInline(one)+'</p>':'<div class="empty">The one sentence was not found in decision 1022.</div>')
+    + (fund.length?'<ol style="margin:0 0 10px;padding-left:1.4em">'+fund.map(function(l){ return '<li style="margin:4px 0">'+mdInline(l.slice(l.indexOf(". ")+2))+'</li>'; }).join("")+'</ol>'
+        :'<div class="empty">The fundamentals were not found in decision 1022.</div>')
+    + (fund.length&&fund.length!==8?'<div class="empty">Decision 1022 lists '+fund.length+' fundamentals, not the eight expected; shown as written.</div>':'')
+    + fold('The rest of the basics', more);
+}
 function frontMap(){
   if(!D) return "";
   const S=(D.seat_board)||{}, run=S.running||[], stop=S.stopped||[];
   const pr=D.principles||{};
-  let html="";
+  let html=frontBasics();
   if(!mapOk()) html+=mapWait();
   else {
     html+=numberTiles();
