@@ -89,7 +89,7 @@ export function drawBox() {
   host.innerHTML = '';
   if (sc.mailbox) host.appendChild(chip('in ' + sc.mailbox.address, () => { off.mailbox = sc.mailbox.key; }));
   if (sc.email && !thinking) host.appendChild(chip('about this email', () => { off.email = sc.raw.threadKey; }));
-  if (thinking) host.appendChild(chip(thinking.email ? 'a thought on this email' : thinking.topicTitle ? 'a thought on ' + thinking.topicTitle : 'leaving a thought', () => { thinking = null; }));
+  if (thinking) host.appendChild(chip(thinking.email ? 'a thought on this email' : thinking.topicTitle ? 'a thought on ' + thinking.topicTitle : Array.isArray(thinking.for) && thinking.for.length ? 'a thought for ' + thinking.for.join(', ') : 'leaving a thought', () => { thinking = null; }));
   const pin = $('#panel-input');
   if (pin) pin.placeholder = thinking ? THINK_PH : (pin.dataset.ph || (pin.dataset.ph = pin.placeholder));
   input.placeholder = thinking ? THINK_PH : sc.email ? 'Ask about this email, have it answered, or find another'
@@ -358,7 +358,7 @@ function openMenu(which) {
     i.addEventListener('click', () => { closeMenus(); act(); });
     m.appendChild(i);
   };
-  item('Leave a thought', 'Say or type what you think about something you are working on; kept with its topic, for you only', () => startThought({}, which));
+  item('Leave a thought', 'Say or type what you think about something you are working on, in any language; kept with its topic, for you or for people you name', () => startThought({}, which));
   item('Add a file', 'A spreadsheet, document, PDF or slides', () => { addFrom = which; $('#add-file')?.click(); });
   item('Add a picture or screenshot', 'You can also paste a screenshot, or drop files on the conversation', () => { addFrom = which; $('#add-picture')?.click(); });
   item('Connect something', 'Mail, drives, calendar, or a system you use', () => { if (C.connect) C.connect(); });
