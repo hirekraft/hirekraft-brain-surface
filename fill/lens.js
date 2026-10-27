@@ -15,7 +15,7 @@ import { removeControl, drawReadView } from "./sources.js?v=2026-10-25-pace-and-
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-25-thoughtgram";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-27-fraud-watch";
 import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-25-thoughtgram";
 import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts } from "./thoughts.js?v=2026-10-25-thoughtgram"; // thoughtgrams and the Thoughts tab (seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
@@ -2434,6 +2434,31 @@ function emailList(mails) {
     p.textContent = `${mails.length - EMAILS_SHOWN} more are in the records below.`;
     box.appendChild(p);
   }
+  // SOMEONE PRETENDING TO BE US (seat fraud-watch, 2026-10-27): when an answer rests on an email the brain flagged
+  // as pretending to be a person of the business or pressing for a payment to someone new, it says so above the
+  // emails and the email carries its warning. item_warnings decides who sees it (anyone who can open that mailbox);
+  // a check that could not run is said, never shown as no warning.
+  sb.rpc("item_warnings", { p_sources: mails.map((m) => m.key), p_ids: mails.map((m) => m.id) }).then(({ data, error }) => {
+    if (error || !data || data.ok === false) {
+      const p = el("p", "state stalled");
+      p.textContent = "Whether these emails pretend to be someone could not be checked just now.";
+      box.insertBefore(p, ul);
+      return;
+    }
+    const ws = data.warnings || [];
+    if (!ws.length) return;
+    const lead = el("p", "ans-warning");
+    lead.setAttribute("role", "alert");
+    lead.textContent = (ws.length === 1 ? "One email this answer rests on is not from who it says." : `${ws.length} emails this answer rests on are not from who they say.`) + " Do not act on what they ask.";
+    box.insertBefore(lead, ul);
+    const byKey = new Map(ws.map((w) => [w.source + "|" + w.id, w]));
+    ul.querySelectorAll("button.ans-email").forEach((b, i) => {
+      const m = mails[i]; const w = m && byKey.get(m.key + "|" + m.id);
+      if (!w) return;
+      const s = el("span", "ans-email-warn"); s.textContent = w.line;
+      b.appendChild(s); b.classList.add("warned");
+    });
+  }).catch(() => {});
   return box;
 }
 // The one move to Mail: she opened an email from an answer.
