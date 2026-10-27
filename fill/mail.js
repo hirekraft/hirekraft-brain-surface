@@ -166,7 +166,46 @@ async function loadAttention() {
   if (attn.data && !attnSeen) { attnSeen = true; C.sb.rpc('seen_mark_set', { p_place: 'attention' }).then(() => {}, () => {}); }
 }
 function attnTeach(rows) { return C.sb.rpc('find_signal_add', { p_signals: rows }).then(({ data }) => data, () => null); }
+// A THOUGHT LEFT FOR HER (seat every-voice, 2026-10-27, decision 1025) leads the list, in her language: Read it shows it whole
+// (and marks it read, which its author can see), See the original shows the speaker's own words, Reply leaves one back.
+function attnThought(it) {
+  const li = mk('li', 'mailx-att-item mailx-att-thought');
+  li.appendChild(mk('p', 'mailx-att-what', it.what));
+  const said = mk('p', 'mailx-att-why', it.why);
+  li.appendChild(said);
+  const checked = Array.isArray(it.checked) ? it.checked.join(' ') : '';
+  if (checked) li.appendChild(mk('p', 'mailx-att-checked', checked));
+  const row = mk('div', 'mailx-att-acts');
+  const read = mk('button', 'go ghost', 'Read it');
+  read.type = 'button';
+  read.addEventListener('click', () => {
+    said.textContent = String(it.text || it.why || '');
+    read.remove();
+    C.sb.rpc('thought_mark_read', { p_ids: [it.thought_id] }).then(() => {}, () => {});
+  });
+  row.appendChild(read);
+  if (it.translated) {
+    let orig = null;
+    const o = mk('button', 'go ghost', 'See the original');
+    o.type = 'button';
+    o.addEventListener('click', () => {
+      if (orig) { orig.remove(); orig = null; o.textContent = 'See the original'; return; }
+      orig = mk('p', 'mailx-att-why', String(it.original || '')); orig.lang = it.lang || '';
+      said.after(orig); o.textContent = 'Hide the original';
+    });
+    row.appendChild(o);
+  }
+  if (C.startThought) {
+    const rp = mk('button', 'go ghost', 'Reply with a thought');
+    rp.type = 'button';
+    rp.addEventListener('click', () => C.startThought({ for: [String(it.from || '')] }));
+    row.appendChild(rp);
+  }
+  li.appendChild(row);
+  return li;
+}
 function attnItem(it) {
+  if (it && it.kind === 'thought') return attnThought(it);
   const li = mk('li', 'mailx-att-item');
   li.appendChild(mk('p', 'mailx-att-what', it.what));
   if (it.why) li.appendChild(mk('p', 'mailx-att-why', it.why));
@@ -242,7 +281,8 @@ function drawAttention() {
     b.addEventListener('click', () => { attn.more = !attn.more; drawAttention(); });
     d.appendChild(b);
   }
-  const lines = (j.lines || []).slice(1).filter((x) => !/^[0-9]+[.] /.test(x) && !String(x).includes(' more worth a look'));
+  // Thought lines lead j.lines for the other doors (box, own AI); here the items show them, so they are skipped (seat every-voice).
+  const lines = (j.lines || []).filter((x) => !String(x).startsWith('Left for you: ') && !String(x).startsWith('- ')).slice(1).filter((x) => !/^[0-9]+[.] /.test(x) && !String(x).includes(' more worth a look'));
   for (const x of lines) d.appendChild(mk('p', 'mailx-att-quiet', x));
   const learned = mk('button', 'go ghost', 'What it learned from you');
   learned.type = 'button';
