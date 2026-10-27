@@ -1513,6 +1513,14 @@ a.find-title:hover { text-decoration: underline; }
 .first-answer .first-lines li { line-height: 1.45; overflow-wrap: anywhere; }
 .first-answer[aria-busy="true"] { min-height: 6em; }
 
+/* ── LEAVE IT FOR SOMEONE (seat every-voice, 2026-10-27, decision 1025): who a thought is for, on the read-back card; a thought
+   left for her in Worth your attention; the original beside a translation. ── */
+.thought-for { display: flex; flex-wrap: wrap; align-items: center; gap: var(--u); margin-top: calc(var(--u) * 1.5); }
+.thought-for-in { flex: 1 1 14rem; min-width: 0; min-height: 44px; box-sizing: border-box; font: inherit; color: var(--ink);
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 calc(var(--u) * 1.5); }
+.thought-original { opacity: .85; border-left: 3px solid var(--line); padding-left: calc(var(--u) * 1.5); }
+.mailx-att-thought .mailx-att-what { font-weight: 600; }
+
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
    for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
