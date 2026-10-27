@@ -42,6 +42,25 @@
 
 import { conversation } from './answer.js?v=2026-10-22-dates';
 import { fmtDate } from './dates.js?v=2026-10-22-dates';
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';
+
+// VIEWS IN THE LEFT COLUMN (seat mail-views, 2026-10-27; Alex 14:41 PT: "Worth your attention should be ... on the left-hand
+// side instead of an email, like a label ... worth your attention, and the other would be starred"). At the top of the left
+// column, across every mailbox she may open: Worth your attention, Starred, Labels (her Gmail labels by mailbox). Choosing a
+// view fills the middle list; choosing an item fills the right pane. SUPERSEDES the Worth your attention block above the
+// three columns (seat attention, same day), which took a third of the screen and squeezed the mail ("very crowded"); the
+// block and its styles are removed. Starred and a label are read live from Gmail by the same search the box uses (FIND,
+// worklens-live 'search' with is:starred or label:...), each mailbox behind the same door; their counts are the Tool's kept
+// marks (stars-labels). Nothing in any mailbox is changed by looking.
+let view = null;            // { kind: 'attention' } | { kind: 'starred' } | { kind: 'label', name, address } | { kind: 'mailbox' }
+let pick = null;            // the Worth your attention item open in the right pane
+let marks = null;           // { loading } | { labels, starred } | { error }
+let labelsOpen = false;
+let userChose = false;      // she chose a view or a mailbox herself: a late reading never moves her
+let afterOpen = null;       // what to do once the email an item opened is on screen ('reply')
+const LAST = 'tool.mail.last';
+function lastBox() { try { return localStorage.getItem(LAST) || null; } catch (_) { return null; } }
+function keepLastBox(k) { try { localStorage.setItem(LAST, k); } catch (_) { /* this browser keeps nothing */ } }
 
 const LIVE = '/functions/v1/worklens-live';
 
@@ -86,7 +105,7 @@ async function askWarnings(pairs) {
     for (const w of data.warnings || []) { warns.set(warnKey(w.source, w.id), w); fresh++; }
     warnsError = null;
   } catch (e) {
-    warnsError = 'Whether these emails pretend to be someone could not be checked just now (' + String((e && e.message) || e) + ').';
+    warnsError = 'Whether these emails pretend to be someone could not be checked just now. ' + plainWords(String((e && e.message) || e || ''));
   }
   if (!parts || (!fresh && had === warnsError)) return;
   drawList();
@@ -129,9 +148,12 @@ export function initMail(ctx) { C = ctx; }
 // The Brain tab's list and the old /mail/ address both arrive here with a mailbox in hand.
 export function chooseMailbox(key) {
   if (!key) return;
+  userChose = true; keepLastBox(key);
+  const wasView = view && view.kind !== 'mailbox';
+  view = { kind: 'mailbox' }; pick = null;
   // Choosing a mailbox ends a find: the list column goes back to being that inbox (seat one-box).
-  if (found) { found = null; if (key === chosen && parts) { setView('list'); drawList(); return; } }
-  if (key === chosen) { setView('list'); return; }
+  if (found) { found = null; if (key === chosen && parts) { setView('list'); drawSide(); drawList(); drawRead(); return; } }
+  if (key === chosen) { setView('list'); if (wasView && parts) { drawSide(); drawList(); drawRead(); } return; }
   chosen = key; inbox = null; open = null;
   if (parts) { setView('list'); parts.list.scrollTop = 0; drawSide(); drawList(); drawRead(); }
 }
@@ -146,37 +168,164 @@ function markSeen(key) {
 }
 
 // WORTH YOUR ATTENTION (seat attention, 2026-10-27, decision 1024 item 5; Alex 2026-10-26: "something that I would actually
-// want to see first... you learn with time what is of importance to me"). At the top of Mail: the brain's short ranked list
-// (attention, read as her: only mailboxes she may open; books for the owner only), each with what, why and what was checked.
-// It only puts things first: nothing is hidden or changed, the rest is counted in the quiet lines under it. Not important and
-// Open teach it (find_signal); What it learned from you lists every rule, each undoable. No AI, no cost.
-let attn = null;            // { loading } | { data, more } | { error }
+// want to see first... you learn with time what is of importance to me"). The brain's short ranked list (attention, read as
+// her: only mailboxes she may open; books for the owner only), each with what, why and what was checked. It only puts things
+// first: nothing is hidden or changed, the rest is counted in the quiet lines. What it learned from you lists every rule,
+// each undoable. No AI, no cost. SINCE seat mail-views (same day) it is a view in the left column: one line of what and one
+// of why per item in the middle list, the item in the right pane.
+let attn = null;            // { loading } | { data, more, gone, said } | { error }
 let attnSeen = false;
 async function loadAttention() {
   attn = { loading: true };
-  drawAttention();
+  if (parts) { drawSide(); if (view && view.kind === 'attention') drawList(); }
   try {
     const { data, error } = await C.sb.rpc('attention', { p_days: 14 });
-    if (error || !data || data.ok === false) throw new Error((error && error.message) || (data && data.reason) || 'no answer came back');
-    attn = { data, more: false, gone: new Set(), said: null };
+    if (error || !data || data.ok === false) throw new Error((error && error.message) || (data && data.reason) || '');
+    attn = { data, more: false, gone: new Set(), said: new Map() };
   } catch (e) {
-    attn = { error: String((e && e.message) || e) };
+    attn = { error: plainWords(String((e && e.message) || e || '')) };
   }
-  drawAttention();
+  // Opening Mail selects Worth your attention when it has items, otherwise the last mailbox she opened (brief item 3).
+  if (!userChose && view && view.kind === 'attention' && attn.data && !attnItems().length) toMailbox(lastBox());
+  if (parts) { drawSide(); drawList(); drawRead(); }
   if (attn.data && !attnSeen) { attnSeen = true; C.sb.rpc('seen_mark_set', { p_place: 'attention' }).then(() => {}, () => {}); }
 }
+function attnItems() { return attn && attn.data ? (attn.data.items || []).filter((x) => !attn.gone.has(x.key)) : []; }
+function attnMore() { return attn && attn.data ? (attn.data.more || []).filter((x) => !attn.gone.has(x.key)) : []; }
 function attnTeach(rows) { return C.sb.rpc('find_signal_add', { p_signals: rows }).then(({ data }) => data, () => null); }
-// A THOUGHT LEFT FOR HER (seat every-voice, 2026-10-27, decision 1025) leads the list, in her language: Read it shows it whole
-// (and marks it read, which its author can see), See the original shows the speaker's own words, Reply leaves one back.
-function attnThought(it) {
-  const li = mk('li', 'mailx-att-item mailx-att-thought');
-  li.appendChild(mk('p', 'mailx-att-what', it.what));
-  const said = mk('p', 'mailx-att-why', it.why);
-  li.appendChild(said);
-  const checked = Array.isArray(it.checked) ? it.checked.join(' ') : '';
-  if (checked) li.appendChild(mk('p', 'mailx-att-checked', checked));
-  const row = mk('div', 'mailx-att-acts');
-  const read = mk('button', 'go ghost', 'Read it');
+function whoOf(it) { return String(it.what || '').split(': ')[0].split(' (')[0]; }
+
+// ACTIONS FIT THE ITEM (seat mail-views; Alex 14:51 PT: "couldn't the options ... depend more on the email itself ... not
+// say not useful ... whenever we suggest anything ... they should be smarter"). Each kind gets its own two or three actions,
+// each labeled with what happens; each dismissal says what the Tool learns. SUPERSEDES the same Open / Not important pair on
+// every item (seat attention). The kinds (attention_for_identity; email items carry 'about' since migration mail-views):
+//   impostor (someone pretending to be us)  Warn <who reads that mailbox>, Report it in Gmail, Not a scam
+//   invoice, invoices (money owed to us)    Open the invoice, Draft a reminder, Already paid
+//   bill (money we owe)                     Open the bill, Already paid
+//   email about money                       Draft a reply, Already paid, Not important
+//   email about a question waiting for you  Draft a reply, Not mine
+//   email waiting on them to confirm        Draft a follow-up, Not important
+//   thought left for her                    Read it, See the original, Reply with a thoughtgram
+//   anything else (watch, finding, email)   Open, Not important
+function kindOf(it) {
+  if (!it) return 'other';
+  if (it.kind === 'thought' || it.kind === 'impostor' || it.kind === 'bill') return it.kind;
+  if (it.kind === 'invoice' || it.kind === 'invoices') return 'invoice';
+  if (it.kind === 'email' && ['money', 'question', 'waiting'].includes(it.about)) return 'email-' + it.about;
+  return 'other';
+}
+function settle(it, line) {
+  attn.said.set(it.key, line);
+  drawRead();
+}
+function gone(it, line) {
+  attn.gone.add(it.key);
+  attn.said.set(it.key, line);
+  drawSide(); drawList(); drawRead();
+}
+async function dismiss(it, btn, rows, line) {
+  btn.disabled = true;
+  const r = await attnTeach(rows);
+  if (!r || r.ok !== true) { btn.disabled = false; btn.textContent = 'Not kept. Try again'; return; }
+  gone(it, line);
+}
+// Open the email an item rests on, in its own mailbox; then, if asked, start the reply (a draft, never sent by itself).
+function openFor(it, then) {
+  if (it.from_key) attnTeach([{ key: it.from_key, signal: 'opened', title: 'Mail from ' + whoOf(it) }]);
+  afterOpen = then || null;
+  openEmail(it.open_source, it.open_id);
+}
+function gmailHref(it) {
+  const box = String(it.open_source || '').split(':').slice(1).join(':');
+  return 'https://mail.google.com/mail/u/?authuser=' + encodeURIComponent(box) + '#all/' + encodeURIComponent(it.open_id || '');
+}
+function actionsFor(it, row, out) {
+  const b = (label, fn, primary) => { const x = mk('button', primary ? 'go' : 'go ghost', label); x.type = 'button'; x.addEventListener('click', () => fn(x)); row.appendChild(x); return x; };
+  const a = (label, href, primary) => { const x = mk('a', primary ? 'go' : 'go ghost', label); x.href = href; x.target = '_blank'; x.rel = 'noopener'; row.appendChild(x); return x; };
+  const who = whoOf(it);
+  const books = Array.isArray(it.checked) ? it.checked.filter((c) => String(c).startsWith('Books')).join(' ') : '';
+  const paid = (x, what) => dismiss(it, x, [{ key: it.key, signal: 'dismissed', title: what + ' you said was paid' }],
+    (books ? 'The Tool checked your books: ' + books.replace(/^Books: /, '') + ' ' : 'Your books were not checked for this. ')
+      + 'If it was paid, it leaves this list once the payment is in the books. Until then it is moved lower for you; undo under What it learned from you.');
+  const k = kindOf(it);
+  if (k === 'impostor') {
+    const names = (Array.isArray(it.readers) ? it.readers : []).map((p) => String(p.name || '')).filter(Boolean);
+    if (names.length && C.startThought) {
+      b('Warn ' + names.join(', '), () => {
+        C.startThought({ for: names });
+        const i = document.getElementById('ask-input');
+        if (i) i.value = 'Some emails pretend to be someone of our business. Do not pay anything they ask, do not open their links or attachments, and tell the owner.';
+        settle(it, 'Your warning for ' + names.join(', ') + ' is in the box at the top. Press Go: it is read back to you before it is kept, and only you and they will see it.');
+      }, true);
+    } else {
+      out.appendChild(mk('p', 'mailx-att-checked', 'Nobody else who signs in to the Tool reads these mailboxes, so the Tool has nobody to warn. Whoever works them in Gmail does not see this warning: tell them yourself.'));
+    }
+    if (it.open_id) a('Report it in Gmail', gmailHref(it));
+    out.appendChild(mk('p', 'mailx-att-checked', 'Report it in Gmail opens the latest one there, where Report phishing is in the message menu. The Tool changes nothing in your mailbox.'));
+    b('Not a scam', (x) => {
+      x.disabled = true;
+      const f = mk('div', 'mailx-att-why-box');
+      const lab = mk('label', null, 'In one line, why is it not a scam?');
+      const inp = mk('input', 'mailx-att-input'); inp.type = 'text'; inp.maxLength = 280;
+      lab.appendChild(inp);
+      const keep = mk('button', 'go', 'Keep');
+      keep.type = 'button';
+      keep.addEventListener('click', async () => {
+        const why = inp.value.trim();
+        if (!why) { inp.focus(); return; }
+        keep.disabled = true;
+        const fe = String(it.from_email || '').toLowerCase();
+        const r = await attnTeach([{ key: 'fraud:' + fe, signal: 'dismissed', value: 'not_scam', title: 'Mail from ' + fe + ' (you said it is not a scam)', about: why }]);
+        if (!r || r.ok !== true) { keep.disabled = false; keep.textContent = 'Not kept. Try again'; return; }
+        settle(it, 'Kept, with your reason. Mail from ' + fe + ' is no longer raised here for you. The warning stays on those emails for anyone else who reads that mailbox. Undo under What it learned from you.');
+        loadAttention();
+      });
+      f.append(lab, keep);
+      out.appendChild(f);
+      inp.focus();
+    });
+    return;
+  }
+  if (k === 'invoice') {
+    if (it.open_url) a('Open the invoice', it.open_url, true);
+    if (C.ask) b('Draft a reminder', () => {
+      C.ask('Draft a short, polite payment reminder email for this, and do not send it: ' + String(it.what || '') + '. ' + String(it.why || ''));
+      settle(it, 'The reminder is being drafted in the conversation on the right. Nothing is sent: you copy it or ask for changes.');
+    });
+    b('Already paid', (x) => paid(x, 'An invoice'));
+    return;
+  }
+  if (k === 'bill') {
+    if (it.open_url) a('Open the bill', it.open_url, true);
+    b('Already paid', (x) => paid(x, 'A bill'));
+    return;
+  }
+  const canOpen = !!(it.open_source && it.open_id);
+  if (k === 'email-money' || k === 'email-question' || k === 'email-waiting') {
+    if (canOpen) b(k === 'email-waiting' ? 'Draft a follow-up' : 'Draft a reply', () => openFor(it, 'reply'), true);
+    if (k === 'email-money') b('Already paid', (x) => paid(x, 'Mail from ' + who));
+    if (k === 'email-question') {
+      b('Not mine', (x) => dismiss(it, x, [{ key: it.from_key || it.key, signal: 'dismissed', title: 'Questions from ' + who + ' (not yours)' }, { key: it.key, signal: 'dismissed', title: String(it.what || '').slice(0, 150) }],
+        'Got it: questions from ' + who + ' come lower for you from now on. The email stays in the inbox; undo under What it learned from you.'));
+      return;
+    }
+  } else if (canOpen) {
+    b('Open', () => openFor(it), true);
+  } else if (it.open_url) {
+    a('Open in QuickBooks', it.open_url, true);
+  }
+  b('Not important', (x) => {
+    const key = it.from_key || ('kind:' + it.kind);
+    const title = it.from_key ? 'Mail from ' + who : (it.kind === 'watch' ? 'What you asked to watch' : it.kind === 'finding' ? 'Records that do not match' : 'This kind of item');
+    dismiss(it, x, [{ key, signal: 'dismissed', title }, { key: it.key, signal: 'dismissed', title: String(it.what || '').slice(0, 150) }],
+      'Got it: ' + (it.from_key ? 'mail from ' + who : 'items like this') + ' comes lower from now on. Nothing is hidden or changed in the inbox; undo under What it learned from you.');
+  });
+}
+
+// A thought left for her: Read it shows it whole (and marks it read, which its author can see), See the original shows the
+// speaker's own words, Reply with a thoughtgram leaves one back (seat every-voice, decision 1025).
+function thoughtActions(it, row, said) {
+  const read = mk('button', 'go', 'Read it');
   read.type = 'button';
   read.addEventListener('click', () => {
     said.textContent = String(it.text || it.why || '');
@@ -190,114 +339,88 @@ function attnThought(it) {
     o.type = 'button';
     o.addEventListener('click', () => {
       if (orig) { orig.remove(); orig = null; o.textContent = 'See the original'; return; }
-      orig = mk('p', 'mailx-att-why', String(it.original || '')); orig.lang = it.lang || '';
+      orig = mk('p', 'mailx-att-why thought-original', String(it.original || '')); orig.lang = it.lang || '';
       said.after(orig); o.textContent = 'Hide the original';
     });
     row.appendChild(o);
   }
   if (C.startThought) {
-    const rp = mk('button', 'go ghost', 'Reply with a thought');
+    const rp = mk('button', 'go ghost', 'Reply with a thoughtgram');
     rp.type = 'button';
     rp.addEventListener('click', () => C.startThought({ for: [String(it.from || '')] }));
     row.appendChild(rp);
   }
-  li.appendChild(row);
-  return li;
 }
-function attnItem(it) {
-  if (it && it.kind === 'thought') return attnThought(it);
-  const li = mk('li', 'mailx-att-item');
-  li.appendChild(mk('p', 'mailx-att-what', it.what));
-  if (it.why) li.appendChild(mk('p', 'mailx-att-why', it.why));
-  const checked = Array.isArray(it.checked) ? it.checked.join(' ') : '';
-  if (checked) li.appendChild(mk('p', 'mailx-att-checked', 'Checked: ' + checked));
-  const row = mk('div', 'mailx-att-acts');
-  const who = String(it.what || '').split(': ')[0];
-  if (it.open_source && it.open_id) {
-    const o = mk('button', 'go ghost', 'Open');
-    o.type = 'button';
-    o.addEventListener('click', () => {
-      if (it.from_key) attnTeach([{ key: it.from_key, signal: 'opened', title: 'Mail from ' + who }]);
-      openEmail(it.open_source, it.open_id);
-    });
-    row.appendChild(o);
-  } else if (it.open_url) {
-    const a = mk('a', 'go ghost', 'Open in QuickBooks');
-    a.href = it.open_url; a.target = '_blank'; a.rel = 'noopener';
-    row.appendChild(a);
-  }
-  const no = mk('button', 'go ghost', 'Not important');
-  no.type = 'button';
-  no.addEventListener('click', async () => {
-    no.disabled = true;
-    const key = it.from_key || ('kind:' + it.kind);
-    const title = it.from_key ? 'Mail from ' + who : (it.kind === 'invoice' ? 'Invoices coming due' : it.kind === 'bill' ? 'Bills of ours past due' : it.kind === 'impostor' ? 'Emails pretending to be someone of the business' : 'This kind of item');
-    const r = await attnTeach([{ key, signal: 'dismissed', title }, { key: it.key, signal: 'dismissed', title: String(it.what || '').slice(0, 150) }]);
-    if (!r || r.ok !== true) { no.disabled = false; no.textContent = 'Not kept. Try again'; return; }
-    attn.gone.add(it.key);
-    attn.said = 'Got it. Things like this come lower from now on. It is still in your inbox, and you can undo it under What it learned from you.';
-    drawAttention();
-  });
-  row.appendChild(no);
-  li.appendChild(row);
-  return li;
-}
-function drawAttention() {
-  const box = parts && parts.att;
-  if (!box) return;
-  const wasOpen = box.querySelector('details') ? box.querySelector('details').open : !window.matchMedia('(max-width: 720px)').matches;
-  box.innerHTML = '';
-  const d = mk('details', 'mailx-att-box');
-  d.open = wasOpen;
-  const sum = mk('summary', 'mailx-att-head');
-  d.appendChild(sum);
-  box.appendChild(d);
-  if (!attn || attn.loading) {
-    sum.textContent = 'Worth your attention';
-    d.appendChild(mk('p', 'quiet working', 'Looking through your mail and books. Nothing in your mailboxes is changed.'));
-    return;
-  }
-  if (attn.error) {
-    sum.textContent = 'Worth your attention';
-    d.appendChild(mk('p', 'state stalled', 'Worth your attention could not be read just now (' + attn.error + '). This is not a claim that nothing needs you.'));
-    return;
-  }
+
+// The middle list: one line of what, one line of why, per item; the rest ranked lower one press away; the quiet lines.
+function drawAttnList(list) {
+  const head = mk('div', 'mailx-head');
+  head.appendChild(navButton('All views', 'side'));
+  head.appendChild(mk('h3', null, 'Worth your attention'));
+  list.appendChild(head);
+  if (!attn || attn.loading) { list.appendChild(mk('p', 'quiet working', 'Looking through your mail and books. Nothing in your mailboxes is changed.')); return; }
+  if (attn.error) { list.appendChild(mk('p', 'state stalled', 'Worth your attention could not be read just now. ' + attn.error + ' This is not a claim that nothing needs you.')); return; }
   const j = attn.data;
-  const items = (j.items || []).filter((x) => !attn.gone.has(x.key));
-  const more = (j.more || []).filter((x) => !attn.gone.has(x.key));
-  sum.textContent = items.length ? 'Worth your attention: ' + items.length + (items.length === 1 ? ' thing' : ' things') : 'Worth your attention: nothing right now';
-  if (attn.said) d.appendChild(mk('p', 'find-lesson', attn.said));
-  if (items.length) {
-    const ol = mk('ol', 'mailx-att-list');
-    for (const it of items) ol.appendChild(attnItem(it));
-    if (attn.more) for (const it of more) ol.appendChild(attnItem(it));
-    d.appendChild(ol);
-  } else {
-    d.appendChild(mk('p', 'quiet', 'Nothing from the last ' + (j.days || 14) + ' days needs you first.'));
+  const items = attnItems();
+  const more = attnMore();
+  if (!items.length) list.appendChild(mk('p', 'quiet', 'Nothing from the last ' + (j.days || 14) + ' days needs you first.'));
+  const ul = mk('ul', 'mailx-msgs mailx-att-rows');
+  for (const it of items.concat(attn.more ? more : [])) {
+    const li = mk('li');
+    const b = mk('button', 'mailx-msg mailx-att-row' + (it.kind === 'thought' ? ' mailx-att-thought' : ''));
+    b.type = 'button';
+    if (pick && pick.key === it.key) b.setAttribute('aria-current', 'true');
+    b.appendChild(mk('span', 'mailx-subj mailx-att-what', String(it.what || '')));
+    if (it.why) b.appendChild(mk('span', 'mailx-snip mailx-att-line', String(it.why)));
+    if (it.kind === 'impostor') b.classList.add('warned');
+    b.addEventListener('click', () => { pick = it; open = null; setView('read'); drawList(); drawRead(); });
+    li.appendChild(b);
+    ul.appendChild(li);
   }
+  list.appendChild(ul);
   if (more.length) {
     const b = mk('button', 'go ghost', attn.more ? 'Show fewer' : 'Show ' + more.length + ' more, ranked lower');
     b.type = 'button';
-    b.addEventListener('click', () => { attn.more = !attn.more; drawAttention(); });
-    d.appendChild(b);
+    b.addEventListener('click', () => { attn.more = !attn.more; drawList(); });
+    list.appendChild(b);
   }
   // Thought lines lead j.lines for the other doors (box, own AI); here the items show them, so they are skipped (seat every-voice).
   const lines = (j.lines || []).filter((x) => !String(x).startsWith('Left for you: ') && !String(x).startsWith('- ')).slice(1).filter((x) => !/^[0-9]+[.] /.test(x) && !String(x).includes(' more worth a look'));
-  for (const x of lines) d.appendChild(mk('p', 'mailx-att-quiet', x));
+  for (const x of lines) list.appendChild(mk('p', 'mailx-att-quiet', x));
   const learned = mk('button', 'go ghost', 'What it learned from you');
   learned.type = 'button';
   const out = mk('div', 'mailx-att-learned');
   learned.addEventListener('click', () => attnLearned(out));
-  d.append(learned, out);
-  d.appendChild(mk('p', 'mailx-att-quiet', `Tell the box "always show me anything from ..." or "I don't care about ...", and it keeps that as a rule.`));
+  list.append(learned, out);
+  list.appendChild(mk('p', 'mailx-att-quiet', `Tell the box "always show me anything from ..." or "I don't care about ...", and it keeps that as a rule.`));
 }
+
+// The right pane: the item, why it is here, what was checked, and the actions that fit it.
+function drawAttnCard(read, it) {
+  read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
+  const card = mk('article', 'mailx-att-card' + (it.kind === 'thought' ? ' mailx-att-thought' : ''));
+  card.appendChild(mk('p', 'eyebrow', it.kind === 'thought' ? 'Left for you' : it.kind === 'impostor' ? 'Pretending to be someone of your business' : 'Worth your attention'));
+  card.appendChild(mk('h2', 'mailx-subject', String(it.what || '')));
+  const said = mk('p', 'mailx-att-why', String(it.why || ''));
+  card.appendChild(said);
+  const checked = Array.isArray(it.checked) ? it.checked.join(' ') : '';
+  if (checked) card.appendChild(mk('p', 'mailx-att-checked', (it.kind === 'thought' ? '' : 'What was checked: ') + checked));
+  const row = mk('div', 'mailx-att-acts');
+  const out = mk('div', 'mailx-att-out');
+  if (it.kind === 'thought') thoughtActions(it, row, said); else actionsFor(it, row, out);
+  card.append(row, out);
+  const line = attn && attn.said && attn.said.get(it.key);
+  if (line) { const p = mk('p', 'find-lesson'); p.setAttribute('aria-live', 'polite'); p.textContent = line; card.appendChild(p); }
+  read.appendChild(card);
+}
+
 async function attnLearned(out) {
   if (out.childNodes.length) { out.innerHTML = ''; return; }
   out.appendChild(mk('p', 'quiet working', 'Reading what it learned.'));
   let rows = null, err = null;
   try { const r = await C.sb.rpc('find_learned', {}); if (r.error) err = r.error.message; else rows = r.data; } catch (e) { err = String((e && e.message) || e); }
   out.innerHTML = '';
-  if (err) { out.appendChild(mk('p', 'state stalled', 'What it learned could not be read just now: ' + err)); return; }
+  if (err) { out.appendChild(mk('p', 'state stalled', 'What it learned could not be read just now. ' + plainWords(err))); return; }
   if (!rows || !rows.length) { out.appendChild(mk('p', 'quiet', 'Nothing yet. It learns from what you open first, mark Not important, and tell it.')); return; }
   const ul = mk('ul', 'find-learned-list');
   for (const r of rows) {
@@ -314,6 +437,36 @@ async function attnLearned(out) {
     ul.appendChild(li);
   }
   out.appendChild(ul);
+}
+
+// STARRED AND LABELS: their counts from the Tool's kept marks (mail_labels, mail_starred: behind the mailbox gate).
+async function loadMarks() {
+  marks = { loading: true };
+  try {
+    const [l, s] = await Promise.all([C.sb.rpc('mail_labels'), C.sb.rpc('mail_starred', { p_limit: 1 })]);
+    if (l.error || !l.data || l.data.ok === false) throw new Error((l.error && l.error.message) || (l.data && l.data.reason) || '');
+    marks = { labels: l.data.labels || [], starred: s && s.data && s.data.ok !== false ? Number(s.data.count) : null };
+  } catch (e) {
+    marks = { error: plainWords(String((e && e.message) || e || '')) };
+  }
+  if (parts) drawSide();
+  setBar();
+}
+// Gmail's own search words for a label: spaces and slashes become hyphens (Gmail's rule), lower case.
+function labelQuery(name) { return 'label:' + String(name || '').toLowerCase().split('/').join('-').split(' ').join('-'); }
+function readingKeys() { return [...C.mailboxes().values()].filter((m) => m.state === 'reading').map((m) => m.source_key); }
+function chooseView(v) {
+  userChose = true;
+  view = v; pick = null; open = null;
+  if (v.kind === 'starred') findMail('is:starred', readingKeys(), { title: 'Starred', view: true });
+  else if (v.kind === 'label') findMail(labelQuery(v.name), ['gmail:' + v.address], { title: v.name, view: true });
+  else found = null;
+  if (parts) { setView('list'); parts.list.scrollTop = 0; drawSide(); drawList(); drawRead(); }
+}
+function toMailbox(key) {
+  view = { kind: 'mailbox' }; found = null; pick = null;
+  const rows = [...C.mailboxes().values()];
+  if (key && rows.some((m) => m.source_key === key)) { if (key !== chosen) { chosen = key; inbox = null; open = null; } }
 }
 
 const mk = (tag, cls, text) => {
@@ -340,7 +493,8 @@ async function live(action, extra) {
     body: JSON.stringify(Object.assign({ action }, extra || {})),
   });
   const j = await r.json().catch(() => null);
-  if (!r.ok || !j || j.ok === false) throw new Error((j && j.error) || ('the mail read came back with ' + r.status));
+  // Raw words never reach her (plain.js); a reply with nothing in it says so plainly too (seat mail-views).
+  if (!r.ok || !j || j.ok === false) throw new Error(plainWords((j && j.error) || ''));
   return j;
 }
 
@@ -353,24 +507,25 @@ export function drawMail(body) {
     body.innerHTML = '';
     const wrap = mk('div', 'mailx');
     const side = mk('aside', 'mailx-side');
-    side.setAttribute('aria-label', 'Mailboxes you can open');
+    side.setAttribute('aria-label', 'Views and mailboxes you can open');
     const list = mk('section', 'mailx-list');
-    list.setAttribute('aria-label', 'Inbox');
+    list.setAttribute('aria-label', 'The list');
     const read = mk('section', 'mailx-read');
-    read.setAttribute('aria-label', 'The open email');
+    read.setAttribute('aria-label', 'The open item');
     read.setAttribute('aria-live', 'polite');
     wrap.append(side, list, read);
-    const att = mk('section', 'mailx-att');
-    att.setAttribute('aria-label', 'Worth your attention');
-    body.append(att, wrap);
-    parts = { wrap, side, list, read, att };
-    wrap.dataset.view = 'list';
+    body.append(wrap);
+    parts = { wrap, side, list, read };
+    // On a phone the left column is the first screen, like Gmail's menu (brief item 5); elsewhere the list.
+    wrap.dataset.view = window.matchMedia('(max-width: 720px)').matches && !pendingOpen ? 'side' : 'list';
   }
+  if (!view) view = pendingOpen ? { kind: 'mailbox' } : { kind: 'attention' };
   pickDefault();
   drawSide();
   drawList();
   drawRead();
-  if (!attn) loadAttention(); else drawAttention();
+  if (!attn) loadAttention();
+  if (!marks) loadMarks();
   if (!countsAsked && C.mailboxes().size) {
     countsAsked = true;
     C.sb.rpc('mail_new').then(({ data, error }) => {
@@ -390,21 +545,66 @@ export function mailReading() {
   drawSide();
 }
 
-// Her own mailbox first, if she can open it; otherwise the first one that is being read.
+// The last mailbox she opened here, else her own mailbox if she can open it, else the first one that is being read.
 function pickDefault() {
   const rows = [...C.mailboxes().values()];
   if (chosen && rows.some((m) => m.source_key === chosen)) return;
   const me = (C.viewer() && C.viewer().email) || '';
+  const last = lastBox();
+  const prior = rows.find((m) => m.source_key === last && m.state === 'reading');
   const own = rows.find((m) => m.address === me && m.state === 'reading');
   const first = rows.find((m) => m.state === 'reading');
-  const pick = own || first || null;
-  if (pick && pick.source_key !== chosen) { chosen = pick.source_key; inbox = null; open = null; }
+  const choice = prior || own || first || null;
+  if (choice && choice.source_key !== chosen) { chosen = choice.source_key; inbox = null; open = null; }
 }
 
-// ── left: who, then every mailbox she can open, by company ──────────────────
+// ── left: the views, then who, then every mailbox she can open, by company ──
+function viewButton(label, count, on, fn, title) {
+  const b = mk('button', 'mailx-box mailx-view');
+  b.type = 'button';
+  if (on) b.setAttribute('aria-current', 'true');
+  b.appendChild(mk('span', 'mailx-addr', label));
+  if (count !== null && count !== undefined && count !== '') { const n = mk('span', 'mailx-count', String(count)); if (title) n.title = title; b.appendChild(n); }
+  b.addEventListener('click', fn);
+  return b;
+}
+function drawViews(side) {
+  const ul = mk('ul', 'mailx-boxes mailx-views');
+  const li = (node) => { const x = mk('li'); x.appendChild(node); ul.appendChild(x); return x; };
+  const n = attn && attn.data ? attnItems().length : null;
+  li(viewButton('Worth your attention', n === null ? '' : n, view && view.kind === 'attention', () => chooseView({ kind: 'attention' }), 'Things worth your look first, across your mailboxes'));
+  const st = marks && !marks.loading && !marks.error ? marks.starred : null;
+  li(viewButton('Starred', st === null ? '' : st, view && view.kind === 'starred', () => chooseView({ kind: 'starred' }), 'Starred in Gmail, across the mailboxes you can open'));
+  const labs = (marks && marks.labels) || [];
+  const lb = li(viewButton('Labels', '', false, () => { labelsOpen = !labelsOpen; drawSide(); }, ''));
+  lb.firstChild.setAttribute('aria-expanded', labelsOpen ? 'true' : 'false');
+  side.appendChild(ul);
+  if (marks && marks.error) side.appendChild(mk('p', 'state stalled', 'Your stars and labels could not be read just now. ' + marks.error));
+  if (labelsOpen) {
+    const wrap = mk('div', 'mailx-labels');
+    if (!marks || marks.loading) wrap.appendChild(mk('p', 'quiet working', 'Reading your labels.'));
+    else if (!labs.length && !marks.error) wrap.appendChild(mk('p', 'quiet', 'No Gmail labels in the mailboxes you can open.'));
+    const by = new Map();
+    for (const l of labs) { const k = String(l.mailbox || ''); if (!by.has(k)) by.set(k, []); by.get(k).push(l); }
+    for (const [addr, list] of [...by.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+      wrap.appendChild(mk('h4', 'mailx-domain', addr));
+      const lu = mk('ul', 'mailx-boxes');
+      for (const l of list.slice().sort((a, b) => String(a.name).localeCompare(String(b.name)))) {
+        const on = view && view.kind === 'label' && view.name === l.name && view.address === addr;
+        const x = mk('li');
+        x.appendChild(viewButton(String(l.name), l.gmail_total === null || l.gmail_total === undefined ? '' : l.gmail_total, on, () => chooseView({ kind: 'label', name: String(l.name), address: addr }), 'In Gmail under this label'));
+        lu.appendChild(x);
+      }
+      wrap.appendChild(lu);
+    }
+    side.appendChild(wrap);
+  }
+}
 function drawSide() {
   const side = parts.side;
+  const top = side.scrollTop;
   side.innerHTML = '';
+  drawViews(side);
   const v = C.viewer();
   const who = mk('p', 'mailx-who');
   if (v) {
@@ -417,7 +617,7 @@ function drawSide() {
   side.appendChild(who);
 
   if (C.mbxError()) {
-    side.appendChild(mk('p', 'state stalled', 'Your mailboxes could not be read just now (' + C.mbxError() + '), so this list is not a claim either way.'));
+    side.appendChild(mk('p', 'state stalled', 'Your mailboxes could not be read just now, so this list is not a claim either way. ' + plainWords(C.mbxError())));
     return;
   }
   const rows = [...C.mailboxes().values()];
@@ -444,7 +644,7 @@ function drawSide() {
       const li = mk('li');
       const b = mk('button', 'mailx-box');
       b.type = 'button';
-      if (m.source_key === chosen) b.setAttribute('aria-current', 'true');
+      if (m.source_key === chosen && view && view.kind === 'mailbox') b.setAttribute('aria-current', 'true');
       b.appendChild(mk('span', 'mailx-addr', m.address));
       if (unread.has(m.source_key) && unread.get(m.source_key) > 0) {
         const n = mk('span', 'mailx-count', String(unread.get(m.source_key)));
@@ -460,6 +660,7 @@ function drawSide() {
     }
     side.appendChild(ul);
   }
+  side.scrollTop = top;
 }
 
 // ── middle: the inbox ────────────────────────────────────────────────────────
@@ -491,10 +692,11 @@ function drawList() {
   const list = parts.list;
   list.innerHTML = '';
   if (found) { drawFound(list); return; }
+  if (view && view.kind === 'attention') { drawAttnList(list); return; }
   const m = boxRow();
   if (!m) { list.appendChild(mk('p', 'quiet', 'Choose a mailbox on the left.')); return; }
   const head = mk('div', 'mailx-head');
-  head.appendChild(navButton('Mailboxes', 'side'));
+  head.appendChild(navButton('All views', 'side'));
   head.appendChild(mk('h3', null, m.address));
   list.appendChild(head);
   if (m.state !== 'reading') {
@@ -504,7 +706,7 @@ function drawList() {
   if (!inbox) { loadInbox(false); return; }
   if (inbox.loading && !inbox.pages.length) { list.appendChild(mk('p', 'quiet working', 'Reading this inbox from Gmail.')); return; }
   if (inbox.error && !inbox.pages.length) {
-    list.appendChild(mk('p', 'state stalled', 'This inbox could not be opened: ' + inbox.error));
+    list.appendChild(mk('p', 'state stalled', 'This inbox could not be opened. ' + inbox.error));
     return;
   }
   const n = inbox.pages.length;
@@ -538,7 +740,7 @@ function drawList() {
     ul.appendChild(li);
   }
   list.appendChild(ul);
-  if (inbox.error) list.appendChild(mk('p', 'state stalled', 'The next page could not be read: ' + inbox.error));
+  if (inbox.error) list.appendChild(mk('p', 'state stalled', 'The next page could not be read. ' + inbox.error));
   if (inbox.next) {
     const more = mk('button', 'go ghost', inbox.more ? 'Reading more' : 'More mail');
     more.type = 'button';
@@ -563,7 +765,13 @@ async function openThread(threadId, from) {
     if (!open || open.id !== threadId) return;
     open.thread = t; drawRead();
     restoreKept(key, t);
-    const r = await live('related', { source_key: key, thread_id: threadId });
+    // Opened from Worth your attention with Draft a reply: the reply starts here (a draft; nothing is sent by itself).
+    if (afterOpen === 'reply') { afterOpen = null; convoFor(t, true).start('reply'); drawRead(); }
+    // THE THREAD'S OWN ID, NOT THE ONE WE WERE GIVEN (seat mail-views, 2026-10-27). An email opened from an answer or from Worth
+    // your attention arrives by its MESSAGE id; the thread read finds its thread (worklens-live liveThread), but the related
+    // read does not, so asking it with the message id came back "gmail thread <id>: 404" on every email that was not the first
+    // of its thread. That was the raw error on Alex's screen; nothing had been deleted.
+    const r = await live('related', { source_key: key, thread_id: t.thread_id || threadId });
     if (!open || open.id !== threadId) return;
     open.related = r;
   } catch (e) {
@@ -613,12 +821,19 @@ function drawRead() {
   const read = parts.read;
   read.innerHTML = '';
   setBar();
+  if (!open && pick && view && view.kind === 'attention') { drawAttnCard(read, pick); return; }
   if (!open) {
-    read.appendChild(mk('p', 'quiet', 'Choose an email to read it here.'));
+    read.appendChild(mk('p', 'quiet', view && view.kind === 'attention' ? 'Choose an item to see why it is here and what you can do.' : 'Choose an email to read it here.'));
     return;
   }
-  read.appendChild(navButton('Back to the inbox', 'list', ' mailx-back'));
-  if (open.error) { read.appendChild(mk('p', 'state stalled', 'This email could not be opened: ' + open.error)); return; }
+  read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
+  if (pick && view && view.kind === 'attention') {
+    const back = mk('button', 'mailx-toggle', 'Back to why it is here');
+    back.type = 'button';
+    back.addEventListener('click', () => { open = null; drawRead(); });
+    read.appendChild(back);
+  }
+  if (open.error) { read.appendChild(mk('p', 'state stalled', 'This email could not be opened. ' + open.error)); return; }
   const t = open.thread;
   if (!t) { read.appendChild(mk('p', 'quiet working', 'Opening it.')); return; }
 
@@ -649,7 +864,7 @@ function drawRead() {
     const know = mk('div', 'mailx-know');
     know.appendChild(mk('p', 'eyebrow', 'What you didn’t know'));
     if (r === 'loading') know.appendChild(mk('p', 'quiet', 'Pulling the rest of the story together.'));
-    else if (r && r.error) know.appendChild(mk('p', 'state stalled', 'The rest of the story could not be put together: ' + r.error));
+    else if (r && r.error) know.appendChild(mk('p', 'state stalled', 'What connects to this email could not be put together just now. ' + r.error));
     else know.appendChild(mk('p', null, didntKnow(t, r)));
     read.appendChild(know);
 
@@ -993,7 +1208,7 @@ async function restoreKept(key, t) {
     if (key !== chosen || !open || open.id !== t.thread_id || convos.has(about)) return;
     convoFor(t, true, a.data.chat_id).restore(w.data.turns);
   } catch (e) {
-    if (open && open.id === t.thread_id) open.keptError = 'Whether you talked about this email before could not be read just now (' + ((e && e.message) || e) + ').';
+    if (open && open.id === t.thread_id) open.keptError = 'Whether you talked about this email before could not be read just now. ' + plainWords(String((e && e.message) || e || ''));
   }
   if (open && open.id === t.thread_id) drawRead();
 }
@@ -1007,8 +1222,10 @@ function setBar() { if (C && C.scopeChanged) C.scopeChanged(); }
 export function mailScope() {
   const m = boxRow();
   const on = !!(parts && parts.wrap.isConnected && parts.wrap.offsetParent);
-  return { key: on ? chosen : null, address: (m && m.address) || '', emailOpen: on && !!(open && open.thread),
-    threadKey: open && open.thread ? aboutKey(chosen, open.thread.thread_id) : null };
+  // A view she chose (Starred, a label) is a chip in the box, as a mailbox is (seat mail-views): she sees it can be typed.
+  const v = on && view && (view.kind === 'starred' || view.kind === 'label') ? { kind: view.kind, name: view.name || '', address: view.address || '' } : null;
+  return { key: on && view && view.kind === 'mailbox' ? chosen : null, address: (m && m.address) || '', emailOpen: on && !!(open && open.thread),
+    threadKey: open && open.thread ? aboutKey(chosen, open.thread.thread_id) : null, view: v };
 }
 
 export function mailHints() {
@@ -1019,6 +1236,10 @@ export function mailHints() {
     open: other ? { from_name: other.from_name, from_email: other.from_email } : null,
     recent: ((inbox && inbox.pages) || []).filter((x) => !x.details_unavailable).slice(0, 25)
       .map((x) => ({ from_name: x.from_name, from_email: x.from_email })),
+    // Real things for the box's examples (seat mail-views): her labels that hold mail, and who is on Worth your attention.
+    labels: ((marks && marks.labels) || []).filter((l) => Number(l.gmail_total) > 0).map((l) => String(l.name)),
+    starred: !!(marks && Number(marks.starred) > 0),
+    domains: attnItems().filter((x) => x.kind === 'email').map((x) => (String(x.what || '').split(' (')[1] || '').split(')')[0]).filter(Boolean),
   };
 }
 
@@ -1041,8 +1262,11 @@ export function findMail(text, keys, opts) {
   const o = opts || {};
   const seq = ++findSeq;
   found = { text, keys: keys.slice(), per: new Map(keys.map((k) => [k, { state: 'loading' }])),
-    meaning: { state: 'loading' }, unsure: !!o.unsure, note: o.note || '', askInstead: o.askInstead || null, seq };
-  if (parts) { setView('list'); parts.list.scrollTop = 0; drawList(); }
+    meaning: { state: o.view ? 'done' : 'loading', mail: [], failed: [], docs: [], docsGate: {} }, unsure: !!o.unsure, note: o.note || '',
+    askInstead: o.askInstead || null, seq, title: o.title || '', view: !!o.view };
+  // A find from the box leaves any view; a view (Starred, a label) is a find with a title and no meaning search (seat mail-views).
+  if (!o.view) { view = { kind: 'mailbox' }; pick = null; }
+  if (parts) { setView('list'); parts.list.scrollTop = 0; drawSide(); drawList(); }
   const mine = () => found && found.seq === seq;
   for (const k of keys) {
     live('search', { source_key: k, text }).then((j) => {
@@ -1054,7 +1278,7 @@ export function findMail(text, keys, opts) {
       found.per.set(k, { state: 'error', error: String((e && e.message) || e) });
     }).finally(() => { if (mine() && parts) drawList(); });
   }
-  live('meaning', { text }).then((j) => {
+  if (!o.view) live('meaning', { text }).then((j) => {
     if (!mine()) return;
     found.meaning = { state: 'done', mail: j.mail || [], failed: j.mail_failed || [],
       docs: (j.documents && j.documents.docs) || [], docsGate: (j.documents && j.documents.gate) || {} };
@@ -1064,7 +1288,7 @@ export function findMail(text, keys, opts) {
   }).finally(() => { if (mine() && parts) drawList(); });
 }
 
-export function clearFind() { found = null; if (parts) drawList(); }
+export function clearFind() { found = null; if (view && view.kind !== 'attention') view = { kind: 'mailbox' }; if (parts) { drawSide(); drawList(); } }
 
 // AN EMAIL OPENED FROM AN ANSWER (seat talk-to-the-tool, 2026-10-12). The conversation shows the emails an answer
 // rests on; pressing one brings her here with that email open in its own mailbox. The id may be a message id (the
@@ -1091,14 +1315,17 @@ function addrOf(key) {
 function drawFound(list) {
   const f = found;
   const head = mk('div', 'mailx-head');
-  head.appendChild(navButton('Mailboxes', 'side'));
-  head.appendChild(mk('h3', null, 'Found'));
-  const x = mk('button', 'mailx-close', 'x');
-  x.type = 'button';
-  x.title = 'Back to the inbox';
-  x.setAttribute('aria-label', 'Close the search and go back to the inbox');
-  x.addEventListener('click', clearFind);
-  head.appendChild(x);
+  head.appendChild(navButton('All views', 'side'));
+  head.appendChild(mk('h3', null, f.title || 'Found'));
+  // A view (Starred, a label) is left by choosing another on the left; a find has its own close.
+  if (!f.view) {
+    const x = mk('button', 'mailx-close', 'x');
+    x.type = 'button';
+    x.title = 'Back to the inbox';
+    x.setAttribute('aria-label', 'Close the search and go back to the inbox');
+    x.addEventListener('click', clearFind);
+    head.appendChild(x);
+  }
   list.appendChild(head);
 
   const box = mk('div', 'mailx-found');
@@ -1135,12 +1362,13 @@ function drawFound(list) {
   const done = [...f.per.values()].filter((p) => p.state === 'done');
   const waiting = [...f.per.values()].filter((p) => p.state === 'loading').length;
   const boxes = new Set(rows.map((r) => r.source_key)).size;
-  const said = rows.length + ' email' + (rows.length === 1 ? '' : 's') + ' for ' + String.fromCharCode(8220) + f.text + String.fromCharCode(8221)
+  const said = rows.length + ' email' + (rows.length === 1 ? '' : 's') + (f.view ? (f.title === 'Starred' ? ' starred' : ' under this label') : ' for ' + String.fromCharCode(8220) + f.text + String.fromCharCode(8221))
     + (rows.length ? ', in ' + boxes + ' of ' + f.keys.length + ' mailbox' + (f.keys.length === 1 ? '' : 'es') : ' so far')
     + ', newest first.';
   box.appendChild(mk('p', 'mailx-found-line', said));
   const q = done.find((p) => p.query);
-  if (q) box.appendChild(mk('p', 'quiet', 'Gmail was searched for: ' + q.query + (byMeaning ? '. ' + byMeaning + ' more found by meaning in what the company has read.' : '.')));
+  if (f.view) box.appendChild(mk('p', 'quiet', 'Read live from Gmail just now. Nothing in your mailboxes is changed. Ask the box about these, for example ' + String.fromCharCode(8220) + (f.title === 'Starred' ? 'what did I star about invoices last month?' : 'what is waiting under ' + f.title + '?') + String.fromCharCode(8221) + '.'));
+  else if (q) box.appendChild(mk('p', 'quiet', 'Gmail was searched for: ' + q.query + (byMeaning ? '. ' + byMeaning + ' more found by meaning in what the company has read.' : '.')));
   else if (byMeaning) box.appendChild(mk('p', 'quiet', byMeaning + ' found by meaning in what the company has read.'));
   if (f.note) box.appendChild(mk('p', 'quiet', f.note));
   if (f.unsure && f.askInstead) {
@@ -1154,16 +1382,16 @@ function drawFound(list) {
   const status = mk('ul', 'mailx-found-status');
   for (const [k, p] of f.per) {
     if (p.state === 'loading') status.appendChild(mk('li', 'quiet', addrOf(k) + ': searching'));
-    else if (p.state === 'error') status.appendChild(mk('li', 'state stalled', addrOf(k) + ' could not be searched: ' + p.error));
+    else if (p.state === 'error') status.appendChild(mk('li', 'state stalled', addrOf(k) + ' could not be searched. ' + p.error));
     else if (p.more) status.appendChild(mk('li', 'quiet', addrOf(k) + ': showing the newest ' + p.items.length + (p.estimate ? ' of about ' + p.estimate : '') + '; add a word to narrow it'));
   }
   if (f.meaning.state === 'loading') status.appendChild(mk('li', 'quiet', 'Also searching by meaning'));
-  else if (f.meaning.state === 'error') status.appendChild(mk('li', 'state stalled', 'The search by meaning could not run: ' + f.meaning.error));
-  else for (const x of f.meaning.failed || []) status.appendChild(mk('li', 'state stalled', x.count + ' found by meaning in ' + addrOf(x.source_key) + ' could not be opened: ' + x.error));
+  else if (f.meaning.state === 'error') status.appendChild(mk('li', 'state stalled', 'The search by meaning could not run. ' + f.meaning.error));
+  else for (const x of f.meaning.failed || []) status.appendChild(mk('li', 'state stalled', x.count + ' found by meaning in ' + addrOf(x.source_key) + ' could not be opened. ' + plainWords(x.error)));
   if (status.children.length) box.appendChild(status);
 
   if (!rows.length) {
-    if (!waiting && f.meaning.state !== 'loading') box.appendChild(mk('p', 'quiet', 'Nothing found. Try fewer or different words, or a name.'));
+    if (!waiting && f.meaning.state !== 'loading') box.appendChild(mk('p', 'quiet', f.view ? (f.title === 'Starred' ? 'Nothing is starred in the mailboxes you can open.' : 'Nothing in Gmail carries this label right now.') : 'Nothing found. Try fewer or different words, or a name.'));
   } else {
     askWarnings(rows.slice(0, 150).map((r) => [r.source_key, r.id]));
     if (warnsError) box.appendChild(mk('p', 'state stalled', warnsError));
