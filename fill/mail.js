@@ -56,6 +56,53 @@ const imagesShown = new Set(); // message ids whose remote pictures she chose to
 const convos = new Map();      // 'mail:<source_key>:<thread_id>' -> the conversation about that email
 let found = null;              // a find from the one box (box.js): emails from every mailbox, in the inbox column
 let findSeq = 0;
+
+// SOMEONE PRETENDING TO BE US (seat fraud-watch, 2026-10-27; Alex 2026-10-26: "Impersonating accounts, because it's
+// been an issue for us"). The brain checks every email as it arrives and keeps one plain warning on any that pretends
+// to be a person of the business, comes from a look-alike address, or presses for a payment to someone new
+// (fraud_flag). item_warnings hands back the warnings for the emails on screen, to anyone who can open that mailbox;
+// who may see it is decided there, not here. A check that could not run is said, never shown as no warning.
+const warns = new Map();       // 'source key|message id' -> the warning, or null when asked and there is none
+let warnsError = null;
+const warnKey = (s, id) => s + '|' + id;
+function warnFor(s, ids) {
+  for (const id of ids) { const w = id ? warns.get(warnKey(s, id)) : null; if (w) return w; }
+  return null;
+}
+async function askWarnings(pairs) {
+  const need = pairs.filter((p) => p[0] && p[1] && !warns.has(warnKey(p[0], p[1])));
+  if (!need.length) return;
+  for (const p of need) warns.set(warnKey(p[0], p[1]), null);   // asked once per page view, even if the check fails
+  let fresh = 0;
+  const had = warnsError;
+  try {
+    const { data, error } = await C.sb.rpc('item_warnings', { p_sources: need.map((p) => p[0]), p_ids: need.map((p) => p[1]) });
+    if (error || !data || data.ok === false) throw new Error((error && error.message) || (data && data.reason) || 'no answer came back');
+    for (const w of data.warnings || []) { warns.set(warnKey(w.source, w.id), w); fresh++; }
+    warnsError = null;
+  } catch (e) {
+    warnsError = 'Whether these emails pretend to be someone could not be checked just now (' + String((e && e.message) || e) + ').';
+  }
+  if (!parts || (!fresh && had === warnsError)) return;
+  drawList();
+  const t = open && open.thread;
+  if (t && warnFor(chosen, (t.messages || []).map((m) => m.id).concat([t.thread_id]))) drawRead();
+}
+function firstSentence(line) {
+  const s = String(line || ''); const i = s.indexOf('. ');
+  return i > 0 ? s.slice(0, i + 1) : s;
+}
+function warnBox(w) {
+  const box = mk('div', 'mailx-warning');
+  box.setAttribute('role', 'alert');
+  box.appendChild(mk('p', 'mailx-warning-line', w.line));
+  if (w.books) box.appendChild(mk('p', 'mailx-warning-books', w.books));
+  return box;
+}
+function warnTag(b, w) {
+  b.classList.add('warned');
+  b.appendChild(mk('span', 'mailx-warn', firstSentence(w.line)));
+}
 let pendingOpen = null;        // an email an answer asked to open (lens.js emailList), waiting for the columns
 const NL = String.fromCharCode(10);
 const TAB = String.fromCharCode(9);
@@ -271,6 +318,8 @@ function drawList() {
   head.appendChild(mk('span', 'quiet', n + (inbox.estimate ? ' of about ' + inbox.estimate : '') + ', read live from Gmail'));
   if (!n) { list.appendChild(mk('p', 'quiet', 'Nothing in this inbox right now.')); return; }
 
+  askWarnings(inbox.pages.map((x) => [chosen, x.id]));
+  if (warnsError) list.appendChild(mk('p', 'state stalled', warnsError));
   const ul = mk('ul', 'mailx-msgs');
   for (const x of inbox.pages) {
     const li = mk('li');
@@ -289,6 +338,8 @@ function drawList() {
       b.appendChild(mk('span', 'mailx-subj', x.subject || '(no subject)'));
       if (x.snippet) b.appendChild(mk('span', 'mailx-snip', String(x.snippet).slice(0, 140)));
     }
+    const xw = warnFor(chosen, [x.id]);
+    if (xw) warnTag(b, xw);
     b.addEventListener('click', () => openThread(x.thread_id));
     li.appendChild(b);
     ul.appendChild(li);
@@ -386,6 +437,11 @@ function drawRead() {
     head.appendChild(a);
   }
   read.appendChild(head);
+  // The warning goes above everything else about the email, for anyone who can open this mailbox.
+  const tIds = (t.messages || []).map((m) => m.id).concat([t.thread_id]);
+  askWarnings(tIds.map((id) => [chosen, id]));
+  const tw = warnFor(chosen, tIds);
+  if (tw) read.appendChild(warnBox(tw));
 
   const r = open.related;
   // A NEWSLETTER IS SAID ONCE (Alex, 2026-10-07: thirteen earlier issues listed under "Belongs
@@ -916,6 +972,8 @@ function drawFound(list) {
   if (!rows.length) {
     if (!waiting && f.meaning.state !== 'loading') box.appendChild(mk('p', 'quiet', 'Nothing found. Try fewer or different words, or a name.'));
   } else {
+    askWarnings(rows.slice(0, 150).map((r) => [r.source_key, r.id]));
+    if (warnsError) box.appendChild(mk('p', 'state stalled', warnsError));
     const ul = mk('ul', 'mailx-msgs');
     for (const r of rows.slice(0, 150)) {
       const li = mk('li');
@@ -934,6 +992,8 @@ function drawFound(list) {
         if (r.snippet) b.appendChild(mk('span', 'mailx-snip', String(r.snippet).slice(0, 140)));
       }
       if (r.by_meaning) b.appendChild(mk('span', 'mailx-why', 'found by meaning'));
+      const rw = warnFor(r.source_key, [r.id]);
+      if (rw) warnTag(b, rw);
       b.addEventListener('click', () => openThread(r.thread_id, r.source_key));
       li.appendChild(b);
       ul.appendChild(li);
