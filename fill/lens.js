@@ -15,12 +15,12 @@ import { removeControl, drawReadView } from "./sources.js?v=2026-10-25-pace-and-
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-27-fraud-watch";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-27-attention";
 import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-25-thoughtgram";
 import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts } from "./thoughts.js?v=2026-10-25-thoughtgram"; // thoughtgrams and the Thoughts tab (seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
-import { foundCard } from "./find.js?v=2026-10-25-thoughtgram"; // find first, then work on what was found (seat find-first)
+import { foundCard } from "./find.js?v=2026-10-27-attention"; // find first, then work on what was found (seat find-first)
 import { closeCard } from "./close.js?v=2026-10-26-month-end-2"; // the month-end check, corrected cell by cell (seat month-end)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-26-locks"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-22-dates"; // Money tab (seat runway)
