@@ -38,7 +38,7 @@
 // question, because an offered question the Tool cannot answer teaches that the box is decoration.
 
 let C = null;
-const off = { mailbox: null, email: null };   // which chip she removed, by what it named
+const off = { mailbox: null, email: null, view: null };   // which chip she removed, by what it named
 // LEAVING A THOUGHT (seat thoughtgram, 2026-10-25, decisions 1015-1017). Leave a thought (the + menu in both boxes, the
 // Thoughts tab, an open email) puts the box in thought mode, shown as a chip: what she then says or types is not asked,
 // it goes to the thought card (fill/thoughts.js) to be read back, corrected and kept. Removing the chip asks again.
@@ -65,7 +65,11 @@ function scope() {
   const onMail = C.onMail();
   const mailbox = onMail && s && s.key && off.mailbox !== s.key ? { key: s.key, address: s.address || s.key } : null;
   const email = onMail && s && s.emailOpen && off.email !== s.threadKey;
-  return { mailbox, email: !!email, raw: s, onMail };
+  // STARRED OR A LABEL CHOSEN ON MAIL IS A CHIP TOO (seat mail-views, 2026-10-27; brief item 4, "findable by seeing it"): what she
+  // then asks is asked about those emails, in words she can see and could have typed herself.
+  const vk = s && s.view ? s.view.kind + ':' + s.view.address + ':' + s.view.name : null;
+  const view = onMail && vk && off.view !== vk ? s.view : null;
+  return { mailbox, email: !!email, raw: s, onMail, view, viewKey: vk };
 }
 
 function chip(label, onRemove) {
@@ -88,12 +92,42 @@ export function drawBox() {
   const sc = scope();
   host.innerHTML = '';
   if (sc.mailbox) host.appendChild(chip('in ' + sc.mailbox.address, () => { off.mailbox = sc.mailbox.key; }));
+  if (sc.view && !sc.email && !thinking) host.appendChild(chip(viewChip(sc.view), () => { off.view = sc.viewKey; }));
   if (sc.email && !thinking) host.appendChild(chip('about this email', () => { off.email = sc.raw.threadKey; }));
   if (thinking) host.appendChild(chip(thinking.email ? 'a thought on this email' : thinking.topicTitle ? 'a thought on ' + thinking.topicTitle : Array.isArray(thinking.for) && thinking.for.length ? 'a thought for ' + thinking.for.join(', ') : 'leaving a thought', () => { thinking = null; }));
   const pin = $('#panel-input');
   if (pin) pin.placeholder = thinking ? THINK_PH : (pin.dataset.ph || (pin.dataset.ph = pin.placeholder));
   input.placeholder = thinking ? THINK_PH : sc.email ? 'Ask about this email, have it answered, or find another'
-    : C.continuing && C.continuing() ? 'Continue the conversation on the right, or press New there' : DEFAULT_PH;
+    : C.continuing && C.continuing() ? 'Continue the conversation on the right, or press New there'
+    : sc.view ? 'Ask about ' + viewChip(sc.view).replace('in what you starred', 'what you starred') : rotating() || DEFAULT_PH;
+}
+function viewChip(v) { return v.kind === 'starred' ? 'in what you starred' : 'label ' + v.name; }
+// The words a view chip adds to what she asks: the same words she could type herself.
+function viewWords(v) { return v.kind === 'starred' ? 'Among everything I starred: ' : 'Among everything I labeled ' + v.name + ': '; }
+
+// THE BOX SHOWS WHAT IT CAN DO WITH HER OWN THINGS (seat mail-views, brief item 4). With nothing typed, the placeholder turns
+// through real examples drawn from what she has: a company on her Worth your attention list, one of her Gmail labels that holds
+// mail. Built only from what this page already read; nothing is fixed text, and with nothing to draw from it stays the default.
+let phAt = 0, phTimer = null;
+function phExamples() {
+  const h = (C && C.mailHints && C.mailHints()) || {};
+  const out = [];
+  const co = (h.domains || []).map((d) => domainLabel('x@' + d)).find(Boolean);
+  if (h.starred && co) out.push('Try: everything I starred about ' + co);
+  const lab = (h.labels || []).find((n) => n && n.length <= 40);
+  if (lab) out.push('Try: label ' + lab + ', last month');
+  return out;
+}
+function rotating() {
+  const list = phExamples();
+  if (!list.length) return '';
+  return [DEFAULT_PH].concat(list)[phAt % (list.length + 1)];
+}
+function phTick() {
+  const input = $('#ask-input');
+  if (!input || input.value || document.activeElement === input) return;
+  phAt++;
+  drawBox();
 }
 
 function firstName(n) {
@@ -188,6 +222,8 @@ function submit(text, fromPanel) {
   if (named) { find(t, named); return; }
   // A follow-up typed in the panel always continues the panel's conversation.
   if (!fromPanel && sc.email && C.askFromMailBar(t)) return;
+  // A view chip on (Starred, a label): asked about those emails, in the words shown on the chip (seat mail-views).
+  if (!fromPanel && sc.view && !sc.email) { C.ask(viewWords(sc.view) + t); return; }
   C.ask(t);
 }
 
@@ -250,6 +286,7 @@ export function initBox(ctx) {
   wireSpeak();
   wireAdd();
   drawBox();
+  if (!phTimer) phTimer = setInterval(phTick, 7000);
   ownerLines();
 }
 
