@@ -3644,6 +3644,7 @@ function goto(id, key) {
   if (id === "s-security") loadSecurity();
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
   onMail = id === 's-lens' && lensKey === 'email';
+  if (BRAIN_PAIR.includes(id)) import('./first.js?v=2026-10-27-first-answer').then((F) => F.drawFirst({ sb, el, $ })).catch((e) => { const m = $('#first-answer'); if (m) m.textContent = 'The short answer could not be loaded: ' + String(e?.message ?? e); });   // seat first-answer
   workPanel(id === 's-work');
   if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney();
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
