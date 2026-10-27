@@ -1492,6 +1492,12 @@ a.find-title:hover { text-decoration: underline; }
 .close-month { font-weight: var(--w-mid); color: var(--ink); margin: 0; }
 .close-keep { display: flex; flex-direction: column; gap: calc(var(--u) * 2); }
 
+/* THE FIRST ANSWER on top of the Brain tab (seat first-answer, 2026-10-27): six short lines, the detail below. */
+.first-answer { margin: 0 0 16px; }
+.first-answer .first-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.first-answer .first-lines li { line-height: 1.45; overflow-wrap: anywhere; }
+.first-answer[aria-busy="true"] { min-height: 6em; }
+
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
    for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
