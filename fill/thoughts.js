@@ -26,6 +26,9 @@ import { fmtDate } from "./dates.js?v=2026-10-22-dates";
 
 let C = null;   // { sb, el, $, openPanel, askBody, goThoughts, startThought, foundCard, findCtx }
 let view = 'moving';
+// FOR YOU and LEAVE IT FOR SOMEONE (seat every-voice, 2026-10-27, decision 1025): a thought can be left for named people of the
+// business; only she and they see it, the owner included. The brain matches the names, keeps her words as the source and makes
+// each reader's version in their language, marked as a translation, the original one press away.
 let topicOpen = null;
 
 const PREFIXES = ['note for the brain', 'notes for the brain', 'a note for the brain', 'thought for the brain', 'a thought for the brain',
@@ -82,14 +85,30 @@ export function keepThought(text, opts) {
   const o = opts || {};
   const t = turn();
   if (!t) return;
-  t.appendChild(el('p', 'ans-lead', o.email ? 'A thought on this email, to keep' : o.topicTitle ? 'A thought on ' + o.topicTitle + ', to keep' : 'A thought to keep'));
+  const forWho = Array.isArray(o.for) && o.for.filter(Boolean).length ? o.for.filter(Boolean).join(', ') : '';
+  t.appendChild(el('p', 'ans-lead', o.email ? 'A thought on this email, to keep' : o.topicTitle ? 'A thought on ' + o.topicTitle + ', to keep' : forWho ? 'A thought for ' + forWho + ', to keep' : 'A thought to keep'));
   if (o.email && o.email.subject) t.appendChild(el('p', 'quiet', 'On: ' + o.email.subject));
   const ta = el('textarea', 'thought-text');
   ta.value = String(text || '');
   ta.rows = Math.min(8, Math.max(3, Math.ceil(ta.value.length / 70)));
   ta.setAttribute('aria-label', 'Your thought, as it will be kept');
   t.appendChild(ta);
-  t.appendChild(el('p', 'quiet', (o.heard ? 'This is what was heard. ' : '') + 'Correct anything, then keep it. Only you can see it.'));
+  const forRow = el('label', 'thought-for');
+  forRow.appendChild(el('span', 'quiet', 'For (optional): '));
+  const forIn = el('input', 'thought-for-in');
+  forIn.type = 'text'; forIn.value = Array.isArray(o.for) ? o.for.join(', ') : String(o.for || '');
+  forIn.placeholder = 'names of people here, or leave empty for yourself';
+  forIn.setAttribute('aria-label', 'Who this thought is for');
+  forRow.appendChild(forIn);
+  t.appendChild(forRow);
+  const whoSees = el('p', 'quiet');
+  const sayWho = () => {
+    const names = forIn.value.split(',').map((x) => x.trim()).filter(Boolean);
+    whoSees.textContent = (o.heard ? 'This is what was heard. ' : '') + 'Correct anything, then keep it. '
+      + (names.length ? 'Only you and ' + names.join(', ') + ' will see it; each reads it in their own language, with your words kept as the original.' : 'Only you can see it.');
+  };
+  forIn.addEventListener('input', sayWho); sayWho();
+  t.appendChild(whoSees);
   const acts = el('div', 'actions');
   const keep = button('Keep it', 'go', () => go());
   const cancel = button('Cancel', 'go ghost', () => { t.remove(); });
@@ -108,7 +127,9 @@ export function keepThought(text, opts) {
     const w = el('p', 'working', 'Keeping your thought and finding its topic');
     out.appendChild(w);
     const slow = setTimeout(() => { w.textContent = 'Still keeping it: finding its topic is taking longer than usual'; }, 10000);
-    const r = await C.askBody({ thought: { text: words, heard: o.heard === true, email: o.email || null, topic: o.topic || null } });
+    const forNames = forIn.value.split(',').map((x) => x.trim()).filter(Boolean);
+    if (forNames.length) w.textContent = 'Keeping your thought for ' + forNames.join(', ') + ' and making their version';
+    const r = await C.askBody({ thought: { text: words, heard: o.heard === true, email: o.email || null, topic: o.topic || null, for: forNames } });
     clearTimeout(slow);
     out.innerHTML = '';
     if (!r || r.ok !== true || r.state !== 'thought_kept') {
@@ -116,15 +137,19 @@ export function keepThought(text, opts) {
       keep.disabled = false; cancel.disabled = false;
       return;
     }
-    ta.readOnly = true; acts.remove();
-    keptLine(out, r.kept);
+    ta.readOnly = true; acts.remove(); forIn.readOnly = true;
+    keptLine(out, r.kept, r);
     if (document.body.dataset.tab === 'thoughts') loadThoughts();
   }
 }
 
-function keptLine(out, k) {
+function keptLine(out, k, r) {
   const topic = k?.topic;
   out.appendChild(el('p', '', topic ? 'Kept under "' + topic.title + '".' : 'Kept. It is not under any topic yet.'));
+  if (r && r.receipt) out.appendChild(el('p', 'thought-said', r.receipt));
+  out.appendChild(el('p', 'quiet', 'Who can see it: ' + String(k?.who_can_see || 'only you') + '.'
+    + (Array.isArray(k?.for) && k.for.length ? ' ' + k.for.map((p) => p.name).join(' and ') + ' will see it first in Worth your attention.' : '')
+    + (r && Array.isArray(r.translated_to) && r.translated_to.length ? ' Their version was made in their language, marked as a translation; your words stay the original.' : '')));
   if (k?.replaced) out.appendChild(el('p', 'quiet', 'It is now your latest view on this topic. Your thought of ' + day(k.replaced.at) + ' stays in the topic, folded under it.'));
   if (topic && topic.stands) out.appendChild(el('p', 'quiet', 'Where it stands: ' + topic.stands));
   const acts = el('div', 'actions');
@@ -206,7 +231,7 @@ export async function loadThoughts(openId) {
   const top = el('div', 'thought-top');
   const views = el('div', 'thought-views');
   views.setAttribute('role', 'group'); views.setAttribute('aria-label', 'How to see your thoughts');
-  for (const [k, label] of [['moving', 'Moving'], ['topics', 'Topics'], ['mine', 'Mine']]) {
+  for (const [k, label] of [['for_you', 'For you'], ['moving', 'Moving'], ['topics', 'Topics'], ['mine', 'Mine']]) {
     const b = button(label, 'go ghost thought-view', () => { view = k; topicOpen = null; loadThoughts(); });
     b.setAttribute('aria-pressed', String(!topicOpen && view === k));
     views.appendChild(b);
@@ -222,6 +247,7 @@ export async function loadThoughts(openId) {
   if (r.view === 'topic') { drawTopic(body, r); return; }
   host.dataset.title = '';
   if (r.view === 'mine') { drawMine(body, r.thoughts || []); return; }
+  if (r.view === 'for_you') { drawForYou(body, r); return; }
   drawList(body, r);
 }
 
@@ -267,9 +293,46 @@ function drawList(body, r) {
   if (r.unfiled) body.appendChild(el('p', 'quiet', r.unfiled + ' thought' + (r.unfiled === 1 ? ' is' : 's are') + ' not under any topic; they are under Mine.'));
 }
 
+// Thoughts others left for her, newest first, in her language. Opening this view marks them read (the author can see that).
+function drawForYou(body, r) {
+  const items = Array.isArray(r.items) ? r.items : [];
+  const ln = r.your_language && r.your_language.name ? r.your_language.name : 'English';
+  if (!items.length) {
+    body.appendChild(el('p', 'quiet', 'Nobody has left you a thought yet. When someone here does, it shows first here and in Worth your attention, in ' + ln + '.'));
+    return;
+  }
+  body.appendChild(el('p', 'quiet', 'Thoughts people here left for you, newest first, in ' + ln + '. Only the person who left one and the people it is for can see it.'));
+  const ul = el('ul', 'thought-thread');
+  for (const it of items) ul.appendChild(forYouItem(it));
+  body.appendChild(ul);
+}
+function forYouItem(it) {
+  const li = el('li', 'thought-item thought-current');
+  li.appendChild(el('p', 'quiet', [String(it.from || 'Someone') + ' left you a thought', day(it.at), it.heard ? 'spoken' : '', it.read ? '' : 'new'].filter(Boolean).join(' · ')));
+  const said = el('p', 'thought-said', String(it.text || ''));
+  li.appendChild(said);
+  if (it.translated) li.appendChild(el('p', 'quiet', 'Translated from ' + it.lang_name + ' by the Tool. The original is what ' + String(it.from || 'they') + ' said.'));
+  else if (it.lang && it.reader_lang && it.lang !== it.reader_lang) li.appendChild(el('p', 'quiet', 'In ' + it.lang_name + ', not translated yet.'));
+  li.appendChild(el('p', 'quiet', 'Who can see this: ' + String(it.who_can_see || '') + '.'));
+  const acts = el('div', 'actions');
+  if (it.translated) {
+    let orig = null;
+    const b = button('See the original', 'go ghost', () => {
+      if (orig) { orig.remove(); orig = null; b.textContent = 'See the original'; return; }
+      orig = el('p', 'thought-said thought-original', String(it.original || '')); orig.lang = it.lang || '';
+      said.after(orig); b.textContent = 'Hide the original';
+    });
+    acts.appendChild(b);
+  }
+  acts.appendChild(button('Reply with a thought', 'go ghost', () => C.startThought({ for: [String(it.from || '')] })));
+  li.appendChild(acts);
+  return li;
+}
+
 function thoughtItem(th, opts) {
   const li = el('li', 'thought-item thought-' + th.state);
-  const head = el('p', 'quiet', [day(th.at), th.heard ? 'spoken' : '', th.edited_at ? 'changed ' + day(th.edited_at) : '', opts?.topic && th.topic ? 'on ' + th.topic.title : '', 'who can see this: only you'].filter(Boolean).join(' · '));
+  const readBy = Array.isArray(th.read_by) && th.read_by.length ? 'read by ' + th.read_by.map((x) => x.name).join(', ') : '';
+  const head = el('p', 'quiet', [day(th.at), th.heard ? 'spoken' : '', th.edited_at ? 'changed ' + day(th.edited_at) : '', opts?.topic && th.topic ? 'on ' + th.topic.title : '', 'who can see this: ' + String(th.who_can_see || 'only you'), readBy].filter(Boolean).join(' · '));
   li.appendChild(head);
   const text = el('p', 'thought-said', th.text);
   li.appendChild(text);
