@@ -26,7 +26,8 @@ import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-2
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
 import { foundCard } from "./find.js?v=2026-10-27-attention"; // find first, then work on what was found (seat find-first)
 import { closeCard } from "./close.js?v=2026-10-26-month-end-2"; // the month-end check, corrected cell by cell (seat month-end)
-import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-12-working"; import { initChats, loadChats } from "./chats.js?v=2026-10-26-locks"; // Chats tab (seat chat-import)
+import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-27-people-and-access"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-10-27-people-and-access"; // sub-tab row and People and access (seat people-and-access)
+import { initChats, loadChats } from "./chats.js?v=2026-10-26-locks"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-22-dates"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
 
@@ -185,6 +186,7 @@ function readingPrint() {
 let lastPrint = null;
 
 // Returns true when it drew, false when the new reading draws nothing new (onlyIfChanged), so the caller knows.
+let claimTried = false;
 async function readBrain(opts = {}) {
   const tree = $("#tree");
   try {
@@ -193,7 +195,16 @@ async function readBrain(opts = {}) {
     const { data, error } = await sb.rpc("brain_shape");
     if (error) throw error;
 
-    if (data?.state === "unbound") { renderState("unbound"); routeOnState("unbound"); return true; }
+    if (data?.state === "unbound") {
+      // AN INVITED PERSON'S FIRST SIGN-IN (seat people-and-access, decision 1028): the brain binds this sign-in to
+      // the invitation when the confirmed email matches it (identity_claim), once, and the reading is asked again.
+      if (!claimTried) {
+        claimTried = true;
+        try { const { data: c } = await sb.rpc("identity_claim"); if (c?.ok && !c.already) return readBrain(opts); }
+        catch (_) { /* not switched on, or not invited: unbound, as before */ }
+      }
+      renderState("unbound"); routeOnState("unbound"); return true;
+    }
 
     shape = data;
     await Promise.all([mbx, drv]);
@@ -282,7 +293,6 @@ function renderState(state, detail) {
   // keeps its own state (seat conversation-panel, round 4; Alex 2026-10-13: the Contacts card "is somehow always
   // reloading"). Those draw on tab entry only; a reading may refresh what beside them comes from the reading.
   if ($('#s-lens') && !$('#s-lens').hidden) { if (lensKey in OWN_STATE) OWN_STATE[lensKey](); else drawLens(); }
-  if ($('#s-security') && !$('#s-security').hidden) drawSecConnected();
 }
 
 // A placeholder that never resolves would be a spinner that lies. When the read
@@ -3301,8 +3311,6 @@ async function loadTests() {
 // one tap confirms. A typed instruction ("Erin shouldn't see pay figures") arrives from
 // lens-ask as a proposal and goes through exactly the same card; lens-ask changes nothing.
 // What a person sees from Google is the brain's sentence, shown as it is.
-let accessRead = null;
-
 async function accessCall(fn, args) {
   const { data, error } = await sb.rpc(fn, args);
   if (error) throw error;
@@ -3346,7 +3354,7 @@ function changeCard(p, mount) {
         undo.addEventListener("click", () => { undo.remove(); changeCard({ action: "restore", rule_id: d.rule_id }, mount); });
         acts.appendChild(undo);
       }
-      if (accessRead) loadAccess();
+      if ($("#s-security") && !$("#s-security").hidden) loadPeople();   // the people list lives in People and access now
     });
   })();
   return box;
@@ -3360,75 +3368,9 @@ function accessAnswer(slot, body) {
   if (body.proposal && typeof body.proposal === "object") changeCard(body.proposal, slot);
 }
 
-async function loadAccess() {
-  const mount = $("#access");
-  if (!mount) return;
-  if (!accessRead) mount.innerHTML = `<p class="quiet">Reading who sees what.</p>`;
-  try {
-    accessRead = await accessCall("access_people", {});
-    drawAccess(accessRead);
-  } catch (e) {
-    mount.innerHTML = "";
-    const n = el("p", "notice flagged");
-    n.textContent = `Who sees what could not be read, so nothing here is known: ${e?.message ?? e}`;
-    mount.appendChild(n);
-  }
-}
-
-function drawAccess(v) {
-  const mount = $("#access");
-  mount.innerHTML = "";
-  if (!v?.ok) {
-    const n = el("p", "notice");
-    n.textContent = v?.note ?? `Refused: ${v?.reason ?? "no reason given"}.`;
-    mount.appendChild(n);
-    return;
-  }
-  const ul = el("ul", "attn");
-  for (const p of v.people ?? []) {
-    const li = el("li");
-    li.dataset.person = p.id;
-    const t = el("p", "a-title"); t.textContent = p.name + (p.is_you ? " (you)" : "");
-    const d = el("p", "a-detail"); d.textContent = p.line;
-    li.append(t, d);
-    for (const c of p.changes ?? []) {
-      const row = el("p", "a-detail access-change");
-      row.textContent = c.words + " ";
-      const undo = el("button", "go ghost"); undo.type = "button"; undo.textContent = "Undo";
-      const slot = el("div");
-      undo.addEventListener("click", () => { undo.hidden = true; changeCard({ action: "restore", rule_id: c.rule_id }, slot); });
-      row.appendChild(undo);
-      li.append(row, slot);
-    }
-    if (!p.is_owner) {
-      const more = el("button", "go ghost"); more.type = "button"; more.textContent = "Exactly what, and why";
-      const detail = el("div");
-      more.addEventListener("click", () => {
-        if (detail.childElementCount) { detail.innerHTML = ""; return; }
-        personDetail(p, detail);
-      });
-      li.append(more, detail);
-    }
-    ul.appendChild(li);
-  }
-  mount.appendChild(ul);
-  if (!(v.people ?? []).some((p) => (p.changes ?? []).length)) {
-    const n = el("p", "quiet"); n.textContent = "You have not kept anything back from anyone yet."; mount.appendChild(n);
-  }
-  for (const w of v.warnings ?? []) {
-    const n = el("p", "notice flagged"); n.textContent = w.words; mount.appendChild(n);
-  }
-  if (Number(v.not_signing_in) > 0) {
-    const n = el("p", "quiet");
-    n.textContent = `${countOf(v.not_signing_in)} more people appear in your records but cannot sign in, so they see nothing here.`;
-    mount.appendChild(n);
-  }
-  const other = (v.people ?? []).find((p) => !p.is_owner);
-  const hint = el("p", "quiet");
-  hint.textContent = `To change something, tell the box at the top of the page, for example "${other ? other.name : "Sam"} shouldn't see pay figures". `
-    + `You see what it would change before anything changes, and every change can be undone.`;
-  mount.appendChild(hint);
-}
+// SUPERSEDED 2026-10-27 (seat people-and-access, decision 1028): loadAccess/drawAccess, the people list folded at the
+// bottom of the Security tab, are removed. The list, its Undo and "Exactly what, and why" (personDetail, below) are
+// drawn by fill/people.js in Security, People and access, from people_access.
 
 // One person: exactly what they can and cannot see, and why, counted by the brain.
 async function personDetail(p, mount) {
@@ -3493,38 +3435,9 @@ async function secCall(fn, args) {
   return data;
 }
 
-// What is connected comes from the reading this page already holds (brain_shape), not a second count.
-const CAN_TELL = {
-  email: "Google tells the Tool who may open each mailbox, so each person sees only the mail their own Google account opens.",
-  drives: "Google tells the Tool who may open each file, so each person sees only the files their own Google account opens.",
-  calendar: "Google tells the Tool who may see each calendar.",
-  contacts: "Google tells the Tool who may see each contact list.",
-  systems: "Cannot tell the Tool who may see what, so only owners see it unless you decide otherwise.",
-  loose: "Files loaded by hand carry no sharing of their own, so only owners see them unless you decide otherwise.",
-};
-function drawSecConnected() {
-  const mount = $("#sec-connected"); if (!mount) return;
-  mount.innerHTML = "";
-  if (!shape) {
-    secNote(mount, readingState === null ? "Reading what is connected."
-      : "What is connected could not be read just now, so nothing here is a claim either way.");
-    return;
-  }
-  const ul = el("ul", "attn");
-  const off = [];
-  for (const g of GROUPS) {
-    const d = groupsFor().find((x) => x.key === g.key);
-    if (!d || !d.connected) { off.push(g.key === "email" ? "Mail" : g.label); continue; }
-    const li = el("li");
-    li.appendChild(secLine("a-title", `${g.key === "email" ? "Mail" : g.label}: ${d.count} ${d.noun}`));
-    li.appendChild(secState(g.key === "systems" || g.key === "loose" ? "tone-amber" : "tone-green", CAN_TELL[g.key] ?? ""));
-    if (g.key === "systems" && (d.members ?? []).length) li.appendChild(secLine("a-detail", d.members.map((x) => x.name).join(", ")));
-    ul.appendChild(li);
-  }
-  if (ul.childElementCount) mount.appendChild(ul);
-  else secNote(mount, "Nothing is connected yet, so the Tool reads nothing and shows nothing to anyone.");
-  if (off.length) secNote(mount, `Not connected: ${off.join(", ")}.`);
-}
+// SUPERSEDED 2026-10-27 (seat people-and-access): drawSecConnected and CAN_TELL ("What is connected", folded at the
+// bottom of Security) are removed. Which sources follow Google is one sentence in People and access; the systems that
+// cannot tell people apart are listed there from the brain's all_access_system.
 
 function drawSecWatch(v) {
   const mount = $("#sec-watch"); mount.innerHTML = "";
@@ -3589,9 +3502,10 @@ function secFailed(id, what) {
 function secBusy(id, text) { const m = $(id); if (m && !m.childElementCount) secNote(m, text); }
 
 async function loadSecurity() {
-  initPanel({ sb, zone, el, $, countOf });
-  drawSecConnected();
-  loadAccess();
+  initPanel({ sb, zone, el, $, countOf, reveal });
+  showSubtabs($("#s-security"), "security", shape?.viewer?.email);
+  initPeople({ sb, el, $, countOf, personDetail, changeCard, signinUrl: location.origin + location.pathname });
+  loadPeople();
   secBusy("#sec-watch", "Reading refused attempts.");
   secBusy("#sec-sends", "Reading the send record.");
   secBusy("#sec-door", "Reading the Tool's own checks.");
@@ -3615,7 +3529,7 @@ function routeOnState(mode) {
   if (location.hash === "#sources") { goto("s-summary"); return; }
   if (location.hash === "#tests" && $("#s-tests")) { goto("s-tests"); return; }
   if (location.hash === "#totest" && $("#s-totest")) { goto("s-totest"); return; }   // seat test-list
-  if (location.hash === "#security" && $("#s-security")) { goto("s-security"); return; }
+  if ((location.hash === "#security" || location.hash.startsWith("#security/")) && $("#s-security")) { goto("s-security"); return; }   // #security/<part> opens a sub-tab (seat people-and-access)
   // Nobody signed in: the introduction is the honest screen, and it claims nothing
   // about data because there is no identity to claim it about.
   if (mode === "unbound") { goto("s-intro"); return; }
@@ -3640,6 +3554,8 @@ const BRAIN_PAIR = ['s-connect', 's-summary'];
 let lensKey = null;
 function goto(id, key) {
   if (id === 's-access') id = 's-security';   // who sees what moved to the Security tab (seat security-tab)
+  // A sub-tab link (#security/audit) is kept only while that tab is shown (seat people-and-access).
+  if (/^#[a-z]+[/]/.test(location.hash) && location.hash.slice(1).split('/')[0] !== (id === 's-security' ? 'security' : '')) { try { history.replaceState(null, '', location.pathname + location.search); } catch (_) { /* link stays */ } }
   const show = BRAIN_PAIR.includes(id) ? BRAIN_PAIR : [id];
   document.querySelectorAll("section.step").forEach((s) => { s.hidden = !show.includes(s.id); });
   window.scrollTo({ top: 0 });
@@ -4558,6 +4474,14 @@ readBrain();                     // then the live reading lands into the frame
 // An old #sources link still lands somewhere true: there is one lens now. Routed
 // immediately rather than waiting for the read, because it is already a decision.
 if (location.hash === "#sources") { userMoved = true; goto("s-summary"); }
+// A LINK TO A PART OF A TAB (#security/audit), opened while the Tool is already open: the tab, then the sub-tab
+// (seat people-and-access, decision 1029). The shared row (fill/subtabs.js) picks the sub-tab from the link.
+window.addEventListener("hashchange", () => {
+  const [t, sub] = location.hash.slice(1).split("?")[0].split("/");
+  if (!sub || !TABS.some((x) => x.key === t)) return;
+  userMoved = true;
+  if (document.body.dataset.tab !== t) goTab(t); else followHash();
+});
 // The archived /mail/ page sends its visitors here as #mail, with the mailbox they asked for.
 if (location.hash.startsWith('#mail')) {
   userMoved = true;
