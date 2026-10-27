@@ -1202,8 +1202,8 @@ function fillAttention() {
   const panel = $("#attn-panel");
   const boxes = $("#below-tiles");
   const head = $("#attn-count");
-  const items = shape.attention ?? [];
-  const mine = shape.needs_you ?? 0;
+  const items = (shape.attention ?? []).concat(limitItem ? [limitItem] : []);   // seat cost-dial: the owner's AI limit
+  const mine = (shape.needs_you ?? 0) + (limitItem ? 1 : 0);
   const ours = items.length - mine;
 
   if (panel) panel.hidden = true;
@@ -1251,7 +1251,7 @@ function fillAttention() {
   if (!ul) return;
   ul.innerHTML = "";
   if (!items.length) return;
-  for (const a of shape.attention) {
+  for (const a of items) {
     const li = el("li");
     li.innerHTML = `<div class="a-title">${escape(a.title)}</div>`
       + `<div class="a-detail">${escape(a.detail)}</div>`;
@@ -1320,6 +1320,7 @@ function drawReconnect() {
 // in the Ask bar for her; the bar itself asks about the open email while she is on Mail.
 
 function routeFix(a) {
+  if (a.kind === 'ai_limit') { userMoved = true; return goTab('ai'); }   // seat cost-dial
   // Route by the source the fault is actually about, never by words in its title.
   if (a.source && a.source.startsWith("gmail:")) return openConnect("email");
   if (a.source && a.source.startsWith("drive:")) return openConnect("drives");
@@ -3758,7 +3759,7 @@ function drawLens() {
   // one press to change. Owner only (lens-ask refuses anyone else; the tab is hidden for them too). Keeps its own state:
   // a reading does not redraw it (OWN_STATE), so an open choice is not lost.
   if (lensKey === 'ai') {
-    import('./ai.js?v=2026-10-26-ai-tab-plain').then((A) => A.drawAI(body, { el, askBody, ask, isOwner: () => !!shape?.viewer?.all_access }))
+    import('./ai.js?v=2026-10-27-cost-dial').then((A) => A.drawAI(body, { el, askBody, ask, isOwner: () => !!shape?.viewer?.all_access }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The AI tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
@@ -4359,6 +4360,13 @@ function drawClock() {
       long.textContent = 'AI balance ' + money(b.balance_left_usd) + ' left'; short.textContent = 'AI ' + money(b.balance_left_usd);
       if (b.state === 'low' || b.state === 'answers_within_margin') tone = 'b-orange';
     }
+    // THE COST DIAL'S WARNINGS (seat cost-dial, 2026-10-27, decision 1024 item 3): near (80 percent) or at the owner's
+    // monthly AI limit, the badge says so in words, the attention list carries it, and the conversation says it once.
+    // The limit is enforced in the brain's gate (studio-core ai_gate), never here.
+    const L = v.limit || {};
+    if (L.state === 'near') { long.textContent = 'AI limit ' + L.percent + '% used'; short.textContent = 'AI ' + L.percent + '%'; if (tone === 'b-grey') tone = 'b-orange'; }
+    else if (L.state === 'reached' || L.state === 'stopped') { long.textContent = 'AI limit reached: new items wait'; short.textContent = 'AI limit'; tone = 'b-red'; }
+    limitWarn(L);
     badge.className = 'badge ' + tone;
     btn.title = 'What the Tool has cost: ' + money(v.this_month_usd) + ' this month'
       + (v.projected_month_usd !== null && v.projected_month_usd !== undefined ? ', about ' + money(v.projected_month_usd) + ' for the whole month' : '')
@@ -4368,6 +4376,31 @@ function drawClock() {
   read();
   setInterval(read, 10 * 60 * 1000);
 })();
+
+// The owner's AI limit, near or reached (seat cost-dial): one item in the attention list while it holds, and one line
+// in the conversation, said once per month and level (remembered in this browser; if it cannot be, it is said again,
+// which is the safe side). The words are the brain's (ai_limit_state), so the tab, the box and this line agree.
+let limitItem = null;
+function limitWarn(L) {
+  const level = L.state === 'near' ? 'near' : (L.state === 'reached' || L.state === 'stopped') ? 'limit' : null;
+  const was = limitItem;
+  limitItem = level ? { kind: 'ai_limit', title: level === 'near' ? 'Your AI limit is close' : 'Your AI limit is reached',
+    detail: String(L.say || ''), fix: 'Open the AI tab' } : null;
+  if ((was ? was.detail : '') !== (limitItem ? limitItem.detail : '') && shape) fillAttention();
+  if (!level) return;
+  const key = 'tool.ai-limit-said.' + String(L.month || '') + '.' + level;
+  try { if (localStorage.getItem(key)) return; } catch (_) { /* said again next time */ }
+  const log = $('#dock-turns'); if (!log) return;
+  const turn = el('div', 'turn said news');
+  const box = el('div', 'news-item');
+  const t = el('b'); t.textContent = limitItem.title;
+  const p = el('p'); p.textContent = limitItem.detail;
+  const go = el('button', 'go ghost'); go.type = 'button'; go.textContent = 'Open the AI tab';
+  go.addEventListener('click', () => { userMoved = true; goTab('ai'); });
+  box.append(t, p, go); turn.appendChild(box); log.appendChild(turn);
+  if (level === 'limit') openPanel();
+  try { localStorage.setItem(key, '1'); } catch (_) { /* nothing to keep */ }
+}
 
 drawTreeFrame();                 // the frame first, instantly, with space reserved
 stageTypes();
