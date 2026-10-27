@@ -9,14 +9,18 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// NO RAW ERROR TEXT ON ANY SCREEN (seat mail-views, 2026-10-27): every call to the brain and its functions passes through one
+// wrapper that turns upstream error words into a plain sentence before any tab reads them (fill/plain.js). Installed below,
+// before the first call.
+import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 // ONE WAY THE SCREEN WRITES A DATE, and the one time zone (seat calendar-contacts, 2026-10-22): fill/dates.js.
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
 import { removeControl, drawReadView } from "./sources.js?v=2026-10-25-pace-and-boundary"; // remove a source, what the Tool has read (seat sources-basics)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-27-every-voice";
-import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-27-every-voice";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-27-mail-views";
+import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-27-mail-views";
 import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts } from "./thoughts.js?v=2026-10-27-every-voice"; // thoughtgrams and the Thoughts tab (seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
@@ -36,6 +40,7 @@ const PUBLISHABLE_KEY = "sb_publishable_joP87JJiePfN3k1uPoxxVA_DLGT1zv5";
 // doorFetch, the one client every tab is handed: a refusal for want of a session becomes the signed-out
 // line in the masthead, any other permission refusal a plain sentence. No screen shows the database's words.
 let signedIn = false;
+installPlain();
 const signinHref = () => "../login/?next=" + encodeURIComponent("fill/" + location.search + location.hash);
 const REFUSED = new RegExp("permission denied|jwt|not authenticated|42501|PGRST30", "i");
 async function doorFetch(input, init) {
@@ -2477,7 +2482,7 @@ async function hearSpoken(b64, mime) {
     body: JSON.stringify({ listen: b64, mime_type: mime }),
   });
   const j = await r.json().catch(() => null);
-  return j ?? { state: "heard_failed", answer: `The Tool did not answer (${r.status}).` };
+  return j ?? { state: "heard_failed", answer: "The Tool did not answer. Nothing was changed; try again in a moment." };
 }
 
 // ANSWERS BECOME CHARTS AND FILES (seat work-outputs, 2026-10-10). Every answer drawn anywhere passes here once,
@@ -2608,7 +2613,7 @@ async function askBody(payload) {
       headers: { Authorization: `Bearer ${jwt}`, apikey: PUBLISHABLE_KEY, "Content-Type": "application/json" },
       body: JSON.stringify(Object.assign({ tz: zone() }, payload)),
     });
-    return (await r.json().catch(() => null)) ?? { ok: false, error: `The Tool did not answer (${r.status}).` };
+    return (await r.json().catch(() => null)) ?? { ok: false, error: "The Tool did not answer. Nothing was changed; try again in a moment." };
   } catch (e) { return { ok: false, error: `The Tool could not be reached: ${e?.message ?? e}` }; }
 }
 // One teaching exchange. teach_readback: her words read back with Yes / Not quite. Yes keeps it (teach_kept) and
@@ -2950,8 +2955,8 @@ async function ask(question, files) {
       body: JSON.stringify(Object.assign({ question: q, tz: zone(), plan_first: true }, lastAsked ? { follows: lastAsked } : {}, added.length ? { files: added } : {})),
     });
     const body = await r.json().catch(() => null);
-    if (!body) { askProblem(slot, `The brain did not answer (${r.status}). Nothing was changed.`); return; }
-    if (body.ok !== true) { askProblem(slot, body.error ?? `The brain refused this (${r.status}).`); return; }
+    if (!body) { askProblem(slot, "The brain did not answer. Nothing was changed; try again in a moment."); return; }
+    if (body.ok !== true) { askProblem(slot, body.error ?? "The brain did not take this question. Nothing was changed."); return; }
     // Save as test and Teach are drawn by renderAsk for the owner (seat teach-process). lastAsked is still the
     // previous question here, so the test form knows when this one was a follow-on.
     renderAsk(slot, body, { q, follows: lastAsked });
@@ -2962,7 +2967,7 @@ async function ask(question, files) {
     // A plan is kept with its answer after Go (runPlan), not on its own.
     if (body.state !== "plan") await keepTurn(slot, q, body);
   } catch (e) {
-    askProblem(slot, `The brain could not be reached: ${e?.message ?? e}`);
+    askProblem(slot, `The brain could not be reached. ${plainWords(String(e?.message ?? e ?? ""))}`);
   } finally {
     asking = false;
   }
@@ -3117,7 +3122,7 @@ async function suggestLabelFor(q) {
   // A runner older than this action reads the call as "run the tests". Say so rather than
   // presenting a run's reply as a missing label.
   if (body?.started) return { ok: false, error: "The label suggestion is not switched on yet, so a test run was started instead." };
-  return body ?? { ok: false, error: `No reply (${r.status}).` };
+  return body ?? { ok: false, error: "No reply came back. Nothing was changed; try again in a moment." };
 }
 
 function saveForm(q, follows, onSaved) {
@@ -3271,7 +3276,7 @@ async function loadTests() {
         body: JSON.stringify({ trigger: "on_demand" }),
       });
       const body = await r.json().catch(() => null);
-      if (!body?.ok) { said.textContent = body?.error ?? `The tests did not start (${r.status}).`; return; }
+      if (!body?.ok) { said.textContent = body?.error ?? "The tests did not start. Nothing was changed; try again in a moment."; return; }
       said.textContent = "Started. Each test asks the Tool as the person it names; results land one by one. This list refreshes on its own for a few minutes.";
       const before = testsRead?.counts?.last_run_at ?? null;
       for (let i = 0; i < 12; i++) {
@@ -4414,6 +4419,8 @@ initMail({
   // Seat answer, 2026-10-07: the answer conversation on the Mail tab draws and keeps its turns
   // with the same two functions as the Ask bar, so there is one way an answer looks and is kept.
   renderAsk, keepTurn, zone,
+  // seat mail-views: Draft a reminder on Worth your attention asks here, so the draft lands in the one conversation, never sent.
+  ask: (q) => ask(q),
   scopeChanged: () => drawBox(),
   thought: (email) => thoughtOnEmail(email),   // Add a thought on an open email (seat thoughtgram)
   startThought,   // Reply with a thought, from a thought left for her in Worth your attention (seat every-voice)
