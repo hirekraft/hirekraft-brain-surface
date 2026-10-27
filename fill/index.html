@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#ffffff">
 <title>Tool — your brain</title>
 <meta name="description" content="Your business's own memory.">
-<link rel="stylesheet" href="skin.css?v=2026-10-27-cost-dial">
+<link rel="stylesheet" href="skin.css?v=2026-10-27-first-answer">
 <script>
 // THE FRONT DOOR, before anything is drawn (seat front-door, 2026-10-13): no stored sign-in on this
 // browser means she goes to sign in, and comes back to this tab after. lens.js makes the real check
@@ -239,6 +239,9 @@ try {
           of it. Each one says whether it is working, and what to do if it is not. Open a group to
           see them; open a mailbox to read it.</p></details>
     </div>
+
+    <!-- THE FIRST ANSWER (seat first-answer, 2026-10-27, decision 1024 item 1): the short answer on top, the detail below (first.js). -->
+    <div id=first-answer class=first-answer aria-live=polite></div>
 
     <!-- Structure renders immediately with space reserved; the reading lands into it. -->
     <div class="tree" id="tree" aria-busy="true"></div>
@@ -492,6 +495,6 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-27-cost-dial"></script>
+<script type="module" src="lens.js?v=2026-10-27-first-answer"></script>
 </body>
 </html>
