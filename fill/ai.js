@@ -78,9 +78,11 @@ function draw(wrap, ai, ctx) {
     const n = el('p', 'notice flagged');
     n.textContent = 'This month’s spending could not be read just now: ' + String(p?.error ?? 'no reason was given') + '. Nothing here is a claim either way.';
     wrap.appendChild(n);
+    if (ai.limit) wrap.appendChild(limitBlock(ai.limit, ctx, () => load(wrap, ctx)));
   } else {
-    wrap.appendChild(howMuch(p, el));
+    wrap.appendChild(howMuch(p, el, ai.cost));
     wrap.appendChild(balance(p.balance || {}, p, el));
+    if (ai.limit) wrap.appendChild(limitBlock(ai.limit, ctx, () => load(wrap, ctx)));
     wrap.appendChild(bought(p, el));
     wrap.appendChild(byDay(p, el));
     wrap.appendChild(nextMonth(p, el));
@@ -113,7 +115,7 @@ function draw(wrap, ai, ctx) {
 
   // Ask it: the box answers anything on this tab, with the same sentence as the top.
   const asks = el('div', 'ai-asks ai2-asks');
-  for (const q of ['Where did my AI money go?', 'Which AI answers my questions?', 'What would the best setup cost me?']) {
+  for (const q of ['What does all this cost me?', 'Where did my AI money go?', 'Which AI answers my questions?']) {
     const b = el('button', 'go ghost ai-ask');
     b.type = 'button'; b.textContent = q;
     b.addEventListener('click', () => ask(q));
@@ -122,13 +124,118 @@ function draw(wrap, ai, ctx) {
   wrap.appendChild(asks);
 }
 
-// 1. How much, and is that normal.
-function howMuch(p, el) {
+// 1. How much, and is that normal. Then EVERYTHING IT COSTS IN ONE PLACE (seat cost-dial, 2026-10-27, decision 1024
+// item 3): AI, the database the business hosts itself (plan, size, the hosting company's list price, marked an
+// estimate) and Verrandi's fee (not set yet). Never added up: one part is an estimate and one is not decided. The
+// words come from the brain (ai_cost_whole), so the box says the same three lines.
+function howMuch(p, el, cost) {
   const sec = el('section', 'ai2-block ai2-how');
   const lab = el('p', 'ai2-label'); lab.textContent = 'AI this month, ' + String(p.month || '');
   const big = el('p', 'ai2-big'); big.textContent = dollars(p.this_month_usd) ?? '$0';
   const say = el('p', 'ai2-sentence'); say.textContent = String(p.sentence || '');
   sec.append(lab, big, say);
+  if (cost && cost.ok === true) {
+    const h = el('p', 'ai2-label ai2-all-h'); h.textContent = 'Everything it costs you each month';
+    const list = el('div', 'ai2-all');
+    const row = (title, value, said) => {
+      const r = el('div', 'ai2-row');
+      const t = el('span', 'ai2-row-title'); t.textContent = title;
+      const v = el('span', 'ai2-row-usd'); v.textContent = value;
+      const s = el('p', 'ai2-row-said'); s.textContent = said;
+      r.append(t, v, s);
+      return r;
+    };
+    const a = cost.ai || {};
+    list.appendChild(row('AI', (dollars(a.this_month_usd) ?? '$0') + ' so far',
+      a.next_month_estimate_usd !== null && a.next_month_estimate_usd !== undefined
+        ? 'Next month about ' + dollars(a.next_month_estimate_usd) + ', estimated. Exactly what the AI makers charge.' : 'Exactly what the AI makers charge.'));
+    const d = cost.database || {};
+    list.appendChild(row('Your database', d.known ? 'About ' + (dollars(d.estimate_usd) ?? '?') + ', estimated' : 'On their invoice',
+      d.known ? String(d.provider) + ' ' + String(d.plan) + ' plan, ' + String(d.size_gb) + ' GB. Estimated from ' + String(d.provider)
+        + '’s published list price (from ' + (dollars(d.list_from_usd) ?? '?') + ' a month), more if it runs on a larger server. '
+        + String(d.provider) + ' bills you directly; the exact figure is on their invoice.' : String(d.say || '')));
+    list.appendChild(row('Verrandi’s fee', 'Not set yet', 'Not decided yet. Nothing is charged for it today.'));
+    const no = el('p', 'ai2-small'); no.textContent = 'No total is shown: the database figure is an estimate and the fee is not set.';
+    sec.append(h, list, no);
+  }
+  return sec;
+}
+
+// THE COST DIAL (seat cost-dial, 2026-10-27, decision 1024 item 3). The owner sets a monthly AI limit in dollars. The
+// brain warns at 80 percent and at the limit (here, at the top of the screen, in the attention list and once in the
+// conversation); at the limit the Tool's gate (studio-core ai_gate, the one place every AI call asks) stops reading new
+// mail and files until the limit is raised or the month turns, while finding, the privacy check and a few dollars of
+// questions continue. Nothing here enforces anything: this block only shows the state and sets the number. Setting it
+// goes through the one existing door for AI settings (lens-ask ai_choose, owner only), as step 'monthly AI limit'.
+function limitBlock(L, ctx, reload) {
+  const { el, askBody } = ctx;
+  const sec = el('section', 'ai2-block ai2-limit');
+  const lab = el('p', 'ai2-label'); lab.textContent = 'Your monthly AI limit';
+  sec.appendChild(lab);
+  const warn = L.state === 'near' || L.state === 'reached' || L.state === 'stopped';
+  if (L.set === true) {
+    const big = el('p', 'ai2-big ai2-mid' + (warn ? ' ai2-warn' : ''));
+    big.textContent = (money(L.spent_usd) ?? '$0') + ' of ' + (dollars(L.limit_usd) ?? '$0');
+    const pct = Math.max(0, Math.min(100, Number(L.percent) || 0));
+    const bar = el('div', 'ai2-bar' + (warn ? ' ai2-bar-low' : ''));
+    bar.setAttribute('role', 'meter');
+    bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(L.limit_usd));
+    bar.setAttribute('aria-valuenow', String(L.spent_usd));
+    bar.setAttribute('aria-label', 'AI this month: ' + (money(L.spent_usd) ?? '$0') + ' of a ' + (dollars(L.limit_usd) ?? '$0') + ' limit');
+    const fill = el('span', 'ai2-bar-fill'); fill.style.width = pct.toFixed(1) + '%';
+    bar.appendChild(fill);
+    sec.append(big, bar);
+  }
+  const line = el('p', warn ? 'ai2-warn-line' : 'ai2-line');
+  line.textContent = L.set !== true
+    ? 'No limit is set. Set one and the Tool warns you at 80 percent; at the limit it stops reading new mail and files until you raise it or the month turns. Finding, the privacy check and a few dollars of questions keep working.'
+    : (L.state === 'near' ? 'Close to the limit. ' : (L.state === 'reached' || L.state === 'stopped') ? 'Limit reached. ' : '') + String(L.say || '');
+  sec.appendChild(line);
+  const said = el('div', 'ai-said');
+  const acts = el('div', 'ai2-limit-acts');
+  const send = async (btn, value, doing) => {
+    said.innerHTML = '';
+    acts.querySelectorAll('button, input').forEach((b) => { b.disabled = true; });
+    const w = el('p', 'working'); w.textContent = doing;
+    btn.after(w);
+    const r = await askBody({ ai_choose: { step: 'monthly AI limit', model: value, confirm: true } });
+    w.remove();
+    acts.querySelectorAll('button, input').forEach((b) => { b.disabled = false; });
+    const c = r?.choice;
+    if (!r || r.ok !== true || !c) { say(said, el, 'Not changed: ' + String(r?.error ?? 'no reason was given') + '.'); return; }
+    if (c.ok !== true) { say(said, el, 'Not changed: ' + String(c.reason ?? 'no reason was given')); return; }
+    say(said, el, String(c.say || 'Changed.'));
+    setTimeout(reload, 2500);
+  };
+  if (warn && L.raise_to_usd) {
+    const up = el('button', 'go'); up.type = 'button';
+    up.textContent = 'Raise it to ' + dollars(L.raise_to_usd);
+    up.addEventListener('click', () => send(up, String(L.raise_to_usd), 'Raising the limit'));
+    acts.appendChild(up);
+  }
+  const form = el('form', 'ai2-limit-form');
+  const field = el('label', 'ai2-limit-field');
+  const cap = el('span', 'ai2-small'); cap.textContent = L.set === true ? 'A different limit, in dollars a month' : 'Set a limit, in dollars a month';
+  const inp = el('input', 'ai2-limit-in');
+  inp.type = 'text'; inp.inputMode = 'numeric'; inp.autocomplete = 'off';
+  inp.placeholder = L.set === true ? String(L.limit_usd) : '150';
+  field.append(cap, inp);
+  const set = el('button', L.set === true ? 'go ghost' : 'go'); set.type = 'submit';
+  set.textContent = L.set === true ? 'Change it' : 'Set the limit';
+  form.append(field, set);
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = inp.value.trim();
+    if (!v) { say(said, el, 'Type the limit as a number of dollars, like 150.'); return; }
+    send(set, v, 'Setting the limit');
+  });
+  acts.appendChild(form);
+  if (L.set === true) {
+    const off = el('button', 'go ghost'); off.type = 'button'; off.textContent = 'Remove the limit';
+    off.addEventListener('click', () => send(off, '', 'Removing the limit'));
+    acts.appendChild(off);
+  }
+  sec.append(acts, said);
   return sec;
 }
 
