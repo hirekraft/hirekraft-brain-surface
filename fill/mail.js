@@ -49,8 +49,13 @@ let C = null;              // what lens.js hands over (initMail)
 let chosen = null;         // source key of the open mailbox
 let inbox = null;          // { pages, next, estimate, error, loading, more }
 let open = null;           // { id, thread, related, error, full }
-const unread = new Map();  // source key -> unread conversations, when Gmail says
+// NEW SINCE YOU LAST LOOKED (seat attention, 2026-10-27, decision 1024 item 6; Alex 2026-10-26 on Gmail's unread counts:
+// "they just don't tell much"). Beside each mailbox: how many emails arrived since this person last opened that mailbox here,
+// per person, kept by the Tool (mail_new, seen_mark_set). Zero shows nothing. SUPERSEDES Gmail's unread count from
+// worklens-live 'counts' (retired here 2026-10-27, seat attention; worklens-live still answers it for any other caller).
+const unread = new Map();  // source key -> new since she last opened it here
 let countsAsked = false;
+const seenSent = new Set(); // mailboxes marked as looked at on this page view
 let parts = null;          // the three columns once drawn
 const imagesShown = new Set(); // message ids whose remote pictures she chose to load
 const convos = new Map();      // 'mail:<source_key>:<thread_id>' -> the conversation about that email
@@ -131,6 +136,146 @@ export function chooseMailbox(key) {
   if (parts) { setView('list'); parts.list.scrollTop = 0; drawSide(); drawList(); drawRead(); }
 }
 
+// She opened this mailbox: from now on its number counts what arrives after this moment (seat attention).
+function markSeen(key) {
+  if (!key || seenSent.has(key)) return;
+  seenSent.add(key);
+  unread.set(key, 0);
+  if (parts) drawSide();
+  C.sb.rpc('seen_mark_set', { p_place: key }).then(() => {}, () => {});
+}
+
+// WORTH YOUR ATTENTION (seat attention, 2026-10-27, decision 1024 item 5; Alex 2026-10-26: "something that I would actually
+// want to see first... you learn with time what is of importance to me"). At the top of Mail: the brain's short ranked list
+// (attention, read as her: only mailboxes she may open; books for the owner only), each with what, why and what was checked.
+// It only puts things first: nothing is hidden or changed, the rest is counted in the quiet lines under it. Not important and
+// Open teach it (find_signal); What it learned from you lists every rule, each undoable. No AI, no cost.
+let attn = null;            // { loading } | { data, more } | { error }
+let attnSeen = false;
+async function loadAttention() {
+  attn = { loading: true };
+  drawAttention();
+  try {
+    const { data, error } = await C.sb.rpc('attention', { p_days: 14 });
+    if (error || !data || data.ok === false) throw new Error((error && error.message) || (data && data.reason) || 'no answer came back');
+    attn = { data, more: false, gone: new Set(), said: null };
+  } catch (e) {
+    attn = { error: String((e && e.message) || e) };
+  }
+  drawAttention();
+  if (attn.data && !attnSeen) { attnSeen = true; C.sb.rpc('seen_mark_set', { p_place: 'attention' }).then(() => {}, () => {}); }
+}
+function attnTeach(rows) { return C.sb.rpc('find_signal_add', { p_signals: rows }).then(({ data }) => data, () => null); }
+function attnItem(it) {
+  const li = mk('li', 'mailx-att-item');
+  li.appendChild(mk('p', 'mailx-att-what', it.what));
+  if (it.why) li.appendChild(mk('p', 'mailx-att-why', it.why));
+  const checked = Array.isArray(it.checked) ? it.checked.join(' ') : '';
+  if (checked) li.appendChild(mk('p', 'mailx-att-checked', 'Checked: ' + checked));
+  const row = mk('div', 'mailx-att-acts');
+  const who = String(it.what || '').split(': ')[0];
+  if (it.open_source && it.open_id) {
+    const o = mk('button', 'go ghost', 'Open');
+    o.type = 'button';
+    o.addEventListener('click', () => {
+      if (it.from_key) attnTeach([{ key: it.from_key, signal: 'opened', title: 'Mail from ' + who }]);
+      openEmail(it.open_source, it.open_id);
+    });
+    row.appendChild(o);
+  } else if (it.open_url) {
+    const a = mk('a', 'go ghost', 'Open in QuickBooks');
+    a.href = it.open_url; a.target = '_blank'; a.rel = 'noopener';
+    row.appendChild(a);
+  }
+  const no = mk('button', 'go ghost', 'Not important');
+  no.type = 'button';
+  no.addEventListener('click', async () => {
+    no.disabled = true;
+    const key = it.from_key || ('kind:' + it.kind);
+    const title = it.from_key ? 'Mail from ' + who : (it.kind === 'invoice' ? 'Invoices coming due' : it.kind === 'bill' ? 'Bills of ours past due' : it.kind === 'impostor' ? 'Emails pretending to be someone of the business' : 'This kind of item');
+    const r = await attnTeach([{ key, signal: 'dismissed', title }, { key: it.key, signal: 'dismissed', title: String(it.what || '').slice(0, 150) }]);
+    if (!r || r.ok !== true) { no.disabled = false; no.textContent = 'Not kept. Try again'; return; }
+    attn.gone.add(it.key);
+    attn.said = 'Got it. Things like this come lower from now on. It is still in your inbox, and you can undo it under What it learned from you.';
+    drawAttention();
+  });
+  row.appendChild(no);
+  li.appendChild(row);
+  return li;
+}
+function drawAttention() {
+  const box = parts && parts.att;
+  if (!box) return;
+  const wasOpen = box.querySelector('details') ? box.querySelector('details').open : !window.matchMedia('(max-width: 720px)').matches;
+  box.innerHTML = '';
+  const d = mk('details', 'mailx-att-box');
+  d.open = wasOpen;
+  const sum = mk('summary', 'mailx-att-head');
+  d.appendChild(sum);
+  box.appendChild(d);
+  if (!attn || attn.loading) {
+    sum.textContent = 'Worth your attention';
+    d.appendChild(mk('p', 'quiet working', 'Looking through your mail and books. Nothing in your mailboxes is changed.'));
+    return;
+  }
+  if (attn.error) {
+    sum.textContent = 'Worth your attention';
+    d.appendChild(mk('p', 'state stalled', 'Worth your attention could not be read just now (' + attn.error + '). This is not a claim that nothing needs you.'));
+    return;
+  }
+  const j = attn.data;
+  const items = (j.items || []).filter((x) => !attn.gone.has(x.key));
+  const more = (j.more || []).filter((x) => !attn.gone.has(x.key));
+  sum.textContent = items.length ? 'Worth your attention: ' + items.length + (items.length === 1 ? ' thing' : ' things') : 'Worth your attention: nothing right now';
+  if (attn.said) d.appendChild(mk('p', 'find-lesson', attn.said));
+  if (items.length) {
+    const ol = mk('ol', 'mailx-att-list');
+    for (const it of items) ol.appendChild(attnItem(it));
+    if (attn.more) for (const it of more) ol.appendChild(attnItem(it));
+    d.appendChild(ol);
+  } else {
+    d.appendChild(mk('p', 'quiet', 'Nothing from the last ' + (j.days || 14) + ' days needs you first.'));
+  }
+  if (more.length) {
+    const b = mk('button', 'go ghost', attn.more ? 'Show fewer' : 'Show ' + more.length + ' more, ranked lower');
+    b.type = 'button';
+    b.addEventListener('click', () => { attn.more = !attn.more; drawAttention(); });
+    d.appendChild(b);
+  }
+  const lines = (j.lines || []).slice(1).filter((x) => !/^[0-9]+[.] /.test(x) && !String(x).includes(' more worth a look'));
+  for (const x of lines) d.appendChild(mk('p', 'mailx-att-quiet', x));
+  const learned = mk('button', 'go ghost', 'What it learned from you');
+  learned.type = 'button';
+  const out = mk('div', 'mailx-att-learned');
+  learned.addEventListener('click', () => attnLearned(out));
+  d.append(learned, out);
+  d.appendChild(mk('p', 'mailx-att-quiet', `Tell the box "always show me anything from ..." or "I don't care about ...", and it keeps that as a rule.`));
+}
+async function attnLearned(out) {
+  if (out.childNodes.length) { out.innerHTML = ''; return; }
+  out.appendChild(mk('p', 'quiet working', 'Reading what it learned.'));
+  let rows = null, err = null;
+  try { const r = await C.sb.rpc('find_learned', {}); if (r.error) err = r.error.message; else rows = r.data; } catch (e) { err = String((e && e.message) || e); }
+  out.innerHTML = '';
+  if (err) { out.appendChild(mk('p', 'state stalled', 'What it learned could not be read just now: ' + err)); return; }
+  if (!rows || !rows.length) { out.appendChild(mk('p', 'quiet', 'Nothing yet. It learns from what you open first, mark Not important, and tell it.')); return; }
+  const ul = mk('ul', 'find-learned-list');
+  for (const r of rows) {
+    const li = mk('li');
+    const rm = mk('button', 'go ghost', 'Forget this');
+    rm.type = 'button';
+    rm.addEventListener('click', async () => {
+      rm.disabled = true;
+      let ok = false;
+      try { const x = await C.sb.rpc('find_learned_remove', { p_id: r.id }); ok = !x.error && x.data && x.data.ok === true; } catch (_) { ok = false; }
+      if (ok) { li.remove(); loadAttention(); } else { rm.disabled = false; rm.textContent = 'Not removed. Try again'; }
+    });
+    li.append(mk('span', null, String(r.line || '')), rm);
+    ul.appendChild(li);
+  }
+  out.appendChild(ul);
+}
+
 const mk = (tag, cls, text) => {
   const n = C.el(tag, cls);
   if (text !== undefined && text !== null) n.textContent = text;
@@ -175,20 +320,25 @@ export function drawMail(body) {
     read.setAttribute('aria-label', 'The open email');
     read.setAttribute('aria-live', 'polite');
     wrap.append(side, list, read);
-    body.appendChild(wrap);
-    parts = { wrap, side, list, read };
+    const att = mk('section', 'mailx-att');
+    att.setAttribute('aria-label', 'Worth your attention');
+    body.append(att, wrap);
+    parts = { wrap, side, list, read, att };
     wrap.dataset.view = 'list';
   }
   pickDefault();
   drawSide();
   drawList();
   drawRead();
+  if (!attn) loadAttention(); else drawAttention();
   if (!countsAsked && C.mailboxes().size) {
     countsAsked = true;
-    live('counts').then((j) => {
-      for (const m of j.mailboxes || []) if (m.reachable && m.unread !== null) unread.set(m.source_key, m.unread);
+    C.sb.rpc('mail_new').then(({ data, error }) => {
+      if (error || !data || data.ok === false) return;   // a missing count is shown as no count, never as zero
+      for (const m of data.mailboxes || []) if (m.new !== null && m.new !== undefined) unread.set(m.source_key, Number(m.new));
+      if (chosen && seenSent.has(chosen)) unread.set(chosen, 0);
       drawSide();
-    }).catch(() => { /* a missing count is shown as no count, never as zero */ });
+    }, () => {});
   }
   flushOpen();
 }
@@ -257,7 +407,9 @@ function drawSide() {
       if (m.source_key === chosen) b.setAttribute('aria-current', 'true');
       b.appendChild(mk('span', 'mailx-addr', m.address));
       if (unread.has(m.source_key) && unread.get(m.source_key) > 0) {
-        b.appendChild(mk('span', 'mailx-count', String(unread.get(m.source_key))));
+        const n = mk('span', 'mailx-count', String(unread.get(m.source_key)));
+        n.title = 'New since you last opened this mailbox here';
+        b.appendChild(n);
       }
       b.addEventListener('click', () => chooseMailbox(m.source_key));
       li.appendChild(b);
@@ -286,6 +438,7 @@ async function loadInbox(more) {
     inbox.next = j.next_page_token || null;
     inbox.estimate = j.total_estimate || null;
     inbox.error = null;
+    markSeen(key);
   } catch (e) {
     if (key !== chosen) return;
     inbox.error = String((e && e.message) || e);
