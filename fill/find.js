@@ -26,6 +26,9 @@ let saidHere = false;
 
 function cap(s) { s = String(s || ""); return s ? s[0].toUpperCase() + s.slice(1) : s; }
 function chipText(it) {
+  // EARLIER AI WORK (seat attention, 2026-10-27, decision 1024 item 8): a saved chat or a document saved from an assistant is
+  // labeled as earlier AI work, never as a source; the brain ranks it after the sources (find_for_identity earlier_ai).
+  if (it.earlier_ai) return "Earlier AI work";
   const w = (it.kind === "file" || it.kind === "attachment" || it.kind === "record") && it.what && it.what !== "file" ? cap(it.what) : (KIND[it.kind] || "Item");
   const s = SENS[String(it.sensitivity || "").toLowerCase()];
   return s ? w + " · " + s : w;
