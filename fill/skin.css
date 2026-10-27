@@ -1234,6 +1234,19 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
 .ai2-days th:first-child, .ai2-days td:first-child { text-align: left; }
 .ai2-days th { color: var(--ink-3); font-weight: var(--w-mid); }
 .ai2-asks { margin-top: var(--gap-lg); }
+/* Everything it costs, in the first block, and THE COST DIAL (seat cost-dial, 2026-10-27, decision 1024 item 3). The dial
+   is something to act on, so it alone earns a border (house rule 1); --accent only when near or at the limit, always
+   with words. Every press and the field are 44px at every width, so no phone rule is needed. */
+.ai2-all-h { margin-top: var(--gap); }
+.ai2-all { max-width: 560px; border-top: 1px solid var(--line-2); }
+.ai2-all .ai2-row { padding: calc(var(--u) * 1.5) 0; }
+.ai2-limit { border: 1px solid var(--line); border-radius: var(--radius); padding: calc(var(--u) * 4); max-width: 560px; }
+.ai2-limit-acts { display: flex; flex-wrap: wrap; align-items: flex-end; gap: calc(var(--u) * 3); margin-top: calc(var(--u) * 3); }
+.ai2-limit-acts .go { min-height: 44px; }
+.ai2-limit-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: calc(var(--u) * 2); }
+.ai2-limit-field { display: flex; flex-direction: column; gap: 4px; }
+.ai2-limit-field .ai2-small { margin: 0; }
+.ai2-limit-in { width: 9em; min-height: 44px; font-size: 16px; padding: 0 calc(var(--u) * 3); border: 1px solid var(--ink-4); border-radius: var(--radius); background: var(--paper); color: var(--ink); font-variant-numeric: tabular-nums; }
 @media (min-width: 900px) {
   .ai-tab { max-width: 980px; }
   .ai2-how, .ai2-bal { display: inline-block; vertical-align: top; width: calc(50% - var(--gap)); }
