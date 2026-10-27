@@ -1534,6 +1534,29 @@ a.find-title:hover { text-decoration: underline; }
 .thought-original { opacity: .85; border-left: 3px solid var(--line); padding-left: calc(var(--u) * 1.5); }
 .mailx-att-thought .mailx-att-what { font-weight: 600; }
 
+/* -- THE SUB-TAB ROW (seat people-and-access, 2026-10-27, decision 1029). One row under the main tabs, shared by
+   every tab that does several jobs (fill/subtabs.js). Quieter than the main tabs: smaller words, a thin underline. -- */
+.subtabs {
+  display: flex; gap: calc(var(--u) * 1) var(--gap); margin: calc(var(--u) * 3) 0 var(--gap-lg);
+  border-bottom: 1px solid var(--line-2); overflow-x: auto; scrollbar-width: none;
+}
+.subtabs::-webkit-scrollbar { display: none; }
+.subtab {
+  flex: none; white-space: nowrap; font-size: var(--t-small); color: var(--ink-3);
+  padding: calc(var(--u) * 1.5) calc(var(--u) * 0.5); border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.subtab:hover { color: var(--ink); }
+.subtab[aria-selected='true'] { color: var(--ink); font-weight: var(--w-mid); border-bottom-color: var(--ink); }
+.subtab:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.sub-what { color: var(--ink-2); max-width: var(--measure); margin-bottom: var(--gap); }
+/* People and access (seat people-and-access) */
+.people .a-title .chip { font-size: var(--t-small); font-weight: normal; color: var(--ink-3); border: 1px solid var(--line); border-radius: 999px; padding: 0 calc(var(--u) * 1.5); margin-left: calc(var(--u) * 1); white-space: nowrap; }
+.people .a-title .chip-wait { color: var(--accent); border-color: currentColor; }
+.people .sub-head { margin-top: calc(var(--u) * 1.5); color: var(--ink-3); }
+.invite, .all-access { margin-top: calc(var(--gap-lg) * 1.5); }
+.invite-row { display: flex; flex-wrap: wrap; gap: var(--gap); margin-top: var(--gap); max-width: var(--measure); }
+.invite-row input { flex: 1 1 14rem; min-width: 0; font: inherit; padding: calc(var(--u) * 1.5) calc(var(--u) * 2); border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); }
+
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
    for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
@@ -1629,4 +1652,11 @@ a.find-title:hover { text-decoration: underline; }
   .mailx-att-acts .go { flex: 1 1 auto; justify-content: center; }
   .mailx-att-input { font-size: 16px; }
   .mailx-read > .mailx-head > a { min-height: 44px; display: inline-flex; align-items: center; }
+  /* seat people-and-access 2026-10-27: the sub-tab row is one line that scrolls sideways; every sub-tab, button and
+     field in Security is thumb-sized; the invite fields stack. */
+  .subtab { min-height: 44px; display: inline-flex; align-items: center; padding-left: calc(var(--u) * 1); padding-right: calc(var(--u) * 1); }
+  #s-security .go, #s-security summary { min-height: 44px; }
+  #s-security .actions .go { flex: 1 1 auto; justify-content: center; }
+  .invite-row input { flex-basis: 100%; min-height: 44px; font-size: 16px; }
+  .invite-row .go { width: 100%; }
 }
