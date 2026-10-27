@@ -777,18 +777,31 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
 /* WORTH YOUR ATTENTION (seat attention, 2026-10-27, decision 1024 item 5): a short ranked list above the three columns. It
    takes at most about a third of the window and scrolls by itself, so the inbox is always on screen under it; it folds
    (details) to one line. The columns below keep the rest of the height. */
-#lens-body:has(> .mailx-att) { display: flex; flex-direction: column; gap: calc(var(--u) * 3); }
-#lens-body > .mailx-att + .mailx { flex: 1; height: auto; min-height: 0; }
-.mailx-att { flex: none; max-height: 36vh; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); padding: calc(var(--u) * 3) calc(var(--u) * 4); }
-.mailx-att-head { cursor: pointer; font-weight: var(--w-mid); color: var(--ink); min-height: 44px; display: flex; align-items: center; }
-.mailx-att-list { margin: calc(var(--u) * 2) 0; padding-left: 1.4em; display: grid; gap: calc(var(--u) * 3); }
-.mailx-att-item p { margin: 0; overflow-wrap: anywhere; }
+/* WORTH YOUR ATTENTION, STARRED, LABELS ARE VIEWS IN THE LEFT COLUMN (seat mail-views, 2026-10-27; Alex 14:41 PT). SUPERSEDES
+   the block above the columns (seat attention, same day: .mailx-att, at most a third of the window), removed with its rules
+   here and in the phone block. The views sit at the top of the left column; their items fill the middle list; an item opens
+   in the right pane with why it is here, what was checked and the actions that fit it. */
+.mailx-views { margin-bottom: var(--gap); padding-bottom: var(--u); border-bottom: 1px solid var(--line); }
+.mailx-view .mailx-addr { color: var(--ink); font-weight: var(--w-mid); }
+.mailx-labels { margin: 0 0 var(--gap); padding-left: calc(var(--u) * 2); }
+.mailx-labels .mailx-domain { margin-top: calc(var(--u) * 2); }
+.mailx-att-row .mailx-att-what { color: var(--ink); font-weight: var(--w-mid); }
+.mailx-att-row .mailx-att-line { -webkit-line-clamp: 1; }
+.mailx-list > .mailx-att-quiet, .mailx-list > .mailx-att-learned { margin: var(--u) calc(var(--u) * 4); }
+.mailx-att-card { max-width: var(--read); }
+.mailx-att-card > p { margin: var(--u) 0 0; overflow-wrap: anywhere; }
 .mailx-att-what { font-weight: var(--w-mid); color: var(--ink); }
-.mailx-att-why { color: var(--ink-2); font-size: var(--t-small); }
+.mailx-att-why { color: var(--ink-2); }
 .mailx-att-checked, .mailx-att-quiet { color: var(--ink-3); font-size: var(--t-small); margin: var(--u) 0 0; }
-.mailx-att-acts { display: flex; flex-wrap: wrap; gap: var(--u) var(--gap); margin-top: var(--u); }
-.mailx-att-acts .go, .mailx-att > details > .go { min-height: 44px; }
+.mailx-att-acts { display: flex; flex-wrap: wrap; gap: var(--u) var(--gap); margin-top: var(--gap); }
+.mailx-att-acts .go { min-height: 44px; display: inline-flex; align-items: center; }
+.mailx-att-why-box { display: flex; flex-wrap: wrap; align-items: end; gap: var(--u) var(--gap); margin-top: var(--gap); }
+.mailx-att-why-box label { flex: 1 1 16rem; display: grid; gap: var(--u); font-size: var(--t-small); color: var(--ink-2); }
+.mailx-att-input { min-height: 44px; box-sizing: border-box; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 calc(var(--u) * 1.5); }
+.mailx-att-why-box .go { min-height: 44px; }
+.mailx-att-card .find-lesson { margin-top: var(--gap); }
 .mailx-att-learned .find-learned-list { margin: var(--u) 0; }
+.mailx-list > .go { min-height: 44px; }
 .mailx { height: 100%; display: grid; grid-template-columns: minmax(11rem, 13rem) minmax(17rem, 22rem) minmax(0, 1fr); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--paper); }
 .mailx-side, .mailx-list, .mailx-read { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .mailx-side { background: var(--paper-2); border-right: 1px solid var(--line); padding: calc(var(--u) * 4) calc(var(--u) * 2); }
@@ -1609,7 +1622,11 @@ a.find-title:hover { text-decoration: underline; }
   .close-input { font-size: 16px; }
   .close-act .close-btn { flex: 1 1 0; }
   .close-gold { width: 100%; }
-  /* seat attention 2026-10-27: Worth your attention folds by default, takes at most 40% of the height, presses full width. */
-  .mailx-att { max-height: 40vh; padding: calc(var(--u) * 2) calc(var(--u) * 3); }
-  .mailx-att-acts .go { flex: 1 1 auto; }
+  /* seat mail-views 2026-10-27: the left column is the first screen on a phone (views, then mailboxes), every row thumb-sized;
+     an item's actions full width. SUPERSEDES seat attention's folded block rules (the block is gone). */
+  .mailx-box, .mailx-back, .mailx-nav, .mailx-toggle { min-height: 44px; }
+  .mailx-list .mailx-nav, .mailx-read .mailx-back { display: inline-flex; align-items: center; }
+  .mailx-att-acts .go { flex: 1 1 auto; justify-content: center; }
+  .mailx-att-input { font-size: 16px; }
+  .mailx-read > .mailx-head > a { min-height: 44px; display: inline-flex; align-items: center; }
 }
