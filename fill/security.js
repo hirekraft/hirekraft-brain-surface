@@ -80,7 +80,8 @@ function drawGauges() {
     b.appendChild(line("sp-n", t.n == null ? "?" : ctx.countOf(t.n)));
     b.appendChild(line("sp-w", t.words));
     if (t.sub) b.appendChild(line("sp-s", t.sub));
-    b.addEventListener("click", () => ctx.$(t.go)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    // A number may point into another sub-tab (Checks): reveal() picks it first (seat people-and-access, fill/subtabs.js).
+    b.addEventListener("click", () => ctx.reveal ? ctx.reveal(t.go) : ctx.$(t.go)?.scrollIntoView({ behavior: "smooth", block: "start" }));
     row.appendChild(b);
   }
   mount.appendChild(row);
