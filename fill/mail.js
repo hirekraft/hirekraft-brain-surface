@@ -43,6 +43,7 @@
 import { conversation } from './answer.js?v=2026-10-22-dates';
 import { fmtDate } from './dates.js?v=2026-10-22-dates';
 import { plainWords } from './plain.js?v=2026-10-27-mail-views';
+import { screenLang, screenLangName } from './words.js?v=2026-10-28-language';   // See it in <language> (seat language-and-nudge)
 
 // VIEWS IN THE LEFT COLUMN (seat mail-views, 2026-10-27; Alex 14:41 PT: "Worth your attention should be ... on the left-hand
 // side instead of an email, like a label ... worth your attention, and the other would be starred"). At the top of the left
@@ -563,7 +564,8 @@ function viewButton(label, count, on, fn, title) {
   const b = mk('button', 'mailx-box mailx-view');
   b.type = 'button';
   if (on) b.setAttribute('aria-current', 'true');
-  b.appendChild(mk('span', 'mailx-addr', label));
+  // The three views are the Tool's own words (they follow the screen's language); a label or mailbox name never does (words.js).
+  b.appendChild(mk('span', ['Worth your attention', 'Starred', 'Labels'].includes(label) ? 'mailx-addr mailx-viewname' : 'mailx-addr', label));
   if (count !== null && count !== undefined && count !== '') { const n = mk('span', 'mailx-count', String(count)); if (title) n.title = title; b.appendChild(n); }
   b.addEventListener('click', fn);
   return b;
@@ -970,10 +972,47 @@ function newsletterLine(t, r) {
 // ── one message, as it was written ──────────────────────────────────────────
 function messageContent(m) {
   const wrap = mk('div', 'mailx-body');
-  if (m.html) { htmlMessage(wrap, m); return wrap; }
+  if (m.html) { htmlMessage(wrap, m); return seeItIn(wrap, m); }
   if (m.html_too_large) wrap.appendChild(mk('p', 'quiet', 'This email is too large to show as it was laid out, so its text is shown instead.'));
   wrap.appendChild(plainMessage(m.body));
-  return wrap;
+  return seeItIn(wrap, m);
+}
+
+// SEE IT IN <LANGUAGE> (seat language-and-nudge, decision 1026 item 2): the customer's own mail always shows as written.
+// When the screen is in another language, one press under the email puts it in that language, marked as a translation,
+// made for her then (screen-words action passage) and never kept. The original stays above, unchanged.
+function seeItIn(wrap, m) {
+  if (screenLang() === 'en') return wrap;
+  const holder = mk('div', 'mailx-seeit');
+  const b = mk('button', 'go ghost mailx-seeit-btn', 'See it in ' + screenLangName());
+  b.type = 'button';
+  const out = mk('div', 'mailx-seeit-out');
+  out.setAttribute('aria-live', 'polite');
+  b.addEventListener('click', async () => {
+    b.disabled = true;
+    out.innerHTML = '';
+    out.appendChild(mk('p', 'working', 'Putting this email in ' + screenLangName()));
+    let text = String(m.body || '');
+    if (!text && m.html) { try { text = new DOMParser().parseFromString(String(m.html), 'text/html').body.textContent || ''; } catch (_) { text = ''; } }
+    const { data } = await C.sb.auth.getSession();
+    const jwt = data?.session?.access_token;
+    const r = jwt ? await fetch(C.url + '/functions/v1/screen-words', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + jwt, apikey: C.key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'passage', lang: screenLang(), text }),
+    }).then((x) => x.json()).catch(() => null) : null;
+    out.innerHTML = '';
+    b.disabled = false;
+    if (!r || r.ok !== true) { out.appendChild(mk('p', 'state stalled', String(r?.reason || 'The translation could not be made just now. The email is unchanged above.'))); return; }
+    out.appendChild(mk('p', 'eyebrow', 'Translated by the Tool into ' + screenLangName() + '. The email above is the original.'));
+    const t = mk('div', 'mailx-text mailx-seeit-text', r.text);
+    t.lang = r.lang || '';
+    out.appendChild(t);
+    if (r.cut) out.appendChild(mk('p', 'quiet', 'Only the first part of a long email was translated.'));
+  });
+  holder.append(b, out);
+  const outer = mk('div', 'mailx-body-wrap');
+  outer.append(wrap, holder);
+  return outer;
 }
 
 // Plain text: line breaks kept (white-space in skin.css), links clickable, and the quoted
@@ -1164,7 +1203,7 @@ function actions(t) {
   btn('Answer', true, () => { note.textContent = ''; convoFor(t, true).start('reply'); });
   btn('Forward', false, () => { note.textContent = ''; convoFor(t, true).start('forward'); });
   // FROM AN EMAIL (seat thoughtgram, 2026-10-25): a thought linked to this email and its topic, said or typed in the box.
-  if (C.thought) btn('Add a thought', false, () => { note.textContent = ''; C.thought({ source: chosen, source_id: open && open.thread ? open.thread.thread_id : '', subject: t.subject || '' }); });
+  if (C.thought) btn('Add a thoughtgram', false, () => { note.textContent = ''; C.thought({ source: chosen, source_id: open && open.thread ? open.thread.thread_id : '', subject: t.subject || '' }); });
   btn('Ask about this', false, () => {
     const i = document.getElementById('ask-input');
     if (i) i.focus();
