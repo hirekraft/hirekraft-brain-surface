@@ -53,7 +53,7 @@ import { screenLang, screenLangName } from './words.js?v=2026-10-28-language';  
 // block and its styles are removed. Starred and a label are read live from Gmail by the same search the box uses (FIND,
 // worklens-live 'search' with is:starred or label:...), each mailbox behind the same door; their counts are the Tool's kept
 // marks (stars-labels). Nothing in any mailbox is changed by looking.
-let view = null;            // { kind: 'attention' } | { kind: 'starred' } | { kind: 'label', name, address } | { kind: 'mailbox' }
+let view = null;            // { kind: 'attention' } | { kind: 'suspicious' } | { kind: 'starred' } | { kind: 'label', name, address } | { kind: 'mailbox' }
 let pick = null;            // the Worth your attention item open in the right pane
 let marks = null;           // { loading } | { labels, starred } | { error }
 let labelsOpen = false;
@@ -440,6 +440,280 @@ async function attnLearned(out) {
   out.appendChild(ul);
 }
 
+// SUSPICIOUS (seat scam-view, 2026-10-28, decision 1027; Alex 2026-10-27 15:01 PT: "it should show and say these are like
+// malicious things coming in that clearly can't be you ... I have to look at them sometimes and see who is this coming from ...
+// a way to just put everything in spam that you agree ... Probably on the left again"). A view in the left column beside
+// Worth your attention, Starred and Labels: every email the fraud check flagged, across the mailboxes she may open (scam_list,
+// behind the Mail gate), each with the investigation already done in plain words. THE TOOL MOVES NOTHING ON ITS OWN. Move to
+// Spam happens only on her press, through mail-send (the one path that changes a mailbox), and is undone from here for 30 days
+// (Gmail empties Spam after 30). Until Google allows the Tool to move mail (gmail.modify), the buttons say so and do nothing.
+// Not a scam asks one line why; by the owner it clears the warning for everyone and teaches the check, by anyone else it is hers.
+// Links, pictures and attachments of a suspected email are never live here: "Show the original anyway" is a second press and
+// shows its words as plain text. SUPERSEDES, for the owner, the impostor item in Worth your attention and the six findings
+// raised in the conversation (seat fraud-watch): the brain removed both the same day; a reader keeps the item, with the warning
+// in her language.
+let scam = null;            // { loading } | { data, ready: Map|null, readyWhy, said: Map } | { error }
+let scamPick = null;        // the suspected email open in the right pane
+let scamBusy = null;        // a line while a press is being carried out, next to the button
+const SEND = '/functions/v1/mail-send';
+async function mailSend(body) {
+  const { data } = await C.sb.auth.getSession();
+  const jwt = data && data.session && data.session.access_token;
+  if (!jwt) throw new Error('You are not signed in on this browser, so there is nobody to act as.');
+  const r = await fetch(C.url + SEND, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + jwt, apikey: C.key, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const j = await r.json().catch(() => null);
+  if (!j) throw new Error('No answer came back.');
+  return j;
+}
+function scamItems() { return scam && scam.data ? scam.data.items || [] : []; }
+function scamCount() { return scam && scam.data ? scamItems().length : null; }
+async function loadScams() {
+  const keep = scam && scam.ready ? { ready: scam.ready, readyWhy: scam.readyWhy } : null;
+  scam = { loading: true };
+  if (parts && view && view.kind === 'suspicious') drawList();
+  try {
+    const { data, error } = await C.sb.rpc('scam_list');
+    if (error || !data || data.ok === false) throw new Error((error && error.message) || (data && data.reason) || '');
+    scam = { data, ready: keep ? keep.ready : null, readyWhy: keep ? keep.readyWhy : null, said: new Map() };
+  } catch (e) {
+    scam = { error: plainWords(String((e && e.message) || e || '')) };
+  }
+  if (scamPick && scam.data) scamPick = scamItems().find((x) => x.id === scamPick.id) || null;
+  if (parts) { drawSide(); if (view && view.kind === 'suspicious') { drawList(); drawRead(); } }
+  if (scam.data && !scam.ready && scamItems().length) askReady();
+}
+// May the Tool move mail in these mailboxes? Asked of Google through mail-send; nothing is changed by asking.
+async function askReady() {
+  const keys = [...new Set(scamItems().map((x) => x.source))];
+  try {
+    const j = await mailSend({ action: 'spam_ready', source_keys: keys });
+    if (!scam || !scam.data) return;
+    scam.ready = new Map(Object.entries((j && j.ready) || {}));
+    scam.readyWhy = j && j.reason ? plainWords(String(j.reason)) : null;
+  } catch (e) {
+    if (!scam || !scam.data) return;
+    scam.ready = new Map();
+    scam.readyWhy = 'Whether the Tool may move mail could not be checked just now. ' + plainWords(String((e && e.message) || e || ''));
+  }
+  if (parts && view && view.kind === 'suspicious') { drawList(); drawRead(); }
+}
+const cap = (x) => { const t = String(x || ''); return t ? t[0].toUpperCase() + t.slice(1) : t; };
+function canMove(it) { return !!(scam && scam.ready && scam.ready.get(it.source) === true); }
+function permissionLine() {
+  return cap(scam && scam.readyWhy) || 'The Tool is not yet allowed to move mail in this mailbox. The owner gives that permission once, in Google’s admin console.';
+}
+async function moveToSpam(items, btn, where) {
+  const ids = items.map((x) => x.id);
+  if (!ids.length) return;
+  btn.disabled = true;
+  scamBusy = ids.length === 1 ? 'Moving it to Spam in Gmail.' : 'Moving ' + ids.length + ' emails to Spam in Gmail.';
+  where.textContent = scamBusy;
+  where.className = 'working';
+  let j = null, err = null;
+  try { j = await mailSend({ action: 'spam', flag_ids: ids }); } catch (e) { err = plainWords(String((e && e.message) || e || '')); }
+  scamBusy = null;
+  const moved = j ? Number(j.moved || 0) : 0;
+  const line = err ? 'Nothing was moved. ' + err
+    : moved === ids.length ? (moved === 1 ? 'Moved to Spam in Gmail. Undo it below, under Moved to Spam, for 30 days.' : 'Moved ' + moved + ' emails to Spam in Gmail. Undo any of them below, under Moved to Spam, for 30 days.')
+    : (moved ? 'Moved ' + moved + ' of ' + ids.length + ' to Spam. ' : 'Nothing was moved. ') + cap(plainWords(String((j && j.reason) || '')));
+  if (scam && scam.said) scam.said.set('list', line);
+  scamPick = null;
+  setView('list');
+  await loadScams();
+  if (scam && scam.said) scam.said.set('list', line);
+  if (parts) { drawList(); drawRead(); }
+}
+async function undoMove(row, btn, out) {
+  btn.disabled = true;
+  out.textContent = 'Putting it back in Gmail.'; out.className = 'working';
+  let j = null, err = null;
+  try { j = await mailSend({ action: 'spam_undo', action_ids: [row.action_id] }); } catch (e) { err = plainWords(String((e && e.message) || e || '')); }
+  const ok = j && Number(j.restored || 0) === 1;
+  const line = ok ? 'Put back where it was in Gmail. It is in the Suspicious list again.' : 'It was not put back. ' + cap(err || plainWords(String((j && j.reason) || '')));
+  await loadScams();
+  if (scam && scam.said) scam.said.set('list', line);
+  if (parts) drawList();
+}
+function notScam(it, out) {
+  out.innerHTML = '';
+  const f = mk('div', 'mailx-att-why-box');
+  const lab = mk('label', null, 'In one line, why is it not a scam?');
+  const inp = mk('input', 'mailx-att-input'); inp.type = 'text'; inp.maxLength = 280;
+  lab.appendChild(inp);
+  const keep = mk('button', 'go', 'Keep');
+  keep.type = 'button';
+  const said = mk('p', 'find-lesson'); said.setAttribute('aria-live', 'polite');
+  keep.addEventListener('click', async () => {
+    const why = inp.value.trim();
+    if (!why) { inp.focus(); return; }
+    keep.disabled = true;
+    let r = null;
+    try { const x = await C.sb.rpc('scam_not_scam', { p_flag: it.id, p_why: why }); r = x.error ? { ok: false, reason: x.error.message } : x.data; } catch (e) { r = { ok: false, reason: String((e && e.message) || e) }; }
+    if (!r || r.ok !== true) { keep.disabled = false; said.textContent = 'Not kept. ' + plainWords(String((r && r.reason) || '')); return; }
+    scamPick = null;
+    setView('list');
+    await loadScams();
+    if (scam && scam.said) scam.said.set('list', String(r.line || 'Kept.'));
+    warns.clear();
+    if (parts) { drawList(); drawRead(); }
+  });
+  f.append(lab, keep, said);
+  out.appendChild(f);
+  inp.focus();
+}
+async function undoNotScam(row, btn, out) {
+  btn.disabled = true;
+  let r = null;
+  try { const x = await C.sb.rpc('scam_not_scam_undo', { p_action: row.action_id }); r = x.error ? { ok: false, reason: x.error.message } : x.data; } catch (e) { r = { ok: false, reason: String((e && e.message) || e) }; }
+  if (!r || r.ok !== true) { btn.disabled = false; out.textContent = 'Not undone. ' + plainWords(String((r && r.reason) || '')); return; }
+  await loadScams();
+  if (scam && scam.said) scam.said.set('list', String(r.line || 'Undone.'));
+  warns.clear();
+  if (parts) drawList();
+}
+function scamWho(it) { return it.pretends ? 'Pretends to be ' + it.pretends : 'Pretends to be someone you pay'; }
+
+function drawScamList(list) {
+  const head = mk('div', 'mailx-head');
+  head.appendChild(navButton('All views', 'side'));
+  head.appendChild(mk('h3', null, 'Suspicious'));
+  list.appendChild(head);
+  if (!scam || scam.loading) { list.appendChild(mk('p', 'quiet working', 'Reading what the check found. Nothing in your mailboxes is changed.')); return; }
+  if (scam.error) { list.appendChild(mk('p', 'state stalled', 'The suspicious emails could not be read just now. ' + scam.error + ' This is not a claim that there are none.')); return; }
+  const j = scam.data;
+  const items = scamItems();
+  const said = scam.said && scam.said.get('list');
+  if (said) { const p = mk('p', 'find-lesson'); p.setAttribute('aria-live', 'polite'); p.textContent = said; list.appendChild(p); }
+  if (!items.length) list.appendChild(mk('p', 'quiet', 'Nothing suspicious in the mailboxes you can open. The Tool checks every email as it arrives.'));
+  else {
+    list.appendChild(mk('p', 'mailx-att-quiet', items.length + (items.length === 1 ? ' email pretends' : ' emails pretend') + ' to be someone, or press for a payment to someone new. Each one below says who really sent it. The Tool moved and changed nothing.'));
+    if (items[0].warn) list.appendChild(mk('p', 'mailx-warning-line', String(items[0].warn)));
+    const row = mk('div', 'mailx-att-acts');
+    const out = mk('p', 'quiet');
+    out.setAttribute('aria-live', 'polite');
+    const movable = items.filter(canMove);
+    const all = mk('button', 'go', items.length === 1 ? 'Move it to Spam' : 'Move all ' + items.length + ' shown to Spam');
+    all.type = 'button';
+    if (!scam.ready) { all.disabled = true; out.textContent = 'Checking whether the Tool may move mail.'; out.className = 'working'; }
+    else if (movable.length < items.length) { all.disabled = true; all.textContent = 'Move to Spam: needs your permission'; out.textContent = permissionLine(); }
+    all.addEventListener('click', () => moveToSpam(movable, all, out));
+    row.appendChild(all);
+    list.append(row, out);
+  }
+  const ul = mk('ul', 'mailx-msgs mailx-att-rows');
+  for (const it of items) {
+    const li = mk('li');
+    const b = mk('button', 'mailx-msg mailx-att-row warned');
+    b.type = 'button';
+    if (scamPick && scamPick.id === it.id) b.setAttribute('aria-current', 'true');
+    const r1 = mk('div', 'mailx-r1');
+    r1.appendChild(mk('span', 'mailx-from', scamWho(it)));
+    r1.appendChild(mk('span', 'mailx-when', when(it.at)));
+    b.appendChild(r1);
+    b.appendChild(mk('span', 'mailx-subj mailx-att-what', 'Really from ' + String(it.from_email || '')));
+    b.appendChild(mk('span', 'mailx-snip mailx-att-line', String(it.subject || '') + ' · ' + String(it.mailbox || '')));
+    b.addEventListener('click', () => { scamPick = it; open = null; setView('read'); drawList(); drawRead(); });
+    li.appendChild(b);
+    ul.appendChild(li);
+  }
+  list.appendChild(ul);
+  const moved = j.moved || [];
+  if (moved.length) {
+    list.appendChild(mk('h4', 'mailx-domain', 'Moved to Spam (' + moved.length + ')'));
+    const mu = mk('ul', 'mailx-scam-done');
+    for (const m of moved) {
+      const li = mk('li');
+      li.appendChild(mk('span', null, String(m.subject || '') + ', really from ' + String(m.from_email || '') + '. Undo until ' + fmtDate(new Date(m.undo_until), 'short') + '.'));
+      const u = mk('button', 'go ghost', 'Undo'); u.type = 'button';
+      const o = mk('span', 'quiet'); o.setAttribute('aria-live', 'polite');
+      u.addEventListener('click', () => undoMove(m, u, o));
+      li.append(u, o);
+      mu.appendChild(li);
+    }
+    list.appendChild(mu);
+  }
+  const safe = j.not_scam || [];
+  if (safe.length) {
+    list.appendChild(mk('h4', 'mailx-domain', 'Not a scam (' + safe.length + ')'));
+    const su = mk('ul', 'mailx-scam-done');
+    for (const s of safe) {
+      const li = mk('li');
+      li.appendChild(mk('span', null, String(s.from_email || '') + (s.for_all ? ', for everyone' : ', for you') + (s.why ? ': ' + String(s.why) : '')));
+      const o = mk('span', 'quiet'); o.setAttribute('aria-live', 'polite');
+      if (s.can_undo) { const u = mk('button', 'go ghost', 'Undo'); u.type = 'button'; u.addEventListener('click', () => undoNotScam(s, u, o)); li.appendChild(u); }
+      li.appendChild(o);
+      su.appendChild(li);
+    }
+    list.appendChild(su);
+  }
+  if (j.note) list.appendChild(mk('p', 'mailx-att-quiet', String(j.note)));
+}
+
+// The right pane: the investigation, the warning, and the three presses.
+function drawScamCard(read, it) {
+  read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
+  const card = mk('article', 'mailx-att-card');
+  card.appendChild(mk('p', 'eyebrow', 'Suspicious'));
+  card.appendChild(mk('h2', 'mailx-subject', String(it.subject || '')));
+  card.appendChild(warnBox({ line: it.line, books: null }));
+  card.appendChild(mk('p', 'eyebrow', 'What the Tool found'));
+  const ul = mk('ul', 'mailx-scam-facts');
+  for (const f of it.facts || []) ul.appendChild(mk('li', null, String(f)));
+  card.appendChild(ul);
+  if (it.books) card.appendChild(mk('p', 'mailx-att-checked', String(it.books)));
+  if (it.warn) card.appendChild(mk('p', 'mailx-warning-line', String(it.warn)));
+  const row = mk('div', 'mailx-att-acts');
+  const out = mk('div', 'mailx-att-out');
+  const status = mk('p', 'quiet'); status.setAttribute('aria-live', 'polite');
+  const mv = mk('button', 'go', 'Move to Spam'); mv.type = 'button';
+  if (!scam || !scam.ready) { mv.disabled = true; status.textContent = 'Checking whether the Tool may move mail.'; status.className = 'working'; }
+  else if (!canMove(it)) { mv.disabled = true; mv.textContent = 'Move to Spam: needs your permission'; status.textContent = permissionLine(); }
+  mv.addEventListener('click', () => moveToSpam([it], mv, status));
+  const ns = mk('button', 'go ghost', 'Not a scam'); ns.type = 'button';
+  ns.addEventListener('click', () => notScam(it, out));
+  const orig = mk('button', 'go ghost', 'Show the original anyway'); orig.type = 'button';
+  orig.addEventListener('click', () => showOriginal(it, orig, out));
+  row.append(mv, ns, orig);
+  card.append(row, status, out);
+  read.appendChild(card);
+}
+
+// THE ORIGINAL, ON A SECOND PRESS, AS WORDS ONLY: no link can be followed, no picture is loaded (loading one tells the sender
+// it was opened), no attachment is offered. Read live from Gmail by the same thread read as any email (worklens-live).
+function showOriginal(it, btn, out) {
+  out.innerHTML = '';
+  const ask = mk('div', 'mailx-att-why-box');
+  ask.appendChild(mk('p', null, 'This shows the email’s words only. Its links, pictures and attachments stay switched off. Show it?'));
+  const yes = mk('button', 'go ghost', 'Yes, show the words'); yes.type = 'button';
+  ask.appendChild(yes);
+  out.appendChild(ask);
+  yes.addEventListener('click', async () => {
+    yes.disabled = true;
+    out.innerHTML = '';
+    out.appendChild(mk('p', 'working', 'Reading it from Gmail.'));
+    let t = null, err = null;
+    try { t = await live('thread', { source_key: it.source, thread_id: it.source_id }); } catch (e) { err = String((e && e.message) || e || ''); }
+    out.innerHTML = '';
+    if (err || !t) { out.appendChild(mk('p', 'state stalled', 'The original could not be read just now. ' + plainWords(err || ''))); return; }
+    const msgs = t.messages || [];
+    const m = msgs.find((x) => x.id === it.source_id) || msgs[msgs.length - 1] || {};
+    let text = String(m.body || '');
+    if (!text && m.html) { try { text = new DOMParser().parseFromString(String(m.html), 'text/html').body.textContent || ''; } catch (_) { text = ''; } }
+    const box = mk('article', 'mailx-mail mailx-scam-original');
+    const r1 = mk('div', 'mailx-r1');
+    r1.appendChild(mk('span', 'mailx-from', String(m.from_name || '') + ' <' + String(m.from_email || it.from_email || '') + '>'));
+    r1.appendChild(mk('span', 'mailx-when', when(m.date || it.at)));
+    box.appendChild(r1);
+    box.appendChild(mk('div', 'mailx-text', text.trim() || '(no text)'));
+    box.appendChild(mk('p', 'quiet', 'Links are shown as text and cannot be followed here. Pictures and attachments are not shown.'));
+    out.appendChild(box);
+  });
+}
+
 // STARRED AND LABELS: their counts from the Tool's kept marks (mail_labels, mail_starred: behind the mailbox gate).
 async function loadMarks() {
   marks = { loading: true };
@@ -462,6 +736,7 @@ function chooseView(v) {
   if (v.kind === 'starred') findMail('is:starred', readingKeys(), { title: 'Starred', view: true });
   else if (v.kind === 'label') findMail(labelQuery(v.name), ['gmail:' + v.address], { title: v.name, view: true });
   else found = null;
+  if (v.kind === 'suspicious') { scamPick = null; if (scam && scam.said) scam.said.clear(); if (!scam || scam.error) loadScams(); }
   if (parts) { setView('list'); parts.list.scrollTop = 0; drawSide(); drawList(); drawRead(); }
 }
 function toMailbox(key) {
@@ -526,6 +801,7 @@ export function drawMail(body) {
   drawList();
   drawRead();
   if (!attn) loadAttention();
+  if (!scam) loadScams();
   if (!marks) loadMarks();
   if (!countsAsked && C.mailboxes().size) {
     countsAsked = true;
@@ -565,7 +841,7 @@ function viewButton(label, count, on, fn, title) {
   b.type = 'button';
   if (on) b.setAttribute('aria-current', 'true');
   // The three views are the Tool's own words (they follow the screen's language); a label or mailbox name never does (words.js).
-  b.appendChild(mk('span', ['Worth your attention', 'Starred', 'Labels'].includes(label) ? 'mailx-addr mailx-viewname' : 'mailx-addr', label));
+  b.appendChild(mk('span', ['Worth your attention', 'Suspicious', 'Starred', 'Labels'].includes(label) ? 'mailx-addr mailx-viewname' : 'mailx-addr', label));
   if (count !== null && count !== undefined && count !== '') { const n = mk('span', 'mailx-count', String(count)); if (title) n.title = title; b.appendChild(n); }
   b.addEventListener('click', fn);
   return b;
@@ -575,6 +851,9 @@ function drawViews(side) {
   const li = (node) => { const x = mk('li'); x.appendChild(node); ul.appendChild(x); return x; };
   const n = attn && attn.data ? attnItems().length : null;
   li(viewButton('Worth your attention', n === null ? '' : n, view && view.kind === 'attention', () => chooseView({ kind: 'attention' }), 'Things worth your look first, across your mailboxes'));
+  const sc = scamCount();
+  const sb = li(viewButton('Suspicious', sc ? sc : '', view && view.kind === 'suspicious', () => chooseView({ kind: 'suspicious' }), 'Emails pretending to be someone, across the mailboxes you can open'));
+  if (sc) sb.firstChild.classList.add('mailx-view-warn');
   const st = marks && !marks.loading && !marks.error ? marks.starred : null;
   li(viewButton('Starred', st === null ? '' : st, view && view.kind === 'starred', () => chooseView({ kind: 'starred' }), 'Starred in Gmail, across the mailboxes you can open'));
   const labs = (marks && marks.labels) || [];
@@ -695,6 +974,7 @@ function drawList() {
   list.innerHTML = '';
   if (found) { drawFound(list); return; }
   if (view && view.kind === 'attention') { drawAttnList(list); return; }
+  if (view && view.kind === 'suspicious') { drawScamList(list); return; }
   const m = boxRow();
   if (!m) { list.appendChild(mk('p', 'quiet', 'Choose a mailbox on the left.')); return; }
   const head = mk('div', 'mailx-head');
@@ -824,6 +1104,10 @@ function drawRead() {
   read.innerHTML = '';
   setBar();
   if (!open && pick && view && view.kind === 'attention') { drawAttnCard(read, pick); return; }
+  if (!open && view && view.kind === 'suspicious') {
+    if (scamPick) drawScamCard(read, scamPick); else read.appendChild(mk('p', 'quiet', 'Choose one to see who really sent it and what you can do.'));
+    return;
+  }
   if (!open) {
     read.appendChild(mk('p', 'quiet', view && view.kind === 'attention' ? 'Choose an item to see why it is here and what you can do.' : 'Choose an email to read it here.'));
     return;
