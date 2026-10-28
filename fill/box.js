@@ -44,7 +44,7 @@ const off = { mailbox: null, email: null, view: null };   // which chip she remo
 // it goes to the thought card (fill/thoughts.js) to be read back, corrected and kept. Removing the chip asks again.
 let thinking = null;      // { email?, topic? } while she is leaving a thought
 let thinkHeard = false;   // she spoke it (the words are kept, never the audio)
-const THINK_PH = 'Say or type your thought. It is kept for you, not answered';
+const THINK_PH = 'Say or type your thoughtgram. It is kept for you, not answered';
 export function startThought(opts, which) {
   thinking = opts && typeof opts === 'object' ? opts : {};
   thinkHeard = false;
@@ -94,7 +94,7 @@ export function drawBox() {
   if (sc.mailbox) host.appendChild(chip('in ' + sc.mailbox.address, () => { off.mailbox = sc.mailbox.key; }));
   if (sc.view && !sc.email && !thinking) host.appendChild(chip(viewChip(sc.view), () => { off.view = sc.viewKey; }));
   if (sc.email && !thinking) host.appendChild(chip('about this email', () => { off.email = sc.raw.threadKey; }));
-  if (thinking) host.appendChild(chip(thinking.email ? 'a thought on this email' : thinking.topicTitle ? 'a thought on ' + thinking.topicTitle : Array.isArray(thinking.for) && thinking.for.length ? 'a thought for ' + thinking.for.join(', ') : 'leaving a thought', () => { thinking = null; }));
+  if (thinking) host.appendChild(chip(thinking.email ? 'a thoughtgram on this email' : thinking.topicTitle ? 'a thoughtgram on ' + thinking.topicTitle : Array.isArray(thinking.for) && thinking.for.length ? 'a thoughtgram for ' + thinking.for.join(', ') : 'leaving a thoughtgram', () => { thinking = null; }));
   const pin = $('#panel-input');
   if (pin) pin.placeholder = thinking ? THINK_PH : (pin.dataset.ph || (pin.dataset.ph = pin.placeholder));
   input.placeholder = thinking ? THINK_PH : sc.email ? 'Ask about this email, have it answered, or find another'
@@ -395,7 +395,7 @@ function openMenu(which) {
     i.addEventListener('click', () => { closeMenus(); act(); });
     m.appendChild(i);
   };
-  item('Leave a thought', 'Say or type what you think about something you are working on, in any language; kept with its topic, for you or for people you name', () => startThought({}, which));
+  item('Leave a thoughtgram', 'Say or type what you think about something you are working on, in any language; kept with its topic, for you or for people you name', () => startThought({}, which));
   item('Add a file', 'A spreadsheet, document, PDF or slides', () => { addFrom = which; $('#add-file')?.click(); });
   item('Add a picture or screenshot', 'You can also paste a screenshot, or drop files on the conversation', () => { addFrom = which; $('#add-picture')?.click(); });
   item('Connect something', 'Mail, drives, calendar, or a system you use', () => { if (C.connect) C.connect(); });
