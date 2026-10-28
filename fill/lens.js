@@ -28,7 +28,7 @@ import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
 import { foundCard } from "./find.js?v=2026-10-28-language"; // find first, then work on what was found (seat find-first)
 import { closeCard } from "./close.js?v=2026-10-26-month-end-2"; // the month-end check, corrected cell by cell (seat month-end)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-27-people-and-access"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-10-27-people-and-access"; // sub-tab row and People and access (seat people-and-access)
-import { initChats, loadChats } from "./chats.js?v=2026-10-28-language"; // Chats tab (seat chat-import)
+import { initChats, loadChats } from "./chats.js?v=2026-10-28-tab-split"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-22-dates"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
 
@@ -3532,6 +3532,8 @@ function routeOnState(mode) {
   if (location.hash === "#tests" && $("#s-tests")) { goto("s-tests"); return; }
   if (location.hash === "#totest" && $("#s-totest")) { goto("s-totest"); return; }   // seat test-list
   if ((location.hash === "#security" || location.hash.startsWith("#security/")) && $("#s-security")) { goto("s-security"); return; }   // #security/<part> opens a sub-tab (seat people-and-access)
+  { const [t0, s0] = location.hash.slice(1).split("?")[0].split("/"); const tt = SUB_TABS[t0] && TABS.find((x) => x.key === t0 && (!x.owner || shape?.viewer?.all_access));
+    if (s0 && tt) { goTab(t0); return; } }   // #money/<part>, #chats/<part> open a sub-tab (seat tab-split)
   // Nobody signed in: the introduction is the honest screen, and it claims nothing
   // about data because there is no identity to claim it about.
   if (mode === "unbound") { goto("s-intro"); return; }
@@ -3553,11 +3555,14 @@ function routeOnState(mode) {
 // seat tool-tabs). Either id shows both, so every existing call site still lands on
 // the Brain tab unchanged. This is still the only router: a tab is a goto() call.
 const BRAIN_PAIR = ['s-connect', 's-summary'];
+// TABS WITH PARTS (decision 1029): the tab key and its section, for links like #money/pay (seat tab-split, 2026-10-28; Security
+// by seat people-and-access). Calendar and Contacts are not here on purpose: each does one job today (see the seat report).
+const SUB_TABS = { security: 's-security', money: 's-money', chats: 's-chats' };
 let lensKey = null;
 function goto(id, key) {
   if (id === 's-access') id = 's-security';   // who sees what moved to the Security tab (seat security-tab)
   // A sub-tab link (#security/audit) is kept only while that tab is shown (seat people-and-access).
-  if (/^#[a-z]+[/]/.test(location.hash) && location.hash.slice(1).split('/')[0] !== (id === 's-security' ? 'security' : '')) { try { history.replaceState(null, '', location.pathname + location.search); } catch (_) { /* link stays */ } }
+  if (/^#[a-z]+[/]/.test(location.hash) && location.hash.slice(1).split('/')[0] !== (Object.keys(SUB_TABS).find((k) => SUB_TABS[k] === id) ?? '')) { try { history.replaceState(null, '', location.pathname + location.search); } catch (_) { /* link stays */ } }
   const show = BRAIN_PAIR.includes(id) ? BRAIN_PAIR : [id];
   document.querySelectorAll("section.step").forEach((s) => { s.hidden = !show.includes(s.id); });
   window.scrollTo({ top: 0 });
@@ -3569,11 +3574,11 @@ function goto(id, key) {
   onMail = id === 's-lens' && lensKey === 'email';
   if (BRAIN_PAIR.includes(id)) import('./first.js?v=2026-10-27-first-answer').then((F) => F.drawFirst({ sb, el, $ })).catch((e) => { const m = $('#first-answer'); if (m) m.textContent = 'The short answer could not be loaded: ' + String(e?.message ?? e); });   // seat first-answer
   workPanel(id === 's-work');
-  if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney();
+  if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney(); showSubtabs($('#s-money'), 'money', shape?.viewer?.email);   // seat tab-split
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
     import("./ledger.js?v=2026-10-22-dates").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
-  if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); }
+  if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); showSubtabs($('#s-chats'), 'chats', shape?.viewer?.email); }
   const tabNow = id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : 'brain';
   markTab(tabNow);
   document.body.dataset.tab = tabNow;
