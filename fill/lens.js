@@ -15,8 +15,26 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 // ONE WAY THE SCREEN WRITES A DATE, and the one time zone (seat calendar-contacts, 2026-10-22): fill/dates.js.
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
-import { removeControl, drawReadView } from "./sources.js?v=2026-10-25-pace-and-boundary"; // remove a source, what the Tool has read (seat sources-basics)
+import { removeControl, readChooser } from "./sources.js?v=2026-10-28-brain-and-drives"; // remove a source, choose how older mail is read (seat sources-basics)
+import { readSources, drawCounts, drawSources, drawDrives, drawOrganize } from "./brainview.js?v=2026-10-28-brain-and-drives"; // Brain and Drives made legible (seat brain-and-drives, decision 1030)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
+// BRAIN AND DRIVES FROM ONE READING (seat brain-and-drives, 2026-10-28, decision 1030): sources_view, asked once per brain
+// reading (fresh) and shared by the counts, the Sources list, the count under Brain's heading and the Drives tab.
+function viewDeps() {
+  return { sb, el, reveal, isOwner: () => !!shape?.viewer?.all_access,
+    openMailbox: (key) => { userMoved = true; chooseMailbox(key); goto('s-lens', 'email'); },
+    removeControl: (key, name) => removeControl(key, name, srcDeps()),
+    readChooser: (key, name, kind) => readChooser(key, name, srcDeps(), kind),
+    choose: () => stageDrivePicker(driveAccountKey()),
+    act: (r, details) => { if (String(r.action || '').startsWith('Choose')) return details(); userMoved = true; openConnect(r.group); } };
+}
+function drawBrain(fresh) {
+  const d = viewDeps();
+  readSources(sb, fresh).then((v) => { const c = $('#sum-count'); if (c && v?.ok) c.textContent = `${Number(v.counts?.total ?? 0).toLocaleString('en-US')} ${v.counts?.total === 1 ? 'source' : 'sources'} connected`; }).catch(() => {});
+  drawCounts($('#brain-counts'), d);
+  drawSources($('#src-list'), d);
+  if ($('#s-drives') && !$('#s-drives').hidden) drawDrives($('#drives-places'), d);
+}
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-28-scam-view";
@@ -220,7 +238,7 @@ async function readBrain(opts = {}) {
     renderWho();
     fillTree();
     fillAttention();
-    drawReadView($('#read-view'), srcDeps());
+    drawBrain(true);   // Brain's counts and Sources, and Drives when open: one reading, sources_view (seat brain-and-drives)
     fillRecognition();
     fillAdoptable();
     renderState("live");
@@ -318,14 +336,8 @@ function renderWho() {
     ? "What is in it."
     : "What is in it, as far as you reach.";
   // The one-line count under the heading: what the reading itself lists, never recounted here.
-  const groups = (shape.groups ?? []).filter((g) => (g.count ?? 0) > 0);
-  const n = groups.reduce((t, g) => t + g.count, 0);
-  $("#sum-count").textContent = n ? `${n} ${n === 1 ? 'source' : 'sources'} connected, in ${groups.length} ${groups.length === 1 ? 'kind' : 'kinds'}` : '';
-  // Tests are the owner's. Hiding the way in is courtesy; the brain refuses anyone else.
-  const te = $("#tests-entry");
-  if (te) te.hidden = !v.all_access;
-  const tt = $("#totest-entry");   // the test list (seat test-list): the owner's; studio-july refuses anyone else
-  if (tt) tt.hidden = !v.all_access;
+  // seat brain-and-drives 2026-10-28: the count line is written by drawBrain from sources_view (one count everywhere, decision 1030).
+  // The Tests and To test buttons left the customer's screen (seat brain-and-drives, decision 1030); #tests and #totest still open them.
   // What is new, said once by the consultant in the conversation (seat test-list round 2); nothing when nothing is new.
   import("./news.js?v=2026-10-23-test-list-2").then((N) => N.showNews({ sb, el, $, openPanel, owner: !!v.all_access })).catch(() => {});
   // What her watches found since she last looked, said once in the conversation (seat watches); nothing when nothing is new.
@@ -1223,7 +1235,7 @@ function fillAttention() {
   const mine = (shape.needs_you ?? 0) + (limitItem ? 1 : 0);
   const ours = items.length - mine;
 
-  if (panel) panel.hidden = true;
+  if (panel) panel.hidden = !items.length;   // seat brain-and-drives: shown on What it knows when there is something; its box button left with the tree
 
   if (boxes) {
     boxes.innerHTML = "";
@@ -3554,32 +3566,45 @@ function routeOnState(mode) {
 // THE BRAIN TAB SHOWS CONNECTING AND WHAT IS CONNECTED TOGETHER (Alex, 2026-10-02,
 // seat tool-tabs). Either id shows both, so every existing call site still lands on
 // the Brain tab unchanged. This is still the only router: a tab is a goto() call.
-const BRAIN_PAIR = ['s-connect', 's-summary'];
+// SUPERSEDED 2026-10-28 (seat brain-and-drives, decision 1030): connecting is now the Add a source part OF the Brain tab, so
+// s-connect is an alias that opens it; the pair that showed both sections at once is gone.
 // TABS WITH PARTS (decision 1029): the tab key and its section, for links like #money/pay (seat tab-split, 2026-10-28; Security
 // by seat people-and-access). Calendar and Contacts are not here on purpose: each does one job today (see the seat report).
-const SUB_TABS = { security: 's-security', money: 's-money', chats: 's-chats' };
+const SUB_TABS = { security: 's-security', money: 's-money', chats: 's-chats', brain: 's-summary', drives: 's-drives' };   // brain and drives: seat brain-and-drives
 let lensKey = null;
 function goto(id, key) {
   if (id === 's-access') id = 's-security';   // who sees what moved to the Security tab (seat security-tab)
+  let part = null;
+  if (id === 's-connect') { id = 's-summary'; part = 'add'; }   // connecting is Brain's Add a source part (seat brain-and-drives)
   // A sub-tab link (#security/audit) is kept only while that tab is shown (seat people-and-access).
   if (/^#[a-z]+[/]/.test(location.hash) && location.hash.slice(1).split('/')[0] !== (Object.keys(SUB_TABS).find((k) => SUB_TABS[k] === id) ?? '')) { try { history.replaceState(null, '', location.pathname + location.search); } catch (_) { /* link stays */ } }
-  const show = BRAIN_PAIR.includes(id) ? BRAIN_PAIR : [id];
-  document.querySelectorAll("section.step").forEach((s) => { s.hidden = !show.includes(s.id); });
+  document.querySelectorAll("section.step").forEach((s) => { s.hidden = s.id !== id; });
   window.scrollTo({ top: 0 });
-  if (id === "s-connect" && !$("#connect-stage").children.length) stageTypes();
+  if (id === 's-summary') {
+    const sec = $('#s-summary');
+    if (!sec.dataset.wired) { sec.dataset.wired = '1'; sec.addEventListener('subtab', (e) => { if (e.detail?.sub === 'add' && !$('#connect-stage').children.length) stageTypes(); }); }
+    if (part) { try { history.replaceState(null, '', '#brain/' + part); } catch (_) { /* link stays */ } }
+    showSubtabs(sec, 'brain', shape?.viewer?.email);
+  }
+  if (id === 's-drives') {
+    const sec = $('#s-drives');
+    if (!sec.dataset.wired) { sec.dataset.wired = '1'; sec.addEventListener('subtab', (e) => { if (e.detail?.sub === 'organize') drawOrganize($('#drives-organize'), { sb, el }); }); }
+    showSubtabs(sec, 'drives', shape?.viewer?.email);
+    drawBrain(false);
+  }
   if (id === "s-tests") loadTests();
   if (id === "s-totest") import("./totest.js?v=2026-10-23-test-list-2").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + String(e?.message ?? e); });   // seat test-list
   if (id === "s-security") loadSecurity();
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
   onMail = id === 's-lens' && lensKey === 'email';
-  if (BRAIN_PAIR.includes(id)) import('./first.js?v=2026-10-27-first-answer').then((F) => F.drawFirst({ sb, el, $ })).catch((e) => { const m = $('#first-answer'); if (m) m.textContent = 'The short answer could not be loaded: ' + String(e?.message ?? e); });   // seat first-answer
+  if (id === 's-summary') import('./first.js?v=2026-10-27-first-answer').then((F) => F.drawFirst({ sb, el, $ })).catch((e) => { const m = $('#first-answer'); if (m) m.textContent = 'The short answer could not be loaded: ' + String(e?.message ?? e); });   // seat first-answer
   workPanel(id === 's-work');
   if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney(); showSubtabs($('#s-money'), 'money', shape?.viewer?.email);   // seat tab-split
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
     import("./ledger.js?v=2026-10-22-dates").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
   if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); showSubtabs($('#s-chats'), 'chats', shape?.viewer?.email); }
-  const tabNow = id === 's-lens' ? lensKey : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : 'brain';
+  const tabNow = id === 's-lens' ? lensKey : id === 's-drives' ? 'drives' : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : 'brain';
   markTab(tabNow);
   document.body.dataset.tab = tabNow;
   // Remembered so the Tool opens where she was (seat conversation-panel); first-run screens are not tabs.
@@ -3607,7 +3632,7 @@ const TAB_KEY = 'tool.tab';
 // The daily tabs: on a phone these sit in the bottom bar; the rest go under More (seat phone, 2026-10-13).
 const DAY_TABS = ['email', 'work', 'drives', 'calendar', 'contacts'];   // Thoughts sits under More on a phone: a seventh slot clipped its name and Calendar's (seat thoughtgram, measured at 390 px)
 function goTab(key) {
-  if (key === 'brain') goto('s-summary'); else if (key === 'work') goto('s-work');
+  if (key === 'brain') goto('s-summary'); else if (key === 'drives') goto('s-drives'); else if (key === 'work') goto('s-work');
   else if (key === 'security') goto('s-security'); else if (key === 'money') goto('s-money'); else if (key === 'chats') goto('s-chats'); else if (key === 'thoughts') goto('s-thoughts'); else goto('s-lens', key);
 }
 
@@ -3698,7 +3723,6 @@ function drawLens() {
     return;
   }
   const data = groupsFor().find((x) => x.key === lensKey);
-  if (lensKey === 'drives' && data?.connected) { drawDrives(body, data); return; }
   const line = el('p', 'quiet');
   if (!data) {
     line.textContent = readingState === null ? 'Reading your brain. This fills in when the reading lands.'
