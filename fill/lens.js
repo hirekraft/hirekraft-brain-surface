@@ -3749,76 +3749,9 @@ function drawLens() {
   drawMembers(lensKey, list);
 }
 
-// -- DRIVES AS FOLDERS (seat conversation-panel, Alex 2026-10-12; approved picture, board Drives) --
-// One tile per drive she chose: the folder mark, its name, what kind of place it is, ONE status word with a short
-// count, and its remedy if it has one. Everything on a tile comes from drive_state, the same reading as the Brain
-// tab's lines; nothing is counted here. Older connections she did not choose fold behind one line. A list view
-// (the Brain tab's own rows) is one click away and remembered in this browser.
-// NOT BUILT, STATED: opening a drive to see its folders and each file's outcome. The brain keeps no folder names,
-// and no names for files it did not read, so that view needs the drive reader to keep the names Google already
-// gives it; set out for HQ in the seat report rather than drawn from guesses.
-const DRIVE_KIND = { shared_drive: 'Shared drive', my_drive_folder: 'Folder in your Drive', account: 'Your Drive' };
-const DRIVES_VIEW = 'tool.drives.view';
-function drawDrives(body, data) {
-  let view = 'tiles';
-  try { view = localStorage.getItem(DRIVES_VIEW) || 'tiles'; } catch (_) { /* tiles */ }
-  const members = data.members ?? [];
-  const mine = members.map((m) => ({ m, s: driveStateFor(m.target) })).filter((x) => x.s);
-  const older = members.filter((m) => !driveStateFor(m.target));
-  const need = mine.filter((x) => (DRIVE_WORD[x.s.state] ?? [])[1] === 'orange').length;
-  const busy = mine.filter((x) => x.s.state === 'filling').length;
-
-  const top = el('div', 'drives-top');
-  const count = el('p', 'tab-count');
-  count.textContent = [`${mine.length} ${mine.length === 1 ? 'drive' : 'drives'}`, need ? `${need} need you` : '', busy ? `${busy} reading` : '']
-    .filter(Boolean).join(' · ');
-  const choose = el('button', 'go ghost'); choose.type = 'button'; choose.textContent = 'Choose what comes in';
-  choose.addEventListener('click', () => stageDrivePicker(driveAccountKey()));
-  const flip = el('div', 'drives-view'); flip.setAttribute('role', 'group'); flip.setAttribute('aria-label', 'Show drives as');
-  for (const [v, label] of [['tiles', 'Folders'], ['list', 'List']]) {
-    const b = el('button', 'drives-flip'); b.type = 'button'; b.textContent = label;
-    b.setAttribute('aria-pressed', String(view === v));
-    b.addEventListener('click', () => { try { localStorage.setItem(DRIVES_VIEW, v); } catch (_) { /* this page only */ } drawDrives(body, data); });
-    flip.appendChild(b);
-  }
-  top.append(count, choose, flip);
-  body.innerHTML = '';
-  body.appendChild(top);
-
-  if (view === 'list') { const list = el('div'); body.appendChild(list); drawMembers('drives', list); return; }
-
-  const grid = el('ul', 'drives-grid');
-  for (const { m, s } of mine) {
-    const li = el('li', 'drive-tile' + ((DRIVE_WORD[s.state] ?? [])[1] === 'grey' ? ' is-grey' : ''));
-    li.dataset.key = s.source_key;
-    const head = el('div', 'drive-head');
-    head.innerHTML = `<svg class="drive-mark" aria-hidden="true"><use href="#i-drive"/></svg>`;
-    const names = el('div', 'drive-names');
-    const n = el('p', 'drive-name'); n.textContent = s.label || m.name;
-    const k = el('p', 'drive-kind'); k.textContent = DRIVE_KIND[s.kind] ?? 'Drive';
-    names.append(n, k); head.appendChild(names);
-    li.append(head, driveLine(s));
-    grid.appendChild(li);
-  }
-  if (!mine.length) { const p = el('p', 'quiet'); p.textContent = 'No drive is chosen yet. Choose what comes in to start.'; body.appendChild(p); }
-  body.appendChild(grid);
-
-  if (older.length) {
-    const d = el('details', 'drives-older'); d.dataset.key = 'drives-older';
-    const sum = el('summary'); sum.textContent = `Show ${older.length} older ${older.length === 1 ? 'connection' : 'connections'} you did not choose`;
-    const ul = el('ul', 'members');
-    for (const m of older) {
-      const li = el('li'); li.dataset.key = m.target ?? m.name;
-      const p = el('p', 'drive-name'); p.textContent = m.name;
-      const st = el('div', 'state tone-plain');
-      st.innerHTML = `<span class="dot"></span>Not one of the drives you chose &mdash; an older record, kept until you decide about it`;
-      li.append(p, badgeLine(st, ['Not chosen', 'grey']));
-      ul.appendChild(li);
-    }
-    d.append(sum, ul);
-    body.appendChild(d);
-  }
-}
+// -- DRIVES AS FOLDERS (seat conversation-panel, 2026-10-12) was RETIRED 2026-10-28 by seat brain-and-drives (decision 1030):
+// the Drives tab is its own section (s-drives), drawn by fill/brainview.js from sources_view, grouped Shared drives and
+// Folders in someone's drive, each named with what it is, whose, who can open it and one of three states; Organize beside it.
 
 // -- WORK (seat work-tab, 2026-10-06, Alex's rulings 2026-10-02 and 2026-10-06) --
 // Every question asked in the Tool is kept as a chat, whichever tab it was asked from, because
