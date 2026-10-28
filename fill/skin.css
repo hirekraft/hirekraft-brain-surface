@@ -1557,6 +1557,44 @@ a.find-title:hover { text-decoration: underline; }
 .invite-row { display: flex; flex-wrap: wrap; gap: var(--gap); margin-top: var(--gap); max-width: var(--measure); }
 .invite-row input { flex: 1 1 14rem; min-width: 0; font: inherit; padding: calc(var(--u) * 1.5) calc(var(--u) * 2); border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); }
 
+/* ── THE SCREEN IN YOUR LANGUAGE AND THE NUDGE (seat language-and-nudge, 2026-10-28, decision 1026) ──────────────
+   The language switch sits under her name at the top; its menu drops below it. The nudge checkbox sits on the
+   thoughtgram card under For. "See it in <language>" sits under an email, its translation marked as one. */
+.lang-switch { font: inherit; font-size: var(--t-small); color: var(--ink-2); background: transparent; border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 2px 8px; margin-top: 2px; cursor: pointer; min-height: 28px; }
+.lang-switch:hover, .lang-switch:focus-visible { border-color: var(--ink-3); }
+.whoami { position: relative; }
+.lang-menu { position: absolute; right: 0; top: 100%; z-index: 60; margin-top: 4px; width: min(22rem, calc(100vw - 32px)); max-height: min(70vh, 34rem);
+  overflow-y: auto; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12); padding: calc(var(--u) * 1.5); text-align: left; color: var(--ink-2); }
+.lang-menu-note { margin: 0 0 var(--u); font-weight: var(--w-mid); color: var(--ink); }
+.lang-menu-list { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.lang-menu-item { font: inherit; text-align: left; background: transparent; border: 1px solid transparent; border-radius: var(--radius);
+  padding: 6px 8px; cursor: pointer; display: flex; flex-direction: column; color: var(--ink-2); min-height: 40px; }
+.lang-menu-item:hover { background: var(--paper-2); }
+.lang-menu-item.on { border-color: var(--ink-3); background: var(--paper-2); }
+.lang-menu-en { font-size: var(--t-small); }
+.lang-menu-status { margin: var(--u) 0 0; font-size: var(--t-small); }
+.lang-menu-fix { margin-top: var(--u); width: 100%; }
+.lang-menu-mail { display: flex; gap: var(--u); align-items: flex-start; margin-top: calc(var(--u) * 1.5); padding-top: var(--u);
+  border-top: 1px solid var(--line-2); font-size: var(--t-small); cursor: pointer; }
+.lang-menu-mail input, .thought-mail input { width: 18px; height: 18px; margin-top: 2px; flex: 0 0 auto; }
+.thought-mail { display: flex; gap: var(--u); align-items: flex-start; margin-top: var(--u); font-size: var(--t-small); color: var(--ink-3); cursor: pointer; }
+.thought-mail-said { margin-top: var(--u); }
+.mailx-seeit { margin-top: calc(var(--u) * 1.5); }
+.mailx-seeit-out .eyebrow { margin-top: var(--u); }
+.mailx-seeit-text { border-left: 3px solid var(--line); padding-left: calc(var(--u) * 1.5); }
+body.words-correcting #main, body.words-correcting #tabs, body.words-correcting .onebox { cursor: help; }
+.words-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 70; width: min(40rem, calc(100vw - 32px));
+  box-sizing: border-box; display: flex; gap: var(--u); align-items: center; justify-content: space-between; background: var(--paper);
+  border: 1px solid var(--ink-3); border-radius: var(--radius); padding: var(--u) calc(var(--u) * 1.5); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12); }
+.words-fix { position: fixed; left: 50%; top: 20%; transform: translateX(-50%); z-index: 80; width: min(30rem, calc(100vw - 32px));
+  box-sizing: border-box; background: var(--paper); border: 1px solid var(--ink-3); border-radius: var(--radius); padding: calc(var(--u) * 2);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18); }
+.words-fix textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; }
+html[dir='rtl'] .whoami { text-align: left; }
+
+
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
    for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
@@ -1659,4 +1697,13 @@ a.find-title:hover { text-decoration: underline; }
   #s-security .actions .go { flex: 1 1 auto; justify-content: center; }
   .invite-row input { flex-basis: 100%; min-height: 44px; font-size: 16px; }
   .invite-row .go { width: 100%; }
+  /* seat language-and-nudge 2026-10-28: the language switch and its menu thumb-sized; the menu one column, full width
+     under the header; the nudge checkbox row thumb-sized; See it in thumb-sized. */
+  .lang-switch { min-height: 44px; padding: 4px 10px; }
+  .lang-menu { position: fixed; left: 16px; right: 16px; top: 64px; width: auto; max-height: calc(100vh - 96px); }
+  .lang-menu-list { grid-template-columns: 1fr; }
+  .lang-menu-item, .lang-menu-fix, .lang-menu-mail, .thought-mail, .mailx-seeit-btn { min-height: 44px; }
+  .lang-menu-mail, .thought-mail { align-items: center; }
+  .words-bar { flex-wrap: wrap; }
+  .words-bar .go, .words-fix .go { min-height: 44px; }
 }
