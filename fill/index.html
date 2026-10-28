@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#ffffff">
 <title>Tool — your brain</title>
 <meta name="description" content="Your business's own memory.">
-<link rel="stylesheet" href="skin.css?v=2026-10-28-scam-view">
+<link rel="stylesheet" href="skin.css?v=2026-10-28-tab-split">
 <script>
 // THE FRONT DOOR, before anything is drawn (seat front-door, 2026-10-13): no stored sign-in on this
 // browser means she goes to sign in, and comes back to this tab after. lens.js makes the real check
@@ -426,28 +426,39 @@ try {
        Owner only: read from public.money_commitments, which refuses anyone else with a reason; the tab is hidden for
        everyone else as a courtesy, not as the guard. Filled by money.js. #money-ledger belongs to seat contractor-ledger
        (where we stand with each contractor); money.js does not draw into it. -->
+  <!-- 2026-10-28 (seat tab-split, decision 1029: "tabs within tabs"): three parts on the shared sub-tab row (fill/subtabs.js),
+       the most used first: How long we can go, What we pay for, Contractors. Each opens with one sentence of what it is.
+       What was not read stays below every part, outside the row, because it is the tab's stated boundary (fundamental 8)
+       and covers all three. Nothing was removed; the three headings became the row's words. -->
   <section class="step" id="s-money" hidden>
     <div class="tab-top">
       <h2>How long can we go, and what are we paying for.</h2>
       <details class="whatis"><summary>What is this?</summary>
         <p class="quiet">Only you, as the owner, see this tab. Every figure opens the record it came from.</p></details>
     </div>
+    <nav data-subtabs="money"></nav>
 
-    <h3 style="margin-top:2.5rem">How long we can go</h3>
-    <div id="money-runway" aria-live="polite"></div>
+    <div data-sub="runway" data-label="How long we can go">
+      <p class="sub-what">Cash in the bank, what goes out each month, and how many months that lasts.</p>
+      <div id="money-runway" aria-live="polite"></div>
+    </div>
 
-    <h3 style="margin-top:2.5rem">What we pay for</h3>
-    <p class="quiet">Every company that bills the business regularly, how often, the last charge, the card, and when the next one is due.</p>
-    <div id="money-commitments" aria-live="polite"></div>
+    <div data-sub="pay" data-label="What we pay for" hidden>
+      <p class="sub-what">Every company that bills the business regularly, how often, the last charge, the card, and when the next one is due.</p>
+      <div id="money-commitments" aria-live="polite"></div>
+    </div>
 
-    <div id="money-ledger" aria-live="polite"></div>
+    <div data-sub="contractors" data-label="Contractors" hidden>
+      <p class="sub-what">Where we stand with each contractor: what the client was billed for their hours, what they billed us, and what is still owed both ways.</p>
+      <div id="money-ledger" aria-live="polite"></div>
+    </div>
 
     <h3 style="margin-top:2.5rem">What was not read</h3>
     <p class="quiet">What this tab could not use, and how that changes the answer.</p>
     <div id="money-notread" aria-live="polite"></div>
   </section>
 
-  <!-- 7a. THOUGHTS. A client by topic, not inbox and outbox (seat thoughtgram 2026-10-25, decision 1017); filled by thoughts.js. --> <section class='step' id='s-thoughts' hidden><h2>Thoughtgrams</h2><div id='thoughts' aria-live='polite'></div></section> <!-- 7b. CHATS. Chats brought in from outside chatbots, private by default (seat chat-import 2026-10-10, decision cb1a7115); filled by chats.js. --> <section class='step' id='s-chats' hidden><h2>Chats</h2><div id='chats' aria-live='polite'></div></section> <!-- 7. ONE SOURCE. The tab for Mail, Drives & folders, Calendar, Contacts, Systems
+  <!-- 7a. THOUGHTS. A client by topic, not inbox and outbox (seat thoughtgram 2026-10-25, decision 1017); filled by thoughts.js. --> <section class='step' id='s-thoughts' hidden><h2>Thoughtgrams</h2><div id='thoughts' aria-live='polite'></div></section> <!-- 7b. CHATS. Chats brought in from outside chatbots, private by default (seat chat-import 2026-10-10, decision cb1a7115); filled by chats.js. --> <section class='step' id='s-chats' hidden><h2>Chats</h2><nav data-subtabs='chats'></nav><div id='chats' aria-live='polite'></div></section> <!-- 7. ONE SOURCE. The tab for Mail, Drives & folders, Calendar, Contacts, Systems
        or Loose files. Seat tool-tabs, 2026-10-02. Very basic on purpose: what is
        connected, or one line pointing to Brain. Mail is the exception: an inbox you can
        work in, three columns drawn by mail.js (seat mail-redesign, 2026-10-07). -->
@@ -506,6 +517,6 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-28-scam-view"></script>
+<script type="module" src="lens.js?v=2026-10-28-tab-split"></script>
 </body>
 </html>
