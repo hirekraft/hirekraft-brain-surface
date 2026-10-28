@@ -19,15 +19,16 @@ import { removeControl, drawReadView } from "./sources.js?v=2026-10-25-pace-and-
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-27-mail-views";
-import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-27-mail-views";
-import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts } from "./thoughts.js?v=2026-10-27-every-voice"; // thoughtgrams and the Thoughts tab (seat thoughtgram)
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-28-language";
+import { initWords } from "./words.js?v=2026-10-28-language"; // the screen in her language, the switch beside her name (seat language-and-nudge)
+import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-28-language";
+import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts } from "./thoughts.js?v=2026-10-28-language"; // thoughtgrams and the Thoughts tab (seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
-import { foundCard } from "./find.js?v=2026-10-27-attention"; // find first, then work on what was found (seat find-first)
+import { foundCard } from "./find.js?v=2026-10-28-language"; // find first, then work on what was found (seat find-first)
 import { closeCard } from "./close.js?v=2026-10-26-month-end-2"; // the month-end check, corrected cell by cell (seat month-end)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-27-people-and-access"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-10-27-people-and-access"; // sub-tab row and People and access (seat people-and-access)
-import { initChats, loadChats } from "./chats.js?v=2026-10-26-locks"; // Chats tab (seat chat-import)
+import { initChats, loadChats } from "./chats.js?v=2026-10-28-language"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-22-dates"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
 
@@ -311,7 +312,8 @@ function renderWho() {
     const span = document.querySelector('.wordmark span');
     if (!error && typeof data === 'string' && data.trim() && span) span.textContent = data.trim();
   }).catch(() => { /* the read is not there yet: the masthead stays as it was */ });
-  $("#whoami").innerHTML = `<b>${escape(v.name)}</b><br>${escape(v.role ?? "")}`;
+  $("#whoami").innerHTML = `<b translate="no">${escape(v.name)}</b><br><span translate="no">${escape(v.role ?? "")}</span>`;
+  initWords({ sb, url: SUPABASE_URL, key: PUBLISHABLE_KEY });   // the language switch beside her name (seat language-and-nudge)
   $("#sum-head").textContent = v.all_access
     ? "What is in it."
     : "What is in it, as far as you reach.";
@@ -3590,7 +3592,7 @@ function goto(id, key) {
 // she is an owner (Security: seat security-tab, 2026-10-08; Money: seat runway, 2026-10-10).
 const GROUP_TAB = (k, label) => ({ key: k, label: label ?? GROUPS.find((g) => g.key === k).label });
 // THE THOUGHTS TAB (seat thoughtgram, 2026-10-25, decision 1017): beside Mail, a client by topic; drawn by fill/thoughts.js.
-const TABS = [GROUP_TAB('email', 'Mail'), { key: 'thoughts', label: 'Thoughts' }, { key: 'work', label: 'Work' }, { key: 'money', label: 'Money', owner: true },
+const TABS = [GROUP_TAB('email', 'Mail'), { key: 'thoughts', label: 'Thoughtgrams' }, { key: 'work', label: 'Work' }, { key: 'money', label: 'Money', owner: true },
   GROUP_TAB('drives', 'Drives'), GROUP_TAB('calendar'), GROUP_TAB('contacts'),
   { key: 'brain', label: 'Brain' }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
   GROUP_TAB('systems'), GROUP_TAB('loose'),
