@@ -1046,6 +1046,18 @@ body { padding-bottom: var(--gap-lg); }
 .mailx-warning-books { margin-top: calc(var(--u) * 2) !important; color: var(--ink-2); font-size: var(--t-small); }
 .mailx-warn { display: block; margin-top: 2px; color: var(--accent); font-size: var(--t-small); font-weight: var(--w-mid); overflow-wrap: anywhere; }
 .mailx-msg.warned { box-shadow: inset 3px 0 0 var(--accent); }
+/* SUSPICIOUS (seat scam-view, 2026-10-28): the view's count in --accent (something needs a person), the investigation as a
+   short list, what was moved or marked safe as quiet rows with Undo, the original as plain words in a dashed frame. */
+.mailx-view-warn .mailx-count { color: var(--accent); font-weight: var(--w-strong); }
+.mailx-scam-facts { margin: var(--u) 0 0; padding-left: calc(var(--u) * 5); max-width: var(--read); color: var(--ink-2); }
+.mailx-scam-facts li { margin: 0 0 var(--u); overflow-wrap: anywhere; }
+.mailx-scam-done { list-style: none; margin: var(--u) 0 var(--gap); padding: 0; }
+.mailx-scam-done li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--u) var(--gap); padding: var(--u) 0;
+  border-bottom: 1px solid var(--line); color: var(--ink-3); font-size: var(--t-small); overflow-wrap: anywhere; }
+.mailx-scam-done li > span:first-child { flex: 1 1 16em; min-width: 0; }
+.mailx-scam-done .go { min-height: 44px; }
+.mailx-scam-original { border: 1px dashed var(--line-2); }
+.mailx-scam-original .mailx-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .ans-warning { margin: 0 0 calc(var(--u) * 2); padding: calc(var(--u) * 2) calc(var(--u) * 3); border-left: 4px solid var(--accent);
   border-radius: var(--radius); background: color-mix(in srgb, var(--accent) 8%, var(--paper)); color: var(--ink); font-weight: var(--w-strong); }
 .ans-email-warn { display: block; margin-top: 2px; color: var(--accent); font-size: var(--t-small); font-weight: var(--w-mid); overflow-wrap: anywhere; }
@@ -1706,4 +1718,9 @@ html[dir='rtl'] .whoami { text-align: left; }
   .lang-menu-mail, .thought-mail { align-items: center; }
   .words-bar { flex-wrap: wrap; }
   .words-bar .go, .words-fix .go { min-height: 44px; }
+  /* seat scam-view 2026-10-28: the Ask button floats over the bottom of the list on a phone and covered its last row (the
+     last Undo under Moved to Spam or Not a scam could not be pressed); the list and the open item end with room under them.
+     Fixes the class for every Mail list, not only Suspicious. The Suspicious rows with Undo stack, thumb-sized. */
+  .mailx-list, .mailx-read { padding-bottom: 96px; }
+  .mailx-scam-done li .go { flex: 0 0 auto; }
 }
