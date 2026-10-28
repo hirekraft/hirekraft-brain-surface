@@ -1150,25 +1150,59 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
   .panel.in-work .panel-list { display: inline-flex; }
 }
 
-/* DRIVES AS FOLDERS (seat conversation-panel, Alex 2026-10-12): one tile per drive, a list view one click away. */
+/* BRAIN AND DRIVES MADE LEGIBLE (seat brain-and-drives, 2026-10-28, decision 1030). Replaces the drive tiles of seat
+   conversation-panel (2026-10-12), retired with them. One clean row per source: name, what it is and whose, one of three
+   states, a menu; Needs you carries its one action on the row. Three counts on What it knows. Organize, read only. */
 .drives-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); margin-bottom: var(--gap); }
 .drives-top .tab-count { flex: 1; min-width: 12rem; }
 .drives-top .go { margin: 0; }
-.drives-view { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.drives-flip { min-height: 36px; padding: 0 calc(var(--u) * 3); border: 0; background: var(--paper); color: var(--ink-3); font: inherit; font-size: var(--t-small); cursor: pointer; }
-.drives-flip[aria-pressed="true"] { background: var(--act-soft); color: var(--act); font-weight: var(--w-mid); }
-.drives-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: var(--gap); }
-.drive-tile { display: flex; flex-direction: column; gap: calc(var(--u) * 2.5); padding: var(--gap); border: 1px solid var(--line); border-radius: 10px; background: var(--paper); min-width: 0; }
-.drive-head { display: flex; align-items: center; gap: calc(var(--u) * 3); min-width: 0; }
-.drive-mark { flex: none; width: 36px; height: 36px; color: var(--act); }
-.drive-tile.is-grey .drive-mark { color: var(--ink-4); }
-.drive-names { min-width: 0; }
-.drive-name { margin: 0; font-weight: var(--w-strong); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.drive-kind { margin: 0; font-size: var(--t-small); color: var(--ink-3); }
-.drive-tile .state { margin: 0; }
-.drives-older { margin-top: var(--gap-lg); font-size: var(--t-small); }
-.drives-older > summary { width: fit-content; cursor: pointer; color: var(--ink-3); }
-.drives-older .members li { padding: calc(var(--u) * 2) 0; border-bottom: 1px solid var(--line-2); }
+.brain-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); margin: var(--gap-lg) 0 calc(var(--u) * 2); }
+.brain-count { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: var(--gap); border: 1px solid var(--line); border-radius: 10px; background: var(--paper); font: inherit; color: var(--ink); cursor: pointer; text-align: left; min-width: 0; }
+.brain-count:hover { border-color: var(--ink-4); }
+.brain-count.needs { border-color: var(--accent); }
+.brain-count-n { font-size: var(--t-head); font-weight: var(--w-strong); line-height: 1.1; }
+.brain-count-w { font-size: var(--t-small); color: var(--ink-3); }
+.brain-count.needs .brain-count-w { color: var(--accent); }
+.brain-counts-of { margin-bottom: var(--gap-lg); }
+.brain-links { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); margin-top: var(--gap-lg); }
+.brain-links .go { margin: 0; }
+.src-group { display: flex; align-items: baseline; gap: calc(var(--u) * 2); margin: var(--gap-lg) 0 calc(var(--u) * 1); font-size: var(--t-body); font-weight: var(--w-strong); }
+.src-group:first-child { margin-top: 0; }
+.src-group-n { font-size: var(--t-small); font-weight: var(--w-plain); color: var(--ink-3); }
+.src-lede { margin-bottom: calc(var(--u) * 2); }
+.src-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line-2); }
+.src-row { position: relative; padding: calc(var(--u) * 3) 0; border-bottom: 1px solid var(--line-2); }
+.src-head { display: flex; align-items: center; gap: calc(var(--u) * 3); min-width: 0; }
+.src-main { flex: 1; min-width: 0; }
+.src-name { margin: 0; font-weight: var(--w-mid); color: var(--ink); overflow-wrap: anywhere; }
+.src-what { margin: 0; font-size: var(--t-small); color: var(--ink-3); }
+.src-more { flex: none; width: 36px; height: 36px; border: 1px solid transparent; border-radius: var(--radius); background: none; color: var(--ink-3); font-size: 20px; line-height: 1; cursor: pointer; }
+.src-more:hover, .src-more[aria-expanded='true'] { border-color: var(--line); color: var(--ink); }
+.src-menu { position: absolute; right: 0; top: calc(100% - 8px); z-index: 5; display: flex; flex-direction: column; min-width: 11rem; padding: calc(var(--u) * 1) 0; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 6px 18px rgba(20, 23, 28, .12); }
+.src-menu[hidden] { display: none; }
+.src-item { text-align: left; padding: calc(var(--u) * 2) calc(var(--u) * 4); background: none; border: 0; font: inherit; font-size: var(--t-small); color: var(--ink); cursor: pointer; }
+.src-item:hover, .src-item:focus-visible { background: var(--paper-2); }
+.src-act { margin: calc(var(--u) * 2) 0 0; }
+.src-detail { margin-top: calc(var(--u) * 2); padding: calc(var(--u) * 3); background: var(--paper-2); border-radius: var(--radius); font-size: var(--t-small); }
+.src-detail[hidden] { display: none; }
+.src-line { margin: 0 0 calc(var(--u) * 2); color: var(--ink-2); }
+.src-none { margin-top: var(--gap-lg); }
+.src-left { margin-top: var(--gap-lg); font-size: var(--t-small); }
+.src-left > summary { width: fit-content; cursor: pointer; color: var(--ink-3); }
+.src-row.is-left { padding: calc(var(--u) * 2) 0; }
+#s-summary #live-state { margin-top: var(--gap-lg); }
+.org-lede { font-weight: var(--w-mid); margin-bottom: calc(var(--u) * 1); }
+.org-perm { max-width: var(--measure); margin-bottom: var(--gap); }
+.org-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line-2); }
+.org-item { padding: var(--gap) 0; border-bottom: 1px solid var(--line-2); max-width: var(--measure); }
+.org-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--gap); }
+.org-title { margin: 0; font-weight: var(--w-strong); }
+.org-n { flex: none; white-space: nowrap; font-size: var(--t-head); font-weight: var(--w-strong); }
+.org-line { margin: calc(var(--u) * 1) 0; color: var(--ink-2); }
+.org-ex-h { margin: calc(var(--u) * 2) 0 0; }
+.org-ex { margin: calc(var(--u) * 1) 0 calc(var(--u) * 2) var(--gap); font-size: var(--t-small); color: var(--ink-2); overflow-wrap: anywhere; }
+.org-fix { margin: calc(var(--u) * 1) 0; font-size: var(--t-small); }
+.org-cost { margin: 0; font-size: var(--t-micro); }
 
 /* ONE WORKING SIGN (seat conversation-panel, folding in seat working-sign's job; Alex 2026-10-11: "show customer
    that it's actually working... even when it loads the brain the first time"). Any wait puts class "working" on
@@ -1729,4 +1763,12 @@ html[dir='rtl'] .whoami { text-align: left; }
   #s-money .sp-grid td a { display: inline-block; min-height: 44px; line-height: 44px; }
   #s-money summary, #s-chats summary, #s-chats .work-open, #s-chats .go { min-height: 44px; }
   #s-money, #s-chats { padding-bottom: 96px; }
+  /* seat brain-and-drives 2026-10-28: Brain and Drives on the shared row. The three counts stay three across; the row menu
+     and its items, the action on a Needs you row and the links are thumb-sized; both tabs end with room under them. */
+  .brain-counts { gap: calc(var(--u) * 2); }
+  .brain-count { padding: calc(var(--u) * 3); min-height: 44px; }
+  .src-more { width: 44px; height: 44px; }
+  .src-item, .src-act, .brain-links .go, #attn-panel .a-fix, .src-left > summary, .src-detail .go, .src-detail .a-fix, .drives-top .go { min-height: 44px; }
+  .src-act, .drives-top .go { width: 100%; justify-content: center; }
+  #s-summary, #s-drives { padding-bottom: 96px; }
 }
