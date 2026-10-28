@@ -121,10 +121,22 @@ export async function loadChats() {
   await drawMine();
 }
 
-function build(host) {
-  host.dataset.built = "1";
-  host.innerHTML = "";
-  host.appendChild(el("p", "lede", "Bring in the thinking you did in your own Claude or ChatGPT. Chats you bring in are private to you until you share them with the company."));
+// THREE PARTS ON THE SHARED SUB-TAB ROW (seat tab-split, 2026-10-28, decision 1029): Your chats first (the most used: find
+// and open one), then Bring in a chat (export, paste, email), then Connect your Claude. lens.js calls showSubtabs after this
+// builds; the row itself is the <nav data-subtabs="chats"> in index.html. Until 2026-10-28 all of it was one page, the
+// four ways in above a list of every chat (about 4,000 px on a computer and 7,000 on a phone for the owner).
+function part(host, key, label, what, hidden) {
+  const d = el("div"); d.dataset.sub = key; d.dataset.label = label; d.hidden = !!hidden;
+  if (what) d.appendChild(el("p", "sub-what", what));
+  host.appendChild(d); return d;
+}
+
+function build(root) {
+  root.dataset.built = "1";
+  root.innerHTML = "";
+  const mine = part(root, "mine", "Your chats", "Chats you brought in from your own Claude or ChatGPT, and chats others shared with the company. Yours stay private to you until you share them.");
+  const host = part(root, "bring", "Bring in a chat", null, true);
+  host.appendChild(el("p", "sub-what", "Bring in the thinking you did in your own Claude or ChatGPT. Chats you bring in are private to you until you share them with the company."));
 
   // export and pick
   const ex = el("details", "chats-way"); ex.open = true;
@@ -173,23 +185,21 @@ function build(host) {
   fw.appendChild(el("p", null, "From your company address, email yourself with a subject that starts with “keep this” and the chat in the body. It appears here within a few minutes, private to you. A chat sent as an attachment is not read."));
   host.appendChild(fw);
 
-  // connect your own Claude (seat chat-connector fills this)
-  const cn = el("details", "chats-way");
-  cn.appendChild(el("summary", null, "Connect your own Claude"));
+  // connect your own Claude (seat chat-connector fills this); its own part since seat tab-split, open, not folded
+  const cn = part(root, "connect", "Connect your Claude", null, true);
   const cnHost = el("div"); cnHost.id = "chats-connector";
   drawConnector(cnHost);
   cn.appendChild(cnHost);
-  host.appendChild(cn);
 
-  // my chats
-  host.appendChild(el("h3", null, "My chats"));
+  // your chats (first part)
+  const host2 = mine;
   const search = el("input", "work-search"); search.type = "search"; search.placeholder = "Search your chats";
   search.style.width = "100%";
   let t = null;
   search.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => drawMine(search.value), 250); });
   const list = el("div"); list.id = "chats-mine";
   const viewer = el("div"); viewer.id = "chats-view";
-  host.append(search, list, viewer);
+  host2.append(search, list, viewer);
 }
 
 // ---- connect your own Claude (seat chat-connector, 2026-10-10) ------------------------------------
@@ -342,6 +352,7 @@ async function keepTicked(boxes, go, pickSaid) {
   drawMine();
 }
 
+const SHOW_FIRST = 20;
 async function drawMine(q) {
   const list = ctx.$("#chats-mine");
   if (!list) return;
@@ -359,7 +370,16 @@ async function drawMine(q) {
     li.appendChild(b); return li;
   };
   if (!r.mine.length) list.appendChild(el("p", "quiet", r.searched ? `None of your chats mention "${r.searched}" in their title or text.` : "You have not brought in any chats yet."));
-  else { const ul = el("ul", "attn"); r.mine.forEach((c) => ul.appendChild(row(c, false))); list.appendChild(ul); }
+  else {
+    // The newest first, twenty at a time, the rest one press away (seat tab-split: 90 chats made this one list 3,700 px tall).
+    const ul = el("ul", "attn"); const first = r.searched ? r.mine : r.mine.slice(0, SHOW_FIRST);
+    first.forEach((c) => ul.appendChild(row(c, false))); list.appendChild(ul);
+    if (first.length < r.mine.length) {
+      const more = el("button", "go ghost", `Show all ${r.mine.length} of your chats`); more.type = "button";
+      more.addEventListener("click", () => { more.remove(); r.mine.slice(SHOW_FIRST).forEach((c) => ul.appendChild(row(c, false))); });
+      list.appendChild(more);
+    }
+  }
   if (r.shared_with_me.length) {
     list.appendChild(el("h3", null, "Shared with the company by others"));
     const ul = el("ul", "attn"); r.shared_with_me.forEach((c) => ul.appendChild(row(c, true))); list.appendChild(ul);
