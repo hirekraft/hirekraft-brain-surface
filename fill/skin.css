@@ -1723,4 +1723,10 @@ html[dir='rtl'] .whoami { text-align: left; }
      Fixes the class for every Mail list, not only Suspicious. The Suspicious rows with Undo stack, thumb-sized. */
   .mailx-list, .mailx-read { padding-bottom: 96px; }
   .mailx-scam-done li .go { flex: 0 0 auto; }
+  /* seat tab-split 2026-10-28: Money and Chats on the shared sub-tab row. The dated evidence links in What we pay for and
+     each chat row are thumb-sized (both were under 44 px before the split, measured); both tabs end with room under them
+     so the floating Ask button never covers the last row. */
+  #s-money .sp-grid td a { display: inline-block; min-height: 44px; line-height: 44px; }
+  #s-money summary, #s-chats summary, #s-chats .work-open, #s-chats .go { min-height: 44px; }
+  #s-money, #s-chats { padding-bottom: 96px; }
 }
