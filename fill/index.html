@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#ffffff">
 <title>Tool — your brain</title>
 <meta name="description" content="Your business's own memory.">
-<link rel="stylesheet" href="skin.css?v=2026-10-28-tab-split">
+<link rel="stylesheet" href="skin.css?v=2026-10-28-brain-and-drives">
 <script>
 // THE FRONT DOOR, before anything is drawn (seat front-door, 2026-10-13): no stored sign-in on this
 // browser means she goes to sign in, and comes back to this tab after. lens.js makes the real check
@@ -193,18 +193,6 @@ try {
   </section>
 
   <!-- ── 3. CONNECT — same shape every source type ── -->
-  <section class="step" id="s-connect" hidden>
-    <p class="eyebrow" id="connect-eyebrow">Connect a source</p>
-    <h2 id="connect-head">What should Tool read?</h2>
-    <p class="quiet" id="connect-sub">Pick one. The steps are the same every time, whichever you
-      choose.</p>
-
-    <div id="connect-stage"></div>
-
-    <div class="actions">
-      <button class="go ghost" data-goto="s-summary">See what is connected now</button>
-    </div>
-  </section>
 
   <!-- ── 4. RECOGNITION — described from live data, never ranked ── -->
   <section class="step" id="s-recognition" hidden>
@@ -229,69 +217,66 @@ try {
        above it on the Brain tab (Alex, 2026-10-02). The tabs are the navigation spine
        now; this section was it until then. -->
   <section class="step" id="s-summary" hidden>
-    <!-- COMPACT HEADERS (seat conversation-panel, Alex 2026-10-12): one line of heading, one line of count;
-         the explanation behind "What is this?", in the same words. -->
+    <!-- THE BRAIN TAB IN THREE PARTS (seat brain-and-drives, 2026-10-28, decision 1030 with 1029): What it knows (the first
+         answer and the three counts), Sources (one clean row each, grouped), Add a source (what was the connect section,
+         moved here whole, so goto("s-connect") opens this part). Every number comes from the brain's sources_view, which is
+         built on sources_read, the same rows the first answer counts (fill/brainview.js). The builder tools Tests and To
+         test LEFT THIS SCREEN by that decision: they stay on the Studio Surface, and #tests and #totest still open them. -->
     <div class="tab-top">
       <h2 id="sum-head">What is in it.</h2>
       <p class="tab-count" id="sum-count" aria-live="polite"></p>
-      <details class="whatis"><summary>What is this?</summary>
-        <p class="quiet">These sources are the memory — there is nothing to fill up, and this is all
-          of it. Each one says whether it is working, and what to do if it is not. Open a group to
-          see them; open a mailbox to read it.</p></details>
+    </div>
+    <nav data-subtabs="brain"></nav>
+
+    <div data-sub="knows" data-label="What it knows">
+      <!-- THE FIRST ANSWER (seat first-answer, 2026-10-27, decision 1024 item 1): the short answer on top (first.js). -->
+      <div id=first-answer class=first-answer aria-live=polite></div>
+      <div id="brain-counts" aria-live="polite"></div>
+      <!-- Appears only when there is something to act on: a mailbox whose key is held but not yet allowed here. -->
+      <div id="adopt" aria-live="polite"></div>
+      <div id="attn-panel" hidden>
+        <h3>Where we could do more <span class="grp-shape" id="attn-count"></span></h3>
+        <p class="quiet">Only what no source can say on its own row: something true of two connections at once, or of a
+          source with no row of its own.</p>
+        <ul class="attn" id="attn" aria-live="polite"></ul>
+      </div>
+      <p class="brain-links">
+        <button class="go ghost" data-goto="s-recognition">Read it back to me</button>
+        <button class="go ghost" data-goto="s-intro">What this is</button>
+      </p>
+      <p class="sovereign">This brain is yours. It sits in your own database and nothing in it
+        reaches us. That one arrangement has two consequences worth knowing: you can leave at
+        any time and nothing has been moved, and you can check anything it tells you, because the
+        source is still yours.</p>
     </div>
 
-    <!-- THE FIRST ANSWER (seat first-answer, 2026-10-27, decision 1024 item 1): the short answer on top, the detail below (first.js). -->
-    <div id=first-answer class=first-answer aria-live=polite></div>
-
-    <!-- Structure renders immediately with space reserved; the reading lands into it. -->
-    <div class="tree" id="tree" aria-busy="true"></div>
-
-    <!-- TWO BOXES. "See what is connected" opens the overview; "Needs attention"
-         is written only when there is something, so it can never sit here empty
-         and become furniture. Both are drawn by fillAttention. -->
-    <!-- What the Tool has read, one line per source (seat sources-basics, 2026-10-23). -->
-    <div id="read-view" aria-live="polite"></div>
-
-    <div class="boxes" id="below-tiles"></div>
-
-    <!-- Sources that cannot be opened, in one plain line with each fix one click down.
-         Written only when there are some (seat mail-redesign, 2026-10-07). -->
-    <div id="reconnect" aria-live="polite"></div>
-
-    <!-- Appears only when there is something to act on. Holding a mailbox's key
-         and being allowed to read it here are two different facts, and this is
-         where the second one is granted. Empty means nothing is waiting. -->
-    <div id="adopt" aria-live="polite"></div>
-
-    <div id="live-state" aria-live="polite"></div>
-
-    <!-- The detail sits behind the box rather than beside it. -->
-    <div id="attn-panel" hidden>
-      <h2 style="margin-top:4rem">Where we could do more
-        <span class="grp-shape" id="attn-count"></span></h2>
-      <p class="quiet">Only what no source can say on its own line &mdash; something true of two
-        connections at once, or of a source with no line of its own. Anything a row states, it
-        states there. Retries, rate limits and our own repairs never appear here.</p>
-      <ul class="attn" id="attn" aria-live="polite"></ul>
+    <div data-sub="sources" data-label="Sources">
+      <div id="src-list" class="src-wrap" aria-live="polite"></div>
+      <div id="live-state" aria-live="polite"></div>
+      <!-- The old tree, kept OUT OF SIGHT only because the Systems, Calendar and Loose files tabs copy their one-line
+           overview from it (drawLens). Retire it when those tabs get their own (tab-split's merge list). Not shown here. -->
+      <div class="tree" id="tree" hidden aria-hidden="true"></div>
     </div>
 
-    <div class="actions" style="margin-top:2.5rem">
-      <button class="go ghost" data-goto="s-connect">Connect something else</button>
-      <button class="go ghost" data-goto="s-recognition">Read it back to me</button>
-      <button class="go ghost" data-goto="s-intro">What this is</button>
-      <!-- Shown to the owner only; the brain refuses anyone else whatever this says. -->
-      <button class="go ghost" data-goto="s-tests" id="tests-entry" hidden>Tests</button>
-      <!-- The owner's test list, the same one the Studio Surface shows (seat test-list, 2026-10-23). -->
-      <button class="go ghost" data-goto="s-totest" id="totest-entry" hidden>To test</button>
-      <!-- Who sees what moved to the Security tab (seat security-tab, Alex 2026-10-08). -->
-    </div>
+    <div data-sub="add" data-label="Add a source">
+      <p class="eyebrow" id="connect-eyebrow">Connect a source</p>
+    <h2 id="connect-head">What should Tool read?</h2>
+    <p class="quiet" id="connect-sub">Pick one. The steps are the same every time, whichever you
+      choose.</p>
 
-    <p class="sovereign">This brain is yours. It sits in your own database and nothing in it
-      reaches us. That one arrangement has two consequences worth knowing: you can leave at
-      any time and nothing has been moved, and you can check anything it tells you, because the
-      source is still yours.</p>
+    <div id="connect-stage"></div>
+    </div>
   </section>
 
+
+  <!-- DRIVES (seat brain-and-drives, 2026-10-28, decision 1030): drives and folders grouped and named as what they are and
+       whose, with who can open each; Organize, read only, shows what the Tool already knows before anything is done. -->
+  <section class="step" id="s-drives" hidden>
+    <div class="tab-top"><h2>Drives</h2></div>
+    <nav data-subtabs="drives"></nav>
+    <div data-sub="places" data-label="Drives and folders" id="drives-places" aria-live="polite"></div>
+    <div data-sub="organize" data-label="Organize" id="drives-organize" aria-live="polite"></div>
+  </section>
 
   <!-- ── TO TEST — what is waiting for the owner to try, the same list as the Studio Surface's What's new.
        Seat test-list, 2026-10-23. Drawn by totest.js from studio-july; nothing is kept in the brain. ── -->
@@ -517,6 +502,6 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-28-tab-split"></script>
+<script type="module" src="lens.js?v=2026-10-28-brain-and-drives"></script>
 </body>
 </html>
