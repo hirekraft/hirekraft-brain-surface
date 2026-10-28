@@ -33,9 +33,9 @@ let topicOpen = null;
 
 const PREFIXES = ['note for the brain', 'notes for the brain', 'a note for the brain', 'thought for the brain', 'a thought for the brain',
   'note to the brain', 'leave a thoughtgram', 'leave a thought', 'thoughtgram', 'keep this thought'];
-const ONCE = { record: 'tool.thought.said-record', email: 'tool.thought.said-email', why: 'tool.thought.said-why', call: 'tool.thought.said-call', stale: 'tool.thought.said-stale' };
-const COMING = ['asking someone a question and waiting for their thought', 'marking a thought as a decision, with its reasons',
-  'looking at a topic as it stood on a date', 'a topic brought forward before a meeting', 'sharing a thought with your team'];
+const ONCE = { record: 'tool.thought.said-record', email: 'tool.thought.said-email', why: 'tool.thought.said-why', call: 'tool.thought.said-call', stale: 'tool.thought.said-stale', what: 'tool.thought.said-what' };
+const COMING = ['asking someone a question and waiting for their thoughtgram', 'marking a thoughtgram as a decision, with its reasons',
+  'looking at a topic as it stood on a date', 'a topic brought forward before a meeting', 'sharing a thoughtgram with your team'];
 
 export function initThoughts(ctx) { C = ctx; }
 
@@ -67,6 +67,8 @@ export function thoughtFromBox(text) {
   if (!C) return false;
   const raw = String(text || '').trim();
   const low = raw.toLowerCase();
+  const em = emailWords(low);
+  if (em !== null) { emailsSay(em); return true; }
   const p = PREFIXES.find((x) => low.startsWith(x));
   const tw = p ? null : topicWords(raw);
   if (tw) { topicAsk(raw, tw); return true; }
@@ -86,26 +88,36 @@ export function keepThought(text, opts) {
   const t = turn();
   if (!t) return;
   const forWho = Array.isArray(o.for) && o.for.filter(Boolean).length ? o.for.filter(Boolean).join(', ') : '';
-  t.appendChild(el('p', 'ans-lead', o.email ? 'A thought on this email, to keep' : o.topicTitle ? 'A thought on ' + o.topicTitle + ', to keep' : forWho ? 'A thought for ' + forWho + ', to keep' : 'A thought to keep'));
+  t.appendChild(el('p', 'ans-lead', o.email ? 'A thoughtgram on this email, to keep' : o.topicTitle ? 'A thoughtgram on ' + o.topicTitle + ', to keep' : forWho ? 'A thoughtgram for ' + forWho + ', to keep' : 'A thoughtgram to keep'));
+  // THE NAME, EXPLAINED ONCE (decision 1026 item 1, seat language-and-nudge).
+  if (once(ONCE.what)) t.appendChild(el('p', 'quiet thought-teach', 'A thoughtgram is a thought in your own words, kept with its topic.'));
   if (o.email && o.email.subject) t.appendChild(el('p', 'quiet', 'On: ' + o.email.subject));
   const ta = el('textarea', 'thought-text');
   ta.value = String(text || '');
   ta.rows = Math.min(8, Math.max(3, Math.ceil(ta.value.length / 70)));
-  ta.setAttribute('aria-label', 'Your thought, as it will be kept');
+  ta.setAttribute('aria-label', 'Your thoughtgram, as it will be kept');
   t.appendChild(ta);
   const forRow = el('label', 'thought-for');
   forRow.appendChild(el('span', 'quiet', 'For (optional): '));
   const forIn = el('input', 'thought-for-in');
   forIn.type = 'text'; forIn.value = Array.isArray(o.for) ? o.for.join(', ') : String(o.for || '');
   forIn.placeholder = 'names of people here, or leave empty for yourself';
-  forIn.setAttribute('aria-label', 'Who this thought is for');
+  forIn.setAttribute('aria-label', 'Who this thoughtgram is for');
   forRow.appendChild(forIn);
   t.appendChild(forRow);
+  // THE NUDGE, AUTHOR'S SWITCH (decision 1026 item 3): the people it is for get one short email from her own mailbox saying
+  // a thoughtgram is waiting, never its words. On by default; she can untick it for this one.
+  const mailRow = el('label', 'thought-mail');
+  const mailOn = el('input', 'thought-mail-in');
+  mailOn.type = 'checkbox'; mailOn.checked = true;
+  mailRow.append(mailOn, el('span', '', 'Email them that it is waiting (from your mailbox, never your words)'));
+  t.appendChild(mailRow);
   const whoSees = el('p', 'quiet');
   const sayWho = () => {
     const names = forIn.value.split(',').map((x) => x.trim()).filter(Boolean);
     whoSees.textContent = (o.heard ? 'This is what was heard. ' : '') + 'Correct anything, then keep it. '
       + (names.length ? 'Only you and ' + names.join(', ') + ' will see it; each reads it in their own language, with your words kept as the original.' : 'Only you can see it.');
+    mailRow.hidden = !names.length;
   };
   forIn.addEventListener('input', sayWho); sayWho();
   t.appendChild(whoSees);
@@ -124,23 +136,40 @@ export function keepThought(text, opts) {
     if (!words) { out.textContent = 'There is nothing to keep yet.'; return; }
     keep.disabled = true; cancel.disabled = true;
     out.innerHTML = '';
-    const w = el('p', 'working', 'Keeping your thought and finding its topic');
+    const w = el('p', 'working', 'Keeping your thoughtgram and finding its topic');
     out.appendChild(w);
     const slow = setTimeout(() => { w.textContent = 'Still keeping it: finding its topic is taking longer than usual'; }, 10000);
     const forNames = forIn.value.split(',').map((x) => x.trim()).filter(Boolean);
-    if (forNames.length) w.textContent = 'Keeping your thought for ' + forNames.join(', ') + ' and making their version';
+    if (forNames.length) w.textContent = 'Keeping your thoughtgram for ' + forNames.join(', ') + ' and making their version';
     const r = await C.askBody({ thought: { text: words, heard: o.heard === true, email: o.email || null, topic: o.topic || null, for: forNames } });
     clearTimeout(slow);
     out.innerHTML = '';
     if (!r || r.ok !== true || r.state !== 'thought_kept') {
-      out.appendChild(el('p', 'state stalled', String(r?.why || r?.error || 'The thought could not be kept just now.') + ' Your words are still here.'));
+      out.appendChild(el('p', 'state stalled', String(r?.why || r?.error || 'The thoughtgram could not be kept just now.') + ' Your words are still here.'));
       keep.disabled = false; cancel.disabled = false;
       return;
     }
-    ta.readOnly = true; acts.remove(); forIn.readOnly = true;
+    ta.readOnly = true; acts.remove(); forIn.readOnly = true; mailOn.disabled = true;
     keptLine(out, r.kept, r);
+    if (forNames.length && r.kept?.thought?.id) nudgeLine(out, r.kept.thought.id, mailOn.checked);
     if (document.body.dataset.tab === 'thoughts') loadThoughts();
   }
+}
+
+// What happens about the email, said truthfully: turned off for this one, or written and kept while sending from the Tool
+// is being proven (mail-send's test lock), or on its way within the hour.
+async function nudgeLine(out, id, wanted) {
+  const p = el('p', 'quiet thought-mail-said');
+  out.appendChild(p);
+  if (!wanted) {
+    const x = await rpc('thought_nudge_off', { p_thought: id });
+    p.textContent = x.ok ? String(x.said || 'No email will go about this thoughtgram.') : 'The email could not be turned off just now: ' + String(x.why || '') + ' It says only that a thoughtgram is waiting, never your words.';
+    return;
+  }
+  const st = await rpc('nudge_send_state', {});
+  p.textContent = st && st.state === 'held'
+    ? 'HireKraft has written each of them a short email from your mailbox saying a thoughtgram is waiting (never your words). While sending from HireKraft is being proven, that email is kept, not sent.'
+    : 'Each of them gets one short email from your mailbox within the hour saying a thoughtgram is waiting, never your words.';
 }
 
 function keptLine(out, k, r) {
@@ -150,13 +179,13 @@ function keptLine(out, k, r) {
   out.appendChild(el('p', 'quiet', 'Who can see it: ' + String(k?.who_can_see || 'only you') + '.'
     + (Array.isArray(k?.for) && k.for.length ? ' ' + k.for.map((p) => p.name).join(' and ') + ' will see it first in Worth your attention.' : '')
     + (r && Array.isArray(r.translated_to) && r.translated_to.length ? ' Their version was made in their language, marked as a translation; your words stay the original.' : '')));
-  if (k?.replaced) out.appendChild(el('p', 'quiet', 'It is now your latest view on this topic. Your thought of ' + day(k.replaced.at) + ' stays in the topic, folded under it.'));
+  if (k?.replaced) out.appendChild(el('p', 'quiet', 'It is now your latest view on this topic. Your thoughtgram of ' + day(k.replaced.at) + ' stays in the topic, folded under it.'));
   if (topic && topic.stands) out.appendChild(el('p', 'quiet', 'Where it stands: ' + topic.stands));
   const acts = el('div', 'actions');
   if (topic) acts.appendChild(button('Open the topic', 'go ghost', () => C.goThoughts(topic.id)));
   acts.appendChild(button('Change topic', 'go ghost', () => change()));
   out.appendChild(acts);
-  if (once(ONCE.record)) out.appendChild(el('p', 'quiet thought-teach', "A thought is kept as a business record. Taking one back removes it from answers; it stays in its topic's history."));
+  if (once(ONCE.record)) out.appendChild(el('p', 'quiet thought-teach', "A thoughtgram is kept as a business record. Taking one back removes it from answers; it stays in its topic's history."));
   const pick = el('div', 'thought-pick');
   out.appendChild(pick);
   function change() {
@@ -201,7 +230,7 @@ export function afterAnswer(question, body, slot) {
   const cited = Array.isArray(body?.citations) ? body.citations : [];
   if (cited.some((c) => String(c?.source || c?.where || '').toLowerCase().startsWith('thought'))) return;
   if (!once(ONCE.why)) return;
-  const p = el('p', 'quiet thought-teach', 'None of your own thoughts are kept on this. Next time you decide something, say why in a thought (Leave a thought, under the +), and the Tool will have your reasons when this is asked again.');
+  const p = el('p', 'quiet thought-teach', 'None of your own thoughtgrams are kept on this. Next time you decide something, say why in a thoughtgram (Leave a thoughtgram, under the +), and the Tool will have your reasons when this is asked again.');
   slot.appendChild(p);
 }
 
@@ -214,9 +243,9 @@ export async function afterCall() {
   if (!once(key)) return;
   const t = turn();
   if (!t) return;
-  t.appendChild(el('p', '', 'Your meeting "' + r.meeting.title + '" ended at ' + fmtDate(r.meeting.end, 'time') + '. Want to leave a thought on it while it is fresh?'));
+  t.appendChild(el('p', '', 'Your meeting "' + r.meeting.title + '" ended at ' + fmtDate(r.meeting.end, 'time') + '. Want to leave a thoughtgram on it while it is fresh?'));
   const acts = el('div', 'actions');
-  acts.appendChild(button('Leave a thought', 'go', () => { C.startThought({ topicTitle: r.meeting.title }); }));
+  acts.appendChild(button('Leave a thoughtgram', 'go', () => { C.startThought({ topicTitle: r.meeting.title }); }));
   acts.appendChild(button('Not now', 'go ghost', () => t.remove()));
   t.appendChild(acts);
 }
@@ -230,20 +259,20 @@ export async function loadThoughts(openId) {
   host.innerHTML = '';
   const top = el('div', 'thought-top');
   const views = el('div', 'thought-views');
-  views.setAttribute('role', 'group'); views.setAttribute('aria-label', 'How to see your thoughts');
+  views.setAttribute('role', 'group'); views.setAttribute('aria-label', 'How to see your thoughtgrams');
   for (const [k, label] of [['for_you', 'For you'], ['moving', 'Moving'], ['topics', 'Topics'], ['mine', 'Mine']]) {
     const b = button(label, 'go ghost thought-view', () => { view = k; topicOpen = null; loadThoughts(); });
     b.setAttribute('aria-pressed', String(!topicOpen && view === k));
     views.appendChild(b);
   }
-  top.append(views, button('Leave a thought', 'go', () => C.startThought(topicOpen ? { topic: topicOpen, topicTitle: host.dataset.title || '' } : {})));
+  top.append(views, button('Leave a thoughtgram', 'go', () => C.startThought(topicOpen ? { topic: topicOpen, topicTitle: host.dataset.title || '' } : {})));
   host.appendChild(top);
   const body = el('div', 'thought-body');
   host.appendChild(body);
-  body.appendChild(el('p', 'working', 'Reading your thoughts'));
+  body.appendChild(el('p', 'working', 'Reading your thoughtgrams'));
   const r = await rpc('thoughts_view', { p_view: topicOpen ? 'topic' : view, p_topic: topicOpen || null });
   body.innerHTML = '';
-  if (!r || r.ok !== true) { body.appendChild(el('p', 'state stalled', String(r?.why || 'Your thoughts could not be read just now.'))); return; }
+  if (!r || r.ok !== true) { body.appendChild(el('p', 'state stalled', String(r?.why || 'Your thoughtgrams could not be read just now.'))); return; }
   if (r.view === 'topic') { drawTopic(body, r); return; }
   host.dataset.title = '';
   if (r.view === 'mine') { drawMine(body, r.thoughts || []); return; }
@@ -253,10 +282,10 @@ export async function loadThoughts(openId) {
 
 function intro(body) {
   const box = el('div', 'thought-intro');
-  box.appendChild(el('p', 'ans-lead', 'A thought is something you say once, and the Tool keeps with its topic.'));
-  box.appendChild(el('p', '', 'Talk or type an update, a view or a plan about something you are working on. The Tool files it under its topic on its own, and brings it up, dated and in your words, whenever that topic is asked about ("You noted on Oct 25 that ..."). It is never treated as a fact, and a newer thought on the same topic replaces the older one in answers, while the older one stays in the topic history.'));
-  box.appendChild(el('p', '', 'To leave one: press Leave a thought (here, or under the + in the box), on an open email press Add a thought, or start what you say with "note for the brain".'));
-  box.appendChild(el('p', 'quiet', 'Only you can see your thoughts. Coming later: ' + COMING.join('; ') + '.'));
+  box.appendChild(el('p', 'ans-lead', 'A thoughtgram is something you say once, and the Tool keeps with its topic.'));
+  box.appendChild(el('p', '', 'Talk or type an update, a view or a plan about something you are working on. The Tool files it under its topic on its own, and brings it up, dated and in your words, whenever that topic is asked about ("You noted on Oct 25 that ..."). It is never treated as a fact, and a newer thoughtgram on the same topic replaces the older one in answers, while the older one stays in the topic history.'));
+  box.appendChild(el('p', '', 'To leave one: press Leave a thoughtgram (here, or under the + in the box), on an open email press Add a thoughtgram, or start what you say with "note for the brain".'));
+  box.appendChild(el('p', 'quiet', 'A thoughtgram you keep for yourself is yours alone; one you leave for people here is seen by you and them, and they get one short email saying it is waiting. Coming later: ' + COMING.join('; ') + '.'));
   body.appendChild(box);
 }
 
@@ -266,15 +295,15 @@ function topicCard(tp, moving) {
   li.appendChild(b);
   if (tp.stands) li.appendChild(el('p', '', tp.stands));
   const moved = [];
-  if (tp.new_thoughts > 0) moved.push(tp.new_thoughts + ' new thought' + (tp.new_thoughts === 1 ? '' : 's'));
+  if (tp.new_thoughts > 0) moved.push(tp.new_thoughts + ' new thoughtgram' + (tp.new_thoughts === 1 ? '' : 's'));
   if (tp.new_mail > 0) moved.push(tp.new_mail + ' new email' + (tp.new_mail === 1 ? '' : 's') + ' naming ' + tp.party);
-  const meta = [moving && moved.length ? 'What moved: ' + moved.join(', ') : '', 'Last thought ' + day(tp.last_at), tp.thoughts + ' thought' + (tp.thoughts === 1 ? '' : 's')].filter(Boolean);
+  const meta = [moving && moved.length ? 'What moved: ' + moved.join(', ') : '', 'Last thoughtgram ' + day(tp.last_at), tp.thoughts + ' thoughtgram' + (tp.thoughts === 1 ? '' : 's')].filter(Boolean);
   li.appendChild(el('p', 'quiet', meta.join(' · ')));
   // STILL TRUE, the first slice of it: her own thought is older than email that moved the topic. Asked once per topic.
   if (moving && tp.new_mail > 0 && tp.new_thoughts === 0 && once(ONCE.stale + ':' + tp.id + ':' + String(tp.last_at))) {
-    const ask = el('p', 'thought-teach', 'Your last thought here is from ' + day(tp.last_at) + ', and email has come in since. Want to add one?');
+    const ask = el('p', 'thought-teach', 'Your last thoughtgram here is from ' + day(tp.last_at) + ', and email has come in since. Want to add one?');
     li.appendChild(ask);
-    li.appendChild(button('Add a thought', 'go ghost', () => C.startThought({ topic: tp.id, topicTitle: tp.title })));
+    li.appendChild(button('Add a thoughtgram', 'go ghost', () => C.startThought({ topic: tp.id, topicTitle: tp.title })));
   }
   return li;
 }
@@ -285,12 +314,12 @@ function drawList(body, r) {
   if (view === 'moving') {
     body.appendChild(el('p', 'quiet', topics.length ? 'Topics where something changed since you last opened them.' : 'Nothing has moved since you last looked. Your topics are under Topics.'));
   } else {
-    body.appendChild(el('p', 'quiet', r.all_topics + ' topic' + (r.all_topics === 1 ? '' : 's') + ', newest first. To merge two, open one and choose Merge; to split one, move a thought from it to a new topic.'));
+    body.appendChild(el('p', 'quiet', r.all_topics + ' topic' + (r.all_topics === 1 ? '' : 's') + ', newest first. To merge two, open one and choose Merge; to split one, move a thoughtgram from it to a new topic.'));
   }
   const ul = el('ul', 'thought-list');
   for (const tp of topics) ul.appendChild(topicCard(tp, view === 'moving'));
   body.appendChild(ul);
-  if (r.unfiled) body.appendChild(el('p', 'quiet', r.unfiled + ' thought' + (r.unfiled === 1 ? ' is' : 's are') + ' not under any topic; they are under Mine.'));
+  if (r.unfiled) body.appendChild(el('p', 'quiet', r.unfiled + ' thoughtgram' + (r.unfiled === 1 ? ' is' : 's are') + ' not under any topic; they are under Mine.'));
 }
 
 // Thoughts others left for her, newest first, in her language. Opening this view marks them read (the author can see that).
@@ -298,17 +327,17 @@ function drawForYou(body, r) {
   const items = Array.isArray(r.items) ? r.items : [];
   const ln = r.your_language && r.your_language.name ? r.your_language.name : 'English';
   if (!items.length) {
-    body.appendChild(el('p', 'quiet', 'Nobody has left you a thought yet. When someone here does, it shows first here and in Worth your attention, in ' + ln + '.'));
+    body.appendChild(el('p', 'quiet', 'Nobody has left you a thoughtgram yet. When someone here does, it shows first here and in Worth your attention, in ' + ln + '.'));
     return;
   }
-  body.appendChild(el('p', 'quiet', 'Thoughts people here left for you, newest first, in ' + ln + '. Only the person who left one and the people it is for can see it.'));
+  body.appendChild(el('p', 'quiet', 'Thoughtgrams people here left for you, newest first, in ' + ln + '. Only the person who left one and the people it is for can see it.'));
   const ul = el('ul', 'thought-thread');
   for (const it of items) ul.appendChild(forYouItem(it));
   body.appendChild(ul);
 }
 function forYouItem(it) {
   const li = el('li', 'thought-item thought-current');
-  li.appendChild(el('p', 'quiet', [String(it.from || 'Someone') + ' left you a thought', day(it.at), it.heard ? 'spoken' : '', it.read ? '' : 'new'].filter(Boolean).join(' · ')));
+  li.appendChild(el('p', 'quiet', [String(it.from || 'Someone') + ' left you a thoughtgram', day(it.at), it.heard ? 'spoken' : '', it.read ? '' : 'new'].filter(Boolean).join(' · ')));
   const said = el('p', 'thought-said', String(it.text || ''));
   li.appendChild(said);
   if (it.translated) li.appendChild(el('p', 'quiet', 'Translated from ' + it.lang_name + ' by the Tool. The original is what ' + String(it.from || 'they') + ' said.'));
@@ -324,7 +353,7 @@ function forYouItem(it) {
     });
     acts.appendChild(b);
   }
-  acts.appendChild(button('Reply with a thought', 'go ghost', () => C.startThought({ for: [String(it.from || '')] })));
+  acts.appendChild(button('Reply with a thoughtgram', 'go ghost', () => C.startThought({ for: [String(it.from || '')] })));
   li.appendChild(acts);
   return li;
 }
@@ -348,7 +377,7 @@ function thoughtItem(th, opts) {
   if (opts?.move) acts.appendChild(button('Move', 'go ghost', () => opts.move(th, li)));
   li.appendChild(acts);
   function edit() {
-    const ta = el('textarea', 'thought-text'); ta.value = th.text; ta.rows = 4; ta.setAttribute('aria-label', 'Your thought');
+    const ta = el('textarea', 'thought-text'); ta.value = th.text; ta.rows = 4; ta.setAttribute('aria-label', 'Your thoughtgram');
     text.replaceWith(ta); acts.hidden = true;
     const row = el('div', 'actions');
     const said = el('p', 'quiet'); said.setAttribute('aria-live', 'polite');
@@ -375,12 +404,12 @@ function folded(list, word, opts) {
 
 function drawMine(body, thoughts) {
   if (!thoughts.length) { intro(body); return; }
-  body.appendChild(el('p', 'quiet', 'Your thoughts, newest first. Earlier views and thoughts you took back are folded; open them to see how your thinking changed.'));
+  body.appendChild(el('p', 'quiet', 'Your thoughtgrams, newest first. Earlier views and thoughtgrams you took back are folded; open them to see how your thinking changed.'));
   const ul = el('ul', 'thought-thread');
   const earlier = [];
   for (const th of thoughts) { if (th.state === 'current') ul.appendChild(thoughtItem(th, { topic: true })); else earlier.push(th); }
   body.appendChild(ul);
-  const f = folded(earlier, 'earlier view or taken-back thought', { topic: true });
+  const f = folded(earlier, 'earlier view or taken-back thoughtgram', { topic: true });
   if (f) body.appendChild(f);
 }
 
@@ -400,7 +429,7 @@ function drawTopic(body, r) {
     const prev = thoughts.find((x) => x.state === 'superseded');
     if (prev) pic.appendChild(el('p', 'quiet', 'It replaced your view of ' + day(prev.at) + ': ' + String(prev.text).slice(0, 200) + (String(prev.text).length > 200 ? '...' : '')));
   } else {
-    pic.appendChild(el('p', 'quiet', 'Every thought on this topic was taken back. They are kept below.'));
+    pic.appendChild(el('p', 'quiet', 'Every thoughtgram on this topic was taken back. They are kept below.'));
   }
   if (tp.stands) pic.appendChild(el('p', '', 'Where it stands: ' + tp.stands));
   const open = Array.isArray(tp.open) ? tp.open : [];
@@ -412,7 +441,7 @@ function drawTopic(body, r) {
   }
   body.appendChild(pic);
   const acts = el('div', 'actions');
-  acts.appendChild(button('Add a thought here', 'go', () => C.startThought({ topic: tp.id, topicTitle: tp.title })));
+  acts.appendChild(button('Add a thoughtgram here', 'go', () => C.startThought({ topic: tp.id, topicTitle: tp.title })));
   acts.appendChild(button('Rename', 'go ghost', () => rename()));
   const others = Array.isArray(r.others) ? r.others : [];
   if (others.length) acts.appendChild(button('Merge into another topic', 'go ghost', () => merge()));
@@ -427,7 +456,7 @@ function drawTopic(body, r) {
   body.appendChild(about);
   findAbout(slot, tp);
   // The thread: the current view and earlier ones (folded), and any taken back.
-  body.appendChild(el('h4', '', 'Your thoughts on it'));
+  body.appendChild(el('h4', '', 'Your thoughtgrams on it'));
   const ul = el('ul', 'thought-thread');
   const mover = (th, li) => {
     const pick = el('div', 'actions');
@@ -440,7 +469,7 @@ function drawTopic(body, r) {
   const rest = [];
   for (const th of thoughts) { if (th.state === 'current') ul.appendChild(thoughtItem(th, { move: mover })); else rest.push(th); }
   body.appendChild(ul);
-  const f = folded(rest, 'earlier view or taken-back thought', { move: mover });
+  const f = folded(rest, 'earlier view or taken-back thoughtgram', { move: mover });
   if (f) body.appendChild(f);
   function rename() {
     tools.innerHTML = '';
@@ -466,6 +495,21 @@ async function findAbout(slot, tp) {
   slot.appendChild(el('p', 'quiet', String(r?.answer || r?.error || 'Nothing about it was found in your mail, files or records.')));
 }
 
+// THE RECIPIENT'S SWITCH, SAID IN THE BOX (decision 1026 item 3): "stop emailing me about thoughtgrams" turns the emails
+// off; "email me about thoughtgrams" turns them back on. The same switch sits under her name at the top (words.js).
+function emailWords(low) {
+  if (low.indexOf('thoughtgram') < 0 || !(low.indexOf('email') >= 0 || low.indexOf('mail') >= 0)) return null;
+  if (low.startsWith('stop') || low.startsWith('no more') || low.startsWith("don't") || low.startsWith('do not') || low.startsWith('turn off')) return false;
+  if (low.startsWith('email me') || low.startsWith('start') || low.startsWith('turn on') || low.startsWith('send me')) return true;
+  return null;
+}
+async function emailsSay(on) {
+  const t = turn();
+  if (!t) return;
+  const x = await rpc('thoughtgram_emails_set', { p_on: on });
+  t.appendChild(el('p', x.ok ? '' : 'state stalled', x.ok ? String(x.said) : String(x.why || 'That could not be changed just now.')));
+}
+
 // MERGE OR SPLIT, SAID IN THE BOX: "merge the topics A and B", "merge topic A into B", "split the topic A". Both topics
 // must be hers (the brain checks again). A merge is read back with one button; a split opens the topic, where any
 // thought moves to a new topic in one tap.
@@ -482,14 +526,14 @@ async function topicAsk(raw, kind) {
   const low = raw.toLowerCase();
   const named = topics.filter((x) => low.includes(String(x.title).toLowerCase())).sort((a, b) => low.indexOf(String(a.title).toLowerCase()) - low.indexOf(String(b.title).toLowerCase()));
   if (kind === 'split') {
-    if (!named.length) { t.appendChild(el('p', '', 'I could not tell which of your topics to split. Open it under Thoughts, then move a thought to a new topic.')); return; }
-    t.appendChild(el('p', '', 'To split "' + named[0].title + '", move the thoughts that belong apart to a new topic, one tap each.'));
+    if (!named.length) { t.appendChild(el('p', '', 'I could not tell which of your topics to split. Open it under Thoughtgrams, then move a thoughtgram to a new topic.')); return; }
+    t.appendChild(el('p', '', 'To split "' + named[0].title + '", move the thoughtgrams that belong apart to a new topic, one tap each.'));
     t.appendChild(button('Open the topic', 'go', () => C.goThoughts(named[0].id)));
     return;
   }
-  if (named.length < 2) { t.appendChild(el('p', '', 'I could not find two of your topics by those names. Your topics are under Thoughts, Topics; each one has Merge into another topic.')); return; }
+  if (named.length < 2) { t.appendChild(el('p', '', 'I could not find two of your topics by those names. Your topics are under Thoughtgrams, Topics; each one has Merge into another topic.')); return; }
   const [a, b] = named;
-  t.appendChild(el('p', '', 'Merge "' + a.title + '" into "' + b.title + '"? Every thought on it moves over; nothing is lost.'));
+  t.appendChild(el('p', '', 'Merge "' + a.title + '" into "' + b.title + '"? Every thoughtgram on it moves over; nothing is lost.'));
   const acts = el('div', 'actions');
   acts.appendChild(button('Merge them', 'go', async () => {
     acts.remove();
