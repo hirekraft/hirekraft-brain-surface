@@ -206,7 +206,7 @@ async function drawConnector(host) {
   for (const s of [`“Using HireKraft, find everything about Acme payments since June and tell me if anything looks wrong.”`,
     `“Who is Dana at Acme?” or “What meetings do I have next week?”`,
     `“How do thoughtgrams work in HireKraft?” It answers from HireKraft's own guide and your setup.`,
-    `“Save this to HireKraft”, “save this document to HireKraft”, or “leave a thought in HireKraft: ...”. Each lands here or in Thoughts, private to you.`,
+    `“Save this to HireKraft”, “save this document to HireKraft”, or “leave a thoughtgram in HireKraft: ...”. Each lands here or in Thoughtgrams, private to you.`,
     `“Ask HireKraft for its own answer” when you want HireKraft's AI to do the thinking; that one is paid by the business.`]) can.appendChild(el(`li`, null, s));
   host.appendChild(can);
   const addr = el("div"); addr.style.display = "flex"; addr.style.gap = "8px"; addr.style.alignItems = "center";
