@@ -17,9 +17,27 @@ import { initToTest, readList, card } from './totest.js?v=2026-10-23-test-list-2
 const SHOW = 5;
 let done = false;
 
+// A REPLY TO A SUSPECTED SCAM, OR THE BOOKS NAMING ONE, said to the owner first and once (seat mail-inbox, decision 1033 item 3:
+// "a reply to a scam or a payment to its sender interrupts the owner at once; otherwise a monthly line of what was caught").
+// scam_alerts answers only the owner; the Tool has no push, so this and Worth your attention are where it reaches her.
+async function scamAlerts({ sb, el, log, openPanel }) {
+  let a;
+  try { const { data } = await sb.rpc('scam_alerts'); a = data; } catch (_) { return; }
+  if (!a || a.ok !== true) return;
+  const items = a.items || [];
+  if (!items.length && !a.monthly) return;
+  const turn = el('div', 'turn said news news-alert');
+  for (const it of items) { const p = el('p'); const b = el('b'); b.textContent = 'Suspected scam: '; p.appendChild(b); p.appendChild(document.createTextNode(String(it.line || ''))); turn.appendChild(p); }
+  if (a.monthly) { const p = el('p'); p.textContent = String(a.monthly); turn.appendChild(p); }
+  log.appendChild(turn);
+  openPanel();
+  try { await sb.rpc('scam_alerts_seen', { p_ids: items.map((x) => x.id), p_month: a.monthly ? a.month : null }); } catch (_) { /* said again next time, the safe side */ }
+}
+
 export async function showNews({ sb, el, $, openPanel, owner }) {
   if (done) return; done = true;
   const log = $('#dock-turns'); if (!log) return;
+  if (owner) await scamAlerts({ sb, el, log, openPanel });
   let news;
   try {
     const { data, error } = await sb.rpc('guide_news');
