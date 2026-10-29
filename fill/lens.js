@@ -37,17 +37,17 @@ function drawBrain(fresh) {
 }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-29-mail-matters";
-import { initWords } from "./words.js?v=2026-10-28-language"; // the screen in her language, the switch beside her name (seat language-and-nudge)
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-29-thinkrooms";
+import { initWords } from "./words.js?v=2026-10-29-thinkrooms"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initLooks } from "./looks.js?v=2026-10-29-looks"; // the Look switch beside the language switch (seat looks, decision 1036)
-import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-28-language";
-import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts } from "./thoughts.js?v=2026-10-28-language"; // thoughtgrams and the Thoughts tab (seat thoughtgram)
+import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-29-thinkrooms";
+import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-10-29-thinkrooms"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
-import { foundCard } from "./find.js?v=2026-10-28-language"; // find first, then work on what was found (seat find-first)
+import { foundCard } from "./find.js?v=2026-10-29-thinkrooms"; // find first, then work on what was found (seat find-first)
 import { closeCard } from "./close.js?v=2026-10-26-month-end-2"; // the month-end check, corrected cell by cell (seat month-end)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-27-people-and-access"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-10-27-people-and-access"; // sub-tab row and People and access (seat people-and-access)
-import { initChats, loadChats } from "./chats.js?v=2026-10-28-tab-split"; // Chats tab (seat chat-import)
+import { initChats, loadChats } from "./chats.js?v=2026-10-29-thinkrooms"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-10-22-dates"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
 
@@ -3623,8 +3623,8 @@ function goto(id, key) {
 // Contacts), then Brain, Chats, Security, Systems, Loose files. Owner-only tabs are shown once the reading says
 // she is an owner (Security: seat security-tab, 2026-10-08; Money: seat runway, 2026-10-10).
 const GROUP_TAB = (k, label) => ({ key: k, label: label ?? GROUPS.find((g) => g.key === k).label });
-// THE THOUGHTS TAB (seat thoughtgram, 2026-10-25, decision 1017): beside Mail, a client by topic; drawn by fill/thoughts.js.
-const TABS = [GROUP_TAB('email', 'Mail'), { key: 'thoughts', label: 'Thoughtgrams' }, { key: 'work', label: 'Work' }, { key: 'money', label: 'Money', owner: true },
+// THE THINKROOMS TAB (seat thinkrooms-a, 2026-10-29, decision 1035; first built as Thoughts by seat thoughtgram): beside Mail; drawn by fill/thoughts.js.
+const TABS = [GROUP_TAB('email', 'Mail'), { key: 'thoughts', label: 'Thinkrooms' }, { key: 'work', label: 'Work' }, { key: 'money', label: 'Money', owner: true },
   GROUP_TAB('drives', 'Drives'), GROUP_TAB('calendar'), GROUP_TAB('contacts'),
   { key: 'brain', label: 'Brain' }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
   GROUP_TAB('systems'), GROUP_TAB('loose'),
@@ -4305,10 +4305,10 @@ initMail({
   ask: (q) => ask(q),
   scopeChanged: () => drawBox(),
   thought: (email) => thoughtOnEmail(email),   // Add a thought on an open email (seat thoughtgram)
-  startThought,   // Reply with a thought, from a thought left for her in Worth your attention (seat every-voice)
+  startThought: (o) => openComposer(o),   // Reply in the Thinkroom, from a thought left for her in Worth your attention (seat thinkrooms-a)
 });
-// THOUGHTGRAMS (seat thoughtgram, 2026-10-25): what fill/thoughts.js needs from this page.
-initThoughts({ sb, el, $, openPanel, askBody, startThought, foundCard, findCtx,
+// THINKROOMS (seat thinkrooms-a, 2026-10-29; first seat thoughtgram, 2026-10-25): what fill/thoughts.js needs from this page.
+initThoughts({ sb, el, $, openPanel, askBody, startThought, foundCard, findCtx, url: SUPABASE_URL, key: PUBLISHABLE_KEY,
   goThoughts: (id) => { userMoved = true; goto('s-thoughts', id); } });
 // THE ONE BOX (seat one-box, 2026-10-08): what it needs from this page, and nothing it does itself.
 initBox({
@@ -4316,7 +4316,9 @@ initBox({
   // seat watches 2026-10-23: "tell me when ...", "what are you watching", "stop watching ..." are kept as watches, not asked.
   watch: (t) => watchFromBox(t),
   // seat thoughtgram: "note for the brain: ..." opens the thought card; a thought left in thought mode is read back there.
-  thought: (t) => thoughtFromBox(t), keepThought: (t, o) => keepThought(t, o),
+  thought: (t) => thoughtFromBox(t), keepThought: (t, o) => keepThought(t, o),   // seat thinkrooms-a: openThinkrooms below
+  // seat thinkrooms-a: Add a thought (the + menu) and every other way in open the Thinkrooms tab with the composer, never a card here.
+  openThinkrooms: (o) => openComposer(o),
   // seat add-files: whether a question is on its way (a question sent now would be dropped), and the one connect flow.
   busy: () => asking,
   connect: () => { userMoved = true; openConnect(); },
