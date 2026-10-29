@@ -37,7 +37,7 @@ function drawBrain(fresh) {
 }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-29-mail-inbox";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-29-mail-matters";
 import { initWords } from "./words.js?v=2026-10-28-language"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-28-language";
 import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts } from "./thoughts.js?v=2026-10-28-language"; // thoughtgrams and the Thoughts tab (seat thoughtgram)
