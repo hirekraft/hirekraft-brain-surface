@@ -8,13 +8,13 @@
 //
 // NEVER TRANSLATED: names, amounts, dates as data, and the customer's own mail and files. Only a piece of text that is
 // exactly one of the Tool's own words (or starts or ends with one, for sentences the screen joins with a name or a
-// number) is changed; anything else stays as written. Mail, answers she asked, her own thoughtgrams and names sit in
+// number) is changed; anything else stays as written. Mail, answers she asked, her own thoughts and names sit in
 // zones this module never touches (NEVER below), and any element can opt out with translate="no".
 // A MISSING WORD NEVER BREAKS A SCREEN: it shows in English, and the misses are counted (a number, no text) in the brain.
 //
 // THE SWITCH sits beside her name at the top: the current language; choosing another changes the screen at once (making
 // it first, the first time anyone here chooses it, with the working sign and a count). The first choice comes from what
-// she said (person_lang), then her first thoughtgram (also person_lang, set by the brain), then the browser.
+// she said (person_lang), then her first thought (also person_lang, set by the brain), then the browser.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
 let C = null;
@@ -275,13 +275,13 @@ function openMenu(btn) {
     fix.addEventListener('click', () => { closeMenu(); toggleCorrect(); });
     m.appendChild(fix);
   }
-  // THE RECIPIENT'S SWITCH for thoughtgram emails sits here too, under her name (decision 1026 item 3).
+  // THE RECIPIENT'S SWITCH for Thinkroom emails sits here too, under her name (decision 1026 item 3).
   const mail = document.createElement('label');
   mail.className = 'lang-menu-mail';
   const box = document.createElement('input');
   box.type = 'checkbox'; box.disabled = true;
   const words2 = document.createElement('span');
-  words2.textContent = 'Email me when someone here leaves me a thoughtgram';
+  words2.textContent = 'Email me when someone adds a thought for me in a Thinkroom';
   mail.append(box, words2);
   m.appendChild(mail);
   C.sb.rpc('thoughtgram_emails_state').then(({ data }) => { box.checked = !!data?.on; box.disabled = false; }, () => {});
@@ -354,7 +354,7 @@ function onCorrectClick(e) {
 }
 
 // ---- start ---------------------------------------------------------------------------------------------------------
-// ctx: { sb, url, key }. Reads her language (what she said, or her first thoughtgram), else the browser's; English
+// ctx: { sb, url, key }. Reads her language (what she said, or her first thought), else the browser's; English
 // draws nothing new beyond the switch.
 export async function initWords(ctx) {
   C = ctx;
