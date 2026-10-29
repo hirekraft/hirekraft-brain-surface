@@ -3593,7 +3593,7 @@ function goto(id, key) {
     drawBrain(false);
   }
   if (id === "s-tests") loadTests();
-  if (id === "s-totest") import("./totest.js?v=2026-10-23-test-list-2").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + String(e?.message ?? e); });   // seat test-list
+  if (id === "s-totest") import("./totest.js?v=2026-10-29-ask-agent").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + String(e?.message ?? e); });   // seat test-list
   if (id === "s-security") loadSecurity();
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
   onMail = id === 's-lens' && lensKey === 'email';
