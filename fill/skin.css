@@ -1058,6 +1058,16 @@ body { padding-bottom: var(--gap-lg); }
 .mailx-scam-done .go { min-height: 44px; }
 .mailx-scam-original { border: 1px dashed var(--line-2); }
 .mailx-scam-original .mailx-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* The inbox view's left column (seat mail-inbox, decision 1033): group headings, Mark all as seen, Caught, all labels, Handled. */
+.mailx-group { margin-top: calc(var(--u) * 3); text-transform: none; color: var(--ink-2); }
+.mailx-group + .mailx-who { margin-top: 0; }
+.mailx-markall { display: flex; flex-wrap: wrap; align-items: center; gap: var(--u) calc(var(--u) * 2); margin: 0 calc(var(--u) * 2) var(--u); }
+.mailx-markall > p { margin: 0; flex: 1 1 12em; font-size: var(--t-small); }
+.mailx-caught { margin-top: calc(var(--u) * 2); }
+.mailx-all-labels { margin: var(--u) calc(var(--u) * 2) 0; }
+.mailx-handled-opts { display: flex; flex-wrap: wrap; gap: var(--u); margin: var(--u) 0 calc(var(--u) * 1.5); }
+.mailx-handled-opts .go[aria-pressed="true"] { border-color: var(--act); color: var(--ink); font-weight: var(--w-strong); }
+.mailx-att-row.unread .mailx-att-what { font-weight: var(--w-strong); }
 .ans-warning { margin: 0 0 calc(var(--u) * 2); padding: calc(var(--u) * 2) calc(var(--u) * 3); border-left: 4px solid var(--accent);
   border-radius: var(--radius); background: color-mix(in srgb, var(--accent) 8%, var(--paper)); color: var(--ink); font-weight: var(--w-strong); }
 .ans-email-warn { display: block; margin-top: 2px; color: var(--accent); font-size: var(--t-small); font-weight: var(--w-mid); overflow-wrap: anywhere; }
@@ -1757,6 +1767,7 @@ html[dir='rtl'] .whoami { text-align: left; }
      Fixes the class for every Mail list, not only Suspicious. The Suspicious rows with Undo stack, thumb-sized. */
   .mailx-list, .mailx-read { padding-bottom: 96px; }
   .mailx-scam-done li .go { flex: 0 0 auto; }
+  .mailx-markall .go, .mailx-all-labels, .mailx-handled-opts .go { min-height: 44px; }   /* seat mail-inbox */
   /* seat tab-split 2026-10-28: Money and Chats on the shared sub-tab row. The dated evidence links in What we pay for and
      each chat row are thumb-sized (both were under 44 px before the split, measured); both tabs end with room under them
      so the floating Ask button never covers the last row. */
