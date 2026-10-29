@@ -44,8 +44,11 @@ const off = { mailbox: null, email: null, view: null };   // which chip she remo
 // it goes to the thought card (fill/thoughts.js) to be read back, corrected and kept. Removing the chip asks again.
 let thinking = null;      // { email?, topic? } while she is leaving a thought
 let thinkHeard = false;   // she spoke it (the words are kept, never the audio)
-const THINK_PH = 'Say or type your thoughtgram. It is kept for you, not answered';
+const THINK_PH = 'Say or type your thought. It goes to a Thinkroom, not answered';
 export function startThought(opts, which) {
+  // THINKROOMS (seat thinkrooms-a, 2026-10-29, decision 1035): a thought is added on the Thinkrooms tab, never in a card in the box or the
+  // side conversation. Every caller (the + menu, an open email, Reply in the Thinkroom) is sent there with the composer open.
+  if (C && C.openThinkrooms) { C.openThinkrooms(opts && typeof opts === 'object' ? opts : {}); return; }
   thinking = opts && typeof opts === 'object' ? opts : {};
   thinkHeard = false;
   drawBox();
@@ -94,7 +97,7 @@ export function drawBox() {
   if (sc.mailbox) host.appendChild(chip('in ' + sc.mailbox.address, () => { off.mailbox = sc.mailbox.key; }));
   if (sc.view && !sc.email && !thinking) host.appendChild(chip(viewChip(sc.view), () => { off.view = sc.viewKey; }));
   if (sc.email && !thinking) host.appendChild(chip('about this email', () => { off.email = sc.raw.threadKey; }));
-  if (thinking) host.appendChild(chip(thinking.email ? 'a thoughtgram on this email' : thinking.topicTitle ? 'a thoughtgram on ' + thinking.topicTitle : Array.isArray(thinking.for) && thinking.for.length ? 'a thoughtgram for ' + thinking.for.join(', ') : 'leaving a thoughtgram', () => { thinking = null; }));
+  if (thinking) host.appendChild(chip(thinking.email ? 'a thought on this email' : thinking.topicTitle ? 'a thought on ' + thinking.topicTitle : Array.isArray(thinking.for) && thinking.for.length ? 'a thought for ' + thinking.for.join(', ') : 'adding a thought', () => { thinking = null; }));
   const pin = $('#panel-input');
   if (pin) pin.placeholder = thinking ? THINK_PH : (pin.dataset.ph || (pin.dataset.ph = pin.placeholder));
   input.placeholder = thinking ? THINK_PH : sc.email ? 'Ask about this email, have it answered, or find another'
@@ -395,7 +398,7 @@ function openMenu(which) {
     i.addEventListener('click', () => { closeMenus(); act(); });
     m.appendChild(i);
   };
-  item('Leave a thoughtgram', 'Say or type what you think about something you are working on, in any language; kept with its topic, for you or for people you name', () => startThought({}, which));
+  item('Add a thought', 'Say or type what you think, in any language. It goes to a Thinkroom: just for you, or with the people you choose', () => startThought({}, which));
   item('Add a file', 'A spreadsheet, document, PDF or slides', () => { addFrom = which; $('#add-file')?.click(); });
   item('Add a picture or screenshot', 'You can also paste a screenshot, or drop files on the conversation', () => { addFrom = which; $('#add-picture')?.click(); });
   item('Connect something', 'Mail, drives, calendar, or a system you use', () => { if (C.connect) C.connect(); });
@@ -477,6 +480,23 @@ function micLook(state) {
   b.setAttribute('aria-label', label);
   b.title = label;
   b.disabled = state === 'writing';
+}
+
+// ANOTHER BOX THE MICROPHONE WRITES INTO (seat thinkrooms-a, 2026-10-29): the Thinkroom composer uses this same microphone, never a
+// second one. m: { btn, input, said } selectors. Press to start and again to stop; on a touch screen, hold to talk and let go.
+export function micFor(m) {
+  const b = $(m.btn);
+  if (!b || b.dataset.wired) return;
+  b.dataset.wired = '1';
+  const i = MICS.findIndex((x) => x.btn === m.btn);
+  if (i >= 0) MICS[i] = m; else MICS.push(m);
+  const was = at; at = m; micLook('idle'); at = was;
+  const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  if (!touch) { b.addEventListener('click', () => pressMic(m)); return; }
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); if (!mic.on) pressMic(m); });
+  const up = () => { if (mic.on && at === m) stopMic(); };
+  b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up);
+  b.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
 function wireMic() {
