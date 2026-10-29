@@ -67,18 +67,43 @@ function prefixed(p, subject) {
   return s.toLowerCase().startsWith(p.toLowerCase()) ? s : p + ' ' + s;
 }
 
+// People from a header: "Name <a@b.c>, d@e.f" -> [{ name, email }]. A comma inside a quoted name stays with the name.
+export function people(s) {
+  const parts = []; let cur = ''; let quoted = false;
+  for (const ch of String(s || '')) { if (ch === '"') quoted = !quoted; if (ch === ',' && !quoted) { parts.push(cur); cur = ''; } else cur += ch; }
+  parts.push(cur);
+  return parts.map((p) => {
+    const a = p.indexOf('<'), b = p.indexOf('>');
+    const email = (a >= 0 && b > a ? p.slice(a + 1, b) : p).trim().toLowerCase();
+    const name = a >= 0 ? p.slice(0, a).split('"').join('').trim() : '';
+    return { name, email };
+  }).filter((x) => x.email.includes('@') && !x.email.includes(' '));
+}
+// The name people call someone by: "Doe, Jane" and "Jane Doe" are both Jane; an address alone gives its first part.
+export function firstName(p) {
+  const n = String((p && p.name) || '').trim();
+  if (n) return (n.includes(',') ? n.split(',')[1] : n).trim().split(' ')[0] || n;
+  const local = String((p && p.email) || '').split('@')[0].split('.')[0];
+  return local ? local.charAt(0).toUpperCase() + local.slice(1) : '';
+}
+
 // Who the email is from and what it is, as lens-ask reads it. One shape for the composer and the conversation.
+// THE EMAIL SHE OPENED (seat mail-invites, 2026-10-29): o.focusId names the message open on her screen, so a reply answers that
+// message and its people, not whichever message happens to be last in the conversation (her own reply, after she answered).
 function shapeOf(o) {
   const t = o.thread;
   const msgs = (t && t.messages) || [];
   const last = msgs[msgs.length - 1] || {};
   const mailbox = String(o.mailbox || '').toLowerCase();
-  const other = [...msgs].reverse().find((m) => String(m.from_email || '').toLowerCase() !== mailbox) || last;
+  const focus = (o.focusId && msgs.find((m) => m.id === o.focusId)) || null;
+  const other = (focus && String(focus.from_email || '').toLowerCase() !== mailbox ? focus : null)
+    || [...msgs].reverse().find((m) => String(m.from_email || '').toLowerCase() !== mailbox) || last;
+  const base = focus || other;
   const anchor = t ? {
     source_key: o.sourceKey, thread_id: t.thread_id, from_email: other.from_email || '', from_name: other.from_name || '',
     subject: t.subject || '', date: last.date || '', text: threadText(t),
   } : null;
-  return { t, msgs, last, mailbox, other, anchor };
+  return { t, msgs, last, base, mailbox, other, anchor };
 }
 
 // "Draft a reply for me": lens-ask writes the reply (or the note above a forward) from the emails and the books.
@@ -95,21 +120,54 @@ export async function askDraft(C, o, mode, cur) {
   }
 }
 
-// THE COMPOSER. o: { sourceKey, mailbox, thread, mode: 'reply' | 'replyall' | 'forward', onDiscard(), onSent() }.
-// Returns { el, mode, fill(draft), setMode(m), status(text, cls), body() }.
+// WHO THE REPLY GOES TO, ALWAYS A VISIBLE CHOICE (seat mail-invites, 2026-10-29; Alex 14:39 PT on a thread with six people: Draft a
+// reply for me showed To: the sender only, no Cc). At the top of the composer two choices, "Just <first name>" and "Everyone on this
+// email (n)"; To and Cc are chips with each person's name, each removable, and "Add someone". The mailbox's own address and the
+// person's own are never added. The last choice on this conversation is remembered in this browser; Reply opens on Just, Reply all
+// on Everyone, and Draft a reply for me (mode 'auto') on Everyone when the email also went to people outside the business, else on
+// Just. Switching changes only who it goes to: the words she wrote stay. SUPERSEDES the free-text To and Cc fields of round two.
+const WHO_KEY = 'tool.replyWho.';
+function whoRemembered(threadId) { try { return localStorage.getItem(WHO_KEY + threadId); } catch (_) { return null; } }
+function whoRemember(threadId, w) { try { localStorage.setItem(WHO_KEY + threadId, w); } catch (_) { /* no storage: it is simply not remembered */ } }
+
+// THE COMPOSER. o: { sourceKey, mailbox, thread, focusId, mode: 'reply' | 'replyall' | 'forward' | 'auto', onDiscard(), onSent() }.
+// Returns { el, mode, who, fill(draft), setMode(m), setWho(w), status(text, cls), body(), recipients() }.
 export function composer(C, o) {
   const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = text; return n; };
   const s = shapeOf(o);
+  const viewer = String((C.viewer && C.viewer() && C.viewer().email) || '').toLowerCase();
+  const own = new Set([s.mailbox, viewer].filter(Boolean));
+  const ownDomain = s.mailbox.split('@')[1] || '';
+  const sender = { name: s.other.from_name && s.other.from_name !== s.other.from_email ? s.other.from_name : '', email: String(s.other.from_email || '').toLowerCase() };
+  const uniq = (list) => { const seen = new Set(); return list.filter((p) => { if (!p.email || own.has(p.email) || seen.has(p.email)) return false; seen.add(p.email); return true; }); };
+  const toAll = uniq([sender].concat(people(s.base.to)));
+  const ccAll = uniq(people(s.base.cc)).filter((p) => !toAll.some((q) => q.email === p.email));
+  const everyone = toAll.length + ccAll.length;
+  const outsiders = toAll.concat(ccAll).filter((p) => p.email !== sender.email && p.email.split('@')[1] !== ownDomain).length;
+
   const box = mk('section', 'mailx-compose');
   box.setAttribute('aria-label', 'Your reply');
   const head = mk('p', 'mailx-compose-kind');
   const drafted = mk('p', 'mailx-compose-drafted', 'Drafted from the emails and your books. Change anything before you send.');
   drafted.hidden = true;
-  const field = (label, el) => { const l = mk('label', 'mailx-compose-field'); l.appendChild(mk('span', null, label)); l.appendChild(el); return l; };
-  const toI = mk('input'); toI.type = 'text'; toI.autocomplete = 'off';
-  const ccI = mk('input'); ccI.type = 'text'; ccI.autocomplete = 'off';
+  const whoRow = mk('div', 'mailx-who-pick');
+  whoRow.setAttribute('role', 'group');
+  whoRow.setAttribute('aria-label', 'Who the reply goes to');
+  const justB = mk('button', 'mailx-who-btn'); justB.type = 'button';
+  justB.append(mk('span', null, 'Just'), document.createTextNode(' '));
+  const jn = mk('span', 'mailx-who-name', firstName(sender) || sender.email); jn.translate = false; justB.appendChild(jn);
+  const allB = mk('button', 'mailx-who-btn'); allB.type = 'button';
+  allB.append(mk('span', null, 'Everyone on this email'), document.createTextNode(' '));
+  const an = mk('span', 'mailx-who-n', '(' + everyone + ')'); an.translate = false; allB.appendChild(an);
+  whoRow.append(justB, allB);
+  const chipsRow = (label) => { const r = mk('div', 'mailx-compose-field mailx-chips-field'); r.appendChild(mk('span', 'mailx-chips-label', label)); const c = mk('div', 'mailx-chips'); r.appendChild(c); return { row: r, chips: c }; };
+  const toF = chipsRow('To');
+  const ccF = chipsRow('Cc');
+  const addI = mk('input', 'mailx-chip-add'); addI.type = 'email'; addI.autocomplete = 'off'; addI.placeholder = 'Add someone';
+  addI.setAttribute('aria-label', 'Add someone');
   const subjI = mk('input'); subjI.type = 'text';
-  const ccRow = field('Cc', ccI);
+  const subjL = mk('label', 'mailx-compose-field'); subjL.appendChild(mk('span', null, 'Subject')); subjL.appendChild(subjI);
+  const hint = mk('p', 'mailx-compose-drafted mailx-compose-hint'); hint.hidden = true;
   const bodyI = mk('textarea', 'mailx-compose-body');
   bodyI.rows = 8;
   bodyI.setAttribute('aria-label', 'Your reply');
@@ -120,31 +178,67 @@ export function composer(C, o) {
   const discard = mk('button', 'go ghost', 'Discard'); discard.type = 'button';
   const said = mk('p', 'mailx-compose-said'); said.setAttribute('aria-live', 'polite');
   row.append(send, discard, said);
-  box.append(head, drafted, field('To', toI), ccRow, field('Subject', subjI), bodyI, fwdNote, fwdPre, row);
+  box.append(head, drafted, whoRow, toF.row, ccF.row, subjL, hint, bodyI, fwdNote, fwdPre, row);
+
+  let to = [], cc = [], added = [];
+  const drawChips = () => {
+    toF.chips.innerHTML = ''; ccF.chips.innerHTML = '';
+    const chip = (p, list, where) => {
+      const c = mk('span', 'mailx-chip');
+      const nm = mk('span', 'mailx-chip-name', p.name || p.email); nm.translate = false; nm.title = p.email;
+      const x = mk('button', 'mailx-chip-x', '×'); x.type = 'button';
+      x.setAttribute('aria-label', 'Remove'); x.title = 'Remove';
+      x.addEventListener('click', () => { const i = list.indexOf(p); if (i >= 0) list.splice(i, 1); added = added.filter((q) => q !== p); drawChips(); });
+      c.append(nm, x); where.appendChild(c);
+    };
+    for (const p of to) chip(p, to, toF.chips);
+    for (const p of cc) chip(p, cc, ccF.chips);
+    toF.chips.appendChild(addI);
+    ccF.row.hidden = !cc.length;
+    const all = api.who === 'all';
+    justB.setAttribute('aria-pressed', all ? 'false' : 'true');
+    allB.setAttribute('aria-pressed', all ? 'true' : 'false');
+  };
+  const addTyped = () => {
+    const v = addI.value.trim();
+    if (!v) return true;
+    const got = people(v);
+    if (!got.length) { api.status('That is not an email address.', 'state stalled'); return false; }
+    for (const p of got) if (!own.has(p.email) && !to.concat(cc).some((q) => q.email === p.email)) { to.push(p); added.push(p); }
+    addI.value = ''; api.status('', ''); drawChips();
+    return true;
+  };
+  addI.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTyped(); } });
+  addI.addEventListener('blur', () => { addTyped(); });
 
   const fwdBlock = () => ['---------- Forwarded message ----------',
-    'From: ' + (s.last.from_name ? s.last.from_name + ' <' + (s.last.from_email || '') + '>' : (s.last.from_email || '')),
-    'Date: ' + (s.last.date || ''), 'Subject: ' + ((s.t && s.t.subject) || ''), 'To: ' + (s.last.to || ''), '', s.last.body || ''].join(NL);
-  // Reply all: everyone the latest email went to, on To and Cc, except this mailbox and the person replied to.
-  const others = () => {
-    const skip = new Set([s.mailbox, String(s.other.from_email || '').toLowerCase()]);
-    return [...new Set(addrs(s.last.to).concat(addrs(s.last.cc)))].filter((a) => !skip.has(a));
+    'From: ' + (s.base.from_name ? s.base.from_name + ' <' + (s.base.from_email || '') + '>' : (s.base.from_email || '')),
+    'Date: ' + (s.base.date || ''), 'Subject: ' + ((s.t && s.t.subject) || ''), 'To: ' + (s.base.to || ''), '', s.base.body || ''].join(NL);
+  const threadId = s.t && s.t.thread_id;
+  const api = { el: box, mode: null, who: 'one' };
+  api.setWho = (w) => {
+    api.who = w === 'all' ? 'all' : 'one';
+    to = (api.who === 'all' ? toAll.slice() : (sender.email && !own.has(sender.email) ? [sender] : [])).concat(added.filter((p) => !toAll.concat(ccAll).some((q) => q.email === p.email)));
+    cc = api.who === 'all' ? ccAll.slice() : [];
+    if (threadId && api.mode !== 'forward') whoRemember(threadId, api.who);
+    drawChips();
   };
-  const api = { el: box, mode: null };
   api.setMode = (m) => {
     const fwd = m === 'forward';
-    api.mode = m;
-    head.textContent = m === 'forward' ? 'Forward' : m === 'replyall' ? 'Reply all' : 'Reply';
-    toI.value = fwd ? '' : (s.other.from_email || '');
-    ccI.value = m === 'replyall' ? others().join(', ') : '';
-    ccRow.hidden = m !== 'replyall' && !ccI.value;
+    api.mode = fwd ? 'forward' : 'reply';
+    head.textContent = fwd ? 'Forward' : 'Reply';
+    whoRow.hidden = fwd || everyone < 2;
     subjI.value = prefixed(fwd ? 'Fwd:' : 'Re:', s.t && s.t.subject);
     bodyI.placeholder = fwd ? 'Add a note above the forwarded email' : 'Write your reply';
     fwdNote.hidden = !fwd; fwdPre.hidden = !fwd;
     fwdPre.textContent = fwd ? fwdBlock() : '';
-    drafted.hidden = true;
-    said.textContent = ''; said.className = 'mailx-compose-said';
+    if (fwd) { api.who = 'one'; to = added.slice(); cc = []; drawChips(); return; }
+    const remembered = threadId ? whoRemembered(threadId) : null;
+    const w = m === 'replyall' ? 'all' : m === 'reply' ? 'one' : (remembered || (outsiders > 0 ? 'all' : 'one'));
+    api.setWho(w);
   };
+  justB.addEventListener('click', () => api.setWho('one'));
+  allB.addEventListener('click', () => api.setWho('all'));
   api.fill = (d) => {
     if (d.subject) subjI.value = d.subject;
     bodyI.value = d.text || '';
@@ -153,24 +247,28 @@ export function composer(C, o) {
   };
   api.status = (text, cls) => { said.textContent = text; said.className = 'mailx-compose-said' + (cls ? ' ' + cls : ''); };
   api.body = () => ({ subject: subjI.value, text: bodyI.value });
-  api.focus = () => { (toI.value ? bodyI : toI).focus(); };
+  api.recipients = () => ({ to: to.map((p) => p.email), cc: cc.map((p) => p.email) });
+  // A line over the text (Suggest another time): drawn as its own words, so it shows in her language like every other line.
+  api.hint = (text) => { hint.textContent = text; hint.hidden = !text; };
+  api.focus = () => { (to.length ? bodyI : addI).focus(); };
   discard.addEventListener('click', () => { if (o.onDiscard) o.onDiscard(); });
   send.addEventListener('click', async () => {
+    if (!addTyped()) return;
     const fwd = api.mode === 'forward';
-    const to = addrs(toI.value), cc = addrs(ccI.value);
-    if (!to.length) { api.status('Put at least one address in To.', 'state stalled'); return; }
+    const r = api.recipients();
+    if (!r.to.length) { api.status('Put at least one person in To.', 'state stalled'); return; }
     if (!bodyI.value.trim() && !fwd) { api.status('Write your reply first, or press Draft a reply for me.', 'state stalled'); return; }
     const text = fwd ? bodyI.value.trimEnd() + NL + NL + fwdBlock() : bodyI.value;
-    const d = { source_key: o.sourceKey, thread_id: fwd ? '' : s.t.thread_id, to, cc, subject: subjI.value, text };
+    const d = { source_key: o.sourceKey, thread_id: fwd ? '' : s.t.thread_id, to: r.to, cc: r.cc, subject: subjI.value, text };
     send.disabled = true;
     api.status('Sending from ' + s.mailbox + '.', 'working');
     try {
       const hash = await draftHash(d);
       const { status, j } = await post(C, SEND, Object.assign({ action: 'send', hash }, d));
       if (j && j.ok === true && j.sent) {
-        const n = to.concat(cc).length;
+        const n = r.to.length + r.cc.length;
         api.status('Sent from ' + s.mailbox + ' to ' + n + ' address' + (n === 1 ? '' : 'es') + '. It is in your Sent folder in Gmail too.', 'mailx-compose-ok');
-        for (const el of [toI, ccI, subjI, bodyI]) el.readOnly = true;
+        for (const el of [subjI, bodyI, addI]) el.readOnly = true;
         discard.hidden = true;
         if (o.onSent) o.onSent();
         return;
