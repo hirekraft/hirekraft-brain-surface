@@ -41,7 +41,7 @@ import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind,
 import { initWords } from "./words.js?v=2026-10-29-thinkrooms"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initLooks } from "./looks.js?v=2026-10-29-looks"; // the Look switch beside the language switch (seat looks, decision 1036)
 import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-29-thinkrooms";
-import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-10-29-thinkrooms"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
+import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-10-29-thinkrooms-2"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
 import { foundCard } from "./find.js?v=2026-10-29-thinkrooms"; // find first, then work on what was found (seat find-first)
