@@ -446,27 +446,17 @@ function matterRow(it, onPick, current) {
 function drawAttnList(list) {
   const head = mk('div', 'mailx-head');
   head.appendChild(navButton('All views', 'side'));
-  head.appendChild(mk('h3', null, 'Worth your attention'));
+  head.appendChild(mk('h3', null, mode === 'ai' ? 'For you' : 'Worth your attention'));
   list.appendChild(head);
   if (!attn || attn.loading) { list.appendChild(mk('p', 'quiet working', 'Looking through your mail and books. Nothing in your mailboxes is changed.')); return; }
-  if (attn.error) { list.appendChild(mk('p', 'state stalled', 'Worth your attention could not be read just now. ' + attn.error + ' This is not a claim that nothing needs you.')); return; }
+  if (attn.error) { list.appendChild(mk('p', 'state stalled', 'This list could not be read just now. ' + attn.error + ' This is not a claim that nothing needs you.')); return; }
   const j = attn.data;
   const items = attnItems();
   const more = attnMore();
   if (!items.length) list.appendChild(mk('p', 'quiet', 'Nothing from the last ' + (j.days || 14) + ' days needs you first.'));
   const ul = mk('ul', 'mailx-msgs mailx-att-rows');
   for (const it of items.concat(attn.more ? more : [])) {
-    const li = mk('li');
-    const b = mk('button', 'mailx-msg mailx-att-row' + (it.kind === 'thought' ? ' mailx-att-thought' : ''));
-    b.type = 'button';
-    if (pick && pick.key === it.key) b.setAttribute('aria-current', 'true');
-    b.appendChild(mk('span', 'mailx-subj mailx-att-what', String(it.what || '')));
-    if (it.why) b.appendChild(mk('span', 'mailx-snip mailx-att-line', String(it.why)));
-    if (it.kind === 'impostor') b.classList.add('warned');
-    if (attnUnseen(it)) b.classList.add('unread');
-    b.addEventListener('click', () => { pick = it; open = null; markSeen('attention', 'attention', [it.key]); setView('read'); drawList(); drawRead(); });
-    li.appendChild(b);
-    ul.appendChild(li);
+    ul.appendChild(matterRow(it, () => { pick = it; open = null; markSeen('attention', 'attention', [it.key]); setView('read'); drawList(); drawRead(); }, pick && pick.key === it.key));
   }
   list.appendChild(ul);
   if (more.length) {
@@ -475,33 +465,133 @@ function drawAttnList(list) {
     b.addEventListener('click', () => { attn.more = !attn.more; drawList(); });
     list.appendChild(b);
   }
-  // Thought lines lead j.lines for the other doors (box, own AI); here the items show them, so they are skipped (seat every-voice).
-  const lines = (j.lines || []).filter((x) => !String(x).startsWith('Left for you: ') && !String(x).startsWith('- ')).slice(1).filter((x) => !/^[0-9]+[.] /.test(x) && !String(x).includes(' more worth a look'));
-  for (const x of lines) list.appendChild(mk('p', 'mailx-att-quiet', x));
-  const learned = mk('button', 'go ghost', 'What it learned from you');
+  const learned = mk('button', 'mailx-toggle mailx-learned-link', 'What it learned');
   learned.type = 'button';
   const out = mk('div', 'mailx-att-learned');
   learned.addEventListener('click', () => attnLearned(out));
   list.append(learned, out);
-  list.appendChild(mk('p', 'mailx-att-quiet', `Tell the box "always show me anything from ..." or "I don't care about ...", and it keeps that as a rule.`));
+}
+// FOLLOWING (decision 1031 item 3): the matters she asked to be kept posted on. Each comes back to For you only when something new
+// and unresolved arrives in it; here it is listed with where it stands, and Stop following.
+function followItems() { return attn && attn.data ? (attn.data.following || []).map((f) => Object.assign({}, f, { following: true, kind: 'email', subject: f.title })) : []; }
+function drawFollowList(list) {
+  const head = mk('div', 'mailx-head');
+  head.appendChild(navButton('All views', 'side'));
+  head.appendChild(mk('h3', null, 'Following'));
+  list.appendChild(head);
+  if (!attn || attn.loading) { list.appendChild(mk('p', 'quiet working', 'Reading what you follow.')); return; }
+  if (attn.error) { list.appendChild(mk('p', 'state stalled', 'What you follow could not be read just now. ' + attn.error)); return; }
+  const rows = followItems();
+  if (!rows.length) { list.appendChild(mk('p', 'quiet', 'You follow nothing yet. On any item under For you, press Keep me posted: it moves here, and comes back only when something new and unresolved arrives.')); return; }
+  const ul = mk('ul', 'mailx-msgs mailx-att-rows');
+  for (const it of rows) ul.appendChild(matterRow(it, () => { pick = it; open = null; setView('read'); drawList(); drawRead(); }, pick && pick.key === it.key));
+  list.appendChild(ul);
 }
 
-// The right pane: the item, why it is here, what was checked, and the actions that fit it.
+// The right pane: the matter. Where it stands (and that AI wrote it, from which emails), the latest words, the choices, why it is
+// here behind one press, and its emails one press away each.
 function drawAttnCard(read, it) {
   read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
-  const card = mk('article', 'mailx-att-card' + (it.kind === 'thought' ? ' mailx-att-thought' : ''));
-  card.appendChild(mk('p', 'eyebrow', it.kind === 'thought' ? 'Left for you' : it.kind === 'impostor' ? 'Pretending to be someone of your business' : 'Worth your attention'));
-  card.appendChild(mk('h2', 'mailx-subject', String(it.what || '')));
-  const said = mk('p', 'mailx-att-why', String(it.why || ''));
-  card.appendChild(said);
-  const checked = Array.isArray(it.checked) ? it.checked.join(' ') : '';
-  if (checked) card.appendChild(mk('p', 'mailx-att-checked', (it.kind === 'thought' ? '' : 'What was checked: ') + checked));
+  const card = mk('article', 'mailx-att-card mailx-matter-card' + (it.kind === 'thought' ? ' mailx-att-thought' : ''));
+  const eyebrow = it.kind === 'thought' ? 'Left for you' : it.kind === 'money' ? 'Money' : it.following ? 'Following'
+    : it.kind === 'impostor' ? 'Pretending to be someone of your business' : mode === 'ai' ? 'For you' : 'Worth your attention';
+  card.appendChild(mk('p', 'eyebrow', eyebrow));
+  const h = mk('h2', 'mailx-subject', String(it.kind === 'email' || it.following ? (it.subject || it.title || '(no subject)') : (it.what || '')));
+  card.appendChild(h);
+  if (it.kind === 'thought') {
+    const said = mk('p', 'mailx-att-why', String(it.why || ''));
+    card.appendChild(said);
+    const row = mk('div', 'mailx-att-acts');
+    thoughtActions(it, row, said);
+    card.appendChild(row);
+    read.appendChild(card);
+    return;
+  }
+  if (it.who) { const w = mk('p', 'mailx-from mailx-matter-who', String(it.who) + (it.org && it.org !== it.who ? ' · ' + it.org : '')); w.translate = false; card.appendChild(w); }
+  const out = mk('div', 'mailx-att-out'); out.setAttribute('aria-live', 'polite');
+  if (it.kind === 'email' || it.following) {
+    card.appendChild(mk('h3', 'mailx-matter-h', 'Where it stands'));
+    const st = stateOf(it);
+    if (st) {
+      const p = mk('p', 'mailx-matter-state-full', st); p.translate = false; card.appendChild(p);
+      const n = Number(it.state.n || 0);
+      card.appendChild(mk('p', 'mailx-att-checked', 'Written by AI from ' + (n === 1 ? 'its one email' : 'its ' + n + ' emails') + ' only, as of ' + when(it.state.as_of) + '.'));
+    } else if (it.state && it.state.withheld) {
+      card.appendChild(mk('p', 'mailx-att-checked', String(it.state.reason || 'Its summary rests on mail you cannot open, so it is not shown to you.')));
+    } else {
+      card.appendChild(mk('p', 'mailx-att-checked', 'Being written from its emails; it appears here within minutes. Until then, here are the latest words.'));
+    }
+    const pass = passageOf(it);
+    if (pass) {
+      card.appendChild(mk('h3', 'mailx-matter-h', 'The latest words'));
+      const q = mk('blockquote', 'mailx-matter-passage-full', pass); q.translate = false; card.appendChild(q);
+      card.appendChild(mk('p', 'mailx-att-checked', it.state && it.state.passage_by === 'ai' ? 'Copied word for word from the latest email.' : 'The first lines of the latest email.'));
+    }
+  } else if (it.why) {
+    card.appendChild(mk('p', 'mailx-att-why', String(it.why)));
+  }
   const row = mk('div', 'mailx-att-acts');
-  const out = mk('div', 'mailx-att-out');
-  if (it.kind === 'thought') thoughtActions(it, row, said); else actionsFor(it, row, out);
+  choiceRow(it, row, out);
+  if ((it.kind === 'impostor' || it.kind === 'scam_alert') && it.open_source && it.open_id) {
+    const o = mk('button', 'go ghost', 'Open the email'); o.type = 'button';
+    o.addEventListener('click', () => openEmail(it.open_source, it.open_id));
+    row.appendChild(o);
+  }
   card.append(row, out);
-  const line = attn && attn.said && attn.said.get(it.key);
-  if (line) { const p = mk('p', 'find-lesson'); p.setAttribute('aria-live', 'polite'); p.textContent = line; card.appendChild(p); }
+  saidLine(out, it.key);
+  // Why it is here and what was checked: one press (1031 item 2).
+  const checked = Array.isArray(it.checked) ? it.checked.join(' ') : '';
+  if ((it.kind === 'email' && it.why) || checked) {
+    const t = mk('button', 'mailx-toggle', 'Why this is here'); t.type = 'button'; t.setAttribute('aria-expanded', 'false');
+    const box = mk('div', 'mailx-matter-why'); box.hidden = true;
+    if (it.kind === 'email' && it.why) box.appendChild(mk('p', 'mailx-att-why', String(it.why)));
+    if (checked) box.appendChild(mk('p', 'mailx-att-checked', 'What was checked: ' + checked));
+    t.addEventListener('click', () => { box.hidden = !box.hidden; t.setAttribute('aria-expanded', box.hidden ? 'false' : 'true'); });
+    card.append(t, box);
+  }
+  // The money line opens to its list: each invoice and bill, with the books one press away and Already paid on each.
+  if (it.kind === 'money' && Array.isArray(it.list) && it.list.length) {
+    card.appendChild(mk('h3', 'mailx-matter-h', 'In your books'));
+    const ul = mk('ul', 'mailx-matter-list');
+    for (const l of it.list) {
+      const li = mk('li');
+      const line = mk('p', 'mailx-matter-line', String(l.what || '') + '. ' + String(l.why || '')); line.translate = false;
+      li.appendChild(line);
+      const acts = mk('div', 'mailx-att-acts');
+      if (l.open_url) { const a = mk('a', 'go ghost', 'Open in QuickBooks'); a.href = l.open_url; a.target = '_blank'; a.rel = 'noopener'; acts.appendChild(a); }
+      if (!l.paid_by_you) {
+        const lo = mk('div', 'mailx-att-out'); lo.setAttribute('aria-live', 'polite');
+        const p = mk('button', 'go ghost', 'Already paid'); p.type = 'button';
+        p.addEventListener('click', () => choose(Object.assign({}, l, { is_money: true }), 'already_paid', p, lo, l.key));
+        acts.appendChild(p); li.append(acts, lo); saidLine(lo, l.key);
+      } else li.appendChild(acts);
+      ul.appendChild(li);
+    }
+    card.appendChild(ul);
+  }
+  // Its emails, newest first, across the mailboxes she may open; each opens in place.
+  const src = Array.isArray(it.sources) ? it.sources : [];
+  if (src.length) {
+    const n = Number(it.n_emails || src.length);
+    card.appendChild(mk('h3', 'mailx-matter-h', n > src.length ? 'Its emails, the latest ' + src.length + ' of ' + n : 'Its emails'));
+    const ul = mk('ul', 'mailx-matter-sources');
+    for (const s of src) {
+      const li = mk('li');
+      const b = mk('button', 'mailx-matter-source', when(s.date) + ' · ' + String(s.name || s.from || '') + ' · ' + String(s.mailbox || ''));
+      b.type = 'button'; b.translate = false;
+      b.addEventListener('click', () => {
+        if (it.from_key) attnTeach([{ key: it.from_key, signal: 'opened', title: 'Mail from ' + whoOf(it) }]);
+        openEmail(s.source, s.id);
+      });
+      li.appendChild(b);
+      ul.appendChild(li);
+    }
+    card.appendChild(ul);
+  } else if (it.open_source && it.open_id && it.kind !== 'impostor' && it.kind !== 'scam_alert') {
+    const o = mk('button', 'go ghost', 'Open the email'); o.type = 'button';
+    o.addEventListener('click', () => openEmail(it.open_source, it.open_id));
+    card.appendChild(o);
+  }
   read.appendChild(card);
 }
 
