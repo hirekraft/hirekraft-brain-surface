@@ -97,12 +97,44 @@ export function drawBox() {
   if (sc.mailbox) host.appendChild(chip('in ' + sc.mailbox.address, () => { off.mailbox = sc.mailbox.key; }));
   if (sc.view && !sc.email && !thinking) host.appendChild(chip(viewChip(sc.view), () => { off.view = sc.viewKey; }));
   if (sc.email && !thinking) host.appendChild(chip('about this email', () => { off.email = sc.raw.threadKey; }));
+  if (sc.email && !thinking) roomsOnEmail(host, sc.raw.email);
   if (thinking) host.appendChild(chip(thinking.email ? 'a thought on this email' : thinking.topicTitle ? 'a thought on ' + thinking.topicTitle : Array.isArray(thinking.for) && thinking.for.length ? 'a thought for ' + thinking.for.join(', ') : 'adding a thought', () => { thinking = null; }));
   const pin = $('#panel-input');
   if (pin) pin.placeholder = thinking ? THINK_PH : (pin.dataset.ph || (pin.dataset.ph = pin.placeholder));
   input.placeholder = thinking ? THINK_PH : sc.email ? 'Ask about this email, have it answered, or find another'
     : C.continuing && C.continuing() ? 'Continue the conversation on the right, or press New there'
     : sc.view ? 'Ask about ' + viewChip(sc.view).replace('in what you starred', 'what you starred') : rotating() || DEFAULT_PH;
+}
+// A THOUGHT ABOUT AN EMAIL, BOTH WAYS (seat thinkrooms-b, 2026-10-29; mail-round-two finding 4). With the "about this email" chip on,
+// Add a thought and "tell Erin that ..." carry that email into the Thinkroom composer; and the Thinkrooms she is in that already hold a
+// thought about the open email show here as a chip that opens the room. The brain decides which rooms she may see (thoughts_on_email).
+function boxEmail() {
+  if (!C) return null;
+  const sc = scope();
+  return sc.email && sc.raw && sc.raw.email && sc.raw.email.source_id ? sc.raw.email : null;
+}
+const roomsSeen = new Map();   // source_id -> rooms (read once per email while the page is open)
+function roomsOnEmail(host, email) {
+  if (!email || !email.source_id || !C.roomsOnEmail) return;
+  const draw = (rooms) => {
+    for (const r of rooms.slice(0, 2)) {
+      const b = C.el('button', 'onebox-chip onebox-room');
+      b.type = 'button';
+      b.appendChild(document.createTextNode('Thinkroom: '));
+      const n = C.el('span', ''); n.textContent = r.title; n.setAttribute('translate', 'no');
+      b.appendChild(n);
+      b.title = 'Open the Thinkroom with a thought about this email';
+      b.addEventListener('click', () => { if (C.openThinkrooms) C.openThinkrooms({ room: r.id, draft: '' }); });
+      host.appendChild(b);
+    }
+  };
+  if (roomsSeen.has(email.source_id)) { draw(roomsSeen.get(email.source_id)); return; }
+  roomsSeen.set(email.source_id, []);
+  Promise.resolve(C.roomsOnEmail(email)).then((r) => {
+    const rooms = r && r.ok === true && Array.isArray(r.rooms) ? r.rooms : [];
+    roomsSeen.set(email.source_id, rooms);
+    if (rooms.length) drawBox();
+  }).catch(() => null);
 }
 function viewChip(v) { return v.kind === 'starred' ? 'in what you starred' : 'label ' + v.name; }
 // The words a view chip adds to what she asks: the same words she could type herself.
@@ -216,7 +248,7 @@ function submit(text, fromPanel) {
   stopSpeaking();
   // A THOUGHT SHE LEAVES (seat thoughtgram): in thought mode, or said as "note for the brain: ...", it is kept, not asked.
   if (thinking) { const o = thinking; thinking = null; const heard = thinkHeard; thinkHeard = false; drawBox(); if (C.keepThought) C.keepThought(t, Object.assign({}, o, { heard })); return; }
-  if (C.thought && C.thought(t)) return;
+  if (C.thought && C.thought(t, boxEmail())) return;
   // A WATCH SHE ASKS FOR (seat watches, 2026-10-23): "tell me when anyone mentions a late payment" is kept as a watch
   // in the brain, not answered; "what are you watching" lists them. Everything else goes on as before.
   if (C.watch && C.watch(t)) return;
@@ -398,7 +430,7 @@ function openMenu(which) {
     i.addEventListener('click', () => { closeMenus(); act(); });
     m.appendChild(i);
   };
-  item('Add a thought', 'Say or type what you think, in any language. It goes to a Thinkroom: just for you, or with the people you choose', () => startThought({}, which));
+  item('Add a thought', 'Say or type what you think, in any language. It goes to a Thinkroom: just for you, or with the people you choose', () => startThought(boxEmail() ? { email: boxEmail(), draft: '' } : {}, which));
   item('Add a file', 'A spreadsheet, document, PDF or slides', () => { addFrom = which; $('#add-file')?.click(); });
   item('Add a picture or screenshot', 'You can also paste a screenshot, or drop files on the conversation', () => { addFrom = which; $('#add-picture')?.click(); });
   item('Connect something', 'Mail, drives, calendar, or a system you use', () => { if (C.connect) C.connect(); });

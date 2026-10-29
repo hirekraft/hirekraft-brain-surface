@@ -13,18 +13,35 @@
 // never sees them. Positions and the running page come in step B; decisions, minutes and the agenda in step C.
 // Who sees what is decided in the brain only (rooms_view, thought_keep, chunk_permitted): a room's thoughts open to its members,
 // the owner included. This file decides nothing about access. No regex literals (STANDING-CLAUSES).
+// STEP B (seat thinkrooms-b, 2026-10-29, decisions 1035 and 1038), from the mockup's Where we stand and positions:
+// - WHERE WE STAND at the top of each room (lens-ask body.stand): a short summary, We agree, We differ, Still open, and Where each
+//   person stands, written by the Tool in the reader's language and kept until a thought or a position is added. My position: she
+//   says it in her own words; I changed my mind keeps the earlier one, shown as Earlier.
+// - ADD A PERSON (chips of the people signed in here, with what they will see: every thought in the room, from the start) and take
+//   someone out (the one who started the room or the business owner; anyone can leave): room_add, room_remove in the brain.
+// - KEPT JUST FOR YOU: a thought that was kept private but names someone (Erin's of 16:10 for Alex) is offered back to its author
+//   only: Share it with Alex, or Keep it just for me (room_offers, thought_share, thought_share_keep). Nothing moves without her press.
+// - In a room, a thought that names someone who is not in it offers: add them here, or start a room with them, or keep it here.
+// - SEARCH everything said in your Thinkrooms (lens-ask body.room_search; only rooms she is in).
+// - ATTACH a PDF, a Word file or a text file: read into text by the Tool's document reader when the thought is added, openable in
+//   the room, found by the people in it. SUPERSEDES step A's text-only attach that kept the file as a chat in her Chats.
+// - A THOUGHT ABOUT AN EMAIL: the box's "about this email" chip carries the email into the composer; the thought shows the email
+//   and opens it, and the box shows the Thinkrooms that hold a thought about the open email (box.js).
 
 import { fmtDate } from "./dates.js?v=2026-10-22-dates";
-import { micFor } from "./box.js?v=2026-10-29-thinkrooms";
+import { micFor } from "./box.js?v=2026-10-29-thinkrooms-b";
 
 let C = null;   // { sb, el, $, openPanel, askBody, startThought, foundCard, findCtx, goThoughts, url, key }
 let view = 'open';        // 'open' | 'decided'
 let roomOpen = null;      // the room on screen, or null
-let pending = null;       // { draft, heard, email, room, title } handed over by the box, an email, or Reply
+let pending = null;       // { draft, heard, email, room, title, search } handed over by the box, an email, or Reply
+let searchQ = '';         // what she searched for across her Thinkrooms, kept while she moves between rooms
 
 const ONCE = { what: 'tool.room.said-what', why: 'tool.thought.said-why', call: 'tool.thought.said-call' };
 const PREFIXES = ['note for the brain', 'notes for the brain', 'a note for the brain', 'thought for the brain', 'a thought for the brain',
   'note to the brain', 'add a thought', 'leave a thought', 'leave a thoughtgram', 'thoughtgram', 'keep this thought', 'start a thinkroom', 'new thinkroom', 'thinkroom'];
+const SEARCHES = ['search my thinkrooms for', 'search thinkrooms for', 'search the thinkrooms for', 'search my thinkrooms', 'search thinkrooms', 'find in my thinkrooms', 'find in thinkrooms',
+  'in my thinkrooms', 'in the thinkrooms', 'what did we say in the thinkrooms about', 'what was said in the thinkrooms about'];
 const ASKS = ['what they think', 'what she thinks', 'what he thinks', 'what everyone thinks', 'what you all think', 'their view', 'their thoughts', 'for thoughts', 'for their opinion'];
 
 export function initThoughts(ctx) { C = ctx; }
@@ -65,21 +82,29 @@ function whoLine(members) {
 // -- THE BOX HANDS OVER -------------------------------------------------------------------------------------------------
 // "tell Erin that ...", "ask the team what they think about ...", "note for the brain: ...", "stop emailing me about
 // Thinkrooms": true means it was for here and is handled. Anything else is a question for the box.
-export function thoughtFromBox(text) {
+export function thoughtFromBox(text, email) {
   if (!C) return false;
   const raw = String(text || '').trim();
   const low = raw.toLowerCase();
   const em = emailWords(low);
   if (em !== null) { emailsSay(em); return true; }
-  if (low.startsWith('tell ') && !low.startsWith('tell me') && !low.startsWith('tell us') && low.indexOf(' that ') > 0) { openComposer({ draft: raw, auto: true }); return true; }
-  if (low.startsWith('ask ') && ASKS.some((a) => low.indexOf(a) > 0)) { openComposer({ draft: raw, auto: true }); return true; }
+  const sp = SEARCHES.find((x) => low.startsWith(x));
+  if (sp) {
+    let q = raw.slice(sp.length).trim();
+    while (q && ':,.?'.includes(q[0])) q = q.slice(1).trim();
+    while (q && '?.'.includes(q[q.length - 1])) q = q.slice(0, -1).trim();
+    if (q) { searchQ = q; pending = null; roomOpen = null; if (C.goThoughts) C.goThoughts(null); return true; }
+  }
+  const mail = email && email.source_id ? email : null;   // the "about this email" chip was on (box.js): the thought is about it
+  if (low.startsWith('tell ') && !low.startsWith('tell me') && !low.startsWith('tell us') && low.indexOf(' that ') > 0) { openComposer({ draft: raw, auto: true, email: mail }); return true; }
+  if (low.startsWith('ask ') && ASKS.some((a) => low.indexOf(a) > 0)) { openComposer({ draft: raw, auto: true, email: mail }); return true; }
   const p = PREFIXES.find((x) => low.startsWith(x));
   if (!p) return false;
   const next = low.slice(p.length, p.length + 1);
   if (next && ' :,.-'.indexOf(next) < 0) return false;   // "thinkrooms are ..." is a question, not a thought
   let rest = raw.slice(p.length).trim();
   while (rest && ':,.-'.includes(rest[0])) rest = rest.slice(1).trim();
-  openComposer({ draft: rest, auto: !!rest });
+  openComposer({ draft: rest, auto: !!rest, email: mail });
   return true;
 }
 
@@ -137,7 +162,7 @@ export async function loadThoughts(openId) {
   const main = el('div', 'room-main');
   wrap.append(side, main);
   host.appendChild(wrap);
-  const mode = () => { wrap.dataset.mode = roomOpen ? 'room' : pending ? 'new' : 'list'; };
+  const mode = () => { wrap.dataset.mode = roomOpen ? 'room' : pending ? 'new' : searchQ ? 'search' : 'list'; };
   side.appendChild(button('New Thinkroom', 'go room-new', () => { pending = { draft: '' }; roomOpen = null; drawNew(main, wrap); wrap.dataset.mode = 'new'; markRows(side); }));
   const chips = el('div', 'room-chips');
   chips.setAttribute('role', 'group'); chips.setAttribute('aria-label', 'Show');
@@ -147,8 +172,12 @@ export async function loadThoughts(openId) {
     chips.appendChild(b);
   }
   side.appendChild(chips);
+  side.appendChild(searchBox(main, wrap));
+  const offers = el('div', 'room-offers');
+  side.appendChild(offers);
   const list = el('ul', 'room-list');
   side.appendChild(list);
+  drawOffers(offers, main, wrap);
   const stop = working(list, 'Reading your Thinkrooms', 'Still reading your Thinkrooms: it is taking longer than usual');
   const r = await rpc('rooms_view', { p_view: view });
   stop();
@@ -156,6 +185,7 @@ export async function loadThoughts(openId) {
   drawList(list, r, main, wrap);
   if (roomOpen) await drawRoom(main, wrap, roomOpen);
   else if (pending) drawNew(main, wrap);
+  else if (searchQ) await drawSearch(main, wrap, searchQ);
   else drawEmpty(main, r);
   mode();
 }
@@ -226,24 +256,28 @@ async function drawRoom(main, wrap, id) {
   const ppl = whoLine(rm.members);
   ppl.appendChild(el('span', '', rm.decided_at ? ' · Decided' : ' · still open'));
   head.appendChild(ppl);
+  head.appendChild(peopleBar(rm, main, wrap));
   const av = el('div', 'room-avatars'); av.setAttribute('aria-hidden', 'true');
   for (const m of rm.members || []) av.appendChild(own('span', 'room-av' + (m.me ? ' me' : ''), String(m.first || m.name || '?').slice(0, 1).toUpperCase()));
   head.appendChild(av);
   main.appendChild(head);
   if (once(ONCE.what)) main.appendChild(el('p', 'quiet thought-teach', 'Everyone here adds thoughts in their own words and language. Each of you reads the others in your own language, with the original one tap away. Only the people in this room can see it.'));
+  const standSec = el('section', 'room-card room-stand'); standSec.setAttribute('aria-label', 'Where we stand');
+  main.appendChild(standSec);
+  drawStand(standSec, rm, Array.isArray(r.thoughts) ? r.thoughts.length : 0);
   const sec = el('section', 'room-thoughts'); sec.setAttribute('aria-label', 'Thoughts');
   const ths = Array.isArray(r.thoughts) ? r.thoughts : [];
   if (!ths.length) sec.appendChild(el('p', 'quiet', 'No thoughts here yet. Add the first one below.'));
-  for (const th of ths) sec.appendChild(thoughtCard(th, r));
+  for (const th of ths) sec.appendChild(thoughtCard(th, r, rm));
   main.appendChild(sec);
-  if (!rm.decided_at) main.appendChild(composer({ room: rm, wrap, main }));
+  if (!rm.decided_at) main.appendChild(composer({ room: rm, wrap, main, email: pending && pending.room === id ? pending.email || null : null }));
   // Seen: the dot on its row goes.
   const row = wrap.querySelector('.room-row[data-room="' + id + '"] .room-dot');
   if (row) row.remove();
-  if (pending && pending.room === id) { const p = pending; pending = null; const ta = main.querySelector('.room-input'); if (ta && p.draft) { ta.value = p.draft; if (p.auto) main.querySelector('.room-go')?.click(); else ta.focus(); } }
+  if (pending && pending.room === id) { const p = pending; pending = null; const ta = main.querySelector('.room-input'); if (ta && p.draft) { ta.value = p.draft; if (p.auto) main.querySelector('.room-go')?.click(); else ta.focus(); } else if (ta) ta.focus(); }
 }
 
-function thoughtCard(th, r) {
+function thoughtCard(th, r, rm) {
   const art = el('article', 'room-thought' + (th.mine ? ' mine' : '') + (th.state === 'retracted' ? ' retracted' : ''));
   const meta = el('p', 'room-meta');
   meta.appendChild(th.mine ? el('strong', '', 'You') : own('strong', '', th.who_first || th.who || ''));
@@ -256,10 +290,29 @@ function thoughtCard(th, r) {
   for (const a of Array.isArray(th.attach) ? th.attach : []) {
     const p = el('p', 'room-attach');
     if (a.url) { const l = own('a', '', a.title || a.url); l.href = a.url; l.target = '_blank'; l.rel = 'noopener noreferrer'; p.append(el('span', '', 'Link: '), l); }
-    else p.append(el('span', '', 'Document: '), own('span', '', a.title || ''));
+    else {
+      p.append(el('span', '', 'Document: '), own('span', '', a.title || ''));
+      if (a.read === 'part') p.appendChild(el('span', 'quiet', ', the first part kept'));
+      if (a.has_text) {
+        let box = null;
+        const b = button('Open', 'link room-orig-btn room-open-doc', async () => {
+          if (box) { box.remove(); box = null; b.textContent = 'Open'; return; }
+          b.disabled = true;
+          const d = await rpc('room_attachment', { p_thought: th.id, p_n: a.n });
+          b.disabled = false;
+          box = d && d.ok === true ? own('pre', 'room-doc', String(d.text || '')) : el('p', 'state stalled', String(d?.why || 'The document could not be opened just now.'));
+          p.after(box); b.textContent = 'Close';
+        });
+        p.append(document.createTextNode(' '), b);
+      }
+    }
     art.appendChild(p);
   }
-  if (th.email && th.email.subject) { const p = el('p', 'quiet'); p.append(el('span', '', 'On the email: '), own('span', '', th.email.subject)); art.appendChild(p); }
+  if (th.email && th.email.subject) {
+    const p = el('p', 'quiet room-on-email'); p.append(el('span', '', 'On the email: '), own('span', '', th.email.subject));
+    if (th.email.source && th.email.source_id && C.openEmail) { p.append(document.createTextNode(' ')); p.appendChild(button('Open the email', 'link room-orig-btn', () => C.openEmail(th.email.source, th.email.source_id))); }
+    art.appendChild(p);
+  }
   if (th.translated) {
     const row = el('p', 'room-tr');
     row.appendChild(el('span', 'quiet', 'Translated from ' + th.lang_name + ' by the Tool'));
@@ -301,13 +354,14 @@ function composer(o) {
   let heard = false;
   mic.addEventListener('pointerdown', () => { heard = true; });
   mic.addEventListener('click', () => { heard = true; });
-  // Attach: a link, or a text file kept as a document in her Chats.
+  // Attach: a link, or a PDF, Word or text file, read into text by the Tool when the thought is added (seat thinkrooms-b).
   const attach = [];
+  const files = [];   // { name, mime, b64, size }
   const attRow = el('div', 'room-attach-row');
   const chipsAt = el('div', 'room-attach-chips');
   const linkBtn = button('Add a link', 'go ghost room-small', () => { linkBox.hidden = !linkBox.hidden; if (!linkBox.hidden) linkIn.focus(); });
-  const fileIn = el('input', ''); fileIn.type = 'file'; fileIn.accept = '.txt,.md,.csv,text/plain,text/markdown,text/csv'; fileIn.hidden = true;
-  fileIn.setAttribute('aria-label', 'Attach a text file');
+  const fileIn = el('input', ''); fileIn.type = 'file'; fileIn.accept = '.pdf,.docx,.doc,.txt,.md,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,text/plain,text/markdown,text/csv'; fileIn.hidden = true;
+  fileIn.setAttribute('aria-label', 'Attach a PDF, Word or text file');
   const fileBtn = button('Attach a document', 'go ghost room-small', () => fileIn.click());
   attRow.append(linkBtn, fileBtn, fileIn);
   const linkBox = el('div', 'room-link'); linkBox.hidden = true;
@@ -323,31 +377,36 @@ function composer(o) {
     fileIn.value = '';
     if (!f) return;
     attSaid.textContent = '';
-    if (f.size > 400000) { attSaid.textContent = 'That file is too large to attach here. Save it to your drive and add its link.'; return; }
-    const stop = working(sec, 'Keeping ' + f.name + ' as a document', 'Still keeping the document');
-    let text = '';
-    try { text = await f.text(); } catch (_) { text = ''; }
-    if (!text.trim()) { stop(); attSaid.textContent = 'Only text files can be attached here yet (.txt, .md, .csv). For a PDF or a Word file, save it to your drive and add its link.'; return; }
-    const r = await chatImport({ action: 'keep', came_from: 'paste', title: f.name, exact: true, messages: [{ role: 'person', text }] });
+    const low = String(f.name || '').toLowerCase();
+    const okKind = ['.pdf', '.docx', '.doc', '.txt', '.md', '.csv'].some((e) => low.endsWith(e));
+    if (!okKind) { attSaid.textContent = 'A PDF, a Word file or a text file can be attached. For anything else, add a link.'; return; }
+    if (files.length >= 3) { attSaid.textContent = 'Up to 3 documents go with one thought.'; return; }
+    if (files.reduce((n, x) => n + x.size, 0) + f.size > 10000000) { attSaid.textContent = 'The documents on one thought can be up to 10 MB together.'; return; }
+    const stop = working(sec, 'Opening the document', 'Still opening the document');
+    let b64 = '';
+    try {
+      b64 = await new Promise((ok, no) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result).split(',')[1] || ''); rd.onerror = () => no(rd.error); rd.readAsDataURL(f); });
+    } catch (_) { b64 = ''; }
     stop();
-    if (!r || r.ok !== true) { attSaid.textContent = 'The document could not be kept just now: ' + String(r?.note || r?.reason || ''); return; }
-    attach.push({ kind: 'file', id: String(r.chat_id || f.name), title: f.name });
-    attSaid.textContent = 'Kept in your Chats as a document. Others in the room see its name; the document itself stays private to you until you share it there.';
+    if (!b64) { attSaid.textContent = 'This browser could not open the document.'; return; }
+    files.push({ name: f.name, mime: f.type || '', b64, size: f.size });
+    attSaid.textContent = 'The Tool reads it when you add the thought. Everyone in the room can open it and find it.';
     drawAtt();
   });
   function drawAtt() {
     chipsAt.innerHTML = '';
-    attach.forEach((a, i) => {
+    const all = attach.map((a, i) => ({ t: a.title, rm: () => attach.splice(i, 1) })).concat(files.map((f, i) => ({ t: f.name, rm: () => files.splice(i, 1) })));
+    for (const a of all) {
       const c = el('span', 'onebox-chip');
-      c.appendChild(own('span', '', a.title));
-      const x = button('x', 'room-x', () => { attach.splice(i, 1); drawAtt(); }); x.setAttribute('aria-label', 'Remove');
+      c.appendChild(own('span', '', a.t));
+      const x = button('x', 'room-x', () => { a.rm(); drawAtt(); }); x.setAttribute('aria-label', 'Remove');
       c.appendChild(x);
       chipsAt.appendChild(c);
-    });
+    }
   }
   sec.append(attRow, linkBox, chipsAt, attSaid);
-  if (!inRoom && pending && pending.email && pending.email.subject) { const p = el('p', 'quiet'); p.append(el('span', '', 'On the email: '), own('span', '', pending.email.subject)); sec.appendChild(p); }
-  const email = !inRoom && pending ? pending.email || null : null;
+  const email = inRoom ? o.email || null : (pending ? pending.email || null : null);
+  if (email && email.subject) { const p = el('p', 'quiet room-on-email'); p.append(el('span', '', 'About the email: '), own('span', '', email.subject)); sec.appendChild(p); }
   const out = el('div', 'room-shaped'); out.setAttribute('aria-live', 'polite');
   sec.appendChild(out);
   // The microphone: the box's own (box.js), into this box. On a touch screen it is held to talk.
@@ -385,9 +444,34 @@ function composer(o) {
     const people = Array.isArray(r.for) && r.for.length ? r.for : (Array.isArray(r.people) ? r.people : []);
     if (people.length) card.appendChild(el('p', 'quiet', r.kind === 'asking' ? 'You are asking the room for their thoughts.' : 'You are telling the room.'));
     card.appendChild(lineFor(people, r.send));
+    const outside = Array.isArray(r.outside) ? r.outside : [];
     const acts = el('div', 'actions');
-    const add = button('Add it', 'go', () => keep(r.put, o.room.id, add, acts, card));
-    acts.append(add, button('Change', 'go ghost', () => { ta.value = r.put; card.remove(); ta.focus(); }));
+    if (outside.length) {
+      // She named someone who is not in this room (seat thinkrooms-b): never kept here silently; she chooses.
+      const ns = outside.map((p) => p.first || p.name);
+      const p = el('p', 'room-outside');
+      p.append(names(ns), el('span', '', outside.length === 1 ? ' is not in this room.' : ' are not in this room.'));
+      card.appendChild(p);
+      card.appendChild(el('p', 'quiet', 'Added here, they would see every thought in this room, from the start. A new room holds only this thought.'));
+      const addHere = button('Add to this room: ' + ns.join(', '), 'go', async () => {
+        addHere.disabled = true;
+        const a = await rpc('room_add', { p_room: o.room.id, p_people: outside.map((x) => x.id) });
+        if (!a || a.ok !== true) { addHere.disabled = false; card.appendChild(el('p', 'state stalled', String(a?.why || 'They could not be added just now.'))); return; }
+        await keep(r.put, o.room.id, null, acts, card);
+      });
+      const fresh = button('Start a room with ' + ns.join(', '), 'go ghost', async () => {
+        fresh.disabled = true;
+        const s = await rpc('room_start', { p_title: r.title || o.room.title, p_members: outside.map((x) => x.id) });
+        if (!s || s.ok !== true) { fresh.disabled = false; card.appendChild(el('p', 'state stalled', String(s?.why || 'The Thinkroom could not be started just now.'))); return; }
+        await keep(r.put, s.room.id, null, acts, card);
+      });
+      const here = button('Keep it in this room', 'go ghost', () => keep(r.put, o.room.id, here, acts, card));
+      acts.append(addHere, fresh, here, button('Change', 'go ghost', () => { ta.value = r.put; card.remove(); ta.focus(); }));
+    } else {
+      const add = button('Add it', 'go', () => keep(r.put, o.room.id, add, acts, card));
+      acts.append(add, button('Change', 'go ghost', () => { ta.value = r.put; card.remove(); ta.focus(); }));
+    }
+    if (r.unclear) card.appendChild(el('p', 'quiet', 'It sounds meant for someone. Say who, and press Go again, or add it here.'));
     card.appendChild(acts);
     out.appendChild(card);
   }
@@ -440,8 +524,9 @@ function composer(o) {
   }
   async function keep(text, roomId, btn, acts, card) {
     if (btn) btn.disabled = true;
-    const stop = working(card, 'Adding your thought', 'Still adding your thought: translating it for the others can take a little longer');
-    const r = await C.askBody({ thought: { text, heard, room: roomId, attach: attach.slice(), email } });
+    const stop = working(card, files.length ? 'Adding your thought and reading the documents' : 'Adding your thought',
+      files.length ? 'Still reading the document: a long PDF takes a little longer' : 'Still adding your thought: translating it for the others can take a little longer');
+    const r = await C.askBody({ thought: { text, heard, room: roomId, attach: attach.slice(), email, files: files.map((f) => ({ name: f.name, mime: f.mime, b64: f.b64 })) } });
     stop();
     if (!r || r.ok !== true || r.state !== 'thought_kept') {
       if (btn) btn.disabled = false;
@@ -471,15 +556,250 @@ function drawNew(main, wrap) {
   } else setTimeout(() => c.querySelector('.room-input')?.focus(), 0);
 }
 
-async function chatImport(body) {
-  try {
-    const { data } = await C.sb.auth.getSession();
-    const jwt = data?.session?.access_token;
-    if (!jwt) return { ok: false, note: 'Sign in first.' };
-    const r = await fetch(C.url + '/functions/v1/chat-import', {
-      method: 'POST', headers: { Authorization: 'Bearer ' + jwt, apikey: C.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    return await r.json().catch(() => ({ ok: false, note: 'No answer came back.' }));
-  } catch (e) { return { ok: false, note: String(e?.message || e) }; }
+// -- STEP B: SEARCH ACROSS THINKROOMS (seat thinkrooms-b) ------------------------------------------------------------------------
+function searchBox(main, wrap) {
+  const f = el('form', 'room-search'); f.setAttribute('role', 'search');
+  const inp = el('input', 'thought-newtopic room-search-in'); inp.type = 'search'; inp.value = searchQ;
+  inp.placeholder = 'Search everything said in your Thinkrooms'; inp.setAttribute('aria-label', 'Search everything said in your Thinkrooms');
+  const go = el('button', 'go ghost room-small', 'Search'); go.type = 'submit';
+  f.append(inp, go);
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    searchQ = inp.value.trim();
+    roomOpen = null; pending = null; markRows(wrap);
+    wrap.dataset.mode = searchQ ? 'search' : 'list';
+    if (searchQ) await drawSearch(main, wrap, searchQ); else drawEmpty(main, { rooms: [1] });
+  });
+  return f;
+}
+async function drawSearch(main, wrap, q) {
+  main.innerHTML = '';
+  main.appendChild(back(wrap));
+  const sec = el('section', 'room-card room-results'); sec.setAttribute('aria-label', 'What was found in your Thinkrooms');
+  const h = el('h3', 'room-h'); h.append(el('span', '', 'Found in your Thinkrooms: '), own('span', '', q));
+  sec.appendChild(h);
+  main.appendChild(sec);
+  const stop = working(sec, 'Searching your Thinkrooms', 'Still searching your Thinkrooms: it is taking longer than usual');
+  const r = await C.askBody({ room_search: { q } });
+  stop();
+  if (!r || r.ok !== true || r.state !== 'room_search') { sec.appendChild(el('p', 'state stalled', String(r?.why || r?.error || 'Your Thinkrooms could not be searched just now.'))); return; }
+  const hits = Array.isArray(r.hits) ? r.hits : [];
+  const said = el('p', 'quiet');
+  if (hits.length) said.append(el('span', '', 'Only the Thinkrooms you are in were searched.'), document.createTextNode(' '), el('span', '', r.by_meaning ? 'Found by your words and by meaning.' : 'Found by your words.'));
+  else said.appendChild(el('span', '', 'Nothing found in the Thinkrooms you are in.'));
+  sec.appendChild(said);
+  const ul = el('ul', 'room-list');
+  for (const x of hits) {
+    const li = el('li', '');
+    const b = el('button', 'room-row'); b.type = 'button';
+    const top = el('span', 'room-row-top'); top.appendChild(own('span', 'room-row-title', x.room)); b.appendChild(top);
+    const who = el('span', 'room-row-state'); who.append(x.mine ? el('span', '', 'You') : own('span', '', x.who_first || ''), el('span', '', ', ' + day(x.at)));
+    b.appendChild(who);
+    b.appendChild(own('span', 'room-hit', x.text));
+    b.addEventListener('click', async () => { roomOpen = x.room_id; pending = null; wrap.dataset.mode = 'room'; markRows(wrap); await drawRoom(main, wrap, x.room_id); });
+    li.appendChild(b); ul.appendChild(li);
+  }
+  sec.appendChild(ul);
+}
+
+// -- STEP B: KEPT JUST FOR YOU, SHARE IT? -----------------------------------------------------------------------------------------
+async function drawOffers(host, main, wrap) {
+  const r = await rpc('room_offers', {});
+  host.innerHTML = '';
+  const offers = r && r.ok === true && Array.isArray(r.offers) ? r.offers : [];
+  for (const o of offers) {
+    const to = Array.isArray(o.to) ? o.to : [];
+    if (!to.length) continue;
+    const ns = to.map((p) => p.first || p.name);
+    const card = el('section', 'room-card room-offer'); card.setAttribute('aria-label', 'A thought kept just for you');
+    const lead = el('p', 'room-shape-lead');
+    lead.append(el('span', '', 'This was kept just for you. Share it with '), names(ns), el('span', '', '?'));
+    card.appendChild(lead);
+    const why = el('p', 'quiet');
+    why.append(el('span', '', 'You added it on '), el('span', '', day(o.at)), el('span', '', ' and it names '), names(ns), el('span', '', ', but it went into a room of your own.'));
+    card.appendChild(why);
+    card.appendChild(own('blockquote', 'thought-said room-put', o.text));
+    const acts = el('div', 'actions');
+    const share = button('Share with ' + ns.join(', '), 'go', async () => {
+      share.disabled = true;
+      const s = await rpc('thought_share', { p_thought: o.thought_id, p_people: to.map((p) => p.id) });
+      if (!s || s.ok !== true) { share.disabled = false; card.appendChild(el('p', 'state stalled', String(s?.why || 'It could not be shared just now.'))); return; }
+      roomOpen = s.room && s.room.id; pending = null;
+      await loadThoughts(roomOpen);
+    });
+    const keepIt = button('Keep it just for me', 'go ghost', async () => {
+      keepIt.disabled = true;
+      const s = await rpc('thought_share_keep', { p_thought: o.thought_id });
+      if (!s || s.ok !== true) { keepIt.disabled = false; card.appendChild(el('p', 'state stalled', String(s?.why || 'That could not be saved just now.'))); return; }
+      card.remove();
+    });
+    acts.append(share, keepIt);
+    card.appendChild(acts);
+    host.appendChild(card);
+  }
+}
+
+// -- STEP B: ADD A PERSON, TAKE SOMEONE OUT ---------------------------------------------------------------------------------------
+function peopleBar(rm, main, wrap) {
+  const bar = el('div', 'room-peoplebar');
+  const box = el('div', 'room-addbox'); box.hidden = true;
+  const me = (rm.members || []).find((m) => m.me);
+  if (!rm.decided_at) {
+    bar.appendChild(button('Add a person', 'go ghost room-small', async () => {
+      box.hidden = !box.hidden;
+      if (box.hidden) return;
+      box.innerHTML = '';
+      const stop = working(box, 'Reading who is signed in here', 'Still reading who is signed in here');
+      const p = await rpc('room_people', {});
+      stop();
+      const inRoom = new Set((rm.members || []).map((m) => m.id));
+      const can = p && p.ok === true && Array.isArray(p.people) ? p.people.filter((x) => !inRoom.has(x.id)) : [];
+      if (!can.length) { box.appendChild(el('p', 'quiet', 'Everyone signed in to this business is already in this room. Someone new is invited on the Security tab first.')); return; }
+      const chosen = new Set();
+      const cr = el('div', 'room-who');
+      for (const x of can) {
+        const b = el('button', 'room-person'); b.type = 'button';
+        b.appendChild(own('span', '', x.first || x.name));
+        b.setAttribute('aria-pressed', 'false');
+        b.addEventListener('click', () => { if (chosen.has(x.id)) chosen.delete(x.id); else chosen.add(x.id); b.setAttribute('aria-pressed', String(chosen.has(x.id))); });
+        cr.appendChild(b);
+      }
+      box.appendChild(cr);
+      box.appendChild(el('p', 'quiet', 'They will see every thought in this room, from the start, each in their own language.'));
+      const acts = el('div', 'actions');
+      const add = button('Add', 'go', async () => {
+        if (!chosen.size) return;
+        add.disabled = true;
+        const a = await rpc('room_add', { p_room: rm.id, p_people: [...chosen] });
+        if (!a || a.ok !== true) { add.disabled = false; box.appendChild(el('p', 'state stalled', String(a?.why || 'They could not be added just now.'))); return; }
+        await loadThoughts(rm.id);
+      });
+      acts.append(add, button('Cancel', 'go ghost', () => { box.hidden = true; }));
+      box.appendChild(acts);
+    }));
+  }
+  const others = (rm.members || []).filter((m) => !m.me);
+  if (others.length && (rm.can_remove || me)) {
+    const list = el('div', 'room-memberlist');
+    for (const m of others) {
+      if (!rm.can_remove) break;
+      const c = el('span', 'onebox-chip room-member');
+      c.appendChild(own('span', '', m.first || m.name));
+      const x = button('x', 'room-x', () => sure(bar, [el('span', '', 'Take out of this room: '), own('span', '', m.first || m.name), document.createTextNode(' '), el('span', '', 'They will no longer see it.')], 'Take out', async () => {
+        const r = await rpc('room_remove', { p_room: rm.id, p_person: m.id });
+        if (!r || r.ok !== true) { bar.appendChild(el('p', 'state stalled', String(r?.why || 'That could not be done just now.'))); return; }
+        await loadThoughts(rm.id);
+      }));
+      x.setAttribute('aria-label', 'Take this person out of this room');
+      c.appendChild(x);
+      list.appendChild(c);
+    }
+    if (list.children.length) bar.appendChild(list);
+    if (!rm.started_by_me) bar.appendChild(button('Leave this room', 'link room-orig-btn', () => sure(bar, [el('span', '', 'Leave this room? You will no longer see it.')], 'Leave', async () => {
+      const r = await rpc('room_remove', { p_room: rm.id, p_person: me ? me.id : null });
+      if (!r || r.ok !== true) { bar.appendChild(el('p', 'state stalled', String(r?.why || 'That could not be done just now.'))); return; }
+      roomOpen = null; await loadThoughts();
+    })));
+  }
+  const wrapB = el('div', 'room-people-wrap');
+  wrapB.append(bar, box);
+  return wrapB;
+}
+
+// A question asked in place, never a browser dialog (a dialog is never in her language).
+function sure(host, parts, yes, fn) {
+  host.querySelector('.room-sure')?.remove();
+  const box = el('div', 'room-sure');
+  const p = el('p', ''); p.append(...parts); box.appendChild(p);
+  const acts = el('div', 'actions');
+  const y = button(yes, 'go', async () => { y.disabled = true; await fn(); });
+  acts.append(y, button('Cancel', 'go ghost', () => box.remove()));
+  box.appendChild(acts);
+  host.appendChild(box);
+}
+
+// -- STEP B: WHERE WE STAND AND MY POSITION ---------------------------------------------------------------------------------------
+async function drawStand(sec, rm, nThoughts) {
+  sec.innerHTML = '';
+  const det = el('details', 'room-stand-d'); det.open = true;
+  const sum = el('summary', 'room-stand-h', 'Where we stand');
+  det.appendChild(sum);
+  sec.appendChild(det);
+  const body = el('div', 'room-stand-b');
+  det.appendChild(body);
+  if (!nThoughts) { body.appendChild(el('p', 'quiet', 'Once thoughts are added, the Tool writes here where everyone stands, in your language.')); drawMine(body, rm, []); return; }
+  const stop = working(body, 'Writing where everyone stands', 'Still writing where everyone stands: it is read from every thought in the room');
+  const r = await C.askBody({ stand: { room: rm.id } });
+  stop();
+  if (!r || r.ok !== true) { body.appendChild(el('p', 'state stalled', String(r?.why || r?.error || 'Where everyone stands could not be read just now.'))); return; }
+  const positions = Array.isArray(r.positions) ? r.positions : [];
+  if (r.state !== 'stand' || !r.stand) {
+    body.appendChild(el('p', r.state === 'stand' ? 'quiet' : 'state stalled', String(r.why || 'Nothing to say yet.')));
+    drawMine(body, rm, positions);
+    return;
+  }
+  const st = r.stand;
+  const when = el('p', 'quiet room-stand-when');
+  when.append(el('span', '', 'Written by the Tool from every thought in this room.'), document.createTextNode(' '), el('span', '', 'It is written again when someone adds a thought.'));
+  body.appendChild(when);
+  body.appendChild(own('p', 'room-stand-sum', st.summary));
+  const part = (label, items, none) => {
+    const d = el('div', 'room-stand-part');
+    d.appendChild(el('p', 'room-stand-lbl', label));
+    if (!items || !items.length) d.appendChild(el('p', 'quiet', none));
+    else { const ul = el('ul', 'room-stand-list'); for (const x of items) ul.appendChild(own('li', '', x)); d.appendChild(ul); }
+    body.appendChild(d);
+  };
+  part('We agree', st.agree, 'Nothing yet.');
+  part('We differ', st.differ, 'Nothing right now.');
+  part('Still open', st.open, 'Nothing right now.');
+  const each = el('div', 'room-stand-part');
+  each.appendChild(el('p', 'room-stand-lbl', 'Where each person stands'));
+  const meFirst = (positions.find((p) => p.me) || {}).first || '';
+  for (const p of Array.isArray(st.positions) ? st.positions : []) {
+    if (meFirst && String(p.who).toLowerCase() === meFirst.toLowerCase()) continue;
+    const row = el('p', 'room-pos');
+    row.append(own('strong', '', p.who), el('span', '', ': '), own('span', '', p.position));
+    row.appendChild(el('span', 'quiet', p.from === 'stated' ? ' (their stated position)' : ' (from their thoughts)'));
+    const theirs = positions.find((x) => String(x.first).toLowerCase() === String(p.who).toLowerCase());
+    if (theirs && Array.isArray(theirs.earlier) && theirs.earlier.length) row.append(el('span', 'quiet', ' · changed their mind on '), el('span', 'quiet', day(theirs.earlier[0].changed_at)));
+    each.appendChild(row);
+  }
+  body.appendChild(each);
+  const mine = (Array.isArray(st.positions) ? st.positions : []).find((p) => meFirst && String(p.who).toLowerCase() === meFirst.toLowerCase());
+  drawMine(body, rm, positions, mine);
+}
+function drawMine(body, rm, positions, readMine) {
+  const me = positions.find((p) => p.me) || {};
+  const d = el('div', 'room-stand-part room-mypos');
+  d.appendChild(el('p', 'room-stand-lbl', 'My position'));
+  if (me.text) { d.appendChild(own('p', 'thought-said', me.text)); const w = el('p', 'quiet'); w.append(el('span', '', 'In your own words'), document.createTextNode(', '), el('span', '', day(me.at))); d.appendChild(w); }
+  else if (readMine && readMine.position) { d.appendChild(own('p', 'thought-said', readMine.position)); d.appendChild(el('p', 'quiet', 'As the Tool reads it from your thoughts. Say it in your own words to make it yours.')); }
+  else d.appendChild(el('p', 'quiet', 'You have not said where you stand yet.'));
+  for (const e of Array.isArray(me.earlier) ? me.earlier : []) {
+    const p = el('p', 'quiet room-earlier');
+    p.append(el('span', '', 'Earlier:'), document.createTextNode(' '), own('span', '', e.text), document.createTextNode(' '), el('span', '', 'Changed on'), document.createTextNode(' '), el('span', '', day(e.changed_at)));
+    d.appendChild(p);
+  }
+  if (!rm.decided_at) {
+    const form = el('div', 'room-posform'); form.hidden = true;
+    const lab = el('label', 'room-label', 'What you think now'); lab.htmlFor = 'room-pos-in';
+    const ta = el('textarea', 'thought-text'); ta.id = 'room-pos-in'; ta.rows = 2;
+    const acts = el('div', 'actions');
+    const save = button('Save as my latest', 'go', async () => {
+      const t = ta.value.trim();
+      if (!t) { ta.focus(); return; }
+      save.disabled = true;
+      const r = await rpc('room_position_set', { p_room: rm.id, p_text: t, p_lang: null });
+      if (!r || r.ok !== true) { save.disabled = false; form.appendChild(el('p', 'state stalled', String(r?.why || 'Your position could not be saved just now.'))); return; }
+      await loadThoughts(rm.id);
+    });
+    acts.append(save, button('Cancel', 'go ghost', () => { form.hidden = true; }));
+    form.append(lab, ta, acts);
+    d.appendChild(button(me.text ? 'I changed my mind' : 'Say where I stand', 'go ghost room-small', () => { form.hidden = !form.hidden; if (!form.hidden) ta.focus(); }));
+    d.appendChild(form);
+  }
+  body.appendChild(d);
 }
 
 // THE RECIPIENT'S SWITCH, SAID IN THE BOX (decision 1026 item 3): "stop emailing me about Thinkrooms" turns the emails off;
