@@ -39,6 +39,7 @@ import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-29-mail-matters";
 import { initWords } from "./words.js?v=2026-10-28-language"; // the screen in her language, the switch beside her name (seat language-and-nudge)
+import { initLooks } from "./looks.js?v=2026-10-29-looks"; // the Look switch beside the language switch (seat looks, decision 1036)
 import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-28-language";
 import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts } from "./thoughts.js?v=2026-10-28-language"; // thoughtgrams and the Thoughts tab (seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
@@ -332,6 +333,7 @@ function renderWho() {
   }).catch(() => { /* the read is not there yet: the masthead stays as it was */ });
   $("#whoami").innerHTML = `<b translate="no">${escape(v.name)}</b><br><span translate="no">${escape(v.role ?? "")}</span>`;
   initWords({ sb, url: SUPABASE_URL, key: PUBLISHABLE_KEY });   // the language switch beside her name (seat language-and-nudge)
+  initLooks({ sb });   // the Look switch beside it, her look from the brain (seat looks)
   $("#sum-head").textContent = v.all_access
     ? "What is in it."
     : "What is in it, as far as you reach.";
