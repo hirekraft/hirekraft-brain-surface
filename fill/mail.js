@@ -2055,7 +2055,9 @@ export function mailScope() {
   // A view she chose (Starred, a label) is a chip in the box, as a mailbox is (seat mail-views): she sees it can be typed.
   const v = on && view && (view.kind === 'starred' || view.kind === 'label') ? { kind: view.kind, name: view.name || '', address: view.address || '' } : null;
   return { key: on && view && view.kind === 'mailbox' ? chosen : null, address: (m && m.address) || '', emailOpen: on && !!(open && open.thread),
-    threadKey: open && open.thread ? aboutKey(chosen, open.thread.thread_id) : null, view: v };
+    threadKey: open && open.thread ? aboutKey(chosen, open.thread.thread_id) : null, view: v,
+    // seat thinkrooms-b: the open email itself, so a thought added with the "about this email" chip on is about it (box.js).
+    email: on && open && open.thread ? { source: chosen, source_id: open.thread.thread_id, subject: open.thread.subject || '' } : null };
 }
 
 export function mailHints() {
