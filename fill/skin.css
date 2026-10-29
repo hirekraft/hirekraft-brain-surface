@@ -2089,6 +2089,25 @@ button.cs-out:hover { border-color: var(--act); }
   .cs-subject-name { white-space: nowrap; }
 }
 
+/* ── LONG WORDS (seat every-word, 2026-10-29, brief item 4). Alex's screen in German, 12:03 PT: Posteingangsansicht cut in the
+   view switch, AI spilling, Alle als gesehen markieren squeezed, In den Spam verschieben crowded. German runs about 30 percent
+   longer and has single words wider than a narrow control. The rule, for every tab and every look: no control clips or
+   ellipsizes its own words; a long word breaks (hyphenated where the browser knows the language; words.js sets html lang)
+   and the control grows to a second line. An ellipsis stays only for data in lists (names, subjects, file names).
+   SUPERSEDES the nowrap on the view switch (seat mail-round-two) and the one sub-tab line that scrolled sideways on a phone
+   (seat people-and-access, 2026-10-27): in German the sub-tabs past the edge could not be seen, so the row now wraps. ── */
+button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, legend, summary { overflow-wrap: break-word; hyphens: auto; }
+.go, .mailx-mode-btn, .subtab, .mailx-textlink, .mailx-toggle, .mailx-seeit-btn, .words-seeit-btn { white-space: normal; text-overflow: clip; min-width: 0; max-width: 100%; height: auto; }
+.mailx-mode-btn { line-height: 1.15; text-align: center; }
+.mailx-mode { flex-wrap: wrap; }
+.mailx-mode-btn { flex: 1 1 min-content; }
+.subtabs { flex-wrap: wrap; overflow-x: visible; }
+.subtab { flex: 0 1 auto; white-space: normal; text-align: left; }
+.mailx-acts, .mailx-att-acts, .mailx-compose-acts, .mailx-scam-card .mailx-att-acts { flex-wrap: wrap; }
+.mailx-att-acts .go, .mailx-acts .go { flex: 1 1 auto; justify-content: center; text-align: center; }
+.words-seeit { margin-top: var(--gap); }
+.words-seeit-text { margin-top: calc(var(--u) * 2); }
+
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
    for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
@@ -2135,7 +2154,8 @@ button.cs-out:hover { border-color: var(--act); }
   .tabs .tab[hidden] { display: none !important; }
   .tabs .tab-day, .tabs .tab-more {
     display: flex; align-items: center; justify-content: center; flex: 1 1 0; min-width: 0; min-height: 56px;
-    padding: 0 2px; margin: 0; font-size: 13px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    padding: 0 2px; margin: 0; font-size: 13px; text-align: center; white-space: normal; overflow: hidden; text-overflow: clip;
+    line-height: 1.15; overflow-wrap: anywhere; hyphens: auto; /* seat every-word: Laufwerke was cut to Laufw... in German */
     border-bottom: 0; border-top: 2px solid transparent;
   }
   .tabs .tab[aria-current='page'], .tabs .tab-more.here { color: var(--ink); font-weight: var(--w-mid); border-top-color: var(--ink); }
@@ -2287,4 +2307,6 @@ button.cs-out:hover { border-color: var(--act); }
   .mailx-chip-x { width: 44px; height: 44px; }
   .mailx-chips { min-height: 48px; }
   .mailx-compose-field .mailx-chip-add { min-height: 44px; font-size: 16px; }
+  /* seat every-word 2026-10-29: See it in under a matter's words and a caught email thumb-sized; long German words wrap. */
+  .words-seeit-btn { min-height: 44px; }
 }
