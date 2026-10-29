@@ -37,7 +37,7 @@ function drawBrain(fresh) {
 }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-28-scam-view";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-29-mail-inbox";
 import { initWords } from "./words.js?v=2026-10-28-language"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-28-language";
 import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts } from "./thoughts.js?v=2026-10-28-language"; // thoughtgrams and the Thoughts tab (seat thoughtgram)
@@ -339,7 +339,7 @@ function renderWho() {
   // seat brain-and-drives 2026-10-28: the count line is written by drawBrain from sources_view (one count everywhere, decision 1030).
   // The Tests and To test buttons left the customer's screen (seat brain-and-drives, decision 1030); #tests and #totest still open them.
   // What is new, said once by the consultant in the conversation (seat test-list round 2); nothing when nothing is new.
-  import("./news.js?v=2026-10-23-test-list-2").then((N) => N.showNews({ sb, el, $, openPanel, owner: !!v.all_access })).catch(() => {});
+  import("./news.js?v=2026-10-29-mail-inbox").then((N) => N.showNews({ sb, el, $, openPanel, owner: !!v.all_access })).catch(() => {});
   // What her watches found since she last looked, said once in the conversation (seat watches); nothing when nothing is new.
   initWatches({ sb, el, $, openPanel });
   showWatches().catch(() => {});
