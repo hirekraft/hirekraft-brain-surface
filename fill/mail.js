@@ -43,7 +43,7 @@
 import { conversation } from './answer.js?v=2026-10-22-dates';
 import { fmtDate } from './dates.js?v=2026-10-22-dates';
 import { plainWords } from './plain.js?v=2026-10-27-mail-views';
-import { screenLang, screenLangName } from './words.js?v=2026-10-29-thinkrooms';   // See it in <language> (seat language-and-nudge)
+import { screenLang, screenLangName } from './words.js?v=2026-10-29-thinkrooms-3';   // See it in <language> (seat language-and-nudge)
 
 // VIEWS IN THE LEFT COLUMN (seat mail-views, 2026-10-27; Alex 14:41 PT: "Worth your attention should be ... on the left-hand
 // side instead of an email, like a label ... worth your attention, and the other would be starred"). At the top of the left
