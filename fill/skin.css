@@ -801,6 +801,35 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
 .mailx-att-why-box .go { min-height: 44px; }
 .mailx-att-card .find-lesson { margin-top: var(--gap); }
 .mailx-att-learned .find-learned-list { margin: var(--u) 0; }
+/* TWO VIEWS OF MAIL AND MATTERS (seat mail-matters, 2026-10-29, decisions 1031 and 1033). The switch sits at the top of the left
+   column, two halves of one control; the pressed half is the view she is in. A matter row reads subject, who it is with, where it
+   stands, then the latest words in quotes; the open matter keeps the same order with its choices and its emails. */
+.mailx-mode { display: flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: var(--gap); }
+.mailx-mode-btn { flex: 1 1 50%; min-height: 40px; font: inherit; color: var(--ink-2); background: var(--paper); border: 0; cursor: pointer; padding: 0 var(--u); }
+.mailx-mode-btn + .mailx-mode-btn { border-left: 1px solid var(--line); }
+.mailx-mode-btn[aria-pressed="true"] { background: var(--paper-2); color: var(--ink); font-weight: var(--w-strong); }
+.mailx-ai-note { margin: var(--u) 0 0; }
+.mailx-matter { display: grid; gap: 2px; }
+.mailx-matter-top { display: flex; align-items: baseline; gap: var(--u); min-width: 0; }
+.mailx-matter-top .mailx-att-what { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mailx-matter-new { flex: 0 0 auto; font-size: var(--t-small); color: var(--accent); font-weight: var(--w-strong); }
+.mailx-matter-who { color: var(--ink-3); font-size: var(--t-small); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mailx-matter-state { color: var(--ink); -webkit-line-clamp: 2; }
+.mailx-matter-passage { color: var(--ink-3); font-style: italic; -webkit-line-clamp: 2; }
+.mailx-matter-passage::before, .mailx-matter-passage-full::before { content: open-quote; }
+.mailx-matter-passage::after, .mailx-matter-passage-full::after { content: close-quote; }
+.mailx-money .mailx-att-what { color: var(--ink); }
+.mailx-matter-card .mailx-matter-who { white-space: normal; margin: var(--u) 0 0; }
+.mailx-matter-h { font-size: var(--t-small); color: var(--ink-3); font-weight: var(--w-mid); margin: calc(var(--u) * 3) 0 0; }
+.mailx-matter-state-full { color: var(--ink); margin: var(--u) 0 0; overflow-wrap: anywhere; }
+.mailx-matter-passage-full { margin: var(--u) 0 0; padding: var(--u) calc(var(--u) * 2); border-left: 3px solid var(--line); color: var(--ink-2); overflow-wrap: anywhere; }
+.mailx-matter-why { margin-top: var(--u); }
+.mailx-matter-list, .mailx-matter-sources { list-style: none; margin: var(--u) 0 0; padding: 0; display: grid; gap: var(--u); }
+.mailx-matter-line { margin: 0; overflow-wrap: anywhere; }
+.mailx-matter-source { width: 100%; text-align: left; font: inherit; font-size: var(--t-small); color: var(--ink-2); background: none; border: 1px solid var(--line); border-radius: var(--radius); padding: var(--u) calc(var(--u) * 1.5); cursor: pointer; overflow-wrap: anywhere; }
+.mailx-matter-source:hover { color: var(--ink); background: var(--paper-2); }
+.mailx-att-out.find-lesson { display: flex; flex-wrap: wrap; align-items: center; gap: var(--u) var(--gap); }
+.mailx-learned-link { margin: var(--gap) calc(var(--u) * 4) 0; }
 .mailx-list > .go { min-height: 44px; }
 .mailx { height: 100%; display: grid; grid-template-columns: minmax(11rem, 13rem) minmax(17rem, 22rem) minmax(0, 1fr); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--paper); }
 .mailx-side, .mailx-list, .mailx-read { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
@@ -1782,4 +1811,7 @@ html[dir='rtl'] .whoami { text-align: left; }
   .src-item, .src-act, .brain-links .go, #attn-panel .a-fix, .src-left > summary, .src-detail .go, .src-detail .a-fix, .drives-top .go { min-height: 44px; }
   .src-act, .drives-top .go { width: 100%; justify-content: center; }
   #s-summary, #s-drives { padding-bottom: 96px; }
+  /* seat mail-matters 2026-10-29: the Inbox view / AI view switch, an email of a matter, Undo after a choice and What it
+     learned are thumb-sized. */
+  .mailx-mode-btn, .mailx-matter-source, .mailx-att-out .go, .mailx-learned-link { min-height: 44px; }
 }
