@@ -15,6 +15,16 @@
 // THE SWITCH sits beside her name at the top: the current language; choosing another changes the screen at once (making
 // it first, the first time anyone here chooses it, with the working sign and a count). The first choice comes from what
 // she said (person_lang), then her first thought (also person_lang, set by the brain), then the browser.
+// SENTENCES THAT ARE NOT PIECES (seat every-word, 2026-10-29, decision 1026 item 2 as a class): what the brain or a model
+// writes (why an email is fake, where a matter stands, a warning, a money line) and sentences the screen joins around a name
+// are not among the harvested pieces, so they stayed English on a German screen. Each such line the screen shows is now
+// translated on the way out: sent to screen-words (action lines), translated once per language and kept in the brain
+// (screen_lines, keyed by a hash of its exact English, so the brain only ever returns a line to a screen that already shows
+// it), checked for the right language there, and put in place here. Names, amounts and addresses inside stay as written.
+// Only a line that reads as the Tool's English is sent (it carries a word of the screen's own vocabulary); a name, a number
+// or code never is. The customer's own mail and files stay in the NEVER zones; for those, SEE IT IN puts one press under
+// the words (a matter's latest words, a caught email's original), as under an ordinary email.
+// What stays English after its line came back is counted (screen_words_miss english), and tool_health turns it amber.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
 let C = null;
@@ -30,10 +40,24 @@ let misses = new Set();
 let missTimer = null;
 let correcting = false;
 const ATTRS = ['placeholder', 'aria-label', 'title'];
+let lines = new Map();          // English line -> the line in lang (screen-words action lines; the brain keeps them)
+let vocab = new Set();          // lowercased words of the screen's own English pieces: a line must carry one to be sent
+let lineWant = new Set(), lineAsked = new Set(), lineTimer = null, lineBusy = false, lineSent = 0;
+let english = new Set();        // lines of the Tool's own still English after their answer came back (counted, never sent as text)
+const LINE_CAP = 600;           // lines sent per page load at most
+const LINE_ZONES = '.mailx-matter-state, .mailx-matter-state-full, .mailx-matter-line';   // a model's or the books' words, marked translate=no by their module
+const NO_LINES = '.answer-slot';                                                            // an answer is written in her language already
+// Elements that only ever hold the Tool's or the brain's own words (a why-tag, a reason, a checked line): any line in them is
+// sent, even a short one in Title Case ("They asked on Oct 29"), which the general test would take for a name.
+const LINE_OK = '.mailx-why, .mailx-att-line, .mailx-att-why, .mailx-att-checked, .mailx-scam-why, .mailx-warning-line, .mailx-small, .state, .working, .stalled';
+const SEE_ZONES = '.mailx-matter-passage-full, .mailx-scam-original > .mailx-text';          // the customer's own words: See it in, one press
+const origLine = new WeakMap(); // zone element -> its English
 // Zones never touched: the customer's own mail, what she asked, her own words, names, and anything marked translate="no".
 const NEVER = '[translate="no"], .notranslate, textarea, input, select, script, style, code, pre, .mailx-body, .mailx-text, .mailx-snip, .mailx-subj, .mailx-subject, .mailx-from, .mailx-addr:not(.mailx-viewname), .mailx-domain, .mailx-who, .answer-asked, .thought-text, .thought-said, .thought-original, .wordmark, .lang-menu-native';
 // Zones where only an exact word changes (an answer's own text is already in her language; only its buttons are ours).
-const EXACT_ONLY = '.answer-slot, .mailx-list, .mailx-msgs';
+// The mail lists left this list (seat every-word, 2026-10-29): their data (subject, sender, snippet) sits in NEVER zones, and
+// their joined lines ("Pretends to be <name>", "Really from <address>") stayed English on a German screen.
+const EXACT_ONLY = '.answer-slot';
 
 export const LANGS = [
   ['en', 'English', 'English'], ['es', 'Spanish', 'Español'], ['hi', 'Hindi', 'हिन्दी'], ['zh', 'Chinese', '中文'],
@@ -71,11 +95,21 @@ function index() {
 }
 
 // One piece of text in the chosen language, or null when none of it is one of the Tool's own words.
+// Whitespace inside a piece as the page has it (index.html's paragraphs carry line breaks and indents) is one space in the
+// harvested English (seat every-word: the Brain, Security and Chats introductions stayed English for that alone).
+function squash(t) {
+  let o = '', sp = false;
+  for (const ch of t) { const c = ch.charCodeAt(0); if (c === 32 || c === 10 || c === 9 || c === 13 || c === 160) { sp = true; continue; } if (sp && o) o += ' '; sp = false; o += ch; }
+  return o;
+}
+let partial = false;   // set by render when only a joined fragment was found: the rest may be a line
 function render(en, exactOnly) {
+  partial = false;
   const lead = en.length - en.trimStart().length;
-  const core = en.trim();
-  if (!core) return null;
-  const pad = (s) => en.slice(0, lead) + s + en.slice(lead + core.length);
+  const raw = en.trim();
+  if (!raw) return null;
+  const pad = (s) => en.slice(0, lead) + s + en.slice(lead + raw.length);
+  const core = squash(raw);
   if (words.has(core)) return pad(words.get(core));
   if (words.has(en)) return words.get(en);
   if (exactOnly) return null;
@@ -89,7 +123,145 @@ function render(en, exactOnly) {
   for (const piece of ends.get(last) || []) {
     if (out.endsWith(piece) && out.length > piece.length) { out = out.slice(0, out.length - piece.length) + words.get(piece); changed = true; break; }
   }
+  partial = changed;
   return changed ? pad(out) : null;
+}
+
+// A line that reads as the Tool's English: letters, a word of the screen's own vocabulary, no code.
+const CODEISH = ['{', '}', '[', ']', '|', '=', '=>', '()', '.mailx', 'http://', 'https://', '@'];
+function lineWorthy(core) {
+  if (core.length < 4 || core.length > 600) return false;
+  for (const c of CODEISH) if (core.includes(c)) return false;
+  // Most of its words are the screen's own, and it is not written in Title Case (a file's or a company's name is; a sentence
+  // the Tool writes is not), so a customer's file names, subjects and names are never sent.
+  const parts = core.split(' ').filter((w) => w);
+  if (parts.length < 2) return false;
+  let hit = 0, known = 0, caps = 0;
+  for (const w of parts) {
+    let x = '';
+    for (const ch of w.toLowerCase()) { if ((ch >= 'a' && ch <= 'z') || ch === "'") x += ch; }
+    if (x.length < 3) continue;
+    known++;
+    if (vocab.has(x)) hit++;
+    const f = w.charAt(0);
+    if (f !== f.toLowerCase()) caps++;
+  }
+  if (!known || hit / known < 0.6) return false;
+  if (known >= 2 && caps / known > 0.6) return false;
+  return true;
+}
+function lineFor(en) {
+  const lead = en.length - en.trimStart().length;
+  const raw = en.trim();
+  const core = squash(raw);
+  if (!lines.has(core)) return null;
+  return en.slice(0, lead) + lines.get(core) + en.slice(lead + raw.length);
+}
+function wantLine(core) {
+  if (lineAsked.has(core) || lineWant.has(core) || lineSent >= LINE_CAP) { if (lineAsked.has(core) && !lines.has(core)) english.add(core); return; }
+  lineWant.add(core);
+  if (!lineTimer) lineTimer = setTimeout(flushLines, 350);
+}
+async function flushLines() {
+  lineTimer = null;
+  if (lineBusy || lang === 'en' || !C?.sb) { if (lineWant.size && !lineTimer) lineTimer = setTimeout(flushLines, 800); return; }
+  const batch = [...lineWant].slice(0, 60);
+  batch.forEach((x) => { lineWant.delete(x); lineAsked.add(x); });
+  if (!batch.length) return;
+  lineSent += batch.length;
+  lineBusy = true;
+  const asked = lang;
+  let r = null;
+  try {
+    const { data } = await C.sb.auth.getSession();
+    const jwt = data?.session?.access_token;
+    if (jwt) r = await fetch(C.url + '/functions/v1/screen-words', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + jwt, apikey: C.key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'lines', lang: asked, texts: batch }),
+    }).then((x) => x.json()).catch(() => null);
+  } catch (_) { r = null; }
+  lineBusy = false;
+  if (asked !== lang) return;
+  const got = r && r.ok === true && r.lines && typeof r.lines === 'object' ? r.lines : {};
+  for (const en of batch) { if (typeof got[en] === 'string' && got[en]) { lines.set(en, got[en]); english.delete(en); } else english.add(en); }
+  if (Object.keys(got).length) { keepLines(); walk(document.body); }
+  if (lineWant.size && !lineTimer) lineTimer = setTimeout(flushLines, 200);
+}
+function keepLines() {
+  const all = [...lines.entries()].slice(-500);
+  store('tool.lines.' + lang, JSON.stringify(all));
+}
+function loadLines(code) {
+  lines = new Map();
+  try { const a = JSON.parse(load('tool.lines.' + code) || '[]'); if (Array.isArray(a)) for (const [k, v] of a) if (typeof k === 'string' && typeof v === 'string') lines.set(k, v); } catch (_) { /* none kept */ }
+}
+function makeVocab() {
+  vocab = new Set();
+  for (const en of words.keys()) for (const w of en.toLowerCase().split(' ')) {
+    let x = '';
+    for (const ch of w) { if ((ch >= 'a' && ch <= 'z') || ch === "'") x += ch; }
+    if (x.length >= 3) vocab.add(x);
+  }
+}
+
+// A model's or the books' line, in a zone its module marked translate=no: the whole line, never its parts.
+function doLineZone(e) {
+  let en = origLine.get(e);
+  const now = e.textContent;
+  if (en === undefined || (now !== en && now !== e._shownLine)) { en = now; origLine.set(e, en); }
+  if (lang === 'en') { if (now !== en) e.textContent = en; return; }
+  const tr = lineFor(en);
+  if (tr !== null) { if (now !== tr) { e.textContent = tr; e._shownLine = tr; } return; }
+  const core = squash(en.trim());
+  if (core.length > 3) wantLine(core);
+}
+
+// SEE IT IN <LANGUAGE> under the customer's own words where the screen shows them outside an email (seat every-word, brief
+// item 3): one press, translated for her then through screen-words passage (checked for the language there), never kept.
+function seeIt(e) {
+  const next = e.nextElementSibling;
+  const there = next && next.classList.contains('words-seeit') ? next : null;
+  if (lang === 'en') { if (there) there.remove(); return; }
+  if (there || !e.textContent.trim()) return;
+  const native = (LANGS.find((x) => x[0] === lang) || [lang, lang, lang])[2];
+  const holder = document.createElement('div');
+  holder.className = 'words-seeit';
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'go ghost words-seeit-btn';
+  b.textContent = 'See it in ' + native;   // one line, so the whole sentence is put in her language (not "Sehen in" + a name)
+  const out = document.createElement('div');
+  out.setAttribute('aria-live', 'polite');
+  holder.append(b, out);
+  b.addEventListener('click', async () => {
+    b.disabled = true;
+    out.textContent = '';
+    const w = document.createElement('p'); w.className = 'working'; w.textContent = 'Putting these words in your language.'; out.appendChild(w);
+    let r = null;
+    try {
+      const { data } = await C.sb.auth.getSession();
+      const jwt = data?.session?.access_token;
+      if (jwt) r = await fetch(C.url + '/functions/v1/screen-words', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + jwt, apikey: C.key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'passage', lang, text: e.textContent }),
+      }).then((x) => x.json()).catch(() => null);
+    } catch (_) { r = null; }
+    b.disabled = false;
+    out.textContent = '';
+    if (!r || r.ok !== true) { const p = document.createElement('p'); p.className = 'state stalled'; p.textContent = String(r?.reason || 'The translation could not be made just now. The words above are unchanged.'); out.appendChild(p); return; }
+    const m = document.createElement('p'); m.className = 'eyebrow'; m.textContent = 'Translated by the Tool. The words above are the original.';
+    const t = document.createElement('div'); t.className = 'mailx-text words-seeit-text'; t.lang = r.lang || lang; t.textContent = r.text;
+    out.append(m, t);
+  });
+  e.insertAdjacentElement('afterend', holder);
+  walk(holder);
+}
+
+function zones(root) {
+  if (!root || root.nodeType !== 1) return;
+  if (root.matches(LINE_ZONES)) doLineZone(root);
+  root.querySelectorAll(LINE_ZONES).forEach(doLineZone);
+  if (root.matches(SEE_ZONES)) seeIt(root);
+  root.querySelectorAll(SEE_ZONES).forEach(seeIt);
 }
 
 function skipped(node) {
@@ -103,11 +275,19 @@ function doText(n) {
   let en = orig.get(n);
   if (en === undefined || (n.nodeValue !== en && n.nodeValue !== n._shown)) { en = n.nodeValue; orig.set(n, en); }
   if (lang === 'en') { if (n.nodeValue !== en) n.nodeValue = en; return; }
-  const tr = render(en, exactOnly);
+  let tr = render(en, exactOnly);
+  // A sentence the screen joined from a piece and words of its own (a reason, a name): the whole line wins when it reads as
+  // the Tool's English, so no sentence is half German and half English.
+  if (tr !== null && partial) { const tl = lineFor(en); if (tl !== null) tr = tl; else { const c = squash(en.trim()); if (c.length <= 600 && !CODEISH.some((x) => c.includes(x)) && !n.parentElement.closest(NO_LINES)) wantLine(c); } }
   if (tr !== null) { if (n.nodeValue !== tr) { n.nodeValue = tr; n._shown = tr; } return; }
+  const tl = lineFor(en);
+  if (tl !== null) { if (n.nodeValue !== tl) { n.nodeValue = tl; n._shown = tl; } return; }
   if (n.nodeValue !== en) n.nodeValue = en;
-  const core = en.trim();
-  if (core.length > 1 && isLetterish(core)) misses.add(core);
+  const core = squash(en.trim());
+  if (core.length > 1 && isLetterish(core)) {
+    misses.add(core);
+    if ((lineWorthy(core) || (n.parentElement.closest(LINE_OK) && core.length <= 600 && !CODEISH.some((x) => core.includes(x)))) && !n.parentElement.closest(NO_LINES)) wantLine(core);
+  }
 }
 
 // A FIELD'S OWN WORDS (seat thinkrooms-a, 2026-10-29): what she types is never touched, but a box's placeholder, aria-label and
@@ -115,14 +295,16 @@ function doText(n) {
 const FIELD = 'textarea, input, select';
 function doAttrs(e) {
   if (!e || e.closest('[translate="no"], .notranslate')) return;
-  if (skipped(e) && !(e.matches(FIELD) && !(e.parentElement && e.parentElement.closest(NEVER)))) return;
+  // The wordmark's own label (Back to the front door) is the Tool's words too; only its name is data (seat every-word).
+  if (skipped(e) && !(e.matches(FIELD) && !(e.parentElement && e.parentElement.closest(NEVER))) && !e.matches('.wordmark, .wordmark a')) return;
   let o = origAttr.get(e);
   for (const a of ATTRS) {
     if (!e.hasAttribute(a)) continue;
     if (!o) { o = {}; origAttr.set(e, o); }
     const cur = e.getAttribute(a);
     if (o[a] === undefined || (cur !== o[a] && cur !== o['_' + a])) o[a] = cur;
-    const tr = lang === 'en' ? null : render(o[a], true);
+    let tr = lang === 'en' ? null : (render(o[a], true) ?? lineFor(o[a]));
+    if (tr === null && lang !== 'en' && lineWorthy(squash(String(o[a]).trim()))) wantLine(squash(String(o[a]).trim()));
     const want = tr === null ? o[a] : tr;
     if (cur !== want) { e.setAttribute(a, want); o['_' + a] = want; }
   }
@@ -131,10 +313,13 @@ function doAttrs(e) {
 function walk(root) {
   if (!root) return;
   if (root.nodeType === 3) { doText(root); return; }
-  if (root.nodeType !== 1 || root.closest(NEVER)) return;
+  if (root.nodeType !== 1) return;
+  if (!root.closest('.words-seeit-text')) zones(root);
+  // A field's own placeholder changed by its module (the box says something else on each tab) reaches here alone.
+  if (root.closest(NEVER)) { if (root.matches(FIELD) || root.matches('.wordmark')) doAttrs(root); return; }
   doAttrs(root);
   const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
-    acceptNode: (n) => { if (n.nodeType === 1 && n.matches(NEVER)) { if (n.matches(FIELD)) doAttrs(n); return NodeFilter.FILTER_REJECT; } return NodeFilter.FILTER_ACCEPT; },
+    acceptNode: (n) => { if (n.nodeType === 1 && n.matches(NEVER)) { if (n.matches(FIELD) || n.matches('.wordmark')) doAttrs(n); return NodeFilter.FILTER_REJECT; } return NodeFilter.FILTER_ACCEPT; },
   });
   let n = tw.nextNode();
   while (n) { if (n.nodeType === 3) doText(n); else doAttrs(n); n = tw.nextNode(); }
@@ -145,7 +330,7 @@ function watch() {
   if (observer) return;
   observer = new MutationObserver((list) => {
     for (const m of list) {
-      if (m.type === 'characterData') pending.add(m.target);
+      if (m.type === 'characterData') pending.add(m.target.parentElement && m.target.parentElement.closest(LINE_ZONES) ? m.target.parentElement.closest(LINE_ZONES) : m.target);
       else if (m.type === 'attributes') pending.add(m.target);
       else m.addedNodes.forEach((x) => pending.add(x));
     }
@@ -155,10 +340,10 @@ function watch() {
 }
 
 function reportMisses() {
-  if (lang === 'en' || !misses.size || !C?.sb) return;
-  const n = misses.size;
-  misses = new Set();
-  C.sb.rpc('screen_words_miss', { p_lang: lang, p_n: n }).then(() => {}, () => {});
+  if (lang === 'en' || (!misses.size && !english.size) || !C?.sb) return;
+  const n = misses.size, e = english.size;
+  misses = new Set(); english = new Set();
+  C.sb.rpc('screen_words_miss', { p_lang: lang, p_n: n, p_english: e }).then(() => {}, () => {});
 }
 
 async function fetchWords(code) {
@@ -204,7 +389,10 @@ export async function setLang(code, opts) {
     words = new Map(Object.entries(got.words));
     corrected = new Set(got.corrected || []);
     index();
-  } else { words = new Map(); corrected = new Set(); }
+    makeVocab();
+    loadLines(code);
+  } else { words = new Map(); corrected = new Set(); lines = new Map(); }
+  lineWant = new Set(); lineAsked = new Set(); english = new Set();
   lang = code;
   document.documentElement.lang = code;
   document.documentElement.dir = RTL.includes(code) ? 'rtl' : 'ltr';
