@@ -1594,36 +1594,84 @@ a.find-title:hover { text-decoration: underline; }
 .watch-watches .find-meta { margin-top: 2px; }
 .watch-add { margin-top: calc(var(--u) * 3); }
 
-/* Thoughtgrams and the Thoughts tab (seat thoughtgram, 2026-10-25, decision 1017: an early concept, kept plain to revise). */
+/* THINKROOMS (seat thinkrooms-a, 2026-10-29, decision 1035; from the approved mockup "Thinkrooms mockup", in the looks' tokens and the
+   Thinkroom color --room). The list of her rooms on the left, the room or the New Thinkroom composer on the right; on a phone the list
+   first and a room fills the screen (phone block). SUPERSEDES the Thoughts tab rules of seat thoughtgram (2026-10-25: views, topic
+   cards, the picture, folds): those screens are gone; the four rules her words still use are kept here. */
 .thought-text { display: block; width: 100%; box-sizing: border-box; margin-top: calc(var(--u) * 1.5); font: inherit; color: var(--ink);
   background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: calc(var(--u) * 1.5) calc(var(--u) * 2); resize: vertical; }
-.thought-out { margin-top: calc(var(--u) * 1.5); }
-.thought-out p, .thought-pick p { margin: 4px 0 0; }
-.thought-pick { margin-top: calc(var(--u) * 1.5); }
 .thought-newtopic { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
-  padding: calc(var(--u) * 1.25) calc(var(--u) * 2); min-height: 40px; box-sizing: border-box; max-width: 100%; margin: calc(var(--u) * 1) calc(var(--u) * 1) 0 0; }
+  padding: calc(var(--u) * 1.25) calc(var(--u) * 2); min-height: 40px; box-sizing: border-box; max-width: 100%; }
 .thought-teach { color: var(--ink-3); }
-.thought-top { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; justify-content: space-between; margin-bottom: calc(var(--u) * 2); }
-.thought-views { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1); }
-.thought-views .go { margin-top: 0; }
-.thought-views .go[aria-pressed='true'] { background: var(--act-soft); color: var(--ink); border-color: var(--ink-3); }
-.thought-top > .go { margin-top: 0; }
-.thought-list, .thought-thread, .thought-open { list-style: none; margin: 0; padding: 0; }
-.thought-open { list-style: disc; padding-left: 1.25em; }
-.thought-card, .thought-item { padding: calc(var(--u) * 2.5) 0; border-top: 1px solid var(--line); }
-.thought-card:last-child, .thought-item:last-child { border-bottom: 1px solid var(--line); }
-.thought-card p, .thought-item p { margin: 4px 0 0; }
-.thought-title { font: inherit; font-weight: var(--w-mid); color: var(--act); background: none; border: 0; padding: 0; text-align: left; cursor: pointer; min-height: 32px; }
-.thought-said { white-space: pre-wrap; }
-.thought-superseded .thought-said, .thought-retracted .thought-said { color: var(--ink-3); }
-.thought-picture { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); padding: calc(var(--u) * 2) calc(var(--u) * 2.5); margin: calc(var(--u) * 1.5) 0; }
-.thought-picture p { margin: 4px 0 0; }
-.thought-h { margin: calc(var(--u) * 2) 0 0; }
-.thought-about { margin-top: calc(var(--u) * 3); }
-.thought-fold { margin-top: calc(var(--u) * 2); }
-.thought-fold summary { cursor: pointer; color: var(--act); min-height: 32px; }
-.thought-intro p { margin: 8px 0 0; max-width: 70ch; }
-.thought-back { margin-top: 0; }
+.thought-said { white-space: pre-wrap; overflow-wrap: anywhere; }
+.room-wrap { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: var(--gap-lg); align-items: start; }
+.room-side { display: flex; flex-direction: column; gap: calc(var(--u) * 3); min-width: 0; }
+.room-side .room-new { margin-top: 0; width: 100%; }
+.room-chips { display: flex; gap: calc(var(--u) * 2); flex-wrap: wrap; }
+.room-chips .go { margin-top: 0; }
+.room-chip[aria-pressed='true'] { background: var(--room-soft); color: var(--ink); border-color: var(--room); }
+.room-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: calc(var(--u) * 2); }
+.room-none { margin: 0; }
+.room-row { display: flex; flex-direction: column; gap: 4px; width: 100%; box-sizing: border-box; text-align: left; font: inherit; color: var(--ink); cursor: pointer;
+  padding: calc(var(--u) * 3) calc(var(--u) * 3.5); min-height: 44px; border-radius: var(--radius-lg); border: 1px solid var(--line); background: var(--paper); }
+.room-row:hover { border-color: var(--ink-3); }
+.room-row[aria-current='true'] { border-color: var(--room); background: var(--room-soft); }
+.room-row-top { display: flex; align-items: center; justify-content: space-between; gap: calc(var(--u) * 2); }
+.room-row-title { font-weight: var(--w-strong); overflow-wrap: anywhere; min-width: 0; }
+.room-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--room); flex: none; }
+.room-people, .room-row-state { margin: 0; font-size: var(--t-small); color: var(--ink-3); overflow-wrap: anywhere; }
+.room-row-state { color: var(--room); }
+.room-main { min-width: 0; display: flex; flex-direction: column; gap: var(--gap); }
+.room-card { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper); padding: calc(var(--u) * 4) calc(var(--u) * 5); min-width: 0; }
+.room-card p { margin: 6px 0 0; }
+.room-h { margin: 0; font-family: var(--font-head); font-size: var(--t-head); line-height: var(--lead-tight); overflow-wrap: anywhere; min-width: 0; }
+.room-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px calc(var(--u) * 3); }
+.room-head .room-people { grid-column: 1 / -1; grid-row: 2; }
+.room-head .room-avatars { grid-column: 2; grid-row: 1; }
+.room-avatars { display: flex; gap: 4px; }
+.room-av { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: var(--t-micro);
+  font-weight: var(--w-strong); background: var(--people-soft); color: var(--people); }
+.room-av.me { background: var(--room-soft); color: var(--room); }
+.room-thoughts { display: flex; flex-direction: column; gap: calc(var(--u) * 3); }
+.room-thought { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper); padding: calc(var(--u) * 3) calc(var(--u) * 4);
+  max-width: 46rem; box-sizing: border-box; min-width: 0; }
+.room-thought.mine { background: var(--room-soft); border-color: var(--room-soft); align-self: flex-end; }
+.room-thought.retracted .thought-said { color: var(--ink-3); }
+.room-meta { margin: 0; font-size: var(--t-small); color: var(--ink-3); }
+.room-meta strong { color: var(--ink); font-weight: var(--w-strong); }
+.room-new-tag { margin-left: 8px; color: var(--room); font-weight: var(--w-strong); }
+.room-thought .thought-said { margin: 6px 0 0; }
+.room-tr { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; font-size: var(--t-small); }
+.room-orig-btn { font: inherit; background: none; border: 0; padding: 0; color: var(--act); text-decoration: underline; cursor: pointer; min-height: 32px; }
+.thought-original { opacity: .85; border-left: 3px solid var(--line); padding-left: calc(var(--u) * 1.5); }
+.room-attach { font-size: var(--t-small); overflow-wrap: anywhere; }
+.room-label { font-weight: var(--w-mid); }
+.room-row-in { display: flex; gap: calc(var(--u) * 2); align-items: flex-end; margin-top: calc(var(--u) * 2); }
+.room-row-in .thought-text { margin-top: 0; flex: 1 1 auto; min-width: 0; }
+.room-row-in .go { margin-top: 0; min-height: 44px; flex: none; }
+.room-mic { min-width: 44px; min-height: 44px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--paper); color: var(--ink-2);
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.room-mic[aria-pressed='true'] { background: var(--room); color: var(--on-act); border-color: var(--room); }
+.room-hold { display: none; }
+.room-attach-row { display: flex; gap: calc(var(--u) * 2); flex-wrap: wrap; margin-top: calc(var(--u) * 2); }
+.room-small { margin-top: 0; min-height: 36px; font-size: var(--t-small); }
+.room-link[hidden] { display: none; }
+.room-link { display: flex; gap: calc(var(--u) * 2); flex-wrap: wrap; align-items: center; margin-top: calc(var(--u) * 2); }
+.room-link .thought-newtopic { flex: 1 1 14rem; min-width: 0; }
+.room-attach-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.room-x { font: inherit; background: none; border: 0; color: var(--ink-3); cursor: pointer; min-width: 28px; min-height: 28px; }
+.room-shape { margin-top: calc(var(--u) * 3); background: var(--room-soft); border-color: var(--room-soft); }
+.room-shape-lead { font-weight: var(--w-mid); color: var(--ink); }
+.room-put { margin: calc(var(--u) * 2) 0 0; padding: calc(var(--u) * 2.5) calc(var(--u) * 3); background: var(--paper); color: var(--ink);
+  border-radius: var(--radius); border-left: 3px solid var(--room); }
+.room-title-in { display: block; width: 100%; font-weight: var(--w-strong); margin-top: calc(var(--u) * 2); resize: none; overflow: hidden; line-height: 1.4; }
+.room-who { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; margin-top: calc(var(--u) * 3); }
+.room-who-lab { color: var(--ink-2); font-size: var(--t-small); }
+.room-person { font: inherit; min-height: 40px; padding: 0 calc(var(--u) * 4); border-radius: 999px; border: 1px solid var(--line); background: var(--paper);
+  color: var(--ink-2); cursor: pointer; }
+.room-person[aria-pressed='true'] { background: var(--room); color: var(--on-act); border-color: var(--room); }
+.room-email { margin-top: calc(var(--u) * 2); }
+.room-back { display: none; margin-top: 0; align-self: flex-start; }
 
 /* THE MONTH-END CHECK (seat month-end 2026-10-26, decisions 1019 and 1020): what does not tie first, verified rows
    folded to one line, every cell markable Right or Wrong with the right value. */
@@ -1663,10 +1711,6 @@ a.find-title:hover { text-decoration: underline; }
 
 /* ── LEAVE IT FOR SOMEONE (seat every-voice, 2026-10-27, decision 1025): who a thought is for, on the read-back card; a thought
    left for her in Worth your attention; the original beside a translation. ── */
-.thought-for { display: flex; flex-wrap: wrap; align-items: center; gap: var(--u); margin-top: calc(var(--u) * 1.5); }
-.thought-for-in { flex: 1 1 14rem; min-width: 0; min-height: 44px; box-sizing: border-box; font: inherit; color: var(--ink);
-  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 calc(var(--u) * 1.5); }
-.thought-original { opacity: .85; border-left: 3px solid var(--line); padding-left: calc(var(--u) * 1.5); }
 .mailx-att-thought .mailx-att-what { font-weight: 600; }
 
 /* -- THE SUB-TAB ROW (seat people-and-access, 2026-10-27, decision 1029). One row under the main tabs, shared by
@@ -1857,11 +1901,24 @@ a { color: var(--act); }
   /* Nothing pushes the page sideways: long words and addresses wrap, media keep to the column. */
   #main { overflow-wrap: anywhere; }
   #main img, #main video, #main iframe, #main pre, #main svg { max-width: 100%; }
-  /* seat thoughtgram 2026-10-25: the Thoughts tab and the thought card, thumb-sized. */
-  .thought-title, .thought-fold summary { min-height: 44px; display: flex; align-items: center; }
-  .thought-views .go, .thought-top > .go, .thought-turn .go, .thought-card .go, .thought-item .go, .thought-picture ~ .actions .go { min-height: 44px; }
-  .thought-newtopic { width: 100%; min-height: 44px; margin-right: 0; }
-  .thought-top > .go { width: 100%; }
+  /* seat thinkrooms-a 2026-10-29 (decision 1035, mockup Phone): the list first; a room or a new Thinkroom fills the screen with a way back;
+     a big round button to hold and talk. SUPERSEDES seat thoughtgram's Thoughts tab rules here. */
+  .room-wrap { grid-template-columns: minmax(0, 1fr); gap: var(--gap); }
+  .room-wrap[data-mode='room'] .room-side, .room-wrap[data-mode='new'] .room-side { display: none; }
+  .room-wrap[data-mode='list'] .room-main { display: none; }
+  .room-back { display: inline-flex; align-items: center; min-height: 44px; }
+  .room-row, .room-chips .go, .room-small, .room-person, .room-orig-btn, .thought-turn .go, .room-x { min-height: 44px; }
+  .room-x { min-width: 44px; }
+  .room-attach a { display: inline-flex; align-items: center; min-height: 44px; }
+  .room-card { padding: calc(var(--u) * 3) calc(var(--u) * 3.5); }
+  .room-row-in { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(var(--u) * 2); }
+  .room-row-in .go { width: 100%; }
+  .room-mic { width: 72px; height: 72px; border-radius: 50%; justify-self: center; background: var(--room); color: var(--on-act); border-color: var(--room);
+    touch-action: none; user-select: none; -webkit-user-select: none; }
+  .room-mic svg { width: 30px; height: 30px; }
+  .room-hold { display: block; text-align: center; margin: -4px 0 0; }
+  .room-thought.mine { align-self: stretch; }
+  .thought-newtopic { width: 100%; min-height: 44px; }
   #main pre { overflow-x: auto; }
   /* seat month-end 2026-10-26: the month-end check, one cell under another, every press thumb-sized. */
   .close-grid { grid-template-columns: 1fr; }
