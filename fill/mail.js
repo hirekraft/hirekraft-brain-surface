@@ -324,51 +324,52 @@ function attnMore() { return attn && attn.data ? (attn.data.more || []).filter((
 function attnTeach(rows) { return C.sb.rpc('find_signal_add', { p_signals: rows }).then(({ data }) => data, () => null); }
 function whoOf(it) { return String(it.what || '').split(': ')[0].split(' (')[0]; }
 
-// ACTIONS FIT THE ITEM (seat mail-views; Alex 14:51 PT: "couldn't the options ... depend more on the email itself ... not
-// say not useful ... whenever we suggest anything ... they should be smarter"). Each kind gets its own two or three actions,
-// each labeled with what happens; each dismissal says what the Tool learns. SUPERSEDES the same Open / Not important pair on
-// every item (seat attention). The kinds (attention_for_identity; email items carry 'about' since migration mail-views):
-//   impostor (someone pretending to be us)  Warn <who reads that mailbox>, Report it in Gmail, Not a scam
-//   invoice, invoices (money owed to us)    Open the invoice, Draft a reminder, Already paid
-//   bill (money we owe)                     Open the bill, Already paid
-//   email about money                       Draft a reply, Already paid, Not important
-//   email about a question waiting for you  Draft a reply, Not mine
-//   email waiting on them to confirm        Draft a follow-up, Not important
-//   thought left for her                    Read it, See the original, Reply with a thoughtgram
-//   anything else (watch, finding, email)   Open, Not important
-function kindOf(it) {
-  if (!it) return 'other';
-  if (it.kind === 'thought' || it.kind === 'impostor' || it.kind === 'bill') return it.kind;
-  if (it.kind === 'invoice' || it.kind === 'invoices') return 'invoice';
-  if (it.kind === 'email' && ['money', 'question', 'waiting'].includes(it.about)) return 'email-' + it.about;
-  return 'other';
-}
-function settle(it, line) {
-  attn.said.set(it.key, line);
-  drawRead();
-}
-function gone(it, line) {
-  attn.gone.add(it.key);
-  attn.said.set(it.key, line);
-  drawSide(); drawList(); drawRead();
-}
-async function dismiss(it, btn, rows, line) {
+// THE CHOICES ARE ABOUT YOUR ATTENTION, NOT THE WORK (seat mail-matters, 2026-10-29, decision 1031 item 3; Alex 08:34 PT: "either I
+// look at it and I register it and it's fine ... Or I had something where I want to stay in the loop ... or ... it's not important
+// ... or already paid. The draft reply should be out of the email then"). Every item gets the same choices, kept in the brain per
+// person (matter_choose): Got it, Keep me posted (it moves to Following), Not for this list (it learns), and Already paid on money.
+// Each says what happened, with Undo. Drafting a reply happens in the email (Answer), not here. SUPERSEDES the per-kind action
+// table of seat mail-views (Draft a reply, Not mine, Not important, Warn, Report it in Gmail, Draft a reminder), removed with
+// kindOf, settle, gone, dismiss, openFor and gmailHref.
+const saidChoice = new Map();   // item key -> { line, id, choice }: the last choice's line and its Undo survive the redraw that follows
+const CHOICES = [['got_it', 'Got it'], ['keep_me_posted', 'Keep me posted'], ['not_for_this_list', 'Not for this list'], ['already_paid', 'Already paid']];
+async function choose(it, choice, btn, out, key) {
   btn.disabled = true;
-  const r = await attnTeach(rows);
-  if (!r || r.ok !== true) { btn.disabled = false; btn.textContent = 'Not kept. Try again'; return; }
-  gone(it, line);
+  out.className = 'mailx-att-out working'; out.textContent = 'Keeping your choice.';
+  let r = null;
+  try {
+    const x = await C.sb.rpc('matter_choose', { p_key: key || it.key, p_choice: choice, p_title: String(it.subject || it.title || it.what || '').slice(0, 150),
+      p_from_key: it.from_key || null, p_at: it.last_out || null });
+    r = x.error ? { ok: false, reason: x.error.message } : x.data;
+  } catch (e) { r = { ok: false, reason: String((e && e.message) || e) }; }
+  btn.disabled = false;
+  out.innerHTML = '';
+  if (!r || r.ok !== true) { out.className = 'mailx-att-out state stalled'; out.textContent = 'Not kept. ' + plainWords(String((r && r.reason) || '')); return; }
+  saidChoice.set(key || it.key, { line: String(r.line || 'Kept.'), id: choice !== 'stop_following' ? r.id : null });
+  saidLine(out, key || it.key);
+  if (!key && attn && attn.gone) { attn.gone.add(it.key); if (parts) { drawSide(); drawList(); } }
+  setTimeout(() => loadAttention(true), 400);
 }
-// Open the email an item rests on, in its own mailbox; then, if asked, start the reply (a draft, never sent by itself).
-function openFor(it, then) {
-  if (it.from_key) attnTeach([{ key: it.from_key, signal: 'opened', title: 'Mail from ' + whoOf(it) }]);
-  afterOpen = then || null;
-  openEmail(it.open_source, it.open_id);
+function saidLine(out, k) {
+  const said = saidChoice.get(k);
+  if (!said) return;
+  out.innerHTML = '';
+  out.className = 'mailx-att-out find-lesson';
+  out.appendChild(mk('span', null, said.line));
+  if (said.id) {
+    const u = mk('button', 'go ghost', 'Undo'); u.type = 'button';
+    u.addEventListener('click', async () => {
+      u.disabled = true;
+      let z = null;
+      try { const x = await C.sb.rpc('matter_choose', { p_key: String(said.id), p_choice: 'undo' }); z = x.error ? null : x.data; } catch (_) { z = null; }
+      saidChoice.set(k, { line: z && z.ok ? String(z.line || 'Undone.') : 'Not undone. Try again.', id: z && z.ok ? null : said.id });
+      saidLine(out, k);
+      loadAttention(true);
+    });
+    out.appendChild(u);
+  }
 }
-function gmailHref(it) {
-  const box = String(it.open_source || '').split(':').slice(1).join(':');
-  return 'https://mail.google.com/mail/u/?authuser=' + encodeURIComponent(box) + '#all/' + encodeURIComponent(it.open_id || '');
-}
-function actionsFor(it, row, out) {
+function choiceRow(it, row, out) {
   const b = (label, fn, primary) => { const x = mk('button', primary ? 'go' : 'go ghost', label); x.type = 'button'; x.addEventListener('click', () => fn(x)); row.appendChild(x); return x; };
   const a = (label, href, primary) => { const x = mk('a', primary ? 'go' : 'go ghost', label); x.href = href; x.target = '_blank'; x.rel = 'noopener'; row.appendChild(x); return x; };
   const who = whoOf(it);
