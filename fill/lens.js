@@ -37,11 +37,11 @@ function drawBrain(fresh) {
 }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-29-mail-round-two";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-10-29-thinkrooms-b";
 import { initWords } from "./words.js?v=2026-10-29-thinkrooms-3"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initLooks } from "./looks.js?v=2026-10-29-looks"; // the Look switch beside the language switch (seat looks, decision 1036)
-import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-29-thinkrooms";
-import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-10-29-thinkrooms-3"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
+import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-29-thinkrooms-b";
+import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-10-29-thinkrooms-b"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
 import { foundCard } from "./find.js?v=2026-10-29-thinkrooms"; // find first, then work on what was found (seat find-first)
@@ -4309,14 +4309,17 @@ initMail({
 });
 // THINKROOMS (seat thinkrooms-a, 2026-10-29; first seat thoughtgram, 2026-10-25): what fill/thoughts.js needs from this page.
 initThoughts({ sb, el, $, openPanel, askBody, startThought, foundCard, findCtx, url: SUPABASE_URL, key: PUBLISHABLE_KEY,
-  goThoughts: (id) => { userMoved = true; goto('s-thoughts', id); } });
+  goThoughts: (id) => { userMoved = true; goto('s-thoughts', id); },
+  openEmail: (src, id) => { userMoved = true; goto('s-lens', 'email'); openEmail(src, id); } });   // seat thinkrooms-b: a thought about an email opens it
 // THE ONE BOX (seat one-box, 2026-10-08): what it needs from this page, and nothing it does itself.
 initBox({
   el, ask, hear: hearSpoken,
   // seat watches 2026-10-23: "tell me when ...", "what are you watching", "stop watching ..." are kept as watches, not asked.
   watch: (t) => watchFromBox(t),
   // seat thoughtgram: "note for the brain: ..." opens the thought card; a thought left in thought mode is read back there.
-  thought: (t) => thoughtFromBox(t), keepThought: (t, o) => keepThought(t, o),   // seat thinkrooms-a: openThinkrooms below
+  thought: (t, e) => thoughtFromBox(t, e), keepThought: (t, o) => keepThought(t, o),   // seat thinkrooms-a: openThinkrooms below; seat thinkrooms-b: e, the open email
+  // seat thinkrooms-b: the Thinkrooms she is in that hold a thought about the open email (the brain decides which).
+  roomsOnEmail: async (e) => { const { data, error } = await sb.rpc('thoughts_on_email', { p_source: e.source || null, p_source_id: e.source_id }); if (error) throw error; return data; },
   // seat thinkrooms-a: Add a thought (the + menu) and every other way in open the Thinkrooms tab with the composer, never a card here.
   openThinkrooms: (o) => openComposer(o),
   // seat add-files: whether a question is on its way (a question sent now would be dropped), and the one connect flow.
