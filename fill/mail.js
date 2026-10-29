@@ -46,7 +46,7 @@
 // presses. Your Gmail starts folded; a mailbox can be hidden from Mail. SUPERSEDES on the open email: What you didn't know, Where
 // this stands and Belongs with it shown unasked, Answer, Ask about this, and Add a thought (Alex: no "add a thought" and no
 // unrequested "what else bears" block in the pane; a thought is added from the + in the box or on the Thinkrooms tab).
-import { conversation, composer, askDraft } from './answer.js?v=2026-10-29-mail-round-two';
+import { conversation, composer, askDraft } from './answer.js?v=2026-10-29-mail-invites';
 import { fmtDate } from './dates.js?v=2026-10-22-dates';
 import { plainWords } from './plain.js?v=2026-10-27-mail-views';
 import { screenLang, screenLangName } from './words.js?v=2026-10-29-thinkrooms-3';   // See it in <language> (seat language-and-nudge)
@@ -223,7 +223,48 @@ function navButton(label, view, extra) {
   return b;
 }
 
-export function initMail(ctx) { C = ctx; }
+export function initMail(ctx) {
+  C = ctx;
+  setInterval(() => freshen(), FRESH_BEAT);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') freshen(); });
+}
+
+// FRESH WITHIN A MINUTE (seat mail-invites, 2026-10-29; Alex 14:27 PT: "it's not coming through, and it didn't even show at
+// first"). The cause, read at source: Mail read its lists once. A new reading of the brain (the doorbell rings when mail lands,
+// 14 seconds after it arrives) redrew only the left column from the numbers it already had, so a new email reached the screen only
+// after a reload. Now every reading of the brain, a minute's beat while Mail is on screen, and coming back to the page read again:
+// the counts (mail_inbox_view), For you (attention) and the open mailbox's first page, where new mail is put on top. What she has
+// open, what she typed and where she is in the list stay as they are; nothing is read while she is typing, and at most every 15 s.
+const FRESH_GAP = 15000;
+const FRESH_BEAT = 60000;
+let freshAt = 0;
+let freshBusy = false;
+let freshLater = null;
+function mailOnScreen() { return !!(parts && parts.wrap.isConnected && parts.wrap.offsetParent !== null && document.visibilityState === 'visible'); }
+function typingHere() { const a = document.activeElement; return !!(a && parts && parts.wrap.contains(a) && a.matches('input, textarea, select')); }
+async function freshen() {
+  if (!C || !mailOnScreen()) return;
+  const wait = FRESH_GAP - (Date.now() - freshAt);
+  if (wait > 0 || typingHere()) { clearTimeout(freshLater); freshLater = setTimeout(freshen, Math.max(wait, 2000)); return; }
+  if (freshBusy) return;
+  freshBusy = true; freshAt = Date.now();
+  try { await Promise.all([loadInboxView(), loadAttention(true), freshInbox()]); } catch (_) { /* each reader says its own failure */ }
+  freshBusy = false;
+}
+// The open mailbox's first page, asked again: what is new goes on top, nothing she sees moves otherwise.
+async function freshInbox() {
+  if (!chosen || !inbox || inbox.loading || inbox.more || !inbox.pages || found) return;
+  const key = chosen;
+  let j = null;
+  try { j = await live('inbox', { source_key: key }); } catch (_) { return; }
+  if (key !== chosen || !inbox || !inbox.pages) return;
+  const have = new Set(inbox.pages.map((x) => x.id));
+  const add = (j.messages || []).filter((x) => !have.has(x.id));
+  if (!add.length) return;
+  inbox.pages = add.concat(inbox.pages);
+  askUnseen(key, add.map((x) => x.id));
+  if (parts && view && view.kind === 'mailbox') { const top = parts.list.scrollTop; drawList(); parts.list.scrollTop = top; }
+}
 
 // The Brain tab's list and the old /mail/ address both arrive here with a mailbox in hand.
 export function chooseMailbox(key) {
@@ -459,7 +500,8 @@ function matterRow(it, onPick, current) {
     b.appendChild(top);
     if (it.who) { const w = mk('span', 'mailx-from mailx-matter-who', String(it.who) + (it.org && it.org !== it.who ? ' · ' + it.org : '') + (it.at ? ' · ' + when(it.at) : '')); w.translate = false; b.appendChild(w); }
     const st = stateOf(it);
-    if (st) { const s = mk('span', 'mailx-snip mailx-matter-state', st); s.translate = false; b.appendChild(s); }
+    if (it.invite) { const s = mk('span', 'mailx-snip mailx-matter-state mailx-invite-when-row', inviteWhen(it.invite)); s.translate = false; b.appendChild(s); }
+    else if (st) { const s = mk('span', 'mailx-snip mailx-matter-state', st); s.translate = false; b.appendChild(s); }
     else if (it.why) b.appendChild(mk('span', 'mailx-att-line', String(it.why)));
     const p = passageOf(it);
     if (p) { const q = mk('span', 'mailx-snip mailx-matter-passage', p); q.translate = false; b.appendChild(q); }
@@ -543,7 +585,14 @@ function drawAttnCard(read, it) {
   }
   if (it.who) { const w = mk('p', 'mailx-from mailx-matter-who', String(it.who) + (it.org && it.org !== it.who ? ' · ' + it.org : '')); w.translate = false; card.appendChild(w); }
   const out = mk('div', 'mailx-att-out'); out.setAttribute('aria-live', 'polite');
-  if (it.kind === 'email' || it.following) {
+  // AN INVITATION WAITING ON HER (seat mail-invites): the invitation itself, its presses, and the email one press away.
+  if (it.invite) {
+    card.appendChild(inviteCard(it.invite, { onSuggest: () => { openEmail(it.open_source, it.open_id); pendingSuggest = it.invite.id; } }));
+    const o = mk('button', 'go ghost mailx-invite-open', 'Open the email'); o.type = 'button';
+    o.addEventListener('click', () => openEmail(it.open_source, it.open_id));
+    card.appendChild(o);
+  }
+  if ((it.kind === 'email' || it.following) && !String(it.key || '').startsWith('invite:')) {
     card.appendChild(mk('h3', 'mailx-matter-h', 'Where it stands'));
     const st = stateOf(it);
     if (st) {
@@ -561,7 +610,7 @@ function drawAttnCard(read, it) {
       const q = mk('blockquote', 'mailx-matter-passage-full', pass); q.translate = false; card.appendChild(q);
       card.appendChild(mk('p', 'mailx-att-checked', it.state && it.state.passage_by === 'ai' ? 'Copied word for word from the latest email.' : 'The first lines of the latest email.'));
     }
-  } else if (it.why) {
+  } else if (it.why && !it.invite) {
     card.appendChild(mk('p', 'mailx-att-why', String(it.why)));
   }
   const row = mk('div', 'mailx-att-acts');
@@ -1156,6 +1205,7 @@ function shortWhy(w) {
 function whyTag(it) {
   const k = it.kind === 'money' ? ['money', 'Money'] : it.kind === 'thought' ? ['room', 'Left for you']
     : it.kind === 'impostor' || it.kind === 'scam_alert' ? ['scam', 'Scam']
+    : it.about === 'invite' ? ['people', 'Asks if this time works']
     : it.following || it.news ? ['people', it.news ? 'New in what you follow' : 'Following']
     : [it.is_money ? 'money' : 'people', shortWhy(it.why) || (it.is_money ? 'Money' : 'Waiting on you')];
   return mk('span', 'mailx-why mailx-why-' + k[0], k[1]);
@@ -1225,6 +1275,7 @@ export function drawMail(body) {
 export function mailReading() {
   if (!parts || !parts.wrap.isConnected) return;
   drawSide();
+  freshen();
 }
 
 // The last mailbox she opened here, else her own mailbox if she can open it, else the first one that is being read.
@@ -1526,7 +1577,7 @@ function drawList() {
     const xw = warnFor(chosen, [x.id]);
     if (xw) warnTag(b, xw);
     withAvatar(b, x.from_name || x.from_email, xw ? 'scam' : 'people');
-    b.addEventListener('click', () => openThread(x.thread_id));
+    b.addEventListener('click', () => openThread(x.thread_id, null, x.id));
     li.appendChild(b);
     ul.appendChild(li);
   }
@@ -1544,17 +1595,20 @@ function drawList() {
 }
 
 // ── right: the open email ────────────────────────────────────────────────────
-async function openThread(threadId, from) {
+async function openThread(threadId, from, msgId) {
   // An email from a find may sit in another mailbox: open it there, and keep the find on screen.
   if (from && from !== chosen) { chosen = from; inbox = null; drawSide(); }
   const key = chosen;
-  open = { id: threadId, thread: null, related: 'loading', error: null, full: false };
+  // THE EMAIL SHE OPENED (seat mail-invites): msg is the message she pressed (a row, an item, an answer's email). An id that
+  // arrives alone is a message id too: the thread read finds its conversation from it.
+  open = { id: threadId, msg: msgId || threadId, thread: null, related: 'loading', error: null, full: false };
   setView('read'); parts.read.scrollTop = 0;
   drawList(); drawRead();
   try {
     const t = await live('thread', { source_key: key, thread_id: threadId });
     if (!open || open.id !== threadId) return;
     open.thread = t; drawRead();
+    loadInvites(key, (t.messages || []).map((m) => m.id));
     markSeen('email', key, (t.messages || []).map((m) => m.id).concat([threadId]));   // opened: seen, for her (seat mail-inbox)
     restoreKept(key, t);
     // THE THREAD'S OWN ID, NOT THE ONE WE WERE GIVEN (seat mail-views, 2026-10-27). An email opened from an answer or from Worth
@@ -1632,8 +1686,12 @@ function drawRead() {
   if (!t) { read.appendChild(mk('p', 'quiet working', 'Opening it.')); return; }
 
   // THE EMAIL FIRST AND LARGE (round two): who sent it, the subject, the warning when there is one, the presses, then the words.
+  // THE EMAIL SHE OPENED, NOT THE LAST ONE (seat mail-invites, 2026-10-29; Alex: "sometimes it only showed my email"): the pane
+  // showed the conversation's last message and its sender, so after Alex replied, opening the invitation showed his own reply and
+  // his own address. Now it shows the message she pressed; when she arrived at the conversation some other way, the latest one
+  // from someone else. Her own later reply is one line under it, and the rest of the conversation one press away.
   const msgs = t.messages || [];
-  const latest = msgs[msgs.length - 1] || {};
+  const latest = focusOf(t);
   const who = mk('div', 'mailx-sender');
   who.appendChild(avatar(latest.from_name || latest.from_email, 'people', true));
   const wn = mk('div', 'mailx-sender-words');
@@ -1653,6 +1711,11 @@ function drawRead() {
   askWarnings(tIds.map((id) => [chosen, id]));
   const tw = warnFor(chosen, tIds);
   if (tw) read.appendChild(warnBox(tw));
+
+  const inv = invites.get(chosen + '|' + latest.id);
+  if (inv) read.appendChild(inviteCard(inv, { onSuggest: () => suggestTime(t, inv) }));
+  if (inv && pendingSuggest === inv.id) { pendingSuggest = null; setTimeout(() => suggestTime(t, inv), 0); }
+  else if (latest.notice === 'calendar invitation' && invitesErr.has(chosen)) read.appendChild(mk('p', 'quiet mailx-invite-none', 'This email carries a calendar invitation; its details could not be read just now.'));
 
   read.appendChild(actions(t));
   if (open.compose) read.appendChild(open.compose.el);
@@ -1705,11 +1768,19 @@ function drawRead() {
     read.appendChild(more);
   }
 
-  // The newest message, with the earlier ones one press away.
-  const show = open.full ? msgs : msgs.slice(-1);
+  // The email she opened, with the rest of the conversation one press away.
+  const show = open.full ? msgs : [latest];
   const hidden = msgs.length - show.length;
+  const mine = boxAddress();
+  const laterOwn = msgs.slice(msgs.indexOf(latest) + 1).filter((m) => String(m.from_email || '').toLowerCase() === mine);
+  if (!open.full && laterOwn.length) {
+    const p = mk('p', 'quiet mailx-later-own');
+    p.append(mk('span', null, 'You replied'), document.createTextNode(' '));
+    const w = mk('span', null, when(laterOwn[laterOwn.length - 1].date)); w.translate = false; p.appendChild(w);
+    read.appendChild(p);
+  }
   if (msgs.length > 1) {
-    const tg = mk('button', 'mailx-toggle', hidden > 0 ? 'Show ' + hidden + ' earlier message' + (hidden === 1 ? '' : 's') : 'Show only the latest');
+    const tg = mk('button', 'mailx-toggle', hidden > 0 ? 'Show the whole conversation' : 'Show only this email');
     tg.type = 'button';
     tg.addEventListener('click', () => { open.full = !open.full; drawRead(); });
     read.appendChild(tg);
@@ -1985,22 +2056,210 @@ function startCompose(t, mode) {
   if (!open.compose) {
     const threadId = t.thread_id;
     open.compose = composer(C, { sourceKey: chosen, mailbox: (m && m.address) || chosen.split(':').slice(1).join(':'), thread: t, mode,
+      focusId: focusOf(t).id,
       onDiscard: () => { if (open && open.thread && open.thread.thread_id === threadId) { open.compose = null; drawRead(); } } });
     drawRead();
-  } else if (open.compose.mode !== mode) open.compose.setMode(mode);
+  } else if (mode === 'forward' || open.compose.mode === 'forward') { if (open.compose.mode !== mode) open.compose.setMode(mode); }
+  else if (mode === 'reply') open.compose.setWho('one');
+  else if (mode === 'replyall') open.compose.setWho('all');
   open.compose.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   open.compose.focus();
   return open.compose;
 }
 // Draft a reply for me: the composer opens (as a reply unless she chose Reply all or Forward) and is filled by AI, said while it works.
 async function draftFor(t) {
-  const c = startCompose(t, open && open.compose ? open.compose.mode : 'reply');
+  const c = startCompose(t, open && open.compose ? open.compose.mode : 'auto');
   if (!c) return;
   const m = boxRow();
   c.status('Drafting from the emails and your books. Nothing is sent.', 'working');
-  const r = await askDraft(C, { sourceKey: chosen, mailbox: (m && m.address) || '', thread: t }, c.mode === 'forward' ? 'forward' : 'reply', c.body().text.trim() ? c.body() : null);
+  const r = await askDraft(C, { sourceKey: chosen, mailbox: (m && m.address) || '', thread: t, focusId: focusOf(t).id }, c.mode === 'forward' ? 'forward' : 'reply', c.body().text.trim() ? c.body() : null);
   if (!open || open.compose !== c) return;
   if (r.ok) c.fill(r.draft); else c.status('No draft this time. ' + plainWords(String(r.reason || '')), 'state stalled');
+}
+
+// ── the email she opened, and an invitation in it (seat mail-invites, 2026-10-29) ──
+function boxAddress() { const m = boxRow(); return String((m && m.address) || String(chosen || '').split(':').slice(1).join(':')).toLowerCase(); }
+// The message open on her screen: the one she pressed, else the latest from someone else, else the latest.
+function focusOf(t) {
+  const msgs = (t && t.messages) || [];
+  const mine = boxAddress();
+  return (open && open.msg && msgs.find((m) => m.id === open.msg))
+    || [...msgs].reverse().find((m) => String(m.from_email || '').toLowerCase() !== mine)
+    || msgs[msgs.length - 1] || {};
+}
+
+// AN INVITATION SHOWN AS AN INVITATION (decision 1038 item 3; Alex 14:27 PT). The brain reads each invitation once (ics_parse,
+// mail_invite) and says what it means for her (mail_invite_state: on her calendar or not, answered, canceled, a newer version,
+// past). The card says what, when in her time zone (and the sender's, small), how long, where or the join link, and who else is
+// invited. Accept, Maybe and Decline go out through mail-send, the one send path, as the standard calendar answer, held plainly
+// while its test lock is on; Suggest another time opens the reply to the sender; Add to my calendar asks Google through mail-send.
+// A reading that fails is said in one line, never shown as no invitation.
+const invites = new Map();       // source|message id -> the invitation as the brain reads it for her
+const invitesErr = new Set();    // mailboxes whose invitation reading failed just now
+const inviteSaid = new Map();    // invitation id -> { line, cls } after a press
+let pendingSuggest = null;
+async function loadInvites(key, ids) {
+  const want = (ids || []).filter(Boolean).slice(0, 200);
+  if (!key || !want.length) return;
+  try {
+    const { data, error } = await C.sb.rpc('mail_invite_state', { p_source: key, p_ids: want });
+    if (error || !data || data.ok === false) throw new Error('not read');
+    invitesErr.delete(key);
+    for (const inv of data.invites || []) invites.set(key + '|' + inv.message_id, inv);
+  } catch (_) { invitesErr.add(key); }
+  if (parts && open && open.thread) drawRead();
+}
+function screenLocale() { const l = screenLang(); return l === 'en' ? 'en-US' : l; }
+function rangeIn(inv, zone, withZone) {
+  const s = new Date(inv.starts_at), e = inv.ends_at ? new Date(inv.ends_at) : null;
+  const opt = { timeZone: zone, hour: 'numeric', minute: '2-digit' };
+  if (withZone) opt.timeZoneName = 'short';
+  const f = new Intl.DateTimeFormat(screenLocale(), opt);
+  return e && e > s && f.formatRange ? f.formatRange(s, e) : f.format(s);
+}
+// When, in her own time zone: "Fri, Oct 30, 10:00 – 10:30 AM". A whole-day invitation is its date alone.
+function inviteWhen(inv) {
+  try {
+    const s = new Date(inv.starts_at);
+    if (inv.all_day) return new Intl.DateTimeFormat(screenLocale(), { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' }).format(s);
+    const zone = C.zone();
+    return new Intl.DateTimeFormat(screenLocale(), { timeZone: zone, weekday: 'short', month: 'short', day: 'numeric' }).format(s) + ', ' + rangeIn(inv, zone, false);
+  } catch (_) { return String(inv.starts_at || ''); }
+}
+// The sender's own time, when it is not hers: "1:00 – 1:30 PM EDT".
+function inviteTheirTime(inv) {
+  if (!inv.tz || inv.all_day || inv.tz_how === 'floating') return '';
+  try {
+    const at = new Date(inv.starts_at);
+    const off = (z) => new Intl.DateTimeFormat('en-US', { timeZone: z, timeZoneName: 'longOffset' }).format(at).split(' ').pop();
+    const zone = String(inv.tz).startsWith('UTC') ? String(inv.tz).slice(3) : inv.tz;
+    if (off(zone) === off(C.zone())) return '';
+    return rangeIn(inv, zone, true);
+  } catch (_) { return ''; }
+}
+function inviteLength(inv) {
+  const n = Number(inv.minutes || 0);
+  const out = mk('span', 'mailx-invite-len');
+  if (inv.all_day) { out.appendChild(mk('span', null, 'All day')); return out; }
+  if (!n) return null;
+  const h = Math.floor(n / 60), m = n % 60;
+  const part = (v, one, many) => { const x = mk('span', 'mailx-invite-n', String(v)); x.translate = false; out.append(x, document.createTextNode(' '), mk('span', null, v === 1 ? one : many)); };
+  if (h) part(h, 'hour', 'hours');
+  if (h && m) out.appendChild(document.createTextNode(' '));
+  if (m) part(m, 'minute', 'minutes');
+  return out;
+}
+const JOIN = { teams: 'Join on Teams', zoom: 'Join on Zoom', meet: 'Join on Google Meet', webex: 'Join on Webex' };
+function inviteCard(inv, opts) {
+  const card = mk('section', 'mailx-invite' + (inv.cancelled ? ' mailx-invite-off' : ''));
+  card.setAttribute('aria-label', 'Invitation');
+  if (!inv.readable) { card.appendChild(mk('p', 'quiet', 'This email carries a calendar invitation the Tool could not read.')); return card; }
+  card.appendChild(mk('p', 'eyebrow mailx-invite-kind', inv.kind === 'cancel' ? 'Canceled meeting' : inv.kind === 'update' ? 'Updated invitation' : 'Invitation'));
+  const h = mk('h3', 'mailx-invite-title', inv.summary || '(no title)'); h.translate = false;
+  card.appendChild(h);
+  const dl = mk('dl', 'mailx-invite-facts');
+  const fact = (label, node) => { if (!node) return; dl.append(mk('dt', null, label)); const dd = mk('dd'); dd.appendChild(node); dl.appendChild(dd); };
+  const whenBox = mk('span', 'mailx-invite-when');
+  const w1 = mk('span', 'mailx-invite-mine', inviteWhen(inv)); w1.translate = false;
+  const line1 = mk('span', 'mailx-invite-line');
+  line1.append(w1, document.createTextNode(' '), mk('span', 'mailx-invite-zone', 'your time'));
+  whenBox.appendChild(line1);
+  const their = inviteTheirTime(inv);
+  if (their) {
+    const t2 = mk('span', 'mailx-invite-theirs');
+    const tt = mk('span', null, their); tt.translate = false;
+    t2.append(tt, document.createTextNode(' '), mk('span', null, 'for the sender'));
+    whenBox.appendChild(t2);
+  }
+  fact('When', whenBox);
+  fact('How long', inviteLength(inv));
+  if (inv.recurring) fact('Repeats', mk('span', null, 'It repeats'));
+  if (inv.location && (!inv.join_url || String(inv.location).indexOf('http') < 0)) { const l = mk('span', null, inv.location); l.translate = false; fact('Where', l); }
+  const org = inv.organizer || {};
+  if (org.email) { const o = mk('span', null, org.name || org.email); o.translate = false; o.title = org.email; fact('Invited by', o); }
+  const others = Array.isArray(inv.others) ? inv.others : [];
+  if (others.length) {
+    const names = mk('span', 'mailx-invite-others', others.slice(0, 5).map((p) => p.name || p.email).join(', ') + (others.length > 5 ? ' +' + (others.length - 5) : ''));
+    names.translate = false;
+    fact('Also invited', names);
+  }
+  card.appendChild(dl);
+  if (inv.join_url && !inv.cancelled) {
+    const a = mk('a', 'go ghost mailx-invite-join', JOIN[inv.join_kind] || 'Join the meeting');
+    a.href = inv.join_url; a.target = '_blank'; a.rel = 'noopener';
+    card.appendChild(a);
+  }
+  // Her calendar, as the Tool last read it (every 15 minutes), and where it stands.
+  const cal = inv.on_calendar === true ? ['mailx-invite-on', 'Already on your calendar'] : inv.on_calendar === false ? ['mailx-invite-off-cal', 'Not on your calendar yet']
+    : ['quiet', inv.mailbox && inv.mailbox !== String((C.viewer() && C.viewer().email) || '').toLowerCase() ? 'Only the owner of this mailbox sees its calendar.' : 'Your calendar is not read by the Tool yet.'];
+  card.appendChild(mk('p', 'mailx-invite-cal ' + cal[0], cal[1]));
+  const ans = inv.answered && inv.answered.partstat;
+  const state = inv.cancelled ? 'This meeting was canceled.' : inv.newer ? 'A newer version of this invitation came later.' : inv.past ? 'This time has passed.'
+    : ans === 'ACCEPTED' ? 'You accepted.' : ans === 'DECLINED' ? 'You declined.' : ans === 'TENTATIVE' ? 'You said maybe.' : '';
+  if (state) card.appendChild(mk('p', 'mailx-invite-state', state));
+  const out = mk('p', 'mailx-invite-said'); out.setAttribute('aria-live', 'polite');
+  if (!inv.cancelled && !inv.past && !inv.newer && (inv.kind === 'request' || inv.kind === 'update')) {
+    const row = mk('div', 'mailx-invite-acts');
+    const b = (label, cls, fn) => { const x = mk('button', cls, label); x.type = 'button'; x.addEventListener('click', () => fn(x)); row.appendChild(x); return x; };
+    b('Accept', 'go', (x) => rsvp(inv, 'ACCEPTED', x, out));
+    b('Maybe', 'go ghost', (x) => rsvp(inv, 'TENTATIVE', x, out));
+    b('Decline', 'go ghost', (x) => rsvp(inv, 'DECLINED', x, out));
+    b('Suggest another time', 'go ghost', () => opts && opts.onSuggest && opts.onSuggest());
+    if (inv.on_calendar === false) b('Add to my calendar', 'go ghost', (x) => calendarAdd(inv, x, out));
+    card.appendChild(row);
+  }
+  card.appendChild(out);
+  const said = inviteSaid.get(inv.id);
+  if (said) { out.textContent = said.line; out.className = 'mailx-invite-said ' + (said.cls || ''); }
+  else if (inv.last_press && inv.last_press.status === 'held') { out.textContent = 'Your last answer was held, not sent, while the Tool’s own sending is being tested.'; out.className = 'mailx-invite-said mailx-compose-held'; }
+  return card;
+}
+async function sendAct(body) {
+  const { data } = await C.sb.auth.getSession();
+  const jwt = data && data.session && data.session.access_token;
+  if (!jwt) return { ok: false, reason: 'You are not signed in on this browser, so there is nobody to act as.' };
+  try {
+    const r = await fetch(C.url + '/functions/v1/mail-send', { method: 'POST',
+      headers: { Authorization: 'Bearer ' + jwt, apikey: C.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return (await r.json().catch(() => null)) || { ok: false, reason: 'The send came back with ' + r.status + '.' };
+  } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; }
+}
+const PART_DONE = { ACCEPTED: 'Accepted.', TENTATIVE: 'You said maybe.', DECLINED: 'Declined.' };
+async function rsvp(inv, partstat, btn, out) {
+  btn.disabled = true;
+  out.className = 'mailx-invite-said working'; out.textContent = 'Sending your answer from ' + (inv.mailbox || '') + '.';
+  const j = await sendAct({ action: 'rsvp', source_key: inv.source, invite_id: inv.id, partstat });
+  btn.disabled = false;
+  const why = String((j && (j.reason || j.error)) || '');
+  let said;
+  if (j && j.ok === true && j.sent) { said = { line: PART_DONE[partstat] + ' Your answer went to ' + ((inv.organizer && (inv.organizer.name || inv.organizer.email)) || '') + '.', cls: 'mailx-compose-ok' }; setTimeout(() => loadAttention(true), 400); }
+  else if (why.startsWith('test lock')) said = { line: 'Held, not sent. While the Tool’s own sending is being tested, your answer does not go out. Answer in Gmail or Outlook for now.', cls: 'mailx-compose-held' };
+  // A mail-send that does not know this action yet refuses without naming the action (the page's plain-words wrapper hides its
+  // own words), so a refusal with no action in it means: not switched on yet.
+  else if (j && j.refused === true && !j.action) said = { line: 'Not sent: answering invitations from here is not switched on yet. Answer in Gmail or Outlook for now.', cls: 'state stalled' };
+  else said = { line: 'Not sent. ' + plainWords(why), cls: 'state stalled' };
+  inviteSaid.set(inv.id, said);
+  out.textContent = said.line; out.className = 'mailx-invite-said ' + said.cls;
+}
+async function calendarAdd(inv, btn, out) {
+  btn.disabled = true;
+  out.className = 'mailx-invite-said working'; out.textContent = 'Asking Google to add it to your calendar.';
+  const j = await sendAct({ action: 'calendar_add', source_key: inv.source, invite_id: inv.id });
+  btn.disabled = false;
+  const why = String((j && (j.reason || j.error)) || '');
+  const said = j && j.ok === true ? { line: 'Added to your calendar.', cls: 'mailx-compose-ok' }
+    : j && j.refused === true && !j.action ? { line: 'Adding it from here is not switched on yet. Accept it in Gmail and Google adds it for you.', cls: 'state stalled' }
+    : { line: 'Not added. ' + plainWords(why), cls: 'state stalled' };
+  inviteSaid.set(inv.id, said);
+  out.textContent = said.line; out.className = 'mailx-invite-said ' + said.cls;
+}
+// Suggest another time: the reply to the sender, opened on Just them, with a hint where to write the time.
+function suggestTime(t, inv) {
+  const c = startCompose(t, 'reply');
+  if (!c) return;
+  c.setWho('one');
+  c.hint('Suggest a time that works for you');
+  c.focus();
 }
 
 // ── the conversation about an email ─────────────────────────────────────────
@@ -2018,7 +2277,7 @@ function convoFor(t, create, keptChat) {
     onTurn: () => { if (open && open.id === threadId && conv.count() === 1) drawRead(); },
     onDiscard: () => { convos.delete(key); if (open && open.id === threadId) drawRead(); },
     // A draft asked for in the box goes into the composer under the email (round two), the one place to write.
-    onDraft: (d) => { if (open && open.id === threadId && open.thread) { const c = startCompose(open.thread, open.compose ? open.compose.mode : 'reply'); if (c) c.fill(d); } },
+    onDraft: (d) => { if (open && open.id === threadId && open.thread) { const c = startCompose(open.thread, open.compose ? open.compose.mode : 'auto'); if (c) c.fill(d); } },
   });
   convos.set(key, conv);
   return conv;
@@ -2134,7 +2393,7 @@ function flushOpen() {
   if (!pendingOpen || !parts || !parts.wrap.isConnected) return;
   const p = pendingOpen;
   pendingOpen = null;
-  openThread(p.id, p.sourceKey);
+  openThread(p.id, p.sourceKey, p.id);
 }
 
 function addrOf(key) {
