@@ -1672,6 +1672,38 @@ a.find-title:hover { text-decoration: underline; }
 .room-person[aria-pressed='true'] { background: var(--room); color: var(--on-act); border-color: var(--room); }
 .room-email { margin-top: calc(var(--u) * 2); }
 .room-back { display: none; margin-top: 0; align-self: flex-start; }
+/* THINKROOMS STEP B (seat thinkrooms-b, 2026-10-29): Where we stand, My position, Add a person, Kept just for you, search, documents. */
+.room-search { display: flex; gap: calc(var(--u) * 2); align-items: center; }
+.room-search .room-search-in { flex: 1 1 auto; min-width: 0; min-height: 40px; }
+.room-search .go { margin-top: 0; flex: none; }
+.room-offers { display: flex; flex-direction: column; gap: calc(var(--u) * 2); }
+.room-offers:empty { display: none; }
+.room-offer { background: var(--room-soft); border-color: var(--room); }
+.room-offer .actions, .room-addbox .actions, .room-posform .actions { flex-wrap: wrap; }
+.room-people-wrap { grid-column: 1 / -1; display: flex; flex-direction: column; gap: calc(var(--u) * 2); }
+.room-peoplebar { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; }
+.room-memberlist { display: flex; flex-wrap: wrap; gap: 6px; }
+.room-member { min-height: 36px; }
+.room-addbox[hidden], .room-posform[hidden] { display: none; }
+.room-addbox { border: 1px dashed var(--room); border-radius: var(--radius-lg); padding: calc(var(--u) * 3); }
+.room-stand { background: var(--paper); border-color: var(--room); }
+.room-stand-d > summary { cursor: pointer; min-height: 32px; font-family: var(--font-head); font-size: var(--t-head); line-height: var(--lead-tight); color: var(--ink); }
+.room-stand-b { display: flex; flex-direction: column; gap: calc(var(--u) * 2); margin-top: calc(var(--u) * 2); }
+.room-stand-when { margin: 0; font-size: var(--t-small); }
+.room-stand-sum { margin: 0; overflow-wrap: anywhere; }
+.room-stand-lbl { margin: 0; font-size: var(--t-micro); font-weight: var(--w-strong); letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); overflow-wrap: anywhere; }
+.room-stand-list { margin: 4px 0 0; padding-left: 1.2em; }
+.room-stand-list li { overflow-wrap: anywhere; }
+.room-pos { margin: 4px 0 0; overflow-wrap: anywhere; }
+.room-mypos { border-top: 1px solid var(--line); padding-top: calc(var(--u) * 2); }
+.room-earlier { margin: 4px 0 0; overflow-wrap: anywhere; }
+.room-outside { font-weight: var(--w-mid); color: var(--ink); }
+.room-hit { font-size: var(--t-small); color: var(--ink-2); overflow-wrap: anywhere; }
+.room-doc { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; font: inherit; font-size: var(--t-small); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: calc(var(--u) * 2); margin: 6px 0 0; }
+.room-on-email { overflow-wrap: anywhere; }
+.room-sure { border: 1px solid var(--line); border-radius: var(--radius); padding: calc(var(--u) * 2) calc(var(--u) * 3); background: var(--paper); flex: 1 1 100%; }
+.room-sure p { margin: 0; overflow-wrap: anywhere; }
+.onebox-room { font: inherit; cursor: pointer; background: var(--room-soft); color: var(--room); border: 1px solid var(--room-soft); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* THE MONTH-END CHECK (seat month-end 2026-10-26, decisions 1019 and 1020): what does not tie first, verified rows
    folded to one line, every cell markable Right or Wrong with the right value. */
@@ -2109,6 +2141,11 @@ button.cs-out:hover { border-color: var(--act); }
   .room-back { display: inline-flex; align-items: center; min-height: 44px; }
   .room-row, .room-chips .go, .room-small, .room-person, .room-orig-btn, .thought-turn .go, .room-x { min-height: 44px; }
   .room-x { min-width: 44px; }
+  .room-wrap[data-mode='search'] .room-side { display: none; }
+  .room-search .room-search-in, .room-search .go, .room-member, .onebox-room, .room-open-doc { min-height: 44px; }
+  .room-open-doc { min-width: 44px; }
+  .room-stand-d > summary { min-height: 44px; display: flex; align-items: center; }
+  .room-offer .actions .go, .room-addbox .actions .go, .room-posform .actions .go { flex: 1 1 100%; }
   .room-attach a { display: inline-flex; align-items: center; min-height: 44px; }
   .room-card { padding: calc(var(--u) * 3) calc(var(--u) * 3.5); }
   .room-row-in { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(var(--u) * 2); }
