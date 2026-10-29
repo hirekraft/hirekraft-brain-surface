@@ -9,10 +9,27 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Verrandi">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#F7F3EC">
+<script>
+// THE LOOK BEFORE THE FIRST PAINT (seat looks, 2026-10-29, decision 1036): the look this browser remembers goes on <html>
+// before the stylesheet, so the screen never flashes Warm before turning Evening. looks.js then asks the brain.
+try {
+  var lk = localStorage.getItem("tool.look");
+  if (["warm", "bright", "evening", "clear"].indexOf(lk) >= 0) {
+    document.documentElement.setAttribute("data-look", lk);
+    var tc = { warm: "#F7F3EC", bright: "#F3F5FB", evening: "#1C1B19", clear: "#F7F3EC" }[lk];
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", tc);
+  }
+} catch (e) { /* no storage: Warm until the brain answers */ }
+</script>
+<!-- THE LOOKS' FONTS, loaded once and never waited on (seat looks): Inter, Source Serif 4, Plus Jakarta Sans. The screen
+     paints at once in the system face and swaps when the fonts arrive; if they never arrive it stays in the system face. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
 <title>Tool — your brain</title>
 <meta name="description" content="Your business's own memory.">
-<link rel="stylesheet" href="skin.css?v=2026-10-29-mail-matters">
+<link rel="stylesheet" href="skin.css?v=2026-10-29-looks">
 <script>
 // THE FRONT DOOR, before anything is drawn (seat front-door, 2026-10-13): no stored sign-in on this
 // browser means she goes to sign in, and comes back to this tab after. lens.js makes the real check
@@ -22,7 +39,8 @@ try {
     location.replace("../login/?next=" + encodeURIComponent("fill/" + location.search + location.hash));
 } catch (e) { /* storage blocked: lens.js decides */ }
 </script>
-<!-- No font is fetched. No image is fetched. Every mark below is drawn. -->
+<!-- No image is fetched. Every mark below is drawn. The three fonts above are the one exception (seat looks, 2026-10-29,
+     decision 1036 SUPERSEDES "no font is fetched": a look is part of acceptance). -->
 <!-- Pages errors a build when another push lands on top of it within seconds.
      Space deploys; do not push a pair. -->
 </head>
@@ -502,6 +520,6 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-10-29-mail-matters"></script>
+<script type="module" src="lens.js?v=2026-10-29-looks"></script>
 </body>
 </html>
