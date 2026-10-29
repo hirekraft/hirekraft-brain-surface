@@ -68,6 +68,44 @@ function keepLastBox(k) { try { localStorage.setItem(LAST, k); } catch (_) { /* 
 
 const LIVE = '/functions/v1/worklens-live';
 
+// TWO VIEWS OF MAIL (seat mail-matters, 2026-10-29, decision 1033; Alex 08:59 PT: "we want to meet the user where they are ...
+// Maybe we say AI view ... still have something that looks very much like what you used to"). A switch at the top of the left
+// column: the Inbox view (mailboxes, as built by seat mail-inbox) and the AI view (For you, Following, Caught: matters, not single
+// emails). The view she used last opens, kept per person in the brain (mail_view, mail_view_set) and in this browser so it opens
+// at once; a person with no history starts in the Inbox view.
+const MODE = 'tool.mail.mode';
+let mode = (() => { try { return localStorage.getItem(MODE) === 'ai' ? 'ai' : 'inbox'; } catch (_) { return 'inbox'; } })();
+let modeAsked = false;
+async function loadMode() {
+  if (modeAsked) return;
+  modeAsked = true;
+  try {
+    const { data } = await C.sb.rpc('mail_view');
+    if (data && data.ok && (data.view === 'ai' || data.view === 'inbox') && data.view !== mode) setMode(data.view, false);
+  } catch (_) { /* the view this browser kept stays */ }
+}
+function setMode(m, keep) {
+  mode = m === 'ai' ? 'ai' : 'inbox';
+  try { localStorage.setItem(MODE, mode); } catch (_) { /* this browser keeps nothing */ }
+  if (keep) C.sb.rpc('mail_view_set', { p_view: mode }).then(() => {}, () => {});
+  if (mode === 'ai' && (!view || !['attention', 'following', 'suspicious'].includes(view.kind))) { view = { kind: 'attention' }; pick = null; open = null; found = null; }
+  if (mode === 'inbox' && view && view.kind === 'following') { view = { kind: 'attention' }; pick = null; }
+  if (parts) { parts.wrap.dataset.mode = mode; drawSide(); drawList(); drawRead(); }
+}
+function drawModeSwitch(side) {
+  const g = mk('div', 'mailx-mode');
+  g.setAttribute('role', 'group');
+  g.setAttribute('aria-label', 'How Mail is shown');
+  for (const [m, label] of [['inbox', 'Inbox view'], ['ai', 'AI view']]) {
+    const b = mk('button', 'mailx-mode-btn', label);
+    b.type = 'button';
+    b.setAttribute('aria-pressed', mode === m ? 'true' : 'false');
+    b.addEventListener('click', () => { if (mode !== m) { userChose = true; setMode(m, true); } });
+    g.appendChild(b);
+  }
+  side.appendChild(g);
+}
+
 let C = null;              // what lens.js hands over (initMail)
 let chosen = null;         // source key of the open mailbox
 let inbox = null;          // { pages, next, estimate, error, loading, more }
@@ -264,9 +302,9 @@ async function undoMarkAll(id, btn) {
 // of why per item in the middle list, the item in the right pane.
 let attn = null;            // { loading } | { data, more, gone, said } | { error }
 let attnSeen = false;
-async function loadAttention() {
-  attn = { loading: true };
-  if (parts) { drawSide(); if (view && view.kind === 'attention') drawList(); }
+async function loadAttention(quiet) {
+  if (!quiet || !attn || !attn.data) attn = { loading: true };
+  if (parts && !quiet) { drawSide(); if (view && view.kind === 'attention') drawList(); }
   try {
     const { data, error } = await C.sb.rpc('attention', { p_days: 14 });
     if (error || !data || data.ok === false) throw new Error((error && error.message) || (data && data.reason) || '');
@@ -275,7 +313,8 @@ async function loadAttention() {
     attn = { error: plainWords(String((e && e.message) || e || '')) };
   }
   // Opening Mail selects Worth your attention when it has items, otherwise the last mailbox she opened (brief item 3).
-  if (!userChose && view && view.kind === 'attention' && attn.data && !attnItems().length) toMailbox(lastBox());
+  if (!userChose && mode === 'inbox' && view && view.kind === 'attention' && attn.data && !attnItems().length) toMailbox(lastBox());
+  if (pick && attn.data) { const again = attnItems().concat(attnMore(), followItems()).find((x) => x.key === pick.key); if (again) pick = again; }
   if (parts) { drawSide(); drawList(); drawRead(); }
   if (attn.data && !attnSeen) { attnSeen = true; C.sb.rpc('seen_mark_set', { p_place: 'attention' }).then(() => {}, () => {}); }
 }
