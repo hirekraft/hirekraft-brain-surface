@@ -1,4 +1,5 @@
-// fill/chats.js: the Chats tab (seat chat-import, 2026-10-10; decision cb1a7115).
+// fill/chats.js: the Chats tab (seat chat-import, 2026-10-10; decision cb1a7115). Your chats by subject: seat chats-subjects, 2026-10-29,
+// decision 1037 (see the block YOUR CHATS, BY SUBJECT below).
 // Bring in chats from outside chatbots. PRIVATE BY DEFAULT; "Share with the company" is explicit and reversible.
 // Three ways in, one tab: export-and-pick, paste, forward (email yourself "keep this"); plus the
 // "Connect your own Claude" panel (#chats-connector) that seat chat-connector fills.
@@ -134,7 +135,7 @@ function part(host, key, label, what, hidden) {
 function build(root) {
   root.dataset.built = "1";
   root.innerHTML = "";
-  const mine = part(root, "mine", "Your chats", "Chats you brought in from your own Claude or ChatGPT, and chats others shared with the company. Yours stay private to you until you share them.");
+  const mine = part(root, "mine", "Your chats", null);
   const host = part(root, "bring", "Bring in a chat", null, true);
   host.appendChild(el("p", "sub-what", "Bring in the thinking you did in your own Claude or ChatGPT. Chats you bring in are private to you until you share them with the company."));
 
@@ -191,15 +192,8 @@ function build(root) {
   drawConnector(cnHost);
   cn.appendChild(cnHost);
 
-  // your chats (first part)
-  const host2 = mine;
-  const search = el("input", "work-search"); search.type = "search"; search.placeholder = "Search your chats";
-  search.style.width = "100%";
-  let t = null;
-  search.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => drawMine(search.value), 250); });
-  const list = el("div"); list.id = "chats-mine";
-  const viewer = el("div"); viewer.id = "chats-view";
-  host2.append(search, list, viewer);
+  // your chats, by subject (first part)
+  buildMine(mine);
 }
 
 // ---- connect your own Claude (seat chat-connector, 2026-10-10) ------------------------------------
@@ -352,117 +346,415 @@ async function keepTicked(boxes, go, pickSaid) {
   drawMine();
 }
 
-const SHOW_FIRST = 20;
-async function drawMine(q) {
-  const list = ctx.$("#chats-mine");
-  if (!list) return;
-  const r = await rpc("chat_list", { p_q: q || null });
-  list.innerHTML = "";
-  if (!r?.ok) { list.appendChild(el("p", "notice flagged", r?.note || "Your chats could not be read.")); return; }
-  const row = (c, theirs) => {
-    const li = el("li");
-    const b = el("button", "work-open"); b.type = "button"; b.style.textAlign = "left"; b.style.width = "100%";
-    b.appendChild(el("div", "a-title", c.title));
-    const bits = [theirs ? `shared by ${c.brought_by}` : c.shared_at ? `Shared ${day(c.shared_at)}` : "Private",
-      CAME[c.came_from] || c.came_from, day(c.started_at || c.brought_in_at), `${c.messages} messages`];
-    b.appendChild(el("div", "a-detail", bits.filter(Boolean).join(" · ")));
-    b.addEventListener("click", () => openChat(c.id));
-    li.appendChild(b); return li;
-  };
-  if (!r.mine.length) list.appendChild(el("p", "quiet", r.searched ? `None of your chats mention "${r.searched}" in their title or text.` : "You have not brought in any chats yet."));
-  else {
-    // The newest first, twenty at a time, the rest one press away (seat tab-split: 90 chats made this one list 3,700 px tall).
-    const ul = el("ul", "attn"); const first = r.searched ? r.mine : r.mine.slice(0, SHOW_FIRST);
-    first.forEach((c) => ul.appendChild(row(c, false))); list.appendChild(ul);
-    if (first.length < r.mine.length) {
-      const more = el("button", "go ghost", `Show all ${r.mine.length} of your chats`); more.type = "button";
-      more.addEventListener("click", () => { more.remove(); r.mine.slice(SHOW_FIRST).forEach((c) => ul.appendChild(row(c, false))); });
-      list.appendChild(more);
-    }
+// ---- YOUR CHATS, BY SUBJECT (seat chats-subjects, 2026-10-29, decision 1037; blueprint: the Chats by subject mockup) ----------
+// The tab is sorted by what each chat is about, not by date. The brain decides everything shown here (chat_list, chat_open,
+// chat_move): which chats she may open, the business's subjects that hold one of them and her count in each, the Tool's line and
+// what came out of each chat, in her language when the Tool has written it. This page only lays it out.
+// The Tool sorts on its own (chat-import action sort) whenever the brain says chats are owed, and writes its words in her
+// language (action say) when they are missing; both with the working sign and a count. Move to is hers and wins.
+// Every sentence here is one whole piece, so the language switch can put it in her language; titles, names, dates and the
+// chat itself are hers and carry translate="no". Until 2026-10-29 this part was one list of every chat, newest first.
+let cs = null;              // { root, list, said, view, subjects, items, sel, open, q, r }
+const SAYS_RUNNING = { sort: false, say: false };
+
+function txt(tag, cls, text, keep) { const e = el(tag, cls, text); if (keep) e.setAttribute("translate", "no"); return e; }
+function btn(cls, text) { const b = el("button", cls, text); b.type = "button"; return b; }
+
+function buildMine(host) {
+  const root = el("div", "cs"); root.dataset.view = "list";
+  const top = el("div", "cs-top");
+  const words = el("div", "cs-top-words");
+  words.append(el("h3", "cs-h", "Your work with Claude, kept whole"),
+    el("p", "quiet", "Every chat you or your team saved, sorted by what it is about. In Claude, just say “save this to HireKraft”. The whole chat and every file it made come here, word for word."));
+  const howB = btn("go ghost cs-how-b", "How it works");
+  top.append(words, howB);
+  const how = el("div", "cs-how"); how.hidden = true;
+  for (const [h, p] of [["Save it", "Say “save this”, “keep this” or “put this in HireKraft”. Any of these works, in any language."],
+    ["Save it again later", "Kept working in the same chat? Save again. It updates the same entry here and keeps the earlier version."],
+    ["Pick it back up", "Open any chat here and press Continue in Claude. Claude starts where you left off, with everything that came out of it."]]) {
+    const c = el("div", "cs-how-card"); c.append(el("b", null, h), el("p", "quiet", p)); how.appendChild(c);
   }
-  if (r.shared_with_me.length) {
-    list.appendChild(el("h3", null, "Shared with the company by others"));
-    const ul = el("ul", "attn"); r.shared_with_me.forEach((c) => ul.appendChild(row(c, true))); list.appendChild(ul);
-  }
-  if (Array.isArray(r.private_counts) && r.private_counts.length) {
-    list.appendChild(el("p", "quiet", "Private chats other people brought in (you cannot open these until they share them): " +
-      r.private_counts.map((p) => `${p.person} ${p.chats}`).join(", ") + "."));
-  }
-  // MADE FROM LOCKED STAYS LOCKED (seat locks-and-basics, decision 1022): shared chats built from things you cannot open
-  // are counted, never silently missing.
-  const locked = Number(r.shared_locked || 0);
-  if (locked) list.appendChild(el("p", "quiet", `${locked} shared ${locked === 1 ? "chat is" : "chats are"} not shown to you: ` +
-    `${locked === 1 ? "it was" : "they were"} made from emails or files you cannot open yourself.`));
+  howB.addEventListener("click", () => { how.hidden = !how.hidden; howB.textContent = how.hidden ? "How it works" : "Hide how it works"; });
+  const said = el("div", "cs-said"); said.setAttribute("aria-live", "polite");
+  const search = el("input", "work-search cs-search"); search.type = "search"; search.placeholder = "Search your chats";
+  search.setAttribute("aria-label", "Search your chats");
+  let t = null;
+  search.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => { cs.q = search.value.trim(); drawMine(); }, 250); });
+  const grid = el("div", "cs-grid");
+  const subjects = el("nav", "cs-subjects"); subjects.setAttribute("aria-label", "Subjects");
+  const list = el("section", "cs-list"); list.setAttribute("aria-label", "Chats in this subject");
+  const view = el("article", "cs-open"); view.setAttribute("aria-label", "Open chat");
+  grid.append(subjects, list, view);
+  const foot = el("div", "cs-foot");
+  root.append(top, how, said, search, grid, foot);
+  host.appendChild(root);
+  cs = { root, subjects, list, view, said, foot, items: [], subs: [], sel: null, open: null, q: "", r: null };
 }
 
-async function openChat(id) {
-  const v = ctx.$("#chats-view");
+// One list of everything she may open here: her chats and loose documents, chats shared with her, her questions from the box.
+function itemsOf(r) {
+  const out = [];
+  for (const c of r.mine || []) if (c.kind !== "document" || !c.made_in) out.push({ t: "chat_import", ...c, mine: true });
+  for (const c of r.shared_with_me || []) out.push({ t: "chat_import", ...c, mine: false });
+  for (const w of r.tool_chats || []) out.push({ t: "work_chat", id: w.id, title: w.title, kind: "tool", started_at: w.created_at, turns: w.turns, subject_id: w.subject_id, line: w.line, about: w.about, mine: true });
+  return out;
+}
+const NOT_SORTED = "unsorted";
+// The kinds of thing a chat can make, as the Tool names them (chat_outs_clean); listed here so each is one of the screen's words.
+const KIND_WORDS = ["Doc", "Sheet", "Chart", "Plan", "Posts", "Image", "Prompt", "Note", "Code", "Email"];
+void KIND_WORDS;
+
+async function drawMine() {
+  if (!cs) return;
+  const r = await rpc("chat_list", { p_q: cs.q || null });
+  cs.r = r;
+  cs.subjects.innerHTML = ""; cs.list.innerHTML = ""; cs.foot.innerHTML = "";
+  if (!r?.ok) { cs.list.appendChild(el("p", "notice flagged", r?.note || "Your chats could not be read.")); return; }
+  cs.items = itemsOf(r);
+  cs.subs = (r.subjects || []).slice();
+  if (cs.items.some((x) => !x.subject_id)) cs.subs.push({ id: NOT_SORTED, name: null, line: null, place: "unsorted", chats: cs.items.filter((x) => !x.subject_id).length });
+  if (cs.q) drawFound(); else drawSubjects();
+  drawFoot(r);
+  if (!cs.q) owed(r);
+}
+
+function drawSubjects() {
+  const ids = cs.subs.map((s) => s.id);
+  if (!cs.sel || !ids.includes(cs.sel)) cs.sel = (cs.subs.find((s) => Number(s.chats) > 0) || cs.subs[0] || {}).id || null;
+  cs.subjects.appendChild(el("div", "eyebrow", "Subjects"));
+  const row = el("div", "cs-subject-row");
+  for (const s of cs.subs) {
+    const b = btn("cs-subject" + (s.id === cs.sel ? " on" : ""), null);
+    b.setAttribute("aria-pressed", s.id === cs.sel ? "true" : "false");
+    b.dataset.place = s.place || "normal";
+    const name = s.id === NOT_SORTED ? el("span", "cs-subject-name", "Not sorted yet") : txt("span", "cs-subject-name", s.name, true);
+    b.append(el("span", "cs-dot"), name, txt("span", "cs-count", String(s.chats ?? 0), true));
+    b.addEventListener("click", () => { cs.sel = s.id; cs.root.dataset.view = "list"; drawMine(); });
+    row.appendChild(b);
+  }
+  cs.subjects.appendChild(row);
+  cs.subjects.appendChild(el("p", "quiet cs-subject-note", "The Tool sorts new chats into a subject for you. Move one with Move to if it landed in the wrong place."));
+  const s = cs.subs.find((x) => x.id === cs.sel);
+  const head = el("div", "cs-list-head");
+  if (s) {
+    head.appendChild(s.id === NOT_SORTED ? el("h3", "cs-h", "Not sorted yet") : txt("h3", "cs-h", s.name, true));
+    if (s.id === NOT_SORTED) head.appendChild(el("p", "quiet", "The Tool has not put these in a subject yet."));
+    else if (s.line) head.appendChild(txt("p", "quiet", s.line, true));
+  } else head.appendChild(el("p", "quiet", "You have not saved any chats yet. In Claude, say “save this to HireKraft”."));
+  cs.list.appendChild(head);
+  const mine = cs.items.filter((x) => (x.subject_id || NOT_SORTED) === cs.sel);
+  const ul = el("ul", "cs-chats");
+  for (const c of mine) ul.appendChild(chatRow(c));
+  cs.list.appendChild(ul);
+  if (!mine.length && s) cs.list.appendChild(el("p", "quiet", s.place === "start" ? "Nothing pinned here yet. Open a chat and use Move to, then Start here." : "No chats here."));
+  if (!cs.open || !cs.items.some((x) => x.id === cs.open)) drawOpenEmpty();
+}
+
+function drawFound() {
+  const head = el("div", "cs-list-head");
+  head.appendChild(el("h3", "cs-h", "Chats that mention your words"));
+  cs.list.appendChild(head);
+  cs.subjects.appendChild(el("p", "quiet", "Searching every subject."));
+  const ul = el("ul", "cs-chats");
+  for (const c of cs.items) ul.appendChild(chatRow(c));
+  cs.list.appendChild(ul);
+  if (!cs.items.length) cs.list.appendChild(el("p", "quiet", "None of your chats mention these words."));
+}
+
+function keptChip(c) {
+  if (c.kind === "tool") return el("span", "cs-chip tool", "Asked in the Tool");
+  if (c.kind === "document") return el("span", "cs-chip whole", "A document");
+  return c.exact ? el("span", "cs-chip whole", "Whole chat") : el("span", "cs-chip summary", "Only a summary");
+}
+function metaOf(c) {
+  const m = el("span", "cs-meta");
+  const who = c.mine ? el("span", null, c.kind === "tool" ? "You, in the Tool" : "You") : txt("span", null, c.brought_by || "", true);
+  m.append(who, document.createTextNode(" · "), txt("span", null, day(c.started_at || c.brought_in_at), true));
+  const n = c.kind === "tool" ? Number(c.turns || 0) : Number(c.messages || 0);
+  if (n) m.append(document.createTextNode(" · "), el("span", null, c.kind === "tool" ? `${n} questions asked` : `${n} messages saved`));
+  return m;
+}
+function chatRow(c) {
+  const li = el("li");
+  const b = btn("cs-chat" + (c.id === cs.open ? " on" : ""), null);
+  b.append(txt("span", "cs-chat-title", c.title, true), metaOf(c));
+  if (c.line) b.appendChild(txt("span", "cs-chat-line", c.line, true));
+  b.appendChild(keptChip(c));
+  b.addEventListener("click", () => openItem(c));
+  li.appendChild(b); return li;
+}
+
+function drawFoot(r) {
+  if (Array.isArray(r.private_counts) && r.private_counts.length) {
+    const p = el("p", "quiet");
+    p.appendChild(el("span", null, "Private chats other people saved (you cannot open these until they share them): "));
+    p.appendChild(txt("span", null, r.private_counts.map((x) => `${x.person} ${x.chats}`).join(", ") + ".", true));
+    cs.foot.appendChild(p);
+  }
+  // MADE FROM LOCKED STAYS LOCKED (seat locks-and-basics, decision 1022): counted, never silently missing.
+  const locked = Number(r.shared_locked || 0);
+  if (locked) cs.foot.appendChild(el("p", "quiet", locked === 1 ? "1 shared chat is not shown to you: it was made from emails or files you cannot open yourself."
+    : `${locked} shared chats are not shown to you: they were made from emails or files you cannot open yourself.`));
+}
+
+// THE TOOL SORTS AND SPEAKS HER LANGUAGE ON ITS OWN, with the working sign and a count, next to where she is looking.
+async function owed(r) {
+  const n = Number(r.owed || 0), w = Number(r.said_owed || 0);
+  if (n > 0 && !SAYS_RUNNING.sort) await work("sort", { action: "sort" }, n);
+  else if (w > 0 && r.lang && r.lang !== "en" && !SAYS_RUNNING.say) await work("say", { action: "say", lang: r.lang }, w);
+}
+async function work(kind, body, n) {
+  SAYS_RUNNING[kind] = true;
+  const box = el("p", "working"); const t = el("span"); const bar = el("span", "working-bar"); const fill = el("span");
+  bar.appendChild(fill); box.append(t, bar);
+  cs.said.innerHTML = ""; cs.said.appendChild(box);
+  let left = n, done = 0, rounds = 0, stop = "";
+  while (left > 0 && rounds < 12) {
+    rounds++;
+    t.textContent = kind === "sort" ? `Sorting your chats into subjects: ${left} to go` : `Putting the subjects in your language: ${left} to go`;
+    fill.style.width = `${Math.round((done / (done + left)) * 100)}%`;
+    const a = await call(body);
+    if (!a?.ok) { stop = a?.reason === "bad_action" ? "off" : "failed"; break; }
+    const got = kind === "sort" ? Number(a.sorted || 0) : Number(a.kept || 0) + Number(a.subjects || 0);
+    done += got; left = kind === "sort" ? Number(a.owed_left || 0) : Math.max(0, left - got);
+    if (!got) { stop = kind === "sort" && Number(a.failed || 0) ? "some" : ""; break; }
+  }
+  SAYS_RUNNING[kind] = false;
+  cs.said.innerHTML = "";
+  if (stop === "off") cs.said.appendChild(el("p", "quiet", kind === "sort" ? "Sorting into subjects is not switched on yet. Your chats are all here, under Not sorted yet." : "The subjects are not in your language yet; they show as the Tool wrote them."));
+  else if (stop === "failed") cs.said.appendChild(el("p", "notice flagged", kind === "sort" ? "The Tool could not sort your chats just now. Nothing was changed; it tries again the next time you open Chats." : "The subjects could not be put in your language just now. Nothing was changed."));
+  else if (stop === "some") cs.said.appendChild(el("p", "quiet", "A few chats could not be sorted this time. They stay under Not sorted yet, and the Tool tries again later."));
+  if (done) await drawMine();
+}
+
+// ---- the open chat --------------------------------------------------------------------------------------------------------
+function drawOpenEmpty() {
+  cs.view.innerHTML = "";
+  cs.view.appendChild(el("p", "quiet cs-open-empty", "Open a chat to see what came out of it, read it whole, or pick it back up in Claude."));
+}
+
+async function openItem(c) {
+  cs.open = c.id;
+  cs.list.querySelectorAll(".cs-chat").forEach((b) => b.classList.remove("on"));
+  cs.root.dataset.view = "open";
+  const v = cs.view; v.innerHTML = "";
+  const wait = el("p", "working no-late"); wait.appendChild(el("span", null, "Opening the chat.")); v.appendChild(wait);
+  if (c.t === "work_chat") return openToolChat(c, v);
+  const r = await rpc("chat_open", { p_chat: c.id });
   v.innerHTML = "";
-  const r = await rpc("chat_open", { p_chat: id });
+  back(v);
   if (!r?.ok) { v.appendChild(el("p", "notice flagged", r?.note || "This chat could not be opened.")); return; }
-  const card = el("div", "notice");
-  card.appendChild(el("h3", null, r.title));
-  card.appendChild(el("p", "quiet", [r.mine ? (r.shared_at ? `Shared with the company ${day(r.shared_at)}` : "Private to you") : `Shared by ${r.brought_by}`,
-    CAME[r.came_from] || r.came_from, r.exact ? "exact text" : "condensed", day(r.started_at || r.brought_in_at)].filter(Boolean).join(" · ")));
+  v.appendChild(txt("h3", "cs-open-title", r.title, true));
+  const meta = el("p", "quiet cs-meta");
+  meta.append(r.mine ? el("span", null, "Saved by you") : txt("span", null, r.brought_by || "", true), document.createTextNode(" · "),
+    txt("span", null, day(r.started_at || r.brought_in_at), true), document.createTextNode(" · "),
+    r.kind === "document" ? el("span", null, "A document") : r.exact ? el("span", null, `${(r.messages || []).length} messages, whole`) : el("span", null, "Only a summary"),
+    document.createTextNode(" · "), el("span", null, r.mine ? (r.shared_at ? "Shared with the company" : "Private to you") : "Shared with you"));
+  v.appendChild(meta);
+  if (r.title_written && r.original_title) {
+    const p = el("p", "quiet cs-renamed");
+    p.append(el("span", null, "Renamed by the Tool. It was saved as"), document.createTextNode(" “"), txt("span", null, r.original_title, true), document.createTextNode("”."));
+    v.appendChild(p);
+  }
+  if (!r.exact && r.kind !== "document") {
+    const w = el("div", "cs-warn");
+    w.append(el("b", null, "Only a summary was saved"),
+      el("p", null, "Claude sent a short version, not the whole chat. To keep everything, open that chat in Claude and say:"),
+      el("p", "cs-say", "Save the whole chat to HireKraft."),
+      el("p", null, "It will replace this entry and keep this one as an earlier version."));
+    v.appendChild(w);
+  }
+  if (Number(r.joined || 0) > 0) v.appendChild(el("p", "cs-joined", "Copies of this chat were joined into this one. Every version is kept."));
+  if (r.made_in && r.made_in.title) {
+    const p = el("p", "quiet");
+    p.append(el("span", null, "Made in the chat"), document.createTextNode(" “"), txt("span", null, r.made_in.title, true), document.createTextNode("”."));
+    v.appendChild(p);
+  }
+  // WHAT CAME OUT OF IT: the documents saved with it, then what the chat itself shows was made. Nothing invented.
+  const outs = el("section", "cs-outs");
+  outs.appendChild(el("div", "eyebrow", "What came out of it"));
+  const docs = Array.isArray(r.came_out_of_it) ? r.came_out_of_it : [];
+  const named = Array.isArray(r.named_outs) ? r.named_outs : [];
+  for (const d of docs) {
+    const card = btn("cs-out", null);
+    card.append(el("span", "cs-kind", "Doc"), outWords(d.title, "Saved with the chat"));
+    card.addEventListener("click", () => openItem({ t: "chat_import", id: d.id }));
+    outs.appendChild(card);
+  }
+  const savedNames = new Set(docs.map((d) => String(d.title || "").toLowerCase()));
+  for (const o of named) {
+    if (savedNames.has(String(o.name || "").toLowerCase())) continue;
+    const card = el("div", "cs-out");
+    card.append(el("span", "cs-kind", o.kind || "Note"), outWords(o.name, o.line, true));
+    outs.appendChild(card);
+  }
+  if (!docs.length && !named.length) outs.appendChild(el("p", "quiet", "Nothing saved from this chat yet."));
+  else if (named.length) outs.appendChild(el("p", "quiet cs-outs-note", "Named in the chat. Only what is saved with it opens here."));
+  v.appendChild(outs);
+  actions(v, r, c);
+}
+function outWords(name, line, lineIsTools) {
+  const w = el("span", "cs-out-words");
+  w.appendChild(txt("span", "cs-out-name", name || "", true));
+  if (line) w.appendChild(lineIsTools ? txt("span", "cs-out-line", line, true) : el("span", "cs-out-line", line));
+  return w;
+}
+function back(v) {
+  const b = btn("go ghost cs-back", "Back to the list");
+  b.addEventListener("click", () => { cs.root.dataset.view = "list"; cs.open = null; cs.root.scrollIntoView({ block: "start" }); });
+  v.appendChild(b);
+}
+
+function actions(v, r, c) {
+  const row = el("div", "cs-actions");
+  const cont = btn("go", "Continue in Claude");
+  const whole = btn("go ghost", "Read the whole chat");
+  const move = btn("go ghost", "Move to");
+  row.append(cont, whole, move);
+  let share = null, rm = null;
   if (r.mine) {
-    const n = Number(r.sources_known || 0);
-    const line = r.made_from_state === "recorded"
-      ? (n ? `Made from ${n} ${n === 1 ? "item" : "items"} HireKraft found for you. Anyone you share it with sees it only if they can open all of them.` : "")
-      : r.made_from_state === "untied"
-        ? "Saved from your AI assistant. HireKraft could not tie it item by item to what it handed over, so sharing it asks you first."
-        : "HireKraft does not know what this was made from, so sharing it asks you first.";
-    if (line) card.appendChild(el("p", "quiet", line + (r.past_lock ? " You shared it after being shown what is private in it." : "")));
+    share = btn("go ghost", r.shared_at ? "Stop sharing" : "Share with the company");
+    rm = btn("go ghost cs-remove", "Remove");
+    row.append(share, rm);
   }
-  const acts = el("div"); acts.style.display = "flex"; acts.style.gap = "8px"; acts.style.margin = "8px 0";
-  const msg = el("div");
-  if (r.mine) {
-    const sh = el("button", r.shared_at ? "go ghost" : "go", r.shared_at ? "Unshare" : "Share with the company"); sh.type = "button";
-    // SHARING SHOWS WHAT IS PRIVATE FIRST (seat locks-and-basics, decision 1022). The brain decides (chat_share): if anyone
-    // it would reach cannot open everything it was made from, or what it was made from is not known, the first press
-    // shares nothing and says what is private and to whom; only "Share anyway" shares it, and that choice is recorded.
-    sh.addEventListener("click", async () => {
-      sh.disabled = true;
-      const s = await rpc("chat_share", { p_chat: id, p_share: !r.shared_at });
-      if (s?.ok) { await openChat(id); drawMine(); return; }
-      sh.disabled = false;
-      if (s?.reason !== "needs_confirm") { said(msg, s?.note || "That did not work.", true); return; }
-      msg.innerHTML = "";
-      const box = el("div", "notice flagged");
-      box.appendChild(el("p", null, "Not shared yet. " + (s.note || "")));
-      const who = Array.isArray(s.private_to) ? s.private_to : [];
-      if (who.length) {
-        box.appendChild(el("p", "quiet", "What is in it that these people cannot open themselves:"));
-        const ul = el("ul"); ul.style.paddingLeft = "1.2em";
-        who.forEach((p) => ul.appendChild(el("li", null, `${p.person}: ${p.items} ${p.items === 1 ? "item" : "items"} (` +
-          (Array.isArray(p.sources) ? p.sources.map((x) => `${x.items} from ${x.source}`).join(", ") : "") + ")")));
-        box.appendChild(ul);
-      }
-      const row2 = el("div"); row2.style.display = "flex"; row2.style.gap = "8px"; row2.style.flexWrap = "wrap";
-      const yes = el("button", "go", "Share anyway"); yes.type = "button";
-      const no = el("button", "go ghost", "Keep it private"); no.type = "button";
-      yes.addEventListener("click", async () => {
-        yes.disabled = true; no.disabled = true;
-        const t = await rpc("chat_share", { p_chat: id, p_share: true, p_confirm: true });
-        if (t?.ok) { await openChat(id); drawMine(); } else { yes.disabled = false; no.disabled = false; said(msg, t?.note || "That did not work.", true); }
-      });
-      no.addEventListener("click", () => { msg.innerHTML = ""; msg.appendChild(el("p", "quiet", "Kept private. Nothing was shared.")); });
-      row2.append(yes, no); box.appendChild(row2); msg.appendChild(box);
+  v.appendChild(row);
+  const slot = el("div", "cs-slot"); v.appendChild(slot);
+  const msg = el("div"); v.appendChild(msg);
+  // CONTINUE IN CLAUDE: one line to paste in a new Claude chat; her own Claude finds the chat in HireKraft by its title.
+  cont.addEventListener("click", async () => {
+    slot.innerHTML = "";
+    const box = el("div", "cs-cont");
+    const line = el("p", "cs-say");
+    line.append(el("span", null, "Pick up my HireKraft chat"), document.createTextNode(" “"), txt("span", null, r.title, true), document.createTextNode("” "), el("span", null, "where we left off."));
+    box.append(el("b", null, "Paste this into a new Claude chat:"), line);
+    slot.appendChild(box);
+    let ok = false;
+    try { await navigator.clipboard.writeText(line.textContent); ok = true; } catch (_) { ok = false; }
+    box.querySelector("b").textContent = ok ? "Copied. Paste this into a new Claude chat:" : "Select and copy this, then paste it into a new Claude chat:";
+  });
+  whole.addEventListener("click", () => {
+    if (slot.querySelector(".cs-whole")) { slot.innerHTML = ""; whole.textContent = "Read the whole chat"; return; }
+    slot.innerHTML = ""; whole.textContent = "Hide the conversation";
+    slot.appendChild(wholeChat(r));
+  });
+  move.addEventListener("click", () => {
+    if (slot.querySelector(".cs-move")) { slot.innerHTML = ""; return; }
+    slot.innerHTML = ""; slot.appendChild(moveTo(c.t || "chat_import", r.id, r.subject_id));
+  });
+  if (share) share.addEventListener("click", () => shareFlow(r, share, msg));
+  if (rm) rm.addEventListener("click", async () => {
+    if (!confirm("Remove this chat? It leaves your list and every answer. It is kept in the archive, not erased.")) return;
+    const s = await rpc("chat_remove", { p_chat: r.id });
+    if (s?.ok) { cs.open = null; drawOpenEmpty(); cs.root.dataset.view = "list"; drawMine(); } else said(msg, s?.note || "That did not work.", true);
+  });
+}
+
+function whoSaid(r, m) {
+  if (m.role !== "assistant") return r.mine ? "You" : null;
+  return r.came_from === "chatgpt_export" ? "ChatGPT" : r.came_from === "paste" || r.came_from === "forward" ? "Assistant" : "Claude";
+}
+function wholeChat(r) {
+  const box = el("div", "cs-whole");
+  const msgs = Array.isArray(r.messages) ? r.messages : [];
+  const head = el("div", "cs-whole-head");
+  head.appendChild(el("div", "eyebrow", "The whole conversation"));
+  const find = el("input", "work-search"); find.type = "search"; find.placeholder = "Search inside this chat"; find.setAttribute("aria-label", "Search inside this chat");
+  const count = el("p", "quiet");
+  head.append(find, count);
+  box.appendChild(head);
+  const rows = [];
+  for (const m of msgs) {
+    const d = el("div", "cs-msg " + (m.role === "assistant" ? "them" : "me"));
+    const w = whoSaid(r, m);
+    d.appendChild(w ? txt("span", "cs-msg-who", w, w === "Claude" || w === "ChatGPT") : txt("span", "cs-msg-who", r.brought_by || "", true));
+    d.appendChild(txt("div", "cs-msg-text", m.text, true));
+    box.appendChild(d); rows.push([d, String(m.text || "").toLowerCase()]);
+  }
+  const show = () => {
+    const q = find.value.trim().toLowerCase();
+    let n = 0;
+    for (const [d, t] of rows) { const hit = !q || t.includes(q); d.hidden = !hit; if (hit) n++; }
+    count.textContent = q ? `Messages that match: ${n}` : `${rows.length} messages in this chat`;
+  };
+  find.addEventListener("input", show); show();
+  if (!msgs.length) box.appendChild(el("p", "quiet", "Only the summary is here until the whole chat is saved."));
+  return box;
+}
+
+function moveTo(table, id, current) {
+  const box = el("div", "cs-move");
+  box.appendChild(el("p", "quiet", "Move it to:"));
+  const row = el("div", "cs-move-row");
+  for (const s of cs.subs) {
+    if (s.id === NOT_SORTED || s.id === current) continue;
+    if (s.place === "start" && !cs.r?.can_pin) continue;
+    const b = btn("cs-move-b", null); b.appendChild(txt("span", null, s.name, true));
+    b.addEventListener("click", async () => {
+      row.querySelectorAll("button").forEach((x) => { x.disabled = true; });
+      const m = await rpc("chat_move", { p_table: table, p_item: id, p_subject: s.id });
+      if (m?.ok) { cs.sel = s.id; await drawMine(); box.innerHTML = ""; box.appendChild(el("p", "cs-moved", "Moved. The Tool will file chats like this one there from now on.")); }
+      else { row.querySelectorAll("button").forEach((x) => { x.disabled = false; }); box.appendChild(el("p", "notice flagged", m?.note || "It could not be moved just now.")); }
     });
-    const rm = el("button", "go ghost", "Remove"); rm.type = "button";
-    rm.addEventListener("click", async () => {
-      if (!confirm("Remove this chat? It leaves your list and every answer. It is kept in the archive, not erased.")) return;
-      const s = await rpc("chat_remove", { p_chat: id });
-      if (s?.ok) { v.innerHTML = ""; v.appendChild(el("p", "quiet", s.note)); drawMine(); } else said(msg, s?.note || "That did not work.", true);
-    });
-    acts.append(sh, rm);
+    row.appendChild(b);
   }
-  card.append(acts, msg);
-  for (const m of r.messages || []) {
-    const p = el("div"); p.style.margin = "10px 0"; p.style.whiteSpace = "pre-wrap";
-    p.appendChild(el("div", "eyebrow", m.role === "assistant" ? "Assistant" : "Person"));
-    p.appendChild(el("div", null, m.text));
-    card.appendChild(p);
+  box.appendChild(row);
+  return box;
+}
+
+// SHARING SHOWS WHAT IS PRIVATE FIRST (seat locks-and-basics, decision 1022), unchanged: the brain decides (chat_share); the first
+// press shares nothing when anyone it would reach cannot open everything it was made from, and says what is private and to whom.
+async function shareFlow(r, sh, msg) {
+  sh.disabled = true;
+  const s = await rpc("chat_share", { p_chat: r.id, p_share: !r.shared_at });
+  if (s?.ok) { await drawMine(); openItem({ t: "chat_import", id: r.id }); return; }
+  sh.disabled = false;
+  if (s?.reason !== "needs_confirm") { said(msg, s?.note || "That did not work.", true); return; }
+  msg.innerHTML = "";
+  const box = el("div", "notice flagged");
+  box.append(el("p", null, "Not shared yet."), txt("p", null, s.note || "", false));
+  const who = Array.isArray(s.private_to) ? s.private_to : [];
+  if (who.length) {
+    box.appendChild(el("p", "quiet", "What is in it that these people cannot open themselves:"));
+    const ul = el("ul");
+    who.forEach((p) => ul.appendChild(txt("li", null, `${p.person}: ${p.items} (` + (Array.isArray(p.sources) ? p.sources.map((x) => `${x.items} ${x.source}`).join(", ") : "") + ")", true)));
+    box.appendChild(ul);
   }
-  v.appendChild(card);
-  v.scrollIntoView({ behavior: "smooth", block: "start" });
+  const row2 = el("div", "cs-actions");
+  const yes = btn("go", "Share anyway"); const no = btn("go ghost", "Keep it private");
+  yes.addEventListener("click", async () => {
+    yes.disabled = true; no.disabled = true;
+    const t = await rpc("chat_share", { p_chat: r.id, p_share: true, p_confirm: true });
+    if (t?.ok) { await drawMine(); openItem({ t: "chat_import", id: r.id }); } else { yes.disabled = false; no.disabled = false; said(msg, t?.note || "That did not work.", true); }
+  });
+  no.addEventListener("click", () => { msg.innerHTML = ""; msg.appendChild(el("p", "quiet", "Kept private. Nothing was shared.")); });
+  row2.append(yes, no); box.appendChild(row2); msg.appendChild(box);
+}
+
+// A chat she had in the Tool's box: her questions here, the answers on the Work tab (where they are kept with their sources).
+async function openToolChat(c, v) {
+  const { data, error } = await ctx.sb.rpc("work_open", { p_chat: c.id });
+  v.innerHTML = "";
+  back(v);
+  if (error || !data?.ok) { v.appendChild(el("p", "notice flagged", data?.note || "This chat could not be opened.")); return; }
+  v.appendChild(txt("h3", "cs-open-title", data.chat.title, true));
+  const meta = el("p", "quiet cs-meta");
+  meta.append(el("span", null, "Asked in the Tool"), document.createTextNode(" · "), txt("span", null, day(data.chat.created_at), true));
+  v.appendChild(meta);
+  if (String(data.chat.about || "").startsWith("mail:")) v.appendChild(el("p", "quiet", "Started from an email."));
+  const outs = el("section", "cs-outs");
+  outs.appendChild(el("div", "eyebrow", "What came out of it"));
+  const turns = Array.isArray(data.turns) ? data.turns : [];
+  outs.appendChild(el("p", "quiet", turns.length ? "The answers, with their sources, are on the Work tab." : "Nothing saved from this chat yet."));
+  v.appendChild(outs);
+  const row = el("div", "cs-actions");
+  const go = btn("go", "Open it on the Work tab");
+  go.addEventListener("click", () => { const t = document.querySelector('#tabs .tab[data-tab="work"]'); if (t) t.click(); });
+  const move = btn("go ghost", "Move to");
+  row.append(go, move); v.appendChild(row);
+  const slot = el("div", "cs-slot"); v.appendChild(slot);
+  move.addEventListener("click", () => { if (slot.querySelector(".cs-move")) { slot.innerHTML = ""; return; } slot.innerHTML = ""; slot.appendChild(moveTo("work_chat", c.id, c.subject_id)); });
+  const qs = el("div", "cs-whole");
+  qs.appendChild(el("div", "eyebrow", "What you asked"));
+  for (const t of turns) { const d = el("div", "cs-msg me"); d.appendChild(txt("div", "cs-msg-text", t.question, true)); qs.appendChild(d); }
+  v.appendChild(qs);
 }
