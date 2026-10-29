@@ -58,8 +58,7 @@ function whoLine(members) {
   const others = (members || []).filter((m) => !m.me).map((m) => m.first || m.name);
   const p = el('p', 'room-people');
   if (!others.length) { p.appendChild(el('span', '', 'Just you')); return p; }
-  p.appendChild(el('span', '', 'You, '));
-  p.appendChild(names(others));
+  p.append(el('span', '', 'You'), document.createTextNode(', '), names(others));
   return p;
 }
 
@@ -398,7 +397,7 @@ function composer(o) {
     lead.appendChild(el('span', '', r.kind === 'asking' ? 'This sounds like a question for the team. ' : ''));
     lead.appendChild(el('span', '', "I'd start a new Thinkroom with this title:"));
     card.appendChild(lead);
-    const tIn = own('textarea', 'thought-newtopic room-title-in'); tIn.rows = 1; tIn.value = pending && pending.title ? pending.title : r.title; tIn.setAttribute('aria-label', 'The title of the Thinkroom');
+    const tIn = el('textarea', 'thought-newtopic room-title-in'); tIn.rows = 1; tIn.value = pending && pending.title ? pending.title : r.title; tIn.setAttribute('aria-label', 'The title of the Thinkroom');   // not translate=no: the screen never changes what is typed in a box, only its label
     const fit = () => { tIn.style.height = 'auto'; tIn.style.height = tIn.scrollHeight + 2 + 'px'; };
     tIn.addEventListener('input', fit); setTimeout(fit, 0);
     card.appendChild(tIn);
