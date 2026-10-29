@@ -110,8 +110,12 @@ function doText(n) {
   if (core.length > 1 && isLetterish(core)) misses.add(core);
 }
 
+// A FIELD'S OWN WORDS (seat thinkrooms-a, 2026-10-29): what she types is never touched, but a box's placeholder, aria-label and
+// title are the Tool's words and follow her language (the box and the Thinkrooms composer said English in German before).
+const FIELD = 'textarea, input, select';
 function doAttrs(e) {
-  if (skipped(e)) return;
+  if (!e || e.closest('[translate="no"], .notranslate')) return;
+  if (skipped(e) && !(e.matches(FIELD) && !(e.parentElement && e.parentElement.closest(NEVER)))) return;
   let o = origAttr.get(e);
   for (const a of ATTRS) {
     if (!e.hasAttribute(a)) continue;
@@ -130,7 +134,7 @@ function walk(root) {
   if (root.nodeType !== 1 || root.closest(NEVER)) return;
   doAttrs(root);
   const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
-    acceptNode: (n) => (n.nodeType === 1 && n.matches(NEVER)) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+    acceptNode: (n) => { if (n.nodeType === 1 && n.matches(NEVER)) { if (n.matches(FIELD)) doAttrs(n); return NodeFilter.FILTER_REJECT; } return NodeFilter.FILTER_ACCEPT; },
   });
   let n = tw.nextNode();
   while (n) { if (n.nodeType === 3) doText(n); else doAttrs(n); n = tw.nextNode(); }
