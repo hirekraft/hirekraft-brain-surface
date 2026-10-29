@@ -1716,43 +1716,18 @@ function drawRead() {
   }
   for (const m of show) {
     const box = mk('article', 'mailx-mail');
-    const mh = mk('div', 'mailx-r1');
-    mh.appendChild(mk('span', 'mailx-from', m.from_name || m.from_email || ''));
-    mh.appendChild(mk('span', 'mailx-when', when(m.date)));
-    box.appendChild(mh);
-    if (m.to) box.appendChild(mk('p', 'quiet', 'to ' + m.to));
+    if (show.length > 1 || m !== latest) {
+      const mh = mk('div', 'mailx-r1');
+      mh.appendChild(mk('span', 'mailx-from', m.from_name || m.from_email || ''));
+      mh.appendChild(mk('span', 'mailx-when', when(m.date)));
+      box.appendChild(mh);
+    }
+    if (m.to) { const to = mk('p', 'quiet mailx-to', 'to ' + m.to + (m.cc ? ', cc ' + m.cc : '')); to.translate = false; box.appendChild(to); }
     box.appendChild(messageContent(m));
     read.appendChild(box);
   }
-  if (conv) read.appendChild(conv.el);
-
-  // What the related read found, each openable where it lives.
-  if (!t.bulk && r && r !== 'loading' && !r.error) {
-    const mail = (r.mail && r.mail.threads) || [];
-    const docs = (r.documents && r.documents.docs) || [];
-    if (mail.length || docs.length) {
-      const rel = mk('div', 'mailx-rel');
-      rel.appendChild(mk('p', 'eyebrow', 'Belongs with it'));
-      const ul = mk('ul');
-      for (const x of mail) {
-        const li = mk('li');
-        const b = mk('button', 'mailx-link', (x.subject || '(no subject)') + ' · ' + (x.from_name || x.from_email || '') + ', ' + when(x.date));
-        b.type = 'button';
-        b.addEventListener('click', () => openThread(x.thread_id));
-        li.appendChild(b);
-        ul.appendChild(li);
-      }
-      for (const d of docs) {
-        const li = mk('li');
-        const a = mk('a', 'mailx-link', d.name || 'A document without a name');
-        if (d.drive_url) { a.href = d.drive_url; a.target = '_blank'; a.rel = 'noopener'; }
-        li.appendChild(a);
-        ul.appendChild(li);
-      }
-      rel.appendChild(ul);
-      read.appendChild(rel);
-    }
-  }
+  // What she asked about this email from the one box, under it (Tell me more shows it inside its own section instead).
+  if (conv && conv.count() && !open.more) read.appendChild(conv.el);
 }
 
 function newsletterLine(t, r) {
@@ -1983,34 +1958,49 @@ function fitFrame(frame) {
   });
 }
 
-// Answer and Forward start the conversation about this email (answer.js): a briefing of what the
-// company knows about it, then a draft when she asks, and Send as its own press. "Ask about this"
-// puts her in the one Ask bar, which asks about the open email while one is open; the answer lands
-// in the same conversation, with this email, and is kept in Work as a chat named after it.
-// SUPERSEDED 2026-10-07 (seat email-workspace): "Ask about this" used to start a question in the Ask
-// bar that was answered in the band under the columns and kept in whichever Work chat was open.
+// THE PRESSES ON AN OPEN EMAIL (round two): Reply, Reply all, Forward open the composer under them; Draft a reply for me fills it
+// from the emails and the books; Tell me more about this opens the background. SUPERSEDES Answer, Forward into the conversation,
+// Add a thought and Ask about this (seat email-workspace 2026-10-07, seat thoughtgram 2026-10-25): the one box still asks about
+// the open email, and the answer lands under it.
 function actions(t) {
   const row = mk('div', 'mailx-acts');
-  const note = mk('p', 'quiet mailx-said');
-  note.setAttribute('aria-live', 'polite');
-  const btn = (label, primary, fn) => {
-    const b = mk('button', primary ? 'go' : 'go ghost', label);
-    b.type = 'button';
-    b.addEventListener('click', fn);
-    row.appendChild(b);
-  };
-  btn('Answer', true, () => { note.textContent = ''; convoFor(t, true).start('reply'); });
-  btn('Forward', false, () => { note.textContent = ''; convoFor(t, true).start('forward'); });
-  // FROM AN EMAIL (seat thoughtgram, 2026-10-25): a thought linked to this email and its topic, said or typed in the box.
-  if (C.thought) btn('Add a thought', false, () => { note.textContent = ''; C.thought({ source: chosen, source_id: open && open.thread ? open.thread.thread_id : '', subject: t.subject || '' }); });
-  btn('Ask about this', false, () => {
-    const i = document.getElementById('ask-input');
-    if (i) i.focus();
-    note.textContent = 'Ask in the box at the top; the answer appears here, with this email.';
+  const btn = (label, cls, fn) => { const b = mk('button', cls, label); b.type = 'button'; b.addEventListener('click', fn); row.appendChild(b); return b; };
+  btn('Reply', 'go', () => startCompose(t, 'reply'));
+  btn('Reply all', 'go ghost', () => startCompose(t, 'replyall'));
+  btn('Forward', 'go ghost', () => startCompose(t, 'forward'));
+  row.appendChild(mk('span', 'mailx-acts-gap'));
+  btn('Draft a reply for me', 'go ghost mailx-ai-btn', () => draftFor(t));
+  const more = btn(open && open.more ? 'Hide the background' : 'Tell me more about this', 'go ghost mailx-ai-btn', () => {
+    open.more = !open.more;
+    if (open.more) convoFor(t, true).brief();
+    drawRead();
   });
-  const wrap = mk('div');
-  wrap.append(row, note);
-  return wrap;
+  more.setAttribute('aria-expanded', open && open.more ? 'true' : 'false');
+  return row;
+}
+// The composer for this email, made once per open email; a new mode refills its addresses.
+function startCompose(t, mode) {
+  if (!open || !open.thread) return null;
+  const m = boxRow();
+  if (!open.compose) {
+    const threadId = t.thread_id;
+    open.compose = composer(C, { sourceKey: chosen, mailbox: (m && m.address) || chosen.split(':').slice(1).join(':'), thread: t, mode,
+      onDiscard: () => { if (open && open.thread && open.thread.thread_id === threadId) { open.compose = null; drawRead(); } } });
+    drawRead();
+  } else if (open.compose.mode !== mode) open.compose.setMode(mode);
+  open.compose.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  open.compose.focus();
+  return open.compose;
+}
+// Draft a reply for me: the composer opens (as a reply unless she chose Reply all or Forward) and is filled by AI, said while it works.
+async function draftFor(t) {
+  const c = startCompose(t, open && open.compose ? open.compose.mode : 'reply');
+  if (!c) return;
+  const m = boxRow();
+  c.status('Drafting from the emails and your books. Nothing is sent.', 'working');
+  const r = await askDraft(C, { sourceKey: chosen, mailbox: (m && m.address) || '', thread: t }, c.mode === 'forward' ? 'forward' : 'reply', c.body().text.trim() ? c.body() : null);
+  if (!open || open.compose !== c) return;
+  if (r.ok) c.fill(r.draft); else c.status('No draft this time. ' + plainWords(String(r.reason || '')), 'state stalled');
 }
 
 // ── the conversation about an email ─────────────────────────────────────────
@@ -2024,9 +2014,11 @@ function convoFor(t, create, keptChat) {
   const conv = conversation(C, {
     sourceKey: chosen, mailbox: (m && m.address) || chosen.split(':').slice(1).join(':'), thread: t,
     keep: { chat: keptChat || null, about: key, title: t.subject || '(no subject)' },
-    // The first question folds the email; later ones leave the page as it is.
+    // The first question puts the conversation on screen under the email; later ones leave the page as it is.
     onTurn: () => { if (open && open.id === threadId && conv.count() === 1) drawRead(); },
-    onDiscard: () => { convos.delete(key); if (open && open.id === threadId) { open.unfold = false; drawRead(); } },
+    onDiscard: () => { convos.delete(key); if (open && open.id === threadId) drawRead(); },
+    // A draft asked for in the box goes into the composer under the email (round two), the one place to write.
+    onDraft: (d) => { if (open && open.id === threadId && open.thread) { const c = startCompose(open.thread, open.compose ? open.compose.mode : 'reply'); if (c) c.fill(d); } },
   });
   convos.set(key, conv);
   return conv;
@@ -2081,13 +2073,13 @@ export function mailHints() {
   };
 }
 
-// DO, from the one box: the Answer flow on the open email. A reply is asked as said, so lens-ask
-// drafts it; a forward opens the forward flow. False when no email is open.
+// DO, from the one box, on the open email. A reply is asked as said, so lens-ask drafts it into the composer;
+// a forward opens the composer as a forward. False when no email is open.
 export function doFromBox(text, verb) {
   if (!parts || !open || !open.thread) return false;
-  const conv = convoFor(open.thread, true);
   setView('read');
-  if (verb === 'forward') conv.start('forward'); else conv.ask(text);
+  if (verb === 'forward') { startCompose(open.thread, 'forward'); return true; }
+  convoFor(open.thread, true).ask(text);
   return true;
 }
 
