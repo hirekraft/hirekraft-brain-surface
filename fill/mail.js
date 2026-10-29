@@ -1123,6 +1123,8 @@ export function drawMail(body) {
     wrap.dataset.view = window.matchMedia('(max-width: 720px)').matches && !pendingOpen ? 'side' : 'list';
   }
   if (!view) view = pendingOpen ? { kind: 'mailbox' } : { kind: 'attention' };
+  parts.wrap.dataset.mode = mode;
+  loadMode();
   pickDefault();
   drawSide();
   drawList();
@@ -1166,7 +1168,7 @@ function viewButton(label, count, on, fn, title) {
   b.addEventListener('click', fn);
   return b;
 }
-const VIEW_WORDS = ['Worth your attention', 'Caught', 'Starred', 'Labels', 'All labels'];
+const VIEW_WORDS = ['Worth your attention', 'Caught', 'Starred', 'Labels', 'All labels', 'For you', 'Following'];
 const NOT_SEEN = 'Not yet seen by you in the Tool';
 // THE INBOX VIEW'S LEFT COLUMN (seat mail-inbox, decision 1033 item 1): Worth your attention as it was; Mark all as seen; Mailboxes;
 // Caught (the Suspicious view renamed); Starred and Labels under "Your Gmail". Every number is not yet seen by you.
@@ -1237,7 +1239,9 @@ function drawSide() {
   const side = parts.side;
   const top = side.scrollTop;
   side.innerHTML = '';
+  drawModeSwitch(side);
   const n = attn && attn.data ? attnUnseenCount() : null;
+  if (mode === 'ai') { drawAiSide(side, n); side.scrollTop = top; return; }
   viewList(side, [viewButton('Worth your attention', n === null ? '' : n, view && view.kind === 'attention', () => chooseView({ kind: 'attention' }), NOT_SEEN)]);
   drawMarkAll(side);
   drawBoxes(side);
@@ -1253,6 +1257,20 @@ function drawSide() {
   if (labelsOpen) drawLabels(side);
   if (iv && iv.error) side.appendChild(mk('p', 'state stalled', 'What you have not seen yet could not be counted just now. ' + iv.error + ' The numbers are left off rather than shown wrong.'));
   side.scrollTop = top;
+}
+// THE AI VIEW'S LEFT COLUMN (decision 1031 item 1, 1033 item 2): For you (the matters waiting on you, money in one line, what was
+// left for you, news in what you follow), Following, Caught (the same suspected scams as the Inbox view). Every number is not yet
+// seen by you; Following counts the matters with something new.
+function drawAiSide(side, n) {
+  const fresh = followItems().filter((f) => f.news).length;
+  const sc = caughtCount();
+  const cb = viewButton('Caught', sc ? sc : '', view && view.kind === 'suspicious', () => chooseView({ kind: 'suspicious' }), 'Suspected scams not yet seen by you, across the mailboxes you can open');
+  if (sc) cb.classList.add('mailx-view-warn');
+  viewList(side, [
+    viewButton('For you', n === null ? '' : n, view && view.kind === 'attention', () => chooseView({ kind: 'attention' }), NOT_SEEN),
+    viewButton('Following', fresh || '', view && view.kind === 'following', () => chooseView({ kind: 'following' }), 'Matters you follow with something new'),
+    cb]);
+  side.appendChild(mk('p', 'mailx-att-checked mailx-ai-note', 'Matters, not single emails, across every mailbox you can open. Where each stands is written by AI from its own emails only. Your mail is not changed.'));
 }
 function drawBoxes(side) {
   side.appendChild(mk('h3', 'mailx-domain mailx-group', 'Mailboxes'));
@@ -1344,6 +1362,7 @@ function drawList() {
   if (found) { drawFound(list); return; }
   if (view && (view.kind === 'starred' || view.kind === 'label')) { drawMarkedList(list); return; }
   if (view && view.kind === 'attention') { drawAttnList(list); return; }
+  if (view && view.kind === 'following') { drawFollowList(list); return; }
   if (view && view.kind === 'suspicious') { drawScamList(list); return; }
   const m = boxRow();
   if (!m) { list.appendChild(mk('p', 'quiet', 'Choose a mailbox on the left.')); return; }
@@ -1476,18 +1495,18 @@ function drawRead() {
   const read = parts.read;
   read.innerHTML = '';
   setBar();
-  if (!open && pick && view && view.kind === 'attention') { drawAttnCard(read, pick); return; }
+  if (!open && pick && view && (view.kind === 'attention' || view.kind === 'following')) { drawAttnCard(read, pick); return; }
   if (!open && view && view.kind === 'suspicious') {
     if (scamPick) drawScamCard(read, scamPick); else read.appendChild(mk('p', 'quiet', 'Choose one to see who really sent it and what you can do.'));
     return;
   }
   if (!open) {
-    read.appendChild(mk('p', 'quiet', view && view.kind === 'attention' ? 'Choose an item to see why it is here and what you can do.' : 'Choose an email to read it here.'));
+    read.appendChild(mk('p', 'quiet', view && (view.kind === 'attention' || view.kind === 'following') ? 'Choose one to see where it stands and what you can do.' : 'Choose an email to read it here.'));
     return;
   }
   read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
-  if (pick && view && view.kind === 'attention') {
-    const back = mk('button', 'mailx-toggle', 'Back to why it is here');
+  if (pick && view && (view.kind === 'attention' || view.kind === 'following')) {
+    const back = mk('button', 'mailx-toggle', 'Back to where it stands');
     back.type = 'button';
     back.addEventListener('click', () => { open = null; drawRead(); });
     read.appendChild(back);
