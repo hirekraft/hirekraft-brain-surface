@@ -43,7 +43,7 @@
 import { conversation } from './answer.js?v=2026-10-22-dates';
 import { fmtDate } from './dates.js?v=2026-10-22-dates';
 import { plainWords } from './plain.js?v=2026-10-27-mail-views';
-import { screenLang, screenLangName } from './words.js?v=2026-10-28-language';   // See it in <language> (seat language-and-nudge)
+import { screenLang, screenLangName } from './words.js?v=2026-10-29-thinkrooms';   // See it in <language> (seat language-and-nudge)
 
 // VIEWS IN THE LEFT COLUMN (seat mail-views, 2026-10-27; Alex 14:41 PT: "Worth your attention should be ... on the left-hand
 // side instead of an email, like a label ... worth your attention, and the other would be starred"). At the top of the left
@@ -380,7 +380,7 @@ function choiceRow(it, row, out) {
 }
 
 // A thought left for her: Read it shows it whole (and marks it read, which its author can see), See the original shows the
-// speaker's own words, Reply with a thoughtgram leaves one back (seat every-voice, decision 1025).
+// speaker's own words, Reply in the Thinkroom opens its room with the composer (seat every-voice, decision 1025; seat thinkrooms-a).
 function thoughtActions(it, row, said) {
   const read = mk('button', 'go', 'Read it');
   read.type = 'button';
@@ -402,9 +402,9 @@ function thoughtActions(it, row, said) {
     row.appendChild(o);
   }
   if (C.startThought) {
-    const rp = mk('button', 'go ghost', 'Reply with a thoughtgram');
+    const rp = mk('button', 'go ghost', it.room_id ? 'Reply in the Thinkroom' : 'Reply with a thought');
     rp.type = 'button';
-    rp.addEventListener('click', () => C.startThought({ for: [String(it.from || '')] }));
+    rp.addEventListener('click', () => C.startThought(it.room_id ? { room: it.room_id, draft: '' } : { draft: 'Tell ' + String(it.from || '') + ' that ' }));
     row.appendChild(rp);
   }
 }
@@ -1879,7 +1879,7 @@ function actions(t) {
   btn('Answer', true, () => { note.textContent = ''; convoFor(t, true).start('reply'); });
   btn('Forward', false, () => { note.textContent = ''; convoFor(t, true).start('forward'); });
   // FROM AN EMAIL (seat thoughtgram, 2026-10-25): a thought linked to this email and its topic, said or typed in the box.
-  if (C.thought) btn('Add a thoughtgram', false, () => { note.textContent = ''; C.thought({ source: chosen, source_id: open && open.thread ? open.thread.thread_id : '', subject: t.subject || '' }); });
+  if (C.thought) btn('Add a thought', false, () => { note.textContent = ''; C.thought({ source: chosen, source_id: open && open.thread ? open.thread.thread_id : '', subject: t.subject || '' }); });
   btn('Ask about this', false, () => {
     const i = document.getElementById('ask-input');
     if (i) i.focus();
