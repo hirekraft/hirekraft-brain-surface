@@ -1926,6 +1926,96 @@ a { color: var(--act); }
 .mailx-ok span { flex: 1 1 16rem; }
 .mailx-scam-card .mailx-textlink { margin-top: calc(var(--u) * 3); }
 /* ── end MAIL ROUND TWO ── */
+/* ── CHATS BY SUBJECT (seat chats-subjects, 2026-10-29, decision 1037; drawn by fill/chats.js). Subjects on the left with her
+   counts, the chats in the chosen subject, the open chat with what came out of it first. Built on the looks' tokens only.
+   At 1100px and below the subjects become one row of chips above the list; on a phone the open chat is a page of its own
+   with Back (phone rules in A PHONE IS A FIRST-CLASS SIZE). ── */
+.cs { display: flex; flex-direction: column; gap: var(--gap); }
+.cs-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--u) * 3);
+  padding: calc(var(--u) * 4) calc(var(--u) * 5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper); }
+.cs-top-words { flex: 1 1 22rem; min-width: 0; }
+.cs-top-words .quiet { margin: var(--u) 0 0; max-width: var(--measure); }
+.cs-h { margin: 0; font-family: var(--font-head); font-weight: var(--w-strong); font-size: var(--t-head); line-height: var(--lead-tight); color: var(--ink); overflow-wrap: anywhere; }
+.cs-how { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: calc(var(--u) * 3); }
+.cs-how-card { padding: calc(var(--u) * 3.5) calc(var(--u) * 4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper); }
+.cs-how-card p { margin: var(--u) 0 0; }
+.cs-search { width: 100%; }
+.cs-how[hidden], .cs-msg[hidden] { display: none; }
+.cs-grid { display: grid; grid-template-columns: minmax(13rem, 17rem) minmax(16rem, 26rem) minmax(0, 1fr); gap: var(--gap); align-items: start; }
+.cs-subjects, .cs-list, .cs-open { min-width: 0; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: calc(var(--u) * 3); }
+.cs-subjects .eyebrow { padding: var(--u) calc(var(--u) * 2); }
+.cs-subject-row { display: flex; flex-direction: column; gap: 2px; }
+.cs-subject { display: flex; align-items: center; gap: calc(var(--u) * 2.5); width: 100%; min-height: 44px; padding: calc(var(--u) * 2) calc(var(--u) * 3);
+  border: 0; border-radius: var(--radius); background: transparent; color: var(--ink); font: inherit; font-size: var(--t-body); text-align: left; cursor: pointer; }
+.cs-subject:hover { background: var(--paper-2); }
+.cs-subject.on { background: var(--sel); font-weight: var(--w-strong); }
+.cs-subject-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.cs-count { font-size: var(--t-small); color: var(--ink-4); }
+.cs-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--people); }
+.cs-subject[data-place="start"] .cs-dot { background: var(--act); }
+.cs-subject[data-place="small"] .cs-dot, .cs-subject[data-place="unsorted"] .cs-dot { background: var(--ink-4); }
+.cs-subject-note { padding: calc(var(--u) * 3) calc(var(--u) * 2) var(--u); margin: 0; }
+.cs-list-head { padding: var(--u) calc(var(--u) * 2) calc(var(--u) * 3); }
+.cs-list-head .quiet { margin: var(--u) 0 0; }
+.cs-chats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: calc(var(--u) * 1.5); }
+.cs-chat { display: flex; flex-direction: column; align-items: flex-start; gap: var(--u); width: 100%; padding: calc(var(--u) * 3); text-align: left; cursor: pointer;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); color: var(--ink); font: inherit; }
+.cs-chat:hover { border-color: var(--act); }
+.cs-chat.on { border-color: var(--act); background: var(--sel); }
+.cs-chat-title { font-weight: var(--w-strong); line-height: var(--lead-tight); overflow-wrap: anywhere; }
+.cs-meta { font-size: var(--t-small); color: var(--ink-4); overflow-wrap: anywhere; }
+.cs-chat-line { font-size: var(--t-small); color: var(--ink-2); line-height: 1.4; overflow-wrap: anywhere; }
+.cs-chip { font-size: var(--t-micro); font-weight: var(--w-strong); padding: 2px calc(var(--u) * 2.5); border-radius: 999px; }
+.cs-chip.whole { background: var(--money-soft); color: var(--ok-ink); }
+.cs-chip.summary { background: var(--warn-soft); color: var(--warn); }
+.cs-chip.tool { background: var(--people-soft); color: var(--people); }
+.cs-open { padding: calc(var(--u) * 5) calc(var(--u) * 6); display: flex; flex-direction: column; gap: calc(var(--u) * 4); min-height: 20rem; }
+.cs-open-empty { margin: auto 0; }
+.cs-open-title { margin: 0; font-family: var(--font-head); font-weight: var(--w-strong); font-size: var(--t-head); line-height: var(--lead-tight); color: var(--ink); overflow-wrap: anywhere; }
+.cs-open .cs-meta, .cs-renamed { margin: 0; }
+.cs-back { display: none; align-self: flex-start; }
+.cs-warn { padding: calc(var(--u) * 3.5) calc(var(--u) * 4); border-radius: var(--radius); background: var(--warn-soft); border: 1px solid var(--warn); color: var(--ink); }
+.cs-warn b { color: var(--warn); }
+.cs-warn p { margin: var(--u) 0 0; }
+.cs-say { font-weight: var(--w-mid); background: var(--paper); border: 1px dashed var(--line); border-radius: var(--radius); padding: calc(var(--u) * 2) calc(var(--u) * 3); overflow-wrap: anywhere; }
+.cs-joined { margin: 0; padding: calc(var(--u) * 3) calc(var(--u) * 3.5); border-radius: var(--radius); background: var(--people-soft); color: var(--people); }
+.cs-outs { display: flex; flex-direction: column; gap: calc(var(--u) * 2); }
+.cs-out { display: flex; align-items: flex-start; gap: calc(var(--u) * 3); width: 100%; padding: calc(var(--u) * 3) calc(var(--u) * 3.5); text-align: left;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); color: var(--ink); font: inherit; }
+button.cs-out { cursor: pointer; }
+button.cs-out:hover { border-color: var(--act); }
+.cs-kind { flex: none; min-width: 3.5rem; text-align: center; padding: var(--u) calc(var(--u) * 2); border-radius: var(--radius); font-size: var(--t-micro); font-weight: var(--w-strong); background: var(--act); color: var(--on-act); }
+.cs-out-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cs-out-name { font-weight: var(--w-strong); overflow-wrap: anywhere; }
+.cs-out-line { font-size: var(--t-small); color: var(--ink-4); overflow-wrap: anywhere; }
+.cs-outs-note { margin: 0; font-size: var(--t-micro); }
+.cs-actions { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2.5); }
+.cs-actions .go { min-height: 44px; }
+.cs-remove { margin-left: auto; }
+.cs-cont { display: flex; flex-direction: column; gap: calc(var(--u) * 1.5); padding: calc(var(--u) * 3) calc(var(--u) * 3.5); border-radius: var(--radius); background: var(--money-soft); color: var(--ok-ink); }
+.cs-cont .cs-say { margin: 0; color: var(--ink); }
+.cs-move-row { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); }
+.cs-move-b { min-height: 44px; padding: 0 calc(var(--u) * 3.5); border-radius: 999px; border: 1px solid var(--line); background: var(--paper-2); color: var(--ink); font: inherit; cursor: pointer; }
+.cs-move-b:hover { border-color: var(--act); }
+.cs-moved { margin: 0; color: var(--ok-ink); font-weight: var(--w-mid); }
+.cs-whole { display: flex; flex-direction: column; gap: calc(var(--u) * 2.5); border-top: 1px solid var(--line); padding-top: calc(var(--u) * 4); }
+.cs-whole-head { display: flex; flex-direction: column; gap: calc(var(--u) * 2); }
+.cs-whole-head .quiet { margin: 0; }
+.cs-msg { display: flex; flex-direction: column; gap: var(--u); padding: calc(var(--u) * 3) calc(var(--u) * 3.5); border-radius: var(--radius-lg); max-width: 88%; border: 1px solid var(--line); }
+.cs-msg.them { align-self: flex-start; background: var(--paper-2); }
+.cs-msg.me { align-self: flex-end; background: var(--people-soft); }
+.cs-msg-who { font-size: var(--t-micro); color: var(--ink-4); }
+.cs-msg-text { white-space: pre-wrap; line-height: var(--lead); overflow-wrap: anywhere; color: var(--ink); }
+.cs-foot .quiet { margin: 0; }
+@media (max-width: 1100px) {
+  .cs-grid { grid-template-columns: minmax(15rem, 22rem) minmax(0, 1fr); }
+  .cs-subjects { grid-column: 1 / -1; padding: calc(var(--u) * 2); }
+  .cs-subjects .eyebrow, .cs-subject-note { display: none; }
+  .cs-subject-row { flex-direction: row; overflow-x: auto; gap: calc(var(--u) * 2); scrollbar-width: thin; }
+  .cs-subject { width: auto; flex: none; border: 1px solid var(--line); border-radius: 999px; padding: 0 calc(var(--u) * 3.5); }
+  .cs-subject-name { white-space: nowrap; }
+}
+
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
    for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
@@ -1935,6 +2025,15 @@ a { color: var(--act); }
 .tab-more, .tab-ask { display: none; }
 @media (max-width: 720px) {
   body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  /* Chats by subject (seat chats-subjects): one column; the subjects a row of chips; the open chat a page of its own with Back. */
+  .cs-grid { grid-template-columns: minmax(0, 1fr); }
+  .cs[data-view="open"] .cs-subjects, .cs[data-view="open"] .cs-list, .cs[data-view="open"] .cs-search, .cs[data-view="open"] .cs-top, .cs[data-view="open"] .cs-how { display: none; }
+  .cs[data-view="list"] .cs-open { display: none; }
+  .cs-back { display: inline-flex; }
+  .cs-open { padding: calc(var(--u) * 4); }
+  .cs-top { padding: calc(var(--u) * 3.5); }
+  .cs-remove { margin-left: 0; }
+  .cs-msg { max-width: 100%; }
   .masthead { align-items: center; padding-top: calc(var(--u) * 2); min-height: 48px; }
   .wordmark { display: flex; align-items: baseline; gap: calc(var(--u) * 1.5); white-space: nowrap; }
   .wordmark span { display: inline; margin: 0; }
