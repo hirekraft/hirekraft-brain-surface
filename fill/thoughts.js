@@ -142,7 +142,7 @@ export async function loadThoughts(openId) {
   side.appendChild(button('New Thinkroom', 'go room-new', () => { pending = { draft: '' }; roomOpen = null; drawNew(main, wrap); wrap.dataset.mode = 'new'; markRows(side); }));
   const chips = el('div', 'room-chips');
   chips.setAttribute('role', 'group'); chips.setAttribute('aria-label', 'Show');
-  for (const [k, label] of [['open', 'Open'], ['decided', 'Decided']]) {
+  for (const [k, label] of [['open', 'Still open'], ['decided', 'Decided']]) {
     const b = button(label, 'go ghost room-chip', () => { view = k; loadThoughts(); });
     b.setAttribute('aria-pressed', String(view === k));
     chips.appendChild(b);
@@ -225,7 +225,7 @@ async function drawRoom(main, wrap, id) {
   const head = el('header', 'room-head');
   head.appendChild(own('h3', 'room-h', rm.title));
   const ppl = whoLine(rm.members);
-  ppl.appendChild(el('span', '', rm.decided_at ? ' · Decided' : ' · Open'));
+  ppl.appendChild(el('span', '', rm.decided_at ? ' · Decided' : ' · still open'));
   head.appendChild(ppl);
   const av = el('div', 'room-avatars'); av.setAttribute('aria-hidden', 'true');
   for (const m of rm.members || []) av.appendChild(own('span', 'room-av' + (m.me ? ' me' : ''), String(m.first || m.name || '?').slice(0, 1).toUpperCase()));
@@ -396,7 +396,7 @@ function composer(o) {
     const card = said2(r);
     const lead = el('p', 'room-shape-lead');
     lead.appendChild(el('span', '', r.kind === 'asking' ? 'This sounds like a question for the team. ' : ''));
-    lead.appendChild(el('span', '', "I'd start a Thinkroom called"));
+    lead.appendChild(el('span', '', "I'd start a new Thinkroom with this title:"));
     card.appendChild(lead);
     const tIn = own('textarea', 'thought-newtopic room-title-in'); tIn.rows = 1; tIn.value = pending && pending.title ? pending.title : r.title; tIn.setAttribute('aria-label', 'The title of the Thinkroom');
     const fit = () => { tIn.style.height = 'auto'; tIn.style.height = tIn.scrollHeight + 2 + 'px'; };
