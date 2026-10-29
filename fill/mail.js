@@ -371,85 +371,12 @@ function saidLine(out, k) {
 }
 function choiceRow(it, row, out) {
   const b = (label, fn, primary) => { const x = mk('button', primary ? 'go' : 'go ghost', label); x.type = 'button'; x.addEventListener('click', () => fn(x)); row.appendChild(x); return x; };
-  const a = (label, href, primary) => { const x = mk('a', primary ? 'go' : 'go ghost', label); x.href = href; x.target = '_blank'; x.rel = 'noopener'; row.appendChild(x); return x; };
-  const who = whoOf(it);
-  const books = Array.isArray(it.checked) ? it.checked.filter((c) => String(c).startsWith('Books')).join(' ') : '';
-  const paid = (x, what) => dismiss(it, x, [{ key: it.key, signal: 'dismissed', title: what + ' you said was paid' }],
-    (books ? 'The Tool checked your books: ' + books.replace(/^Books: /, '') + ' ' : 'Your books were not checked for this. ')
-      + 'If it was paid, it leaves this list once the payment is in the books. Until then it is moved lower for you; undo under What it learned from you.');
-  const k = kindOf(it);
-  if (k === 'impostor') {
-    const names = (Array.isArray(it.readers) ? it.readers : []).map((p) => String(p.name || '')).filter(Boolean);
-    if (names.length && C.startThought) {
-      b('Warn ' + names.join(', '), () => {
-        C.startThought({ for: names });
-        const i = document.getElementById('ask-input');
-        if (i) i.value = 'Some emails pretend to be someone of our business. Do not pay anything they ask, do not open their links or attachments, and tell the owner.';
-        settle(it, 'Your warning for ' + names.join(', ') + ' is in the box at the top. Press Go: it is read back to you before it is kept, and only you and they will see it.');
-      }, true);
-    } else {
-      out.appendChild(mk('p', 'mailx-att-checked', 'Nobody else who signs in to the Tool reads these mailboxes, so the Tool has nobody to warn. Whoever works them in Gmail does not see this warning: tell them yourself.'));
-    }
-    if (it.open_id) a('Report it in Gmail', gmailHref(it));
-    out.appendChild(mk('p', 'mailx-att-checked', 'Report it in Gmail opens the latest one there, where Report phishing is in the message menu. The Tool changes nothing in your mailbox.'));
-    b('Not a scam', (x) => {
-      x.disabled = true;
-      const f = mk('div', 'mailx-att-why-box');
-      const lab = mk('label', null, 'In one line, why is it not a scam?');
-      const inp = mk('input', 'mailx-att-input'); inp.type = 'text'; inp.maxLength = 280;
-      lab.appendChild(inp);
-      const keep = mk('button', 'go', 'Keep');
-      keep.type = 'button';
-      keep.addEventListener('click', async () => {
-        const why = inp.value.trim();
-        if (!why) { inp.focus(); return; }
-        keep.disabled = true;
-        const fe = String(it.from_email || '').toLowerCase();
-        const r = await attnTeach([{ key: 'fraud:' + fe, signal: 'dismissed', value: 'not_scam', title: 'Mail from ' + fe + ' (you said it is not a scam)', about: why }]);
-        if (!r || r.ok !== true) { keep.disabled = false; keep.textContent = 'Not kept. Try again'; return; }
-        settle(it, 'Kept, with your reason. Mail from ' + fe + ' is no longer raised here for you. The warning stays on those emails for anyone else who reads that mailbox. Undo under What it learned from you.');
-        loadAttention();
-      });
-      f.append(lab, keep);
-      out.appendChild(f);
-      inp.focus();
-    });
-    return;
+  if (it.following) { b('Stop following', (x) => choose(it, 'stop_following', x, out), false); return; }
+  for (const [c, label] of CHOICES) {
+    if (c === 'keep_me_posted' && it.kind !== 'email') continue;
+    if (c === 'already_paid' && !it.is_money) continue;
+    b(label, (x) => choose(it, c, x, out), c === 'got_it');
   }
-  if (k === 'invoice') {
-    if (it.open_url) a('Open the invoice', it.open_url, true);
-    if (C.ask) b('Draft a reminder', () => {
-      C.ask('Draft a short, polite payment reminder email for this, and do not send it: ' + String(it.what || '') + '. ' + String(it.why || ''));
-      settle(it, 'The reminder is being drafted in the conversation on the right. Nothing is sent: you copy it or ask for changes.');
-    });
-    b('Already paid', (x) => paid(x, 'An invoice'));
-    return;
-  }
-  if (k === 'bill') {
-    if (it.open_url) a('Open the bill', it.open_url, true);
-    b('Already paid', (x) => paid(x, 'A bill'));
-    return;
-  }
-  const canOpen = !!(it.open_source && it.open_id);
-  if (k === 'email-money' || k === 'email-question' || k === 'email-waiting') {
-    if (canOpen) b(k === 'email-waiting' ? 'Draft a follow-up' : 'Draft a reply', () => openFor(it, 'reply'), true);
-    if (k === 'email-money') b('Already paid', (x) => paid(x, 'Mail from ' + who));
-    if (k === 'email-question') {
-      b('Not mine', (x) => dismiss(it, x, [{ key: it.from_key || it.key, signal: 'dismissed', title: 'Questions from ' + who + ' (not yours)' }, { key: it.key, signal: 'dismissed', title: String(it.what || '').slice(0, 150) }],
-        'Got it: questions from ' + who + ' come lower for you from now on. The email stays in the inbox; undo under What it learned from you.'));
-      return;
-    }
-  } else if (canOpen) {
-    b('Open', () => openFor(it), true);
-  } else if (it.open_url) {
-    a('Open in QuickBooks', it.open_url, true);
-  }
-  b('Not important', (x) => {
-    const key = it.from_key || ('kind:' + it.kind);
-    const title = it.from_key ? 'Mail from ' + who : (it.kind === 'watch' ? 'What you asked to watch' : it.kind === 'finding' ? 'Records that do not match' : 'This kind of item');
-    dismiss(it, x, [{ key, signal: 'dismissed', title }, { key: it.key, signal: 'dismissed', title: String(it.what || '').slice(0, 150) }],
-      'Got it: ' + (it.from_key ? 'mail from ' + who : 'items like this') + ' comes lower from now on. Nothing is hidden or changed in the inbox; undo under What it learned from you.');
-  });
 }
 
 // A thought left for her: Read it shows it whole (and marks it read, which its author can see), See the original shows the
@@ -482,7 +409,40 @@ function thoughtActions(it, row, said) {
   }
 }
 
-// The middle list: one line of what, one line of why, per item; the rest ranked lower one press away; the quiet lines.
+// MATTERS (seat mail-matters, 2026-10-29, decisions 1031 item 2 and 1033 item 2). Each row is a matter, not a lone email: its
+// subject, who it is with, where it stands (one line written by AI from that matter's own emails only, kept in the brain and
+// written again only when a newer email arrives) or, until then, why it is here, and the words of the latest email. The money
+// line bundles the books. The same list is For you in the AI view and Worth your attention in the Inbox view. SUPERSEDES the
+// two-line rows (what, why) and the quiet counting lines under the list (seat attention; Alex: "not raised zero, settled zero ...
+// it learned from you"): what it learned sits behind one small link.
+function stateOf(it) { return it && it.state && it.state.state ? String(it.state.state) : ''; }
+function passageOf(it) { return String((it && it.state && it.state.passage) || (it && it.passage_first) || ''); }
+function matterRow(it, onPick, current) {
+  const li = mk('li');
+  const b = mk('button', 'mailx-msg mailx-att-row mailx-matter' + (it.kind === 'thought' ? ' mailx-att-thought' : '') + (it.kind === 'money' ? ' mailx-money' : ''));
+  b.type = 'button';
+  if (current) b.setAttribute('aria-current', 'true');
+  if (it.kind === 'email' || it.following) {
+    const top = mk('span', 'mailx-matter-top');
+    top.appendChild(mk('span', 'mailx-subj mailx-att-what', String(it.subject || it.title || '(no subject)')));
+    if (it.news) top.appendChild(mk('span', 'mailx-matter-new', 'New'));
+    b.appendChild(top);
+    if (it.who) { const w = mk('span', 'mailx-from mailx-matter-who', String(it.who) + (it.org && it.org !== it.who ? ' · ' + it.org : '') + (it.at ? ' · ' + when(it.at) : '')); w.translate = false; b.appendChild(w); }
+    const st = stateOf(it);
+    if (st) { const s = mk('span', 'mailx-snip mailx-matter-state', st); s.translate = false; b.appendChild(s); }
+    else if (it.why) b.appendChild(mk('span', 'mailx-att-line', String(it.why)));
+    const p = passageOf(it);
+    if (p) { const q = mk('span', 'mailx-snip mailx-matter-passage', p); q.translate = false; b.appendChild(q); }
+  } else {
+    b.appendChild(mk('span', 'mailx-subj mailx-att-what', String(it.what || '')));
+    if (it.why) b.appendChild(mk('span', 'mailx-snip mailx-att-line', String(it.why)));
+  }
+  if (it.kind === 'impostor' || it.kind === 'scam_alert') b.classList.add('warned');
+  if (!it.following && attnUnseen(it)) b.classList.add('unread');
+  b.addEventListener('click', onPick);
+  li.appendChild(b);
+  return li;
+}
 function drawAttnList(list) {
   const head = mk('div', 'mailx-head');
   head.appendChild(navButton('All views', 'side'));
