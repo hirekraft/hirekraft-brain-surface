@@ -432,6 +432,15 @@ function composer(o) {
     if (send === 'held') p.appendChild(el('span', '', ' While sending from HireKraft is being proven, that email is kept, not sent.'));
     return p;
   }
+  // CONFIRM BEFORE SHARING (decision 1045 (5), seat rulings-small): the card she presses names everyone who will see the thought,
+  // every time; nothing is kept or shared until she presses Add it, Start it or Share (keep() is reached only from those presses).
+  function seeLine(people) {
+    const ns = (people || []).map((x) => x.first || x.name).filter(Boolean);
+    const p = el('p', 'room-see');
+    if (!ns.length) return document.createTextNode('');   // nobody else: the line under it already says so (lineFor)
+    p.append(el('span', '', 'Who will see it: you and'), document.createTextNode(' '), names(ns));
+    return p;
+  }
   function said2(r) {
     const card = el('div', 'room-card room-shape');
     if (r.shaped_by !== 'reading') card.appendChild(el('p', 'quiet', 'I could not tidy it just now, so here are your words as you said them.'));
@@ -472,6 +481,7 @@ function composer(o) {
       acts.append(add, button('Change', 'go ghost', () => { ta.value = r.put; card.remove(); ta.focus(); }));
     }
     if (r.unclear) card.appendChild(el('p', 'quiet', 'It sounds meant for someone. Say who, and press Go again, or add it here.'));
+    card.appendChild(seeLine(((o.room && o.room.members) || []).filter((m) => !m.me)));
     card.appendChild(acts);
     out.appendChild(card);
   }
@@ -490,7 +500,7 @@ function composer(o) {
     const all = Array.isArray(r.people) ? r.people : [];
     const chosen = new Set((Array.isArray(r.for) ? r.for : []).map((p) => p.id));
     const em = el('div', '');
-    const drawEm = () => { em.innerHTML = ''; em.appendChild(lineFor(all.filter((p) => chosen.has(p.id)), r.send)); };
+    const drawEm = () => { em.innerHTML = ''; const ins = all.filter((p) => chosen.has(p.id)); em.append(seeLine(ins), lineFor(ins, r.send)); };
     if (all.length) {
       const cr = el('div', 'room-who');
       cr.appendChild(el('span', 'room-who-lab', "Who's in:"));
@@ -526,7 +536,7 @@ function composer(o) {
     if (btn) btn.disabled = true;
     const stop = working(card, files.length ? 'Adding your thought and reading the documents' : 'Adding your thought',
       files.length ? 'Still reading the document: a long PDF takes a little longer' : 'Still adding your thought: translating it for the others can take a little longer');
-    const r = await C.askBody({ thought: { text, heard, room: roomId, attach: attach.slice(), email, files: files.map((f) => ({ name: f.name, mime: f.mime, b64: f.b64 })) } });
+    const r = await C.askBody({ thought: { text, heard, room: roomId, attach: attach.slice(), email, files: files.map((f) => ({ name: f.name, mime: f.mime, b64: f.b64 })), confirmed: true } });
     stop();
     if (!r || r.ok !== true || r.state !== 'thought_kept') {
       if (btn) btn.disabled = false;
