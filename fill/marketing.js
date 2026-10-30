@@ -138,7 +138,7 @@ async function drawLast(host, given) {
     if (c.nameless) host.appendChild(mk('p', 'quiet', n0(c.nameless) + ' ' + plural(c.nameless, 'connection is', 'connections are') + ' listed by LinkedIn without a name, so counted and not compared.'));
   }
   if (L.not_understood) host.appendChild(mk('p', 'quiet', n0(L.not_understood) + ' ' + plural(L.not_understood, 'file is', 'files are') + ' kept whole but not yet understood by the Tool.'));
-  host.appendChild(mk('p', 'quiet', 'Only you can see what you bring in. Your messages stay private to you always.'));
+  host.appendChild(mk('p', 'quiet', 'Only you can see what you bring in, except the parts you choose to use for marketing. Your messages and your own account details stay private to you always.'));
   // YOUR LINKEDIN, EXPLAINED (seat linkedin-whole-2, slices 4 and 5): replaces the plain file list that stood here ("What is in
   // it", seat linkedin-whole) with the walk-through, part by part, each with her choice. Retired 2026-10-30, brief linkedin-whole-2.
   const ex = mk('section', 'mk-explain');
@@ -214,7 +214,7 @@ async function drawExplain(ex) {
       det.appendChild(al);
       li.appendChild(det);
     }
-    const now = mk('p', 'mk-person-step state', x.choice ? CHOSEN[x.choice] : 'Only for you until you choose.');
+    const now = mk('p', 'mk-person-step state', (x.choice ? CHOSEN[x.choice] : 'Only for you until you choose.') + (x.said ? ' ' + x.said + '.' : ''));   // said: how the choice was made (seat linkedin-share)
     const acts = mk('div', 'mk-acts');
     const out = mk('p', 'mk-said'); out.setAttribute('aria-live', 'polite');
     let armed = false;
@@ -245,6 +245,25 @@ async function drawExplain(ex) {
     ul.appendChild(li);
   }
   ex.appendChild(ul);
+  // WHO OPENED WHAT SHE SHARES (seat linkedin-share, 2026-10-30, decision 1045 (3)): every opening by someone else, as the brain
+  // logged it (linkedin_opened, written where the opening happens: Signals and the shared list). Nothing here decides who may see.
+  if ((r.parts || []).some((p) => p.choice === 'marketing')) {
+    ex.appendChild(mk('h3', 'mk-sub', 'Who opened what you share'));
+    const names = {}; for (const p of (r.parts || [])) names[p.part] = p.name;
+    if (!(r.opened || []).length) ex.appendChild(mk('p', 'quiet', 'Nobody else has opened what you share yet. Each time someone does, it is listed here: who, which part, how much and when.'));
+    else {
+      const ol = mk('ul', 'mk-role-list');
+      for (const o of r.opened.slice(0, 10)) {
+        const unit = o.part === 'connections' ? ['person', 'people'] : ['row', 'rows'];
+        const at = new Date(o.at);
+        const oi = mk('li', 'mk-role');
+        oi.append(data_('span', null, o.who || 'Someone no longer here'), document.createTextNode(' opened ' + (names[o.part] || o.part) + ' (' + n0(o.n) + ' ' + plural(Number(o.n), unit[0], unit[1]) + ') · ' + day(o.at) + (isNaN(at) ? '' : ' ' + at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))));
+        ol.appendChild(oi);
+      }
+      ex.appendChild(ol);
+      if (Number(r.opened_total || 0) > 10) ex.appendChild(mk('p', 'quiet', n0(r.opened_total) + ' openings in all; the newest 10 are shown.'));
+    }
+  }
   if ((r.absent || []).length) {
     const ws = r.absent.map((x) => (x === 'shares' ? 'posts' : x));
     const said = ws.length > 1 ? ws.slice(0, -1).join(', ') + ' and ' + ws[ws.length - 1] : ws[0];
@@ -258,7 +277,7 @@ async function drawExplain(ex) {
       const sl = mk('ul', 'mk-role-list');
       for (const s1 of sh.shared) {
         const si = mk('li', 'mk-role');
-        si.append(data_('span', null, s1.from), document.createTextNode(': ' + s1.name + ', ' + n0(s1.rows) + ' ' + plural(Number(s1.rows), 'row', 'rows') + (s1.not_yet ? '. ' + s1.not_yet : '.')));
+        si.append(data_('span', null, s1.from), document.createTextNode(': ' + s1.name + ', ' + n0(s1.rows) + ' ' + plural(Number(s1.rows), 'row', 'rows') + (s1.not_yet ? '. ' + s1.not_yet : s1.where ? '. You see them in ' + s1.where + ', on the companies handed to you.' : '.')));
         if ((s1.list || []).length) si.append(document.createTextNode(' '), data_('span', 'quiet', s1.list.slice(0, 30).map((q) => q.name || q.title).join(', ') + (s1.list.length > 30 ? ' and ' + (s1.list.length - 30) + ' more' : '')));
         sl.appendChild(si);
       }
