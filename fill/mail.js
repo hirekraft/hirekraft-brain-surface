@@ -570,7 +570,7 @@ function drawAttnCard(read, it) {
   read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
   const card = mk('article', 'mailx-att-card mailx-matter-card' + (it.kind === 'thought' ? ' mailx-att-thought' : ''));
   const eyebrow = it.kind === 'thought' ? 'Left for you' : it.kind === 'money' ? 'Money' : it.following ? 'Following'
-    : it.kind === 'impostor' ? 'Pretending to be someone of your business' : mode === 'ai' ? 'For you' : 'Worth your attention';
+    : it.kind === 'impostor' ? 'Pretending to be someone of your business' : it.kind === 'new_business' ? 'New business' : mode === 'ai' ? 'For you' : 'Worth your attention';
   card.appendChild(mk('p', 'eyebrow', eyebrow));
   const h = mk('h2', 'mailx-subject', String(it.kind === 'email' || it.following ? (it.subject || it.title || '(no subject)') : (it.what || '')));
   card.appendChild(h);
@@ -615,6 +615,15 @@ function drawAttnCard(read, it) {
   }
   const row = mk('div', 'mailx-att-acts');
   choiceRow(it, row, out);
+  // NEW BUSINESS (seat new-business-first, decisions 961 and 1045 (2)): Reply opens the email with the reply composer; Hand to a
+  // colleague opens it with the forward composer, where she names who takes it. Nothing is sent until she sends it.
+  if (it.kind === 'new_business' && it.open_source && it.open_id) {
+    const rp = mk('button', 'go', 'Reply'); rp.type = 'button';
+    rp.addEventListener('click', () => { pendingCompose = 'reply'; openEmail(it.open_source, it.open_id); });
+    const hd = mk('button', 'go ghost', 'Hand to a colleague'); hd.type = 'button';
+    hd.addEventListener('click', () => { pendingCompose = 'forward'; openEmail(it.open_source, it.open_id); });
+    row.prepend(rp, hd);
+  }
   if ((it.kind === 'impostor' || it.kind === 'scam_alert') && it.open_source && it.open_id) {
     const o = mk('button', 'go ghost', 'Open the email'); o.type = 'button';
     o.addEventListener('click', () => openEmail(it.open_source, it.open_id));
@@ -1205,6 +1214,7 @@ function shortWhy(w) {
 function whyTag(it) {
   const k = it.kind === 'money' ? ['money', 'Money'] : it.kind === 'thought' ? ['room', 'Left for you']
     : it.kind === 'impostor' || it.kind === 'scam_alert' ? ['scam', 'Scam']
+    : it.kind === 'new_business' ? ['money', 'New business']
     : it.about === 'invite' ? ['people', 'Asks if this time works']
     : it.following || it.news ? ['people', it.news ? 'New in what you follow' : 'Following']
     : [it.is_money ? 'money' : 'people', shortWhy(it.why) || (it.is_money ? 'Money' : 'Waiting on you')];
@@ -1719,6 +1729,7 @@ function drawRead() {
 
   read.appendChild(actions(t));
   if (open.compose) read.appendChild(open.compose.el);
+  if (pendingCompose) { const pc = pendingCompose; pendingCompose = null; setTimeout(() => startCompose(t, pc), 0); }
 
   const conv = convos.get(aboutKey(chosen, t.thread_id)) || null;
   if (open.keptError) read.appendChild(mk('p', 'quiet', open.keptError));
@@ -2098,6 +2109,7 @@ const invites = new Map();       // source|message id -> the invitation as the b
 const invitesErr = new Set();    // mailboxes whose invitation reading failed just now
 const inviteSaid = new Map();    // invitation id -> { line, cls } after a press
 let pendingSuggest = null;
+let pendingCompose = null;   // a press on a New business item (Reply, Hand to a colleague) waiting for its email to open
 async function loadInvites(key, ids) {
   const want = (ids || []).filter(Boolean).slice(0, 200);
   if (!key || !want.length) return;
