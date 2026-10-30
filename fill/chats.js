@@ -92,11 +92,16 @@ function fromChatGPT(arr) {
   }
   return out;
 }
+// THE ONE ZIP OPENER (seat linkedin-whole, 2026-10-30, decision 1043): the Marketing tab's LinkedIn drop opens its zip with
+// this same function, in the browser, so there is one zip reader on the screen.
+export async function openZip(file) {
+  const { default: JSZip } = await import("https://esm.sh/jszip@3.10.1");
+  return await JSZip.loadAsync(await file.arrayBuffer());
+}
 async function readExport(file) {
   let text;
   if (file.name.toLowerCase().endsWith(".zip")) {
-    const { default: JSZip } = await import("https://esm.sh/jszip@3.10.1");
-    const zip = await JSZip.loadAsync(await file.arrayBuffer());
+    const zip = await openZip(file);
     // Claude's export now arrives split into several zips; the chats are in conversations-000.zip, and the
     // file inside may be numbered too. Any conversations*.json is accepted.
     const entry = zip.file("conversations.json") || zip.file(/(^|[/])conversations[^/]*[.]json$/)[0];
@@ -157,7 +162,11 @@ function build(root) {
   input.addEventListener("change", () => onFile(input.files?.[0]));
   drop.addEventListener("dragover", (e) => { e.preventDefault(); });
   drop.addEventListener("drop", (e) => { e.preventDefault(); onFile(e.dataTransfer?.files?.[0]); });
-  host.appendChild(ex);
+  // UNFOLDED (seat linkedin-whole, 2026-10-30, decision 1043; Alex could not find it under the Bring in a chat sub-tab): the export
+  // drop sits at the top of Your chats, the part that opens first, so it shows without pressing anything. Paste and email stay
+  // under Bring in a chat, which points here.
+  mine.appendChild(ex);
+  host.appendChild(el("p", "quiet", "To bring in a whole Claude or ChatGPT export, drop it at the top of Your chats."));
 
   // paste
   const pa = el("details", "chats-way");
