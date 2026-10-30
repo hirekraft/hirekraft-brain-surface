@@ -2691,11 +2691,32 @@ function teachAnswer(slot, body, onRetry) {
 // plan comes back revised and, for the owner, what she said is offered as "Learned: ..." to keep for that kind of
 // question (the same teach_confirm the Teach button uses). A way she has agreed several times runs after a short pause
 // unless she taps Change. The turn is kept in Work once, with the answer, not with the plan.
+// WHAT WAS NOT READ, OR CUT (seat lens-ask-by-mechanism, 2026-10-30, finding 3 of seat legs-said): ONE part draws the server's
+// completeness lines, for an answer and for a plan alike. Until now only the answer drew them, so a plan whose reading of the places
+// she can reach failed said nothing about it. Never computed on this side; the server sends the lines empty when nothing was lost.
+function gapBox(body) {
+  if (!Array.isArray(body.completeness) || !body.completeness.length) return null;
+  const box = el("div", "ans-gap");
+  const first = el("p", "ans-gap-lead");
+  first.textContent = String(body.completeness[0]);
+  box.appendChild(first);
+  if (body.completeness.length > 1) {
+    const ul = el("ul", "ans-gap-list");
+    for (const line of body.completeness.slice(1)) {
+      const li = el("li"); li.textContent = String(line); ul.appendChild(li);
+    }
+    box.appendChild(ul);
+  }
+  return box;
+}
+
 function planCard(slot, body, opts) {
   const plan = body.plan;
   const q = (opts && opts.q) || slot.closest(".answer-turn")?.querySelector(".answer-asked")?.textContent || "";
   const card = el("div", "plan-card");
   if (plan.auto?.line) { const a = el("p", "ans-lead"); a.textContent = plan.auto.line; card.appendChild(a); }
+  const gap = gapBox(body);
+  if (gap) card.appendChild(gap);
   const rows = [["What I understood", plan.understood], ["Where I'll look", null], ["How I'll put it together", plan.how]];
   if (plan.unsure) rows.push(["What I'm not sure of", plan.unsure]);
   for (const [k, v] of rows) {
@@ -2846,20 +2867,8 @@ function drawAsk(slot, body) {
   //    bottom in grey while being the line that decided whether the answer could be
   //    trusted. The server sends `completeness` empty when nothing was lost, so
   //    anything here always means something. Never computed on this side.
-  if (Array.isArray(body.completeness) && body.completeness.length) {
-    const box = el("div", "ans-gap");
-    const first = el("p", "ans-gap-lead");
-    first.textContent = String(body.completeness[0]);
-    box.appendChild(first);
-    if (body.completeness.length > 1) {
-      const ul = el("ul", "ans-gap-list");
-      for (const line of body.completeness.slice(1)) {
-        const li = el("li"); li.textContent = String(line); ul.appendChild(li);
-      }
-      box.appendChild(ul);
-    }
-    slot.appendChild(box);
-  }
+  const gap = gapBox(body);
+  if (gap) slot.appendChild(gap);
 
   // 3. THE REST OF THE ANSWER, below the lead.
   if (rest) slot.appendChild(proseBlocks(rest));
