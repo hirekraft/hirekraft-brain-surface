@@ -321,6 +321,10 @@ function boundary(b) {
   if (failed) out.append(mk('p', 'state', failed + ' alerts could not be read and are left out.'));
   if (other) out.append(mk('p', 'state', other + ' emails that looked like alerts were newsletters or requests from other recruiters, so they are left out.'));
   if (b.closed_to_you) out.append(mk('p', 'state', b.closed_to_you + ' alerts are in mailboxes you cannot open, so they are left out.'));
+  if (b.follows) {
+    out.append(mk('p', 'state', 'You follow ' + n0(b.follows) + ' companies on LinkedIn; ' + n0(b.followed_hiring || 0) + ' of them are hiring now'
+      + (b.followed_hiring_nobody_known ? ', ' + n0(b.followed_hiring_nobody_known) + ' where you know nobody yet' : '') + '.'));
+  }
   if (b.linkedin_download_on) {
     out.append(mk('p', 'state', 'People are matched by their current company in your own LinkedIn download of ' + dayOnly(b.linkedin_download_on)
       + ', then your CRM, your applicant tracking' + (b.linkedin_as_of ? ' and the earlier connections export of ' + day(b.linkedin_as_of) + ' for people not in it' : '') + '.'));
@@ -349,7 +353,7 @@ function drawList(stage) {
     const b = mk('button', 'mk-item-btn'); b.type = 'button';
     const line = mk('p', 'mk-item-line');
     line.append(data_('span', 'mk-co', it.company), document.createTextNode(' '), mk('span', null, 'is hiring ' + it.roles_n + (it.roles_n === 1 ? ' role.' : ' roles.')));
-    const known = mk('p', 'mk-item-known', 'You know ' + it.known + (it.known === 1 ? ' person there.' : ' people there.'));
+    const known = mk('p', 'mk-item-known', 'You know ' + it.known + (it.known === 1 ? ' person there.' : ' people there.') + (it.you_follow ? ' You follow them on LinkedIn.' : ''));
     const meta = mk('p', 'mk-item-meta');
     const bits = ['Last seen ' + day(it.last_at)];
     if (it.handed && it.handed.length) bits.push('Handed to ' + it.handed.map((h) => h.to).join(', '));
@@ -373,7 +377,8 @@ function drawItem(stage, key) {
   back.addEventListener('click', () => drawList(stage));
   const title = mk('h2', 'mk-title');
   title.append(data_('span', 'mk-co', it.company), document.createTextNode(' '), mk('span', null, 'is hiring ' + it.roles_n + (it.roles_n === 1 ? ' role.' : ' roles.')));
-  const known = mk('p', 'mk-lede', 'You know ' + it.known + (it.known === 1 ? ' person there.' : ' people there.') + (it.people.length < it.known ? ' The ' + it.people.length + ' closest are here.' : ''));
+  const known = mk('p', 'mk-lede', 'You know ' + it.known + (it.known === 1 ? ' person there.' : ' people there.') + (it.people.length < it.known ? ' The ' + it.people.length + ' closest are here.' : '')
+    + (it.you_follow ? ' You follow them on LinkedIn' + (it.you_follow.since ? ' since ' + dayOnly(it.you_follow.since) : '') + '.' : ''));
   stage.append(back, title, known);
 
   // The roles, each with its own job page where the alert gave one.
@@ -437,6 +442,23 @@ function stepWords(s) {
   return '';
 }
 
+// WHAT SHE HAS WITH THIS PERSON ON LINKEDIN (seat linkedin-whole-2, slice 3): counts and dates from her own download, private
+// to her; never the messages themselves. Said only when there is something to say.
+function tieWords(t) {
+  if (!t) return '';
+  const bits = [];
+  const m = Number(t.messages || 0), g = Number(t.endorsed_them || 0), r = Number(t.endorsed_you || 0);
+  if (m) bits.push(m + (m === 1 ? ' message' : ' messages') + ' between you on LinkedIn' + (t.last_message ? ', the last on ' + dayOnly(t.last_message) : ''));
+  if (g && r) bits.push('you endorsed each other');
+  else if (g) bits.push('you endorsed them');
+  else if (r) bits.push('they endorsed you');
+  if (t.invited === 'you') bits.push('you invited them');
+  else if (t.invited === 'them') bits.push('they invited you');
+  if (!bits.length) return '';
+  const line = bits.join('; ');
+  return line.charAt(0).toUpperCase() + line.slice(1) + '.';
+}
+
 function personRow(it, p, stage) {
   const li = mk('li', 'mk-person' + (p.step && DONE_STEPS.includes(p.step.step) ? ' mk-done' : ''));
   const top = mk('div', 'mk-person-top');
@@ -451,6 +473,8 @@ function personRow(it, p, stage) {
   } else if (p.change === 'new') {
     from.append(document.createTextNode(' New connection' + (p.was_at ? ' since ' + monthYear(p.was_at) : '') + '.'));
   }
+  const tie = tieWords(p.tie);
+  if (tie) from.append(document.createTextNode(' ' + tie));
   const status = mk('p', 'mk-person-step state', stepWords(p.step));
   status.hidden = !status.textContent;
   const acts = mk('div', 'mk-acts');
