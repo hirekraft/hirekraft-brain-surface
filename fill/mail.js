@@ -2209,6 +2209,16 @@ function inviteCard(inv, opts) {
   const state = inv.cancelled ? 'This meeting was canceled.' : inv.newer ? 'A newer version of this invitation came later.' : inv.past ? 'This time has passed.'
     : ans === 'ACCEPTED' ? 'You accepted.' : ans === 'DECLINED' ? 'You declined.' : ans === 'TENTATIVE' ? 'You said maybe.' : '';
   if (state) card.appendChild(mk('p', 'mailx-invite-state', state));
+  else if (ans === 'REPLIED') {
+    // A WRITTEN REPLY ANSWERS IT (decision 1045 (4), seat rulings-small): the brain counts an email she sent to the sender on this
+    // conversation after it arrived, in any language, as her answer; the invitation leaves Worth your attention and says so here.
+    const p = mk('p', 'mailx-invite-state');
+    let day = '';
+    try { day = new Intl.DateTimeFormat(screenLocale(), { timeZone: C.zone(), weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(inv.answered.at)); } catch (_) { day = ''; }
+    p.appendChild(mk('span', null, 'Answered by email on'));
+    if (day) { const d = mk('span', 'mailx-invite-n', day); d.translate = false; p.append(document.createTextNode(' '), d); }
+    card.appendChild(p);
+  }
   const out = mk('p', 'mailx-invite-said'); out.setAttribute('aria-live', 'polite');
   if (!inv.cancelled && !inv.past && !inv.newer && (inv.kind === 'request' || inv.kind === 'update')) {
     const row = mk('div', 'mailx-invite-acts');
