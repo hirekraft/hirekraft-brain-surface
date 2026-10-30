@@ -16,6 +16,7 @@
 // No colour, size or font here: the looks' tokens in skin.css under SIGNALS AND OUTREACH. No regex literals, no backslashes.
 
 import { draftHash } from './answer.js?v=2026-10-29-mail-invites';
+import { openZip } from './chats.js?v=2026-10-30-linkedin-whole';   // the one zip opener on the screen (same token as lens.js)
 
 let C = null;
 let data = null;
@@ -55,11 +56,243 @@ export function drawMarketing(body, ctx) {
   const parts = mk('div', 'mk-parts');
   parts.setAttribute('role', 'tablist');
   const p1 = mk('button', 'mk-part', 'Signals and outreach'); p1.type = 'button'; p1.setAttribute('aria-selected', 'true'); p1.setAttribute('role', 'tab');
-  parts.appendChild(p1);
+  const p2 = mk('button', 'mk-part', 'What this reads'); p2.type = 'button'; p2.setAttribute('aria-selected', 'false'); p2.setAttribute('role', 'tab');
+  parts.append(p1, p2);
+  const pick = (b, go) => { for (const x of [p1, p2]) x.setAttribute('aria-selected', x === b ? 'true' : 'false'); go(parts.nextElementSibling); };
+  p1.addEventListener('click', () => pick(p1, load));
+  p2.addEventListener('click', () => pick(p2, drawReads));
   const stage = mk('div', 'mk-stage');
   wrap.append(parts, stage);
   body.appendChild(wrap);
   load(stage);
+}
+
+// ── WHAT THIS READS: YOUR LINKEDIN DOWNLOAD (seat linkedin-whole, 2026-10-30, decision 1043) ─────────────────────────────────
+// Alex, 2026-10-30: the whole LinkedIn data download goes into the brain whole, dated, compared download to download; any person
+// drops their own and it is theirs. THE FILE IS OPENED HERE, IN HER BROWSER, with the Chats tab's zip opener (openZip); every
+// file inside is listed with its row count before anything leaves her computer. On Bring in, every file and every row goes to
+// the brain (linkedin_drop_open / _rows / _text / _close, each answering about the signed-in person alone) and is kept private
+// to her. The brain says which file is which part (its own list), compares her connections with the last download, and refuses
+// to close a download whose rows did not all arrive. A file the Tool does not know is kept whole and said, never dropped.
+// Rows are read with the papaparse library (a library, as JSZip is); nothing here decides who may see what.
+const PAPA = 'https://esm.sh/papaparse@5.4.1';
+const TEXT_ENDS = ['.txt', '.html', '.htm', '.json', '.md', '.xml', '.vcf'];
+const BATCH_BYTES = 600000;
+const n0 = (x) => Number(x || 0).toLocaleString('en-US');
+const dayOnly = (d) => { if (!d) return ''; const t = new Date(String(d).slice(0, 10) + 'T12:00:00'); return isNaN(t) ? '' : t.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
+const plural = (k, one, many) => (Number(k) === 1 ? one : many);
+let li = null;   // the dropped download, in memory only: { name, on, by, files: [{ path, kind, header, preamble, rows, bytes, objs, text, enc }] }
+
+async function drawReads(stage) {
+  stage.innerHTML = '';
+  const head = mk('div', 'mk-head');
+  head.append(mk('h2', 'mk-title', 'What this reads'));
+  head.append(mk('p', 'mk-lede', 'What the Tool reads for marketing and sales, and what you can bring in yourself.'));
+  stage.appendChild(head);
+  const box = mk('section', 'mk-reads');
+  box.append(mk('h3', 'mk-co', 'LinkedIn'));
+  const last = mk('div'); last.setAttribute('aria-live', 'polite');
+  box.appendChild(last);
+  box.append(mk('p', 'quiet', 'To get your download: on LinkedIn, open Me, then Settings and Privacy, then Data privacy, then Get a copy of your data. Choose the larger download with everything. When LinkedIn emails you that it is ready, download the zip and drop it here.'));
+  const drop = mk('label', 'notice');
+  drop.style.display = 'block'; drop.style.cursor = 'pointer'; drop.style.textAlign = 'center'; drop.style.padding = '24px';
+  drop.textContent = 'Drop your LinkedIn download here, or click to choose it';
+  const input = C.el('input'); input.type = 'file'; input.accept = '.zip'; input.hidden = true;
+  drop.appendChild(input);
+  box.append(drop, mk('p', 'quiet', 'The file is opened on your computer first. You see every file in it with its rows, and nothing is sent until you press Bring in. What you bring in is private to you.'));
+  const said = mk('div'); said.setAttribute('aria-live', 'polite');
+  const pick = mk('div');
+  box.append(said, pick);
+  stage.appendChild(box);
+  const onFile = (f) => { if (f) openDownload(f, said, pick, last); };
+  input.addEventListener('change', () => onFile(input.files && input.files[0]));
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); });
+  drop.addEventListener('drop', (e) => { e.preventDefault(); onFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]); });
+  await drawLast(last);
+}
+
+async function drawLast(host, given) {
+  host.innerHTML = '';
+  if (!given) host.appendChild(mk('p', 'working no-late', 'Reading what you brought in before'));
+  const r = given || await rpc('linkedin_mine', {});
+  host.innerHTML = '';
+  if (!r || r.ok !== true) {
+    host.appendChild(mk('p', 'notice flagged', 'What you brought in before could not be read just now: ' + String((r && (r.reason || r.error)) || 'no reason was given') + '. Nothing here is a claim either way.'));
+    return;
+  }
+  const L = r.last;
+  if (!L) { host.appendChild(mk('p', 'state', 'You have not brought in a LinkedIn download yet.')); host.appendChild(mk('p', 'quiet', 'Only you can see what you bring in.')); return; }
+  host.appendChild(mk('p', 'state', 'Your last LinkedIn download: ' + dayOnly(L.downloaded_on) + ', brought in ' + day(L.brought_at) + '. ' + n0(L.files) + ' ' + plural(L.files, 'file', 'files') + ', ' + n0(L.rows) + ' ' + plural(L.rows, 'row', 'rows') + ', kept whole.'));
+  const c = L.compare;
+  if (c) {
+    if (c.first) host.appendChild(mk('p', 'state', 'Connections: ' + n0(c.connections) + '. This is the first download to compare with; changes show from the next one.'));
+    else host.appendChild(mk('p', 'state', 'Connections: ' + n0(c.connections) + ' now. Since ' + (c.against === 'your download' ? 'your download of ' : 'the connections export of ') + dayOnly(c.since) + ': '
+      + n0(c.new) + ' new, ' + n0(c.changed) + ' changed company or position, ' + n0(c.gone) + ' no longer listed, ' + n0(c.unchanged) + ' unchanged.'));
+    if (c.nameless) host.appendChild(mk('p', 'quiet', n0(c.nameless) + ' ' + plural(c.nameless, 'connection is', 'connections are') + ' listed by LinkedIn without a name, so counted and not compared.'));
+  }
+  if (L.not_understood) host.appendChild(mk('p', 'quiet', n0(L.not_understood) + ' ' + plural(L.not_understood, 'file is', 'files are') + ' kept whole but not yet understood by the Tool.'));
+  host.appendChild(mk('p', 'quiet', 'Only you can see what you bring in. Your messages stay private to you always.'));
+  const det = C.el('details');
+  const sum = mk('summary', null, 'What is in it'); sum.style.minHeight = '44px'; sum.style.display = 'flex'; sum.style.alignItems = 'center'; sum.style.cursor = 'pointer';
+  det.appendChild(sum);
+  const ul = mk('ul', 'attn');
+  for (const f of (L.parts || [])) {
+    const row = mk('li');
+    const t = mk('div', 'a-title'); t.appendChild(f.name ? mk('span', null, f.name) : data_('span', null, f.path));
+    const bits = [];
+    if (f.kind === 'table') bits.push(n0(f.rows) + ' ' + plural(f.rows, 'row', 'rows'));
+    else bits.push('kept whole');
+    if (!f.understood) bits.push('kept, not yet understood');
+    if (f.private_always) bits.push('always private to you');
+    row.append(t, mk('div', 'a-detail', bits.join(' · ')));
+    ul.appendChild(row);
+  }
+  det.appendChild(ul);
+  host.appendChild(det);
+}
+
+// The download's date: from its file name (LinkedIn names it ..._MM-DD-YYYY.zip), else the newest file inside, else today.
+function datedFrom(name, zip) {
+  for (const tok of String(name || '').split('_').join('.').split('.')) {
+    const p = tok.split('-');
+    if (p.length === 3 && p[0].length === 2 && p[1].length === 2 && p[2].length === 4 && p.every((x) => x !== '' && !isNaN(Number(x)))) {
+      const m = Number(p[0]), d = Number(p[1]), y = Number(p[2]);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 2003) return { on: y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0'), by: 'file name' };
+    }
+  }
+  let newest = null;
+  zip.forEach((path, e) => { if (!e.dir && e.date && (!newest || e.date > newest)) newest = e.date; });
+  if (newest && newest.getFullYear() >= 2003) return { on: newest.toISOString().slice(0, 10), by: 'files inside' };
+  return { on: new Date().toISOString().slice(0, 10), by: 'the day it was brought in' };
+}
+
+// One table file read as rows. LinkedIn puts a Notes paragraph above some headers: the header is the first line with at least
+// two filled cells (else the first filled line); the lines above it are kept as its notes. Every filled line under it is a row.
+function tableOf(Papa, text) {
+  const BOM = String.fromCharCode(65279);
+  if (text.startsWith(BOM)) text = text.slice(1);
+  const recs = Papa.parse(text, { skipEmptyLines: false }).data || [];
+  const filled = (r) => (r || []).filter((x) => String(x || '').trim() !== '').length;
+  let h = recs.slice(0, 40).findIndex((r) => filled(r) >= 2);
+  if (h < 0) h = recs.findIndex((r) => filled(r) >= 1);
+  if (h < 0) return { header: [], preamble: '', objs: [] };
+  const seen = new Map();
+  const header = recs[h].map((x, i) => {
+    let k = String(x || '').trim() || ('Column ' + (i + 1));
+    const n = (seen.get(k) || 0) + 1; seen.set(k, n);
+    return n > 1 ? k + ' (' + n + ')' : k;
+  });
+  const preamble = recs.slice(0, h).map((r) => (r || []).join(' ').trim()).filter((x) => x).join(String.fromCharCode(10));
+  const objs = [];
+  for (const r of recs.slice(h + 1)) {
+    if (!filled(r)) continue;
+    const o = {};
+    r.forEach((v, i) => { o[i < header.length ? header[i] : 'Column ' + (i + 1)] = String(v == null ? '' : v); });
+    objs.push(o);
+  }
+  return { header, preamble, objs };
+}
+
+async function openDownload(file, said, pick, last) {
+  pick.innerHTML = ''; li = null;
+  said.innerHTML = ''; said.appendChild(mk('p', 'working', 'Opening the file on your computer'));
+  try {
+    if (!file.name.toLowerCase().endsWith('.zip')) throw new Error('This is not a zip file. LinkedIn sends your download as a zip.');
+    const zip = await openZip(file);
+    const { default: Papa } = await import(PAPA);
+    const dated = datedFrom(file.name, zip);
+    const entries = [];
+    zip.forEach((path, e) => { if (!e.dir) entries.push(e); });
+    if (!entries.length) throw new Error('There are no files inside this zip.');
+    const files = [];
+    for (let k = 0; k < entries.length; k++) {
+      const e = entries[k];
+      said.innerHTML = ''; said.appendChild(mk('p', 'working', 'Reading ' + (k + 1) + ' of ' + entries.length + ' files on your computer'));
+      const low = e.name.toLowerCase();
+      if (low.endsWith('.csv')) {
+        const text = await e.async('string');
+        const t = tableOf(Papa, text);
+        files.push({ path: e.name, kind: 'table', header: t.header, preamble: t.preamble, rows: t.objs.length, bytes: text.length, objs: t.objs });
+      } else if (TEXT_ENDS.some((x) => low.endsWith(x))) {
+        const text = await e.async('string');
+        files.push({ path: e.name, kind: 'text', rows: 0, bytes: text.length, text, enc: 'text' });
+      } else {
+        const b64 = await e.async('base64');
+        files.push({ path: e.name, kind: 'binary', rows: 0, bytes: Math.round(b64.length * 3 / 4), text: b64, enc: 'base64' });
+      }
+    }
+    files.sort((a, b) => a.path.localeCompare(b.path));
+    li = { name: file.name, on: dated.on, by: dated.by, files };
+  } catch (err) {
+    said.innerHTML = ''; said.appendChild(mk('p', 'notice flagged', (err && err.message) || 'The file could not be read.'));
+    return;
+  }
+  const rows = li.files.reduce((a, f) => a + f.rows, 0);
+  said.innerHTML = '';
+  said.appendChild(mk('p', 'state', li.files.length + ' files inside, ' + n0(rows) + ' rows, dated ' + dayOnly(li.on) + ' (' + ({ 'file name': 'from the file name', 'files inside': 'from the newest file inside', 'the day it was brought in': 'today, since the file carries no date' })[li.by] + '). Nothing has left your computer yet.'));
+  const ul = mk('ul', 'attn');
+  for (const f of li.files) {
+    const row = mk('li');
+    row.append(data_('div', 'a-title', f.path), mk('div', 'a-detail', f.kind === 'table' ? n0(f.rows) + ' ' + plural(f.rows, 'row', 'rows') : (f.kind === 'text' ? 'a text file, kept whole' : 'a file, kept whole')));
+    ul.appendChild(row);
+  }
+  const go = mk('button', 'go', 'Bring in'); go.type = 'button';
+  const out = mk('div'); out.setAttribute('aria-live', 'polite');
+  pick.append(ul, go, out);
+  go.addEventListener('click', () => bringIn(go, out, said, last));
+}
+
+async function bringIn(go, out, said, last) {
+  if (!li) return;
+  go.disabled = true;
+  out.innerHTML = '';
+  const w = mk('p', 'working'); const wt = mk('span'); const bar = mk('span', 'working-bar'); const fill = mk('span');
+  bar.appendChild(fill); w.append(wt, bar); go.after(w);
+  const step = (k, n, line) => { wt.textContent = line; fill.style.width = Math.round((k / Math.max(n, 1)) * 100) + '%'; };
+  step(0, 1, 'Opening your download in the Tool');
+  const meta = li.files.map((f) => ({ path: f.path, kind: f.kind, header: f.header || null, preamble: f.preamble || '', rows: f.rows, bytes: f.bytes }));
+  const o = await rpc('linkedin_drop_open', { p_file_name: li.name, p_downloaded_on: li.on, p_dated_by: li.by, p_files: meta });
+  const stop = (line) => { w.remove(); go.disabled = false; out.appendChild(mk('p', 'notice flagged', line)); };
+  if (!o || o.ok !== true) return stop('It was not brought in: ' + String((o && (o.reason || o.error)) || 'no reason was given') + '.');
+  if (o.already) { w.remove(); out.appendChild(mk('p', 'state', 'This download was already brought in. Nothing was redone.')); return drawLast(last); }
+  const id = o.download_id;
+  const total = li.files.length; let fails = 0;
+  for (let k = 0; k < total; k++) {
+    const f = li.files[k];
+    step(k, total, 'Keeping ' + (k + 1) + ' of ' + total + ' files');
+    if (f.kind === 'table') {
+      let from = 1, batch = [], size = 0;
+      const send = async () => {
+        if (!batch.length) return true;
+        const r = await rpc('linkedin_drop_rows', { p_download: id, p_path: f.path, p_from: from, p_rows: batch });
+        from += batch.length; batch = []; size = 0;
+        return r && r.ok === true;
+      };
+      for (const obj of f.objs) {
+        batch.push(obj); size += JSON.stringify(obj).length;
+        if (size >= BATCH_BYTES && !(await send())) { fails++; break; }
+      }
+      if (!(await send())) fails++;
+    } else {
+      const r = await rpc('linkedin_drop_text', { p_download: id, p_path: f.path, p_text: f.text, p_encoding: f.enc });
+      if (!r || r.ok !== true) fails++;
+    }
+  }
+  step(total, total, 'Checking every row arrived');
+  const c = await rpc('linkedin_drop_close', { p_download: id });
+  w.remove();
+  if (!c || c.ok !== true) {
+    go.disabled = false;
+    const short = (c && c.files) || [];
+    out.appendChild(mk('p', 'notice flagged', String((c && (c.reason || c.error)) || 'It could not be finished.') + (short.length ? ' ' + short.length + ' ' + plural(short.length, 'file', 'files') + ' did not arrive whole.' : '') + ' Press Bring in again.'));
+    return;
+  }
+  li = null;
+  said.innerHTML = '';
+  const listed = go.parentNode && go.parentNode.querySelector('ul.attn'); if (listed) listed.remove();
+  out.appendChild(mk('p', 'state', 'Brought in and kept whole, private to you.'));
+  go.remove();
+  drawLast(last, c);
 }
 
 async function load(stage) {
