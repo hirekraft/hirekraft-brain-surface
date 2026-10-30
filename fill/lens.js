@@ -3751,7 +3751,7 @@ function drawLens() {
   }
   // SIGNALS AND OUTREACH (seat job-alerts, 2026-10-30): companies hiring where the business knows someone, a note per person, Hand to a colleague.
   if (lensKey === 'marketing') {
-    import('./marketing.js?v=2026-10-30-linkedin-whole-2c').then((M) => M.drawMarketing(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, viewer: () => shape?.viewer }))
+    import('./marketing.js?v=2026-10-30-marketing-parts').then((M) => M.drawMarketing(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, viewer: () => shape?.viewer }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Marketing and sales tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
