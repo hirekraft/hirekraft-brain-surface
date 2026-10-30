@@ -1535,7 +1535,7 @@ function stageKey(groupKey, o) {
       out.innerHTML = "";
       const msg = el("div", body?.ok ? "notice" : "notice flagged");
       msg.textContent = body?.ok
-        ? `${o.name} is connected. ${connectedSaid(o.key, body)}Ask the box about it in your own words.`
+        ? `${o.name} is connected. ${connectedSaid(o.key, body)}${o.key === "elasticemail" || o.key === "wordpress" ? "The box does not read it yet: answering from it is the next step." : "Ask the box about it in your own words."}`
         : `Not connected: ${body?.reason ?? body?.error ?? "no reason was given"} Nothing was kept.`;
       out.appendChild(msg);
       if (body?.ok) await refreshBrain();
