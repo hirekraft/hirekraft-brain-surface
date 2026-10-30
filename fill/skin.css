@@ -2108,6 +2108,55 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
 .words-seeit { margin-top: var(--gap); }
 .words-seeit-text { margin-top: calc(var(--u) * 2); }
 
+/* ── SIGNALS AND OUTREACH (seat job-alerts, 2026-10-30, decision 1039): the first part of the Marketing and sales tab
+   (fill/marketing.js). A list of companies hiring where the business knows someone, each opening to its roles, its people
+   and a short note per person. Built as one part among the tab's coming parts (mk-parts). Tokens only. ── */
+.mk { display: grid; gap: var(--gap); min-width: 0; }
+.mk-parts { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); border-bottom: 1px solid var(--line); padding-bottom: calc(var(--u) * 2); }
+.mk-part { padding: 8px 14px; border-radius: var(--radius); min-height: var(--tap); font-size: var(--t-small); color: var(--ink-3); overflow-wrap: anywhere; }
+.mk-part[aria-selected='true'] { background: var(--act-soft); color: var(--ink); font-weight: var(--w-mid); }
+.mk-stage { display: grid; gap: var(--gap); min-width: 0; }
+.mk-head { display: grid; gap: calc(var(--u) * 1.5); }
+.mk-title { font-family: var(--font-head); font-size: var(--t-head); color: var(--ink); line-height: var(--lead-tight); overflow-wrap: anywhere; }
+.mk-lede { color: var(--ink-3); font-size: var(--t-small); max-width: var(--measure); }
+.mk-sub { font-size: var(--t-small); font-weight: var(--w-mid); color: var(--ink); margin-bottom: calc(var(--u) * 1.5); }
+.mk-co { font-weight: var(--w-strong); color: var(--ink); }
+.mk-list, .mk-role-list, .mk-person-list { list-style: none; display: grid; gap: calc(var(--u) * 2); min-width: 0; }
+.mk-item-btn { display: grid; gap: 2px; width: 100%; text-align: left; padding: calc(var(--u) * 3) calc(var(--u) * 4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper); min-height: var(--tap); }
+.mk-item-btn:hover { border-color: var(--act); }
+.mk-item-line { color: var(--ink-2); overflow-wrap: anywhere; }
+.mk-item-known { color: var(--people); font-size: var(--t-small); font-weight: var(--w-mid); }
+.mk-item-meta { color: var(--ink-4); font-size: var(--t-micro); overflow-wrap: anywhere; }
+.mk-done .mk-item-btn, .mk-person.mk-done { opacity: .7; }
+.mk-boundary { display: grid; gap: 2px; padding-top: calc(var(--u) * 2); border-top: 1px solid var(--line-2); }
+.mk-back { margin-top: 0; justify-self: start; }
+.mk-roles, .mk-people, .mk-hand { display: grid; gap: calc(var(--u) * 1.5); min-width: 0; }
+.mk-role { color: var(--ink-2); font-size: var(--t-small); overflow-wrap: anywhere; }
+.mk-role-title { color: var(--ink); }
+.mk-role-where { color: var(--ink-3); }
+.mk-role-link { color: var(--act); }
+.mk-hand { grid-template-columns: minmax(0, 1fr); padding: calc(var(--u) * 3); border-radius: var(--radius); background: var(--paper-2); }
+.mk-hand-label { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; font-size: var(--t-small); }
+.mk-hand-pick { font: inherit; min-height: var(--tap); padding: 4px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); color: var(--ink); max-width: 100%; }
+.mk-hand .go { margin-top: 0; justify-self: start; }
+.mk-person { display: grid; gap: calc(var(--u) * 1); padding: calc(var(--u) * 3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); min-width: 0; }
+.mk-person-top { display: flex; flex-wrap: wrap; gap: 4px calc(var(--u) * 2.5); align-items: baseline; }
+.mk-person-name { font-weight: var(--w-strong); color: var(--ink); overflow-wrap: anywhere; }
+.mk-person-title { color: var(--ink-3); font-size: var(--t-small); overflow-wrap: anywhere; }
+.mk-person-from { color: var(--people); font-size: var(--t-micro); }
+.mk-acts { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; }
+.mk-acts .go { margin-top: 0; display: inline-flex; align-items: center; text-decoration: none; }
+.mk-note { display: grid; gap: calc(var(--u) * 2); padding-top: calc(var(--u) * 2); border-top: 1px dashed var(--line); }
+.mk-email, .mk-linkedin { display: grid; gap: calc(var(--u) * 1.5); }
+.mk-email .go, .mk-note > .go { margin-top: 0; justify-self: start; }
+.mk-note-kind { font-size: var(--t-micro); color: var(--ink-3); font-weight: var(--w-mid); }
+.mk-note-to { font-size: var(--t-small); color: var(--ink-3); overflow-wrap: anywhere; }
+.mk-subject, .mk-text, .mk-why { font: inherit; font-size: var(--t-read); width: 100%; min-height: var(--tap); padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); color: var(--ink); }
+.mk-text { line-height: var(--lead-read); resize: vertical; }
+.mk-why { flex: 1 1 220px; width: auto; }
+.mk-said { font-size: var(--t-small); color: var(--ink-3); }
+.mk-said:empty { display: none; }
+
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
    for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
@@ -2309,4 +2358,10 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
   .mailx-compose-field .mailx-chip-add { min-height: 44px; font-size: 16px; }
   /* seat every-word 2026-10-29: See it in under a matter's words and a caught email thumb-sized; long German words wrap. */
   .words-seeit-btn { min-height: 44px; }
+  /* seat job-alerts 2026-10-30: Signals and outreach on a phone: every press thumb-sized and full width, fields 16px so the
+     phone does not zoom, the item a page of its own with Back to the list. */
+  .mk-acts .go, .mk-email .go, .mk-note > .go, .mk-hand .go { flex: 1 1 100%; justify-content: center; min-height: 44px; }
+  .mk-item-btn { padding: calc(var(--u) * 3); }
+  .mk-subject, .mk-text, .mk-why, .mk-hand-pick { font-size: 16px; min-height: 44px; }
+  .mk-part { min-height: 44px; }
 }
