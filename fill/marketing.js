@@ -79,6 +79,7 @@ const PAPA = 'https://esm.sh/papaparse@5.4.1';
 const TEXT_ENDS = ['.txt', '.html', '.htm', '.json', '.md', '.xml', '.vcf'];
 const BATCH_BYTES = 600000;
 const n0 = (x) => Number(x || 0).toLocaleString('en-US');
+const monthYear = (iso) => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }); };
 const dayOnly = (d) => { if (!d) return ''; const t = new Date(String(d).slice(0, 10) + 'T12:00:00'); return isNaN(t) ? '' : t.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
 const plural = (k, one, many) => (Number(k) === 1 ? one : many);
 let li = null;   // the dropped download, in memory only: { name, on, by, files: [{ path, kind, header, preamble, rows, bytes, objs, text, enc }] }
@@ -320,7 +321,12 @@ function boundary(b) {
   if (failed) out.append(mk('p', 'state', failed + ' alerts could not be read and are left out.'));
   if (other) out.append(mk('p', 'state', other + ' emails that looked like alerts were newsletters or requests from other recruiters, so they are left out.'));
   if (b.closed_to_you) out.append(mk('p', 'state', b.closed_to_you + ' alerts are in mailboxes you cannot open, so they are left out.'));
-  out.append(mk('p', 'state', 'People are matched by their current company in your CRM, your applicant tracking and your LinkedIn connections download' + (b.linkedin_as_of ? ' of ' + day(b.linkedin_as_of) : '') + '.'));
+  if (b.linkedin_download_on) {
+    out.append(mk('p', 'state', 'People are matched by their current company in your own LinkedIn download of ' + dayOnly(b.linkedin_download_on)
+      + ', then your CRM, your applicant tracking' + (b.linkedin_as_of ? ' and the earlier connections export of ' + day(b.linkedin_as_of) + ' for people not in it' : '') + '.'));
+  } else {
+    out.append(mk('p', 'state', 'People are matched by their current company in your CRM, your applicant tracking and your LinkedIn connections download' + (b.linkedin_as_of ? ' of ' + day(b.linkedin_as_of) : '') + '.'));
+  }
   return out;
 }
 
@@ -436,7 +442,15 @@ function personRow(it, p, stage) {
   const top = mk('div', 'mk-person-top');
   top.append(data_('span', 'mk-person-name', p.name));
   if (p.title) top.append(data_('span', 'mk-person-title', p.title));
-  const from = mk('p', 'mk-person-from', 'Known from ' + (KNOWN_FROM[p.system] || 'your records') + (p.seen_at ? ', as of ' + day(p.seen_at) : '') + '.');
+  // HER OWN DOWNLOAD (seat linkedin-whole-2): a person found in her own newest LinkedIn download says so, with the date, and the
+  // 2025 company when it changed. Everyone else keeps the line they had.
+  const from = mk('p', 'mk-person-from', p.as_of ? 'As of your LinkedIn download, ' + dayOnly(p.as_of) + '.'
+    : 'Known from ' + (KNOWN_FROM[p.system] || 'your records') + (p.seen_at ? ', as of ' + day(p.seen_at) : '') + '.');
+  if (p.change === 'moved' && p.was) {
+    from.append(document.createTextNode(' Was '), data_('span', 'mk-was', p.was), document.createTextNode(p.was_at ? ' in ' + monthYear(p.was_at) + '.' : ' before.'));
+  } else if (p.change === 'new') {
+    from.append(document.createTextNode(' New connection' + (p.was_at ? ' since ' + monthYear(p.was_at) : '') + '.'));
+  }
   const status = mk('p', 'mk-person-step state', stepWords(p.step));
   status.hidden = !status.textContent;
   const acts = mk('div', 'mk-acts');
