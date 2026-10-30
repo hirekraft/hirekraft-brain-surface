@@ -146,7 +146,10 @@ const PICKERS = {
               { name: "HubSpot",    key: "hubspot", account: true },
               { name: "CATS",       key: "cats", account: true },
               { name: "Mercury",    key: "mercury", account: true },
-              { name: "Slack",      key: "slack", account: true }],
+              { name: "Slack",      key: "slack", account: true },
+              // seat systems-connect 2026-10-30 (decisions 1039, 1044): two more systems on the same connect-by-key path.
+              { name: "Elastic Email", key: "elasticemail", account: true },
+              { name: "WordPress",  key: "wordpress", account: true }],
   },
   loose: {
     head: "Drop in files", sub: "A one-off set of documents that does not live in a connected drive.",
@@ -1452,6 +1455,8 @@ const KEY_HOW = {
   cats: "In CATS, open Settings, then Administration, then API Keys, create a key named Verrandi (read only if CATS offers it), and copy it. The Tool only ever reads from CATS.",
   mercury: "In Mercury, open Settings, then API Tokens, create a token with Read Only access, and copy it. If Mercury asks for allowed IP addresses, say so here: the Tool cannot use a token tied to fixed addresses.",
   slack: "The app only reads, and only what you yourself can see in Slack. It lives in your own workspace, so Slack does not slow it down.",
+  elasticemail: "In Elastic Email, open Settings, then Manage API Keys, and create a key named for this Tool. Read access is enough to connect; copy it (Elastic shows it once). The Tool reads your sending domains and their checks, bounces, complaints, unsubscribes, opens, clicks and where replies go. It sends nothing through Elastic: sending stays switched off until you switch it on.",
+  wordpress: "In WordPress, signed in as an administrator, open Users, then Profile, scroll to Application Passwords, type a name for this Tool and press Add New Application Password, then copy it (WordPress shows it once). The Tool reads your pages, posts and drafts, and the inquiry form entries if your form plugin keeps them. It publishes nothing.",
 };
 // Slack's internal-app manifest (read-only USER scopes: the token reads exactly what the installing person sees).
 // Named after the customer's own Tool (Alex 2026-10-12: HireKraft's systems carry HireKraft's name), pre-filled from
@@ -1479,6 +1484,15 @@ const SLACK_STEPS = [
   "Open the app, then OAuth & Permissions in the left menu, then Install to Workspace (or Reinstall), then Allow.",
   "On that same page, copy the User OAuth Token (it starts with xoxp-) and paste it below.",
 ];
+// What the system said when it accepted the key, in counts (seat systems-connect). Nothing a key system returns is shown
+// but these counts; the key itself never comes back.
+function connectedSaid(kind, b) {
+  const n = (x) => Number(x ?? 0).toLocaleString("en-US");
+  if (kind === "elasticemail") return `It has ${n(b.domains)} sending ${b.domains === 1 ? "domain" : "domains"}: ${n(b.verified)} verified, `
+    + `${n(b.spf)} passing SPF, ${n(b.dkim)} passing DKIM and ${n(b.dmarc)} with DMARC. Nothing is sent through it. `;
+  if (kind === "wordpress") return `${b.can_edit ? "" : "That user cannot see drafts, so only published pages and posts are read. "}${b.forms_note ?? ""} Nothing is published. `;
+  return "";
+}
 function stageKey(groupKey, o) {
   const stage = $("#connect-stage");
   stage.innerHTML = "";
@@ -1490,7 +1504,13 @@ function stageKey(groupKey, o) {
   const how = el("p", "quiet");
   how.textContent = KEY_HOW[o.key] ?? "";
   const form = el("form", "");
-  form.innerHTML = `<label for="key-in"><b>Paste the key</b></label>`
+  const wp = o.key === "wordpress";
+  const field = `display:block;margin:.5rem 0 1rem;width:100%;max-width:28rem;font:inherit;padding:.6rem;border:1px solid currentColor;border-radius:6px;background:none;color:inherit`;
+  form.innerHTML = (wp ? `<label for="site-in"><b>Your website's address</b></label>`
+      + `<input id="site-in" type="url" autocomplete="url" spellcheck="false" required placeholder="https://yourcompany.com" style="${field}">`
+      + `<label for="user-in"><b>Your WordPress user name</b></label>`
+      + `<input id="user-in" type="text" autocomplete="username" spellcheck="false" required style="${field}">` : "")
+    + `<label for="key-in"><b>${wp ? "Paste the application password" : "Paste the key"}</b></label>`
     + `<input id="key-in" type="password" autocomplete="off" spellcheck="false" required `
     + `style="display:block;margin-top:.5rem;width:100%;max-width:28rem;font:inherit;padding:.6rem;`
     + `border:1px solid currentColor;border-radius:6px;background:none;color:inherit">`
@@ -1499,7 +1519,8 @@ function stageKey(groupKey, o) {
   form.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const input = form.querySelector("#key-in");
-    const key = input.value.trim();
+    const key = wp ? JSON.stringify({ site: form.querySelector("#site-in").value.trim(), user: form.querySelector("#user-in").value.trim(), password: input.value.trim() })
+      : input.value.trim();
     input.value = "";
     const btn = form.querySelector("button[type=submit]");
     btn.disabled = true; btn.textContent = "Checking the key";
@@ -1514,7 +1535,7 @@ function stageKey(groupKey, o) {
       out.innerHTML = "";
       const msg = el("div", body?.ok ? "notice" : "notice flagged");
       msg.textContent = body?.ok
-        ? `${o.name} is connected. Ask the box about it in your own words.`
+        ? `${o.name} is connected. ${connectedSaid(o.key, body)}Ask the box about it in your own words.`
         : `Not connected: ${body?.reason ?? body?.error ?? "no reason was given"} Nothing was kept.`;
       out.appendChild(msg);
       if (body?.ok) await refreshBrain();
@@ -1547,7 +1568,7 @@ function stageKey(groupKey, o) {
     extra.push(ta, copy);
   }
   stage.append(n, how, ...extra, form, out, back);
-  form.querySelector("#key-in").focus();
+  form.querySelector(wp ? "#site-in" : "#key-in").focus();
 }
 
 // The account-shaped truth is told at the moment it applies, not in a policy page.
