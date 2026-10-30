@@ -3625,7 +3625,7 @@ function goto(id, key) {
 const GROUP_TAB = (k, label) => ({ key: k, label: label ?? GROUPS.find((g) => g.key === k).label });
 // THE THINKROOMS TAB (seat thinkrooms-a, 2026-10-29, decision 1035; first built as Thoughts by seat thoughtgram): beside Mail; drawn by fill/thoughts.js.
 const TABS = [GROUP_TAB('email', 'Mail'), { key: 'thoughts', label: 'Thinkrooms' }, { key: 'work', label: 'Work' }, { key: 'money', label: 'Money', owner: true },
-  GROUP_TAB('drives', 'Drives'), GROUP_TAB('calendar'), GROUP_TAB('contacts'),
+  GROUP_TAB('drives', 'Drives'), GROUP_TAB('calendar'), GROUP_TAB('contacts'), { key: 'marketing', label: 'Marketing and sales' },   // Marketing and sales: seat job-alerts, 2026-10-30, decision 1039 (fill/marketing.js)
   { key: 'brain', label: 'Brain' }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
   GROUP_TAB('systems'), GROUP_TAB('loose'),
   // THE AI TAB (seat ai-tab, 2026-10-23, decision 1007; working name, Alex may rename): owner only, drawn by fill/ai.js.
@@ -3687,7 +3687,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#tabs')
 //   contacts keeps its own state (the card she looked up): a reading draws nothing. Until now every reading cleared
 //            the card and looked the person up again, so a slow lookup never stayed on screen.
 //   drives, calendar, systems, loose: drawn from the reading itself; redrawn, with keepOpen putting back what she opened.
-const OWN_STATE = { email: () => mailReading(), contacts: () => {}, ai: () => {} };
+const OWN_STATE = { email: () => mailReading(), contacts: () => {}, ai: () => {}, marketing: () => {} };   // marketing: seat job-alerts (an open item stays open)
 
 function drawLens() {
   const t = TABS.find((x) => x.key === lensKey);
@@ -3717,6 +3717,12 @@ function drawLens() {
   if (lensKey === 'ai') {
     import('./ai.js?v=2026-10-27-cost-dial').then((A) => A.drawAI(body, { el, askBody, ask, isOwner: () => !!shape?.viewer?.all_access }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The AI tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
+    return;
+  }
+  // SIGNALS AND OUTREACH (seat job-alerts, 2026-10-30): companies hiring where the business knows someone, a note per person, Hand to a colleague.
+  if (lensKey === 'marketing') {
+    import('./marketing.js?v=2026-10-30-job-alerts').then((M) => M.drawMarketing(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, viewer: () => shape?.viewer }))
+      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Marketing and sales tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
   if (lensKey === 'contacts') {
