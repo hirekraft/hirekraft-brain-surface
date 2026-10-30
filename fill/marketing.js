@@ -133,23 +133,136 @@ async function drawLast(host, given) {
   }
   if (L.not_understood) host.appendChild(mk('p', 'quiet', n0(L.not_understood) + ' ' + plural(L.not_understood, 'file is', 'files are') + ' kept whole but not yet understood by the Tool.'));
   host.appendChild(mk('p', 'quiet', 'Only you can see what you bring in. Your messages stay private to you always.'));
-  const det = C.el('details');
-  const sum = mk('summary', null, 'What is in it'); sum.style.minHeight = '44px'; sum.style.display = 'flex'; sum.style.alignItems = 'center'; sum.style.cursor = 'pointer';
-  det.appendChild(sum);
-  const ul = mk('ul', 'attn');
-  for (const f of (L.parts || [])) {
-    const row = mk('li');
-    const t = mk('div', 'a-title'); t.appendChild(f.name ? mk('span', null, f.name) : data_('span', null, f.path));
-    const bits = [];
-    if (f.kind === 'table') bits.push(n0(f.rows) + ' ' + plural(f.rows, 'row', 'rows'));
-    else bits.push('kept whole');
-    if (!f.understood) bits.push('kept, not yet understood');
-    if (f.private_always) bits.push('always private to you');
-    row.append(t, mk('div', 'a-detail', bits.join(' · ')));
-    ul.appendChild(row);
+  // YOUR LINKEDIN, EXPLAINED (seat linkedin-whole-2, slices 4 and 5): replaces the plain file list that stood here ("What is in
+  // it", seat linkedin-whole) with the walk-through, part by part, each with her choice. Retired 2026-10-30, brief linkedin-whole-2.
+  const ex = mk('section', 'mk-explain');
+  host.appendChild(ex);
+  drawExplain(ex);
+}
+
+// Each part in plain words, from pieces (counts and dates from the brain; names and titles are her data, never translated).
+function partWords(x, prevOn) {
+  const f = x.facts || {};
+  const n = Number(x.rows || 0);
+  let line = '';
+  let use = '';
+  if (x.part === 'connections') {
+    line = n0(f.connections || n) + ' people.' + (f.first ? '' : ' Since ' + dayOnly(f.since) + ': ' + n0(f.new) + ' new, ' + n0(f.changed) + ' changed company or position, ' + n0(f.gone) + ' no longer listed.');
+    use = 'Used for who you know at companies that are hiring.';
+  } else if (x.part === 'companyfollows') {
+    line = n0(f.companies || n) + ' companies' + (f.hiring_now ? '; ' + n0(f.hiring_now) + ' of them are hiring now.' : '.');
+    use = 'Used to mark hiring companies you follow.';
+  } else if (x.part === 'messages') {
+    line = n0(n) + ' messages in ' + n0(f.conversations) + ' conversations' + (f.people ? ', one to one with ' + n0(f.people) + ' people' : '') + (f.first ? ', from ' + dayOnly(f.first) + ' to ' + dayOnly(f.last) : '') + '.';
+    use = 'The Tool uses only how many and when, never what was said.';
+  } else if (x.part === 'endorsementgiveninfo' || x.part === 'endorsementreceivedinfo') {
+    line = n0(n) + ' endorsements' + (f.people ? ', with ' + n0(f.people) + ' people' : '') + (f.last ? ', the last on ' + dayOnly(f.last) : '') + '.';
+    use = 'Shown next to the people you know at hiring companies.';
+  } else if (x.part === 'invitations') {
+    line = n0(n) + ' invitations: ' + n0(f.incoming) + ' to you, ' + n0(f.outgoing) + ' from you.';
+  } else if (x.part === 'articles') {
+    const a = (f.list || [])[0];
+    line = n0(f.articles || 0) + ' articles you published' + (a && a.title ? ', the newest "' + a.title + '"' + (a.published ? ' (' + dayOnly(a.published) + ')' : '') : '') + '.';
+    use = 'Good for your website and your posts.';
+  } else {
+    line = x.kind === 'table' ? n0(n) + ' ' + plural(n, 'row', 'rows') + '.' : 'Kept whole.';
   }
-  det.appendChild(ul);
-  host.appendChild(det);
+  if (x.prev_rows !== null && x.prev_rows !== undefined && prevOn && Number(x.prev_rows) !== n) {
+    const dlt = n - Number(x.prev_rows);
+    line += ' ' + n0(Math.abs(dlt)) + (dlt > 0 ? ' more' : ' fewer') + ' than in your download of ' + dayOnly(prevOn) + '.';
+  }
+  return { line, use };
+}
+
+const CHOICES = [['marketing', 'Use for marketing'], ['me', 'Only for me'], ['out', 'Leave out']];
+const CHOSEN = { marketing: 'Used for marketing: the people who work on marketing see it.', me: 'Only for you.', out: 'Left out: not kept in the Tool, now or in later downloads.' };
+
+async function drawExplain(ex) {
+  ex.innerHTML = '';
+  ex.appendChild(mk('h3', 'mk-sub', 'Your LinkedIn, explained'));
+  const w = mk('p', 'working no-late', 'Going through your download part by part');
+  ex.appendChild(w);
+  const r = await rpc('linkedin_explain', {});
+  w.remove();
+  if (!r || r.ok !== true) {
+    ex.appendChild(mk('p', 'notice flagged', 'This could not be read just now: ' + String((r && (r.reason || r.error)) || 'no reason was given') + '. Nothing here is a claim either way.'));
+    return;
+  }
+  if (!r.last) return;
+  ex.appendChild(mk('p', 'state', 'For each part, choose: use it for marketing (the people who work on marketing see it), keep it only for you, or leave it out. Your choice is kept and used for every download you bring in later. Until you choose, a part is only for you.'));
+  const ul = mk('ul', 'mk-person-list');
+  for (const x of (r.parts || [])) {
+    if (!Number(x.rows || 0) && x.part !== 'articles') continue;
+    const li = mk('li', 'mk-person');
+    const top = mk('div', 'mk-person-top');
+    top.append(mk('span', 'mk-person-name', x.name));
+    const pw = partWords(x, r.last.previous_on);
+    const said = mk('p', 'mk-person-from', pw.line + (pw.use ? ' ' + pw.use : '') + (x.private_always ? ' Always private to you.' : ''));
+    li.append(top, said);
+    if (x.part === 'articles' && ((x.facts || {}).list || []).length > 1) {
+      const det = C.el('details');
+      const sm = mk('summary', null, 'All your articles'); sm.style.minHeight = '44px'; sm.style.display = 'flex'; sm.style.alignItems = 'center'; sm.style.cursor = 'pointer';
+      det.appendChild(sm);
+      const al = mk('ul', 'mk-role-list');
+      for (const a of x.facts.list) { const ai = mk('li', 'mk-role'); ai.append(data_('span', 'mk-role-title', a.title || '')); if (a.published) ai.append(document.createTextNode(' · ' + dayOnly(a.published))); al.appendChild(ai); }
+      det.appendChild(al);
+      li.appendChild(det);
+    }
+    const now = mk('p', 'mk-person-step state', x.choice ? CHOSEN[x.choice] : 'Only for you until you choose.');
+    const acts = mk('div', 'mk-acts');
+    const out = mk('p', 'mk-said'); out.setAttribute('aria-live', 'polite');
+    let armed = false;
+    for (const [c, label] of CHOICES) {
+      if (c === 'marketing' && x.private_always) continue;
+      const b = mk('button', c === (x.choice || 'me') ? 'go' : 'go ghost', label); b.type = 'button';
+      b.setAttribute('aria-pressed', c === (x.choice || 'me') ? 'true' : 'false');
+      b.addEventListener('click', async () => {
+        if (c === 'out' && !armed) { armed = true; out.className = 'mk-said state'; out.textContent = 'Leave out removes this part (' + n0(x.rows) + ' ' + plural(Number(x.rows), 'row', 'rows') + ') from the Tool, and from every download you bring in later. Press Leave out again to confirm.'; return; }
+        armed = false;
+        for (const o of acts.querySelectorAll('button')) o.disabled = true;
+        out.className = 'mk-said working no-late'; out.textContent = 'Keeping your choice';
+        const k = await rpc('linkedin_choose', { p_part: x.part, p_choice: c });
+        for (const o of acts.querySelectorAll('button')) o.disabled = false;
+        if (k && k.ok) {
+          x.choice = c;
+          for (const o of acts.querySelectorAll('button')) { const on = o === b; o.className = on ? 'go' : 'go ghost'; o.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+          now.textContent = CHOSEN[c];
+          out.className = 'mk-said state';
+          out.textContent = k.not_yet ? k.not_yet : (c === 'out' && k.removed ? n0(k.removed) + ' ' + plural(k.removed, 'row', 'rows') + ' removed.' : 'Kept.');
+        } else {
+          out.className = 'mk-said stalled'; out.textContent = 'Not changed: ' + String((k && (k.reason || k.error)) || 'no reason was given') + '.';
+        }
+      });
+      acts.appendChild(b);
+    }
+    li.append(now, acts, out);
+    ul.appendChild(li);
+  }
+  ex.appendChild(ul);
+  if ((r.absent || []).length) {
+    const ws = r.absent.map((x) => (x === 'shares' ? 'posts' : x));
+    const said = ws.length > 1 ? ws.slice(0, -1).join(', ') + ' and ' + ws[ws.length - 1] : ws[0];
+    ex.appendChild(mk('p', 'quiet', 'Your ' + said + ' are not in this download, so the Tool cannot use them.'));
+  }
+  if ((r.not_understood || []).length) ex.appendChild(mk('p', 'quiet', n0(r.not_understood.length) + ' ' + plural(r.not_understood.length, 'file is', 'files are') + ' kept whole but not understood yet.'));
+  if (r.may_share) {
+    const sh = await rpc('linkedin_shared', {});
+    if (sh && sh.ok && (sh.shared || []).length) {
+      ex.appendChild(mk('h3', 'mk-sub', 'Shared with you by colleagues'));
+      const sl = mk('ul', 'mk-role-list');
+      for (const s1 of sh.shared) {
+        const si = mk('li', 'mk-role');
+        si.append(data_('span', null, s1.from), document.createTextNode(': ' + s1.name + ', ' + n0(s1.rows) + ' ' + plural(Number(s1.rows), 'row', 'rows') + (s1.not_yet ? '. ' + s1.not_yet : '.')));
+        if ((s1.list || []).length) si.append(document.createTextNode(' '), data_('span', 'quiet', s1.list.slice(0, 30).map((q) => q.name || q.title).join(', ') + (s1.list.length > 30 ? ' and ' + (s1.list.length - 30) + ' more' : '')));
+        sl.appendChild(si);
+      }
+      ex.appendChild(sl);
+    } else if (sh && sh.ok) {
+      ex.appendChild(mk('p', 'quiet', 'Nobody has shared anything from their LinkedIn with you yet.'));
+    } else if (sh) {
+      ex.appendChild(mk('p', 'quiet', String(sh.reason || 'What colleagues shared could not be read just now.')));
+    }
+  }
 }
 
 // The download's date: from its file name (LinkedIn names it ..._MM-DD-YYYY.zip), else the newest file inside, else today.
