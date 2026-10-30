@@ -128,7 +128,12 @@ async function drawLast(host, given) {
     return;
   }
   const L = r.last;
-  if (!L) { host.appendChild(mk('p', 'state', 'You have not brought in a LinkedIn download yet.')); host.appendChild(mk('p', 'quiet', 'Only you can see what you bring in.')); return; }
+  if (!L) {
+    host.appendChild(mk('p', 'state', 'You have not brought in a LinkedIn download yet.')); host.appendChild(mk('p', 'quiet', 'Only you can see what you bring in.'));
+    // what colleagues shared still shows for someone with no download of her own (seat linkedin-share)
+    const ex0 = mk('section', 'mk-explain'); host.appendChild(ex0); drawExplain(ex0);
+    return;
+  }
   host.appendChild(mk('p', 'state', 'Your last LinkedIn download: ' + dayOnly(L.downloaded_on) + ', brought in ' + day(L.brought_at) + '. ' + n0(L.files) + ' ' + plural(L.files, 'file', 'files') + ', ' + n0(L.rows) + ' ' + plural(L.rows, 'row', 'rows') + ', kept whole.'));
   const c = L.compare;
   if (c) {
@@ -194,7 +199,7 @@ async function drawExplain(ex) {
     ex.appendChild(mk('p', 'notice flagged', 'This could not be read just now: ' + String((r && (r.reason || r.error)) || 'no reason was given') + '. Nothing here is a claim either way.'));
     return;
   }
-  if (!r.last) return;
+  if (!r.last) { ex.innerHTML = ''; await drawShared(ex, r); return; }
   ex.appendChild(mk('p', 'state', 'For each part, choose: use it for marketing (the people who work on marketing see it), keep it only for you, or leave it out. Your choice is kept and used for every download you bring in later. Until you choose, a part is only for you.'));
   const ul = mk('ul', 'mk-person-list');
   for (const x of (r.parts || [])) {
@@ -270,6 +275,11 @@ async function drawExplain(ex) {
     ex.appendChild(mk('p', 'quiet', 'Your ' + said + ' are not in this download, so the Tool cannot use them.'));
   }
   if ((r.not_understood || []).length) ex.appendChild(mk('p', 'quiet', n0(r.not_understood.length) + ' ' + plural(r.not_understood.length, 'file is', 'files are') + ' kept whole but not understood yet.'));
+  await drawShared(ex, r);
+}
+
+// SHARED WITH YOU BY COLLEAGUES: what others chose to use for marketing, for someone who works on marketing (the brain decides).
+async function drawShared(ex, r) {
   if (r.may_share) {
     const sh = await rpc('linkedin_shared', {});
     if (sh && sh.ok && (sh.shared || []).length) {
