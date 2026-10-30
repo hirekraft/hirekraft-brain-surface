@@ -57,10 +57,16 @@ export function drawMarketing(body, ctx) {
   parts.setAttribute('role', 'tablist');
   const p1 = mk('button', 'mk-part', 'Signals and outreach'); p1.type = 'button'; p1.setAttribute('aria-selected', 'true'); p1.setAttribute('role', 'tab');
   const p2 = mk('button', 'mk-part', 'What this reads'); p2.type = 'button'; p2.setAttribute('aria-selected', 'false'); p2.setAttribute('role', 'tab');
-  parts.append(p1, p2);
-  const pick = (b, go) => { for (const x of [p1, p2]) x.setAttribute('aria-selected', x === b ? 'true' : 'false'); go(parts.nextElementSibling); };
+  // Plan, Sending and What came back (seat marketing-parts, 2026-10-30, decisions 1039, 1044): each part lives in its own file.
+  const part = (label) => { const b = mk('button', 'mk-part', label); b.type = 'button'; b.setAttribute('aria-selected', 'false'); b.setAttribute('role', 'tab'); return b; };
+  const p3 = part('Plan'), p4 = part('Sending'), p5 = part('What came back');
+  parts.append(p1, p3, p4, p5, p2);
+  const pick = (b, go) => { for (const x of [p1, p2, p3, p4, p5]) x.setAttribute('aria-selected', x === b ? 'true' : 'false'); go(parts.nextElementSibling); };
   p1.addEventListener('click', () => pick(p1, load));
   p2.addEventListener('click', () => pick(p2, drawReads));
+  p3.addEventListener('click', () => pick(p3, (s) => import('./marketing-plan.js?v=2026-10-30-marketing-parts').then((M) => M.drawPlan(s, C))));
+  p4.addEventListener('click', () => pick(p4, (s) => import('./marketing-send.js?v=2026-10-30-marketing-parts').then((M) => M.drawSend(s, C))));
+  p5.addEventListener('click', () => pick(p5, (s) => import('./marketing-back.js?v=2026-10-30-marketing-parts').then((M) => M.drawBack(s, C))));
   const stage = mk('div', 'mk-stage');
   wrap.append(parts, stage);
   body.appendChild(wrap);
