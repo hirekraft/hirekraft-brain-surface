@@ -5,12 +5,14 @@
 // each linked to the piece that brought it (the note about a hiring company, or the campaign email to a list), and which list
 // and which kind of note brought replies. Measured in conversations, not opens (decision 1039); opens show as a signal only.
 // Filled by itself every 15 minutes from the mail the Tool reads (mk_back_scan); Elastic Email and the website add their
-// events when they are connected (seat systems-connect), and until then the screen says so.
+// events when they are connected (seat systems-connect), and until then the screen says so. Each campaign's results from the
+// email engine (delivered, opened, clicked, bounced, marked as spam, unsubscribed) are read back every 15 minutes by mail-send's
+// campaign run (seat campaign-engine, 2026-10-31, decision 1050) and shown per campaign below; each person's in Latest.
 // Drawn from what the brain returns (mk_back_view); the brain refuses anyone but the owner, with the reason.
 // No colour, size or font here; no regex literals, no backslashes.
 
 let C = null;
-const KIND = { reply: 'Reply', call_booked: 'Call booked', opening: 'Opening received', open: 'Opened', click: 'Clicked', unsubscribe: 'Unsubscribed', bounce: 'Bounced', complaint: 'Complaint' };
+const KIND = { reply: 'Reply', call_booked: 'Call booked', opening: 'Opening received', open: 'Opened', click: 'Clicked', unsubscribe: 'Unsubscribed', bounce: 'Bounced', complaint: 'Marked as spam', delivered: 'Delivered' };
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
 const data_ = (tag, cls, text) => { const n = mk(tag, cls, text); n.translate = false; return n; };
 const n0 = (x) => Number(x || 0).toLocaleString('en-US');
@@ -76,8 +78,17 @@ export async function drawBack(stage, ctx) {
       what.appendChild(p);
     }
   }
+  if ((r.by_campaign || []).length) {
+    what.appendChild(mk('h3', 'mk-sub', 'Each campaign, from your email engine'));
+    for (const k of r.by_campaign) {
+      const p = mk('p', 'state');
+      p.append(data_('span', null, k.subject), mk('span', null, ': sent ' + n0(k.sent) + ', delivered ' + n0(k.delivered) + ', opened ' + n0(k.opened) + ', clicked ' + n0(k.clicked) + ', bounced ' + n0(k.bounced) + ', marked as spam ' + n0(k.complaints) + ', unsubscribed ' + n0(k.unsubscribed) + '.'));
+      what.appendChild(p);
+    }
+  }
   what.appendChild(mk('p', 'state', 'Read from the mailboxes the Tool reads, every 15 minutes' + (r.scanned_at ? ' (last ' + time(r.scanned_at) + ')' : '') + '.'));
   if (!r.elastic) what.appendChild(mk('p', 'quiet', 'Opens, clicks, bounces and unsubscribes from your email marketing system show here once it is connected under Add a source.'));
+  else what.appendChild(mk('p', 'quiet', 'Delivered, opened, clicked, bounced, marked as spam and unsubscribed are read from ' + String((r.engine && r.engine.name) || 'your email engine') + ' every 15 minutes. Anyone who unsubscribes or marks an email as spam there is never emailed again, and the same goes the other way.'));
   if (!r.site) what.appendChild(mk('p', 'quiet', 'Forms filled on your website show here once the site is connected under Add a source.'));
   what.appendChild(mk('p', 'quiet', 'An opening received shows here; it does not reach For you yet.'));
   stage.appendChild(what);
