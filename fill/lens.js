@@ -149,7 +149,9 @@ const PICKERS = {
               { name: "Slack",      key: "slack", account: true },
               // seat systems-connect 2026-10-30 (decisions 1039, 1044): two more systems on the same connect-by-key path.
               { name: "Elastic Email", key: "elasticemail", account: true },
-              { name: "WordPress",  key: "wordpress", account: true }],
+              { name: "WordPress",  key: "wordpress", account: true },
+              // seat campaign-engine 2026-10-31 (decision 1050 (4)): its own owner-only Google sign-in, read only.
+              { name: "Google Analytics and Search Console", gm: true, account: true }],
   },
   loose: {
     head: "Drop in files", sub: "A one-off set of documents that does not live in a connected drive.",
@@ -1415,9 +1417,9 @@ function stageProviders(groupKey, p) {
       + `border:1px solid currentColor;border-radius:3px;font-size:11px;font-weight:500">`
       + `${escape(o.name[0])}</span>`
       + `<span class="t-name">${escape(o.name)}</span>`
-      + `<span class="t-sub">${o.wired || o.key ? "ready" : o.via ? "with your Google sign-in" : "not connected yet"}</span>`;
+      + `<span class="t-sub">${o.wired || o.key || o.gm ? "ready" : o.via ? "with your Google sign-in" : "not connected yet"}</span>`;
     b.addEventListener("click", () =>
-      o.key ? stageKey(groupKey, o) : o.wired ? stageScope(groupKey, o) : stageNotWired(stage, o));
+      o.gm ? stageGoogleMarketing(o) : o.key ? stageKey(groupKey, o) : o.wired ? stageScope(groupKey, o) : stageNotWired(stage, o));
     grid.appendChild(b);
   }
   stage.appendChild(grid);
@@ -1493,6 +1495,34 @@ function connectedSaid(kind, b) {
   if (kind === "wordpress") return `${b.can_edit ? "" : "That user cannot see drafts, so only published pages and posts are read. "}${b.forms_note ?? ""} Nothing is published. `;
   return "";
 }
+// GOOGLE ANALYTICS AND SEARCH CONSOLE (seat campaign-engine 2026-10-31, decision 1050 (4)). A SEPARATE Google sign-in,
+// read-only, owner only (source_begin refuses anyone else with owner_only): the everyday Google sign-in of each person is
+// not widened, so nobody else is ever asked for Analytics. Same path as every other connect (beginConnect).
+function stageGoogleMarketing(o) {
+  const stage = $('#connect-stage');
+  stage.innerHTML = '';
+  $('#connect-head').textContent = `Connect ${o.name}`;
+  $('#connect-sub').textContent = '';
+  const n = el('div', 'notice flagged');
+  n.innerHTML = '<b>Only the owner connects this, and it only reads.</b> Sign in with the Google account that runs your '
+    + 'Google Analytics and Search Console. The Tool reads the last 90 days: website visits by where they came from and by '
+    + 'campaign, and the searches and pages that brought people to your site. It changes nothing in Google.';
+  const form = el('form', '');
+  form.innerHTML = `<label for='gm-in'><b>Your Google account</b></label>`
+    + `<input id='gm-in' type='email' autocomplete='email' spellcheck='false' required `
+    + `style='display:block;margin:.5rem 0 1rem;width:100%;max-width:28rem;font:inherit;padding:.6rem;border:1px solid currentColor;border-radius:6px;background:none;color:inherit'>`
+    + `<div class='actions'><button class='go' type='submit'>Sign in with Google</button></div>`;
+  form.querySelector('#gm-in').value = shape?.viewer?.email || '';
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const btn = form.querySelector('button[type=submit]');
+    const a = form.querySelector('#gm-in').value.trim().toLowerCase();
+    btn.textContent = 'Opening Google…';
+    beginConnect({ name: o.name, type: 'google_marketing' }, 'individual', a, btn, () => { btn.textContent = 'Sign in with Google'; }, a);
+  });
+  stage.append(n, form);
+}
+
 function stageKey(groupKey, o) {
   const stage = $("#connect-stage");
   stage.innerHTML = "";
