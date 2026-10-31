@@ -65,7 +65,7 @@ export function drawMarketing(body, ctx) {
   p1.addEventListener('click', () => pick(p1, load));
   p2.addEventListener('click', () => pick(p2, drawReads));
   p3.addEventListener('click', () => pick(p3, (s) => import('./marketing-plan.js?v=2026-10-31-rulings-1049').then((M) => M.drawPlan(s, C))));
-  p4.addEventListener('click', () => pick(p4, (s) => import('./marketing-send.js?v=2026-10-30-marketing-parts').then((M) => M.drawSend(s, C))));
+  p4.addEventListener('click', () => pick(p4, (s) => import('./marketing-send.js?v=2026-10-31-rulings-1049').then((M) => M.drawSend(s, C))));
   p5.addEventListener('click', () => pick(p5, (s) => import('./marketing-back.js?v=2026-10-30-marketing-parts').then((M) => M.drawBack(s, C))));
   const stage = mk('div', 'mk-stage');
   wrap.append(parts, stage);
