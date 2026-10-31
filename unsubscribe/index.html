@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Unsubscribe</title>
+<!-- The visible unsubscribe link in every campaign email sent through the Tool (seat campaign-engine, 2026-10-31, decision 1050).
+     Opening the page changes nothing (link checkers open links); pressing the button records it. The token in the address is the
+     only key; the brain decides (mk_unsub_by_token, through mail-send). The one-click header posts to mail-send directly. -->
+<style>
+  :root { --bg: #ffffff; --fg: #1d1d1f; --muted: #5f6368; --line: #d9d9de; --go: #1d1d1f; --go-fg: #ffffff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #151517; --fg: #f2f2f4; --muted: #a8a8b0; --line: #3a3a40; --go: #f2f2f4; --go-fg: #151517; } }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 32rem; margin: 0 auto; padding: 48px 16px; }
+  h1 { font-size: 1.5rem; margin: 0 0 12px; }
+  p { margin: 0 0 16px; color: var(--muted); overflow-wrap: anywhere; }
+  p.said { color: var(--fg); }
+  button { min-height: 48px; padding: 0 20px; border-radius: 10px; border: 1px solid var(--go); background: var(--go); color: var(--go-fg); font: inherit; cursor: pointer; }
+  button[disabled] { opacity: 0.6; cursor: default; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Unsubscribe</h1>
+  <p id="lede">Press the button and you will get no more of these emails.</p>
+  <button id="go" type="button">Unsubscribe me</button>
+  <p id="said" class="said" aria-live="polite"></p>
+</main>
+<script>
+  (function () {
+    var FN = 'https://uvdoompnnypmneyrvtas.supabase.co/functions/v1/mail-send';
+    var t = new URLSearchParams(location.search).get('t') || '';
+    var go = document.getElementById('go'), said = document.getElementById('said');
+    if (!t) { go.hidden = true; said.textContent = 'This unsubscribe link is not complete. Reply to the email with the word unsubscribe and you will be taken off the list.'; return; }
+    go.addEventListener('click', function () {
+      go.disabled = true; said.textContent = 'Recording it';
+      fetch(FN + '?unsub=' + encodeURIComponent(t), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: 'link' })
+        .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
+        .then(function (j) {
+          if (j && j.ok) { go.hidden = true; document.getElementById('lede').hidden = true; said.textContent = j.already ? 'You were already unsubscribed. You will get no more of these emails.' : 'Done. You will get no more of these emails.'; }
+          else { go.disabled = false; said.textContent = (j && j.reason) ? j.reason : 'It could not be recorded just now. Please try again in a minute.'; }
+        })
+        .catch(function () { go.disabled = false; said.textContent = 'It could not be recorded just now. Please try again in a minute.'; });
+    });
+  })();
+</script>
+</body>
+</html>
