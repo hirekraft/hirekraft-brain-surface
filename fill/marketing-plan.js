@@ -192,6 +192,10 @@ function listRow(l) {
   const c = l.counts || {};
   li.appendChild(data_('p', 'mk-item-line', l.question));
   li.appendChild(mk('p', 'mk-item-known', n0(c.in) + ' ' + plural(c.in, 'person is', 'people are') + ' on it. ' + n0(c.out) + ' close ' + plural(c.out, 'match is', 'matches are') + ' left out, each with why.'));
+  // LEFT OUT, AND WHY (seat rulings-1049, decision 1049 (3)): one line counting who is left out by reason, so nobody known to
+  // the business is dropped without her seeing it; Who is left out and why lists each person with the one reason.
+  const outBits = OUT_ORDER.filter((k) => Number(c[k])).map((k) => n0(c[k]) + ' ' + OUT_COUNT[k][Number(c[k]) === 1 ? 0 : 1]);
+  if (outBits.length) li.appendChild(mk('p', 'mk-item-known', 'Left out: ' + outBits.join(', ') + '.'));
   const bits = ['Kept current daily, last on ' + day(l.refreshed_at)];
   if (Number(l.new)) bits.push(l.new + ' new since the day before');
   if (Number(c.in) > Number(c.shown_cap || 500)) bits.push('the first ' + n0(c.shown_cap || 500) + ' are kept to show');
@@ -215,7 +219,15 @@ function listRow(l) {
   return li;
 }
 
+const OUT_ORDER = ['client', 'colleague', 'unsubscribed', 'known', 'contacted', 'not_hiring', 'hiring', 'no_email'];
+const OUT_COUNT = {
+  client: ['current client', 'current clients'], colleague: ['colleague', 'colleagues'], unsubscribed: ['unsubscribed', 'unsubscribed'],
+  known: ['known to you', 'known to you'], contacted: ['contacted recently', 'contacted recently'], not_hiring: ['not hiring', 'not hiring'],
+  hiring: ['hiring', 'hiring'], no_email: ['without an email address', 'without an email address'],
+};
 const OUT_WHY = {
+  colleague: 'Left out: a colleague at your business.',
+  unsubscribed: 'Left out: they unsubscribed, so they never get your marketing.',
   not_hiring: 'Left out: their company is not hiring in the job alerts of the last 30 days.',
   hiring: 'Left out: their company is hiring, and you asked for companies that are not.',
   no_email: 'Left out: there is no email address on file for them.',
@@ -225,6 +237,9 @@ function reasonLines(p) {
   const r = p.reasons || {};
   const lines = [];
   if (p.why_out === 'contacted') lines.push(mk('p', 'stalled', 'Left out: you last emailed with them on ' + day(r.last_contact) + ', inside the time you asked.'));
+  else if (p.why_out === 'client') lines.push(mk('p', 'stalled', 'Left out: a current client' + (r.last_invoice ? ' (last invoiced in QuickBooks on ' + day(r.last_invoice) + ', within 90 days)' : ' (an active client in your records)') + '.'));
+  else if (p.why_out === 'known') lines.push(mk('p', 'stalled', 'Left out: known to you, you have been writing with them in the last 30 days (last on ' + day(r.last_out) + ').'));
+  else if (p.why_out === 'unsubscribed' && r.unsubscribed_at) lines.push(mk('p', 'stalled', 'Left out: they unsubscribed on ' + day(r.unsubscribed_at) + ', so they never get your marketing.'));
   else if (p.why_out) lines.push(mk('p', 'stalled', OUT_WHY[p.why_out] || 'Left out.'));
   if (r.title || r.company) {
     const t = mk('p', 'mk-person-from');
