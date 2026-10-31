@@ -65,8 +65,8 @@ export function drawMarketing(body, ctx) {
   p1.addEventListener('click', () => pick(p1, load));
   p2.addEventListener('click', () => pick(p2, drawReads));
   p3.addEventListener('click', () => pick(p3, (s) => import('./marketing-plan.js?v=2026-10-31-rulings-1049').then((M) => M.drawPlan(s, C))));
-  p4.addEventListener('click', () => pick(p4, (s) => import('./marketing-send.js?v=2026-10-31-rulings-1049').then((M) => M.drawSend(s, C))));
-  p5.addEventListener('click', () => pick(p5, (s) => import('./marketing-back.js?v=2026-10-30-marketing-parts').then((M) => M.drawBack(s, C))));
+  p4.addEventListener('click', () => pick(p4, (s) => import('./marketing-send.js?v=2026-10-31-campaign-engine-2').then((M) => M.drawSend(s, C))));
+  p5.addEventListener('click', () => pick(p5, (s) => import('./marketing-back.js?v=2026-10-31-campaign-engine-2').then((M) => M.drawBack(s, C))));
   const stage = mk('div', 'mk-stage');
   wrap.append(parts, stage);
   body.appendChild(wrap);
@@ -736,7 +736,7 @@ async function fillNote(box, it, p, again, status) {
       const dd = { source_key: 'gmail:' + mailbox, thread_id: '', to: [p.email], cc: [], subject: subj.value, text: text.value };
       send.disabled = true; said.className = 'mk-said working no-late'; said.textContent = 'Sending from ' + mailbox;
       const hash = await draftHash(dd);
-      const j = await post(SEND, Object.assign({ action: 'send', hash }, dd));
+      const j = await post(SEND, Object.assign({ action: 'send', hash, note: { key: it.key, person_id: p.id } }, dd));   // the job-note rules (campaign-engine)
       send.disabled = false;
       if (j && j.ok === true && j.sent) { said.className = 'mk-said state'; said.textContent = 'Sent. It is in your Sent folder in Gmail too.'; await mark('email_sent'); return; }
       const why = String((j && (j.reason || j.error)) || '');
