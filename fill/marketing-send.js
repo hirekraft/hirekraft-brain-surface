@@ -7,8 +7,12 @@
 // her Approve. Before anyone goes in a batch the Tool checks: not emailed in the last 30 days, not unsubscribed, not at an
 // active client, address never bounced; everyone left out says why. One-to-one notes go from her own mailbox (Signals and
 // outreach); campaigns never do.
-// NOTHING IS SENT FROM HERE YET: the one send path (mail-send) stays behind its test lock and the email marketing system is
-// not connected, so an approved batch is held and says so. The rules are real and proven with planted data in the brain.
+// THE ONE SEND PATH (seat campaign-engine, 2026-10-31, decision 1050): Approve hands the batch to mail-send, which sends it
+// through the business's email engine (Elastic Email first) within 15 minutes, or holds it and says why: a rule below not met,
+// or mail-send's test lock (while sending is being proven only the sending address itself gets mail). BEFORE THE FIRST SEND
+// shows the rules every campaign email meets, each checked, and what to add when one is not met: the postal address (in every
+// footer), a sending address on a subdomain of her domain, the engine connected, the domain verified there with SPF, DKIM and
+// DMARC passing. The checks are the brain's (mk_send_rules), read live from the engine by mail-send; this screen only shows them.
 // Drawn from what the brain returns (mk_send_view); the brain refuses anyone but the owner, with the reason.
 // No colour, size or font here; no regex literals, no backslashes.
 
@@ -39,10 +43,52 @@ export async function drawSend(stage, ctx) {
   const v = await rpc('mk_send_view', {});
   w.remove();
   if (!v || v.ok !== true) { stage.appendChild(mk('p', 'notice flagged', 'This could not be read just now: ' + String((v && (v.reason || v.error)) || 'no reason was given') + '.')); return; }
-  stage.appendChild(mk('p', 'notice', "Nothing is sent yet. The Tool's own sending is being tested and your email marketing system is not connected, so a batch you approve is held, and says so."));
+  stage.appendChild(mk('p', 'notice', v.engine ? "Nothing goes to anyone yet: the Tool's own sending is being tested, so a batch you approve is held, and says why."
+    : "Nothing is sent yet. Your email engine is not connected (Brain tab, Add a source, Systems) and the Tool's own sending is being tested, so a batch you approve is held, and says why."));
   for (const c of (v.campaigns || [])) stage.appendChild(campaignCard(stage, c));
   stage.appendChild(startBox(stage, v.lists || []));
+  stage.appendChild(readyPart(stage, v.sending || {}, v.ready || null, v.engine || null));
   stage.appendChild(limitsPart(stage, v.limits || {}, v.today || {}));
+}
+
+// BEFORE THE FIRST SEND (seat campaign-engine): what every campaign email needs, each rule checked, and what to add.
+const RULE = { postal_address: 'Postal address', sending_subdomain: 'Sending address', engine: 'Email engine', domain_verified: 'Sending domain', spf: 'SPF', dkim: 'DKIM', dmarc: 'DMARC' };
+function readyPart(stage, S, R, E) {
+  const sec = mk('section', 'mk-people');
+  sec.appendChild(mk('h3', 'mk-sub', 'Before the first send'));
+  sec.appendChild(mk('p', 'state', 'Every campaign email carries your postal address and a one-click unsubscribe, and goes from a sending address on a subdomain of your domain, so your own mail keeps its good name.'));
+  const checks = (R && Array.isArray(R.checks)) ? R.checks : [];
+  if (!checks.length) sec.appendChild(mk('p', 'quiet', 'The checks run with the next send run, within 15 minutes of a change.'));
+  for (const c of checks) {
+    sec.appendChild(mk('p', c.ok ? 'state' : 'stalled', (c.ok ? 'Done. ' : 'Not yet. ') + (RULE[c.check] || c.check) + ': ' + String(c.said || '')));
+    if (!c.ok && c.fix) sec.appendChild(mk('p', 'quiet', 'What to do: ' + String(c.fix)));
+  }
+  if (R && R.checked_at) sec.appendChild(mk('p', 'quiet', (R.ok ? 'Ready to send. ' : '') + 'Checked ' + day(R.checked_at) + (E && E.name ? ', with ' + E.name : '') + '.'));
+  const det = C.el('details');
+  if (!S.postal_address || !S.sending_from) det.open = true;
+  det.appendChild(mk('summary', 'mk-hand-label', 'Your address and sending address'));
+  const fields = [['postal_address', 'Postal address (street, town, postal code)'], ['sending_from', 'Sending address, for example news@mail.yourdomain.com'], ['sending_name', 'Sender name']];
+  const inputs = {};
+  for (const [k, label] of fields) {
+    const lab = mk('label', 'mk-hand-label', label);
+    const i = C.el('input'); i.type = k === 'sending_from' ? 'email' : 'text'; i.className = 'mk-why'; i.value = S[k] ? String(S[k]) : '';
+    inputs[k] = i; lab.appendChild(i); det.appendChild(lab);
+  }
+  const save = mk('button', 'go ghost', 'Save'); save.type = 'button';
+  const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
+  save.addEventListener('click', async () => {
+    const body = {};
+    for (const k of Object.keys(inputs)) if (inputs[k].value.trim() !== '' && inputs[k].value.trim() !== String(S[k] || '')) body[k] = inputs[k].value.trim();
+    if (!Object.keys(body).length) { said.className = 'mk-said'; said.textContent = 'Nothing changed.'; return; }
+    save.disabled = true; said.className = 'mk-said working no-late'; said.textContent = 'Saving';
+    const r = await rpc('mk_sending_set', { p_set: body });
+    save.disabled = false;
+    if (r && r.ok === true) { drawSend(stage, C); return; }
+    said.className = 'mk-said stalled'; said.textContent = 'Not saved: ' + String((r && r.reason) || 'no reason was given');
+  });
+  det.append(save, said);
+  sec.appendChild(det);
+  return sec;
 }
 
 // SENDING LIMITS (seat rulings-1049, 2026-10-31): the numbers every batch obeys, in words, and changeable here by the owner.
@@ -135,8 +181,11 @@ function campaignCard(stage, c) {
 function batchRow(stage, b) {
   const box = mk('div', 'mk-person');
   let line = day(b.day) + ': ' + n0(b.in) + ' ' + (Number(b.in) === 1 ? 'person' : 'people') + '. ';
+  const hw = String(b.held_why || '');
   if (b.state === 'waiting') line += 'Waiting for your Approve.';
-  else if (b.state === 'held') line += 'You approved it on ' + day(b.approved_at) + '. Held, not sent, while sending is being tested.';
+  else if (b.state === 'approved') line += 'You approved it on ' + day(b.approved_at) + '. It goes out with the next send run, within 15 minutes.';
+  else if (b.state === 'sending') line += 'Going out now.';
+  else if (b.state === 'held') line += 'You approved it on ' + day(b.approved_at) + '. ' + (hw === 'held_test_lock' || hw.startsWith('test lock') ? 'Held, not sent, while sending is being tested: for now only your own sending address gets mail.' : (hw.startsWith('Not sent: ') ? 'Held. ' + hw : 'Held, not sent' + (hw ? ': ' + hw : '.')));
   else line += 'Sent ' + n0(b.sent) + ', ' + n0(b.bounces) + ' bounced, ' + n0(b.complaints) + ' ' + (Number(b.complaints) === 1 ? 'complaint' : 'complaints') + '.';
   box.appendChild(mk('p', 'state', line));
   const lo = b.left_out || {};
