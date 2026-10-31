@@ -64,7 +64,7 @@ export function drawMarketing(body, ctx) {
   const pick = (b, go) => { for (const x of [p1, p2, p3, p4, p5]) x.setAttribute('aria-selected', x === b ? 'true' : 'false'); go(parts.nextElementSibling); };
   p1.addEventListener('click', () => pick(p1, load));
   p2.addEventListener('click', () => pick(p2, drawReads));
-  p3.addEventListener('click', () => pick(p3, (s) => import('./marketing-plan.js?v=2026-10-30-marketing-parts').then((M) => M.drawPlan(s, C))));
+  p3.addEventListener('click', () => pick(p3, (s) => import('./marketing-plan.js?v=2026-10-31-rulings-1049').then((M) => M.drawPlan(s, C))));
   p4.addEventListener('click', () => pick(p4, (s) => import('./marketing-send.js?v=2026-10-30-marketing-parts').then((M) => M.drawSend(s, C))));
   p5.addEventListener('click', () => pick(p5, (s) => import('./marketing-back.js?v=2026-10-30-marketing-parts').then((M) => M.drawBack(s, C))));
   const stage = mk('div', 'mk-stage');
