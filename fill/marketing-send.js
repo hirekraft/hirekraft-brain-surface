@@ -1,7 +1,9 @@
 // fill/marketing-send.js - THE MARKETING AND SALES TAB, part SENDING (seat marketing-parts, 2026-10-30, decisions 1039, 1044).
 //
-// WHAT IT DOES FOR HER. A campaign email goes to one of her lists in small daily batches. The first is 50; each next one grows
-// only while bounces and complaints stay low, and the campaign pauses by itself if either rises. Every day's batch waits for
+// WHAT IT DOES FOR HER. A campaign email goes to one of her lists in small daily batches, within her sending limits (seat
+// rulings-1049, 2026-10-31, replacing the grow-by-half warm-up): 50 a day in week 1, 100 in week 2, 250 in week 3, then at most
+// 500, everyone at most once in 30 days, and a pause by itself over 3 percent bounces or 0.1 percent complaints. She changes the
+// limits here (Sending limits); the brain keeps them (mk_send_limits) and every batch obeys them. Every day's batch waits for
 // her Approve. Before anyone goes in a batch the Tool checks: not emailed in the last 30 days, not unsubscribed, not at an
 // active client, address never bounced; everyone left out says why. One-to-one notes go from her own mailbox (Signals and
 // outreach); campaigns never do.
@@ -11,7 +13,8 @@
 // No colour, size or font here; no regex literals, no backslashes.
 
 let C = null;
-const OUT = { emailed: 'emailed in the last 30 days', unsubscribed: 'unsubscribed', client: 'at an active client', bounced: 'their address bounced before' };
+const OUT = { emailed: 'emailed by you recently', campaign_recent: 'had a campaign email recently', note_recent: 'had a note about a job recently',
+  unsubscribed: 'unsubscribed', client: 'at a current client', bounced: 'their address bounced before' };
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
 const data_ = (tag, cls, text) => { const n = mk(tag, cls, text); n.translate = false; return n; };
 const n0 = (x) => Number(x || 0).toLocaleString('en-US');
@@ -39,16 +42,50 @@ export async function drawSend(stage, ctx) {
   stage.appendChild(mk('p', 'notice', "Nothing is sent yet. The Tool's own sending is being tested and your email marketing system is not connected, so a batch you approve is held, and says so."));
   for (const c of (v.campaigns || [])) stage.appendChild(campaignCard(stage, c));
   stage.appendChild(startBox(stage, v.lists || []));
-  const rules = mk('section', 'mk-people');
-  rules.appendChild(mk('h3', 'mk-sub', 'How it sends'));
+  stage.appendChild(limitsPart(stage, v.limits || {}, v.today || {}));
+}
+
+// SENDING LIMITS (seat rulings-1049, 2026-10-31): the numbers every batch obeys, in words, and changeable here by the owner.
+const LIMITS = [
+  ['week1', 'People a day in week 1'], ['week2', 'People a day in week 2'], ['week3', 'People a day in week 3'], ['day_max', 'At most, a day, after that'],
+  ['campaign_gap_days', 'Days between two campaign emails to the same person'], ['note_gap_days', 'Days between two job notes to the same person'],
+  ['bounce_pause_pct', "Pause when a day's bounces pass (percent)"], ['complaint_pause_pct', "Pause when a day's spam complaints pass (percent)"],
+];
+function limitsPart(stage, L, T) {
+  const sec = mk('section', 'mk-people');
+  sec.appendChild(mk('h3', 'mk-sub', 'Sending limits'));
   for (const line of [
-    'The first batch is 50 people. The next is half again as big, up to 500 a day, only while fewer than 2 in 100 bounce and nobody complains.',
-    'At 5 in 100 bounces, or 3 complaints in 1,000, the campaign pauses by itself and tells you.',
-    'Before anyone goes in a batch: not emailed in the last 30 days, not unsubscribed, not at an active client, and their address never bounced. Everyone left out says why.',
-    "Erin has not shared a chat about sending, so these are the Tool's rules for now.",
+    'Warm-up: at most ' + n0(L.week1) + ' people a day in week 1, ' + n0(L.week2) + ' in week 2, ' + n0(L.week3) + ' in week 3, then at most ' + n0(L.day_max) + ' a day, all campaigns together.',
+    'The same person gets a campaign email at most once every ' + n0(L.campaign_gap_days) + ' days, and a note about a job at most once every ' + n0(L.note_gap_days) + ' days. Nobody who unsubscribed ever gets one.',
+    "Sending pauses by itself, and says why, when a day's bounces pass " + L.bounce_pause_pct + ' percent or its spam complaints pass ' + L.complaint_pause_pct + ' percent.',
+    'Before anyone goes in a batch: not at a current client, address never bounced. Everyone left out says why.',
     'One-to-one notes go from your own mailbox, in Signals and outreach. Campaigns never do.',
-  ]) rules.appendChild(mk('p', 'state', line));
-  stage.appendChild(rules);
+  ]) sec.appendChild(mk('p', 'state', line));
+  if (T && T.size !== undefined) sec.appendChild(mk('p', 'quiet', T.pause ? String(T.why || 'Sending is paused.') : 'Today: week ' + n0(T.week) + ', up to ' + n0(T.size) + ' people can go out.'));
+  sec.appendChild(mk('p', 'quiet', String(L.said || '') + (L.set_at ? ' (' + day(L.set_at) + ')' : '')));
+  const det = C.el('details');
+  det.appendChild(mk('summary', 'mk-hand-label', 'Change the limits'));
+  const inputs = {};
+  for (const [k, label] of LIMITS) {
+    const lab = mk('label', 'mk-hand-label', label);
+    const i = C.el('input'); i.type = 'number'; i.className = 'mk-why'; i.value = L[k] === undefined || L[k] === null ? '' : String(L[k]);
+    i.step = k.endsWith('_pct') ? '0.1' : '1'; i.min = k.endsWith('_pct') ? '0.1' : '1';
+    inputs[k] = i; lab.appendChild(i); det.appendChild(lab);
+  }
+  const save = mk('button', 'go ghost', 'Save the limits'); save.type = 'button';
+  const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
+  save.addEventListener('click', async () => {
+    const body = {};
+    for (const k of Object.keys(inputs)) if (inputs[k].value !== '') body[k] = Number(inputs[k].value);
+    save.disabled = true; said.textContent = '';
+    const r = await rpc('mk_limits_set', { p_limits: body });
+    save.disabled = false;
+    if (r && r.ok === true) { drawSend(stage, C); return; }
+    said.className = 'mk-said stalled'; said.textContent = 'Not saved: ' + String((r && r.reason) || 'no reason was given');
+  });
+  det.append(save, said);
+  sec.appendChild(det);
+  return sec;
 }
 
 function startBox(stage, lists) {
@@ -81,7 +118,8 @@ function campaignCard(stage, c) {
   li.appendChild(data_('p', 'mk-item-line', c.subject));
   const to = mk('p', 'mk-item-known'); to.append(mk('span', null, 'To the list: '), data_('span', null, c.list || ''));
   li.appendChild(to);
-  const st = c.state === 'paused' ? 'Paused by itself: ' + String(c.paused_why || '').replace('bounces', 'too many bounces').replace('complaints', 'too many complaints') + ' in the last batch.'
+  const pw = String(c.paused_why || '');
+  const st = c.state === 'paused' ? (pw.startsWith('Paused:') ? pw + ' It stays paused until you press Resume.' : 'Paused by itself: ' + pw.replace('bounces', 'too many bounces').replace('complaints', 'too many complaints') + ' in the last batch.')
     : (c.state === 'done' ? 'Done: everyone on the list who may be emailed has had it.' : 'Running since ' + day(c.made_at) + '.');
   li.appendChild(mk('p', c.state === 'paused' ? 'stalled' : 'state', st));
   for (const b of (c.batches || []).slice(0, 5)) li.appendChild(batchRow(stage, b));
@@ -130,7 +168,7 @@ async function people(host, batch, inside) {
   for (const p of (r.people || [])) {
     const li = mk('li', 'mk-person');
     li.appendChild(data_('span', 'mk-person-name', p.name || p.address));
-    if (p.why_out) li.appendChild(mk('p', 'stalled', 'Left out: ' + (OUT[p.why_out] || p.why_out) + (p.why_out === 'emailed' && p.detail && p.detail.last_out ? ' (last on ' + day(p.detail.last_out) + ')' : '') + '.'));
+    if (p.why_out) li.appendChild(mk('p', 'stalled', 'Left out: ' + (OUT[p.why_out] || p.why_out) + (p.why_out === 'emailed' && p.detail && p.detail.last_out ? ' (last on ' + day(p.detail.last_out) + ')' : '') + ((p.why_out === 'campaign_recent' || p.why_out === 'note_recent') && p.detail && p.detail.last ? ' (last on ' + day(p.detail.last) + ', the limit is one every ' + n0(p.detail.gap) + ' days)' : '') + '.'));
     ul.appendChild(li);
   }
   host.appendChild(ul);
