@@ -489,11 +489,13 @@ function drawList(stage) {
   head.append(mk('h2', 'mk-title', 'Companies hiring where you know someone'));
   head.append(mk('p', 'mk-lede', data.owner
     ? 'From the job alerts in your mail. Open one to see the roles, the people you know there and a short note to each.'
-    : 'What the owner handed to you. Open one to see the people and the note for each.'));
+    : data.marketing   // seat campaign-engine (decision 1050 (5)): under the Marketing folder rule, every hiring company, no hand-off
+      ? 'Every company in the job alerts that is hiring where the business knows someone. You see them because you can open the Marketing folder. Open one to see the roles, the people and a short note to each.'
+      : 'What the owner handed to you. Open one to see the people and the note for each.'));
   stage.appendChild(head);
   const items = data.items || [];
   if (!items.length) {
-    stage.appendChild(mk('p', 'quiet', data.owner ? 'No company in the alerts so far is one where you know someone.' : 'Nothing has been handed to you yet.'));
+    stage.appendChild(mk('p', 'quiet', data.owner || data.marketing ? 'No company in the alerts so far is one where the business knows someone.' : 'Nothing has been handed to you yet.'));
   }
   const ul = mk('ul', 'mk-list');
   for (const it of items) {
