@@ -96,6 +96,9 @@ async function drawReads(stage) {
   head.append(mk('h2', 'mk-title', 'What this reads'));
   head.append(mk('p', 'mk-lede', 'What the Tool reads for marketing and sales, and what you can bring in yourself.'));
   stage.appendChild(head);
+  const who = mk('section', 'mk-reads');
+  stage.appendChild(who);
+  drawWhoSees(who);
   const box = mk('section', 'mk-reads');
   box.append(mk('h3', 'mk-co', 'LinkedIn'));
   const last = mk('div'); last.setAttribute('aria-live', 'polite');
@@ -116,6 +119,48 @@ async function drawReads(stage) {
   drop.addEventListener('dragover', (e) => { e.preventDefault(); });
   drop.addEventListener('drop', (e) => { e.preventDefault(); onFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]); });
   await drawLast(last);
+}
+
+// WHO CAN SEE THE MARKETING DATA (seat rulings-1049, decision 1049 (4)). Alex: one Marketing folder, and whoever Google gives
+// access to it sees the marketing data, which puts it on Google and not on us. The owner names the folder here; who may see is
+// decided in the brain (marketing_may_why), never here. A colleague without access reads her own reason.
+async function drawWhoSees(host) {
+  host.innerHTML = '';
+  host.appendChild(mk('h3', 'mk-co', 'Who can see the marketing data'));
+  const w = mk('p', 'working no-late', 'Reading who has access to your Marketing folder');
+  host.appendChild(w);
+  const r = await rpc('marketing_access', {});
+  w.remove();
+  if (!r || r.ok !== true) { host.appendChild(mk('p', 'notice flagged', 'Who can see this could not be read just now: ' + String((r && r.reason) || 'no reason was given') + '.')); return; }
+  const names = (r.who || []).map((x) => x.name + (x.owner ? ' (owner)' : ''));
+  const line = mk('p', 'state');
+  line.append(mk('span', null, 'Who can see this: '), data_('span', null, names.join(', ') || 'only the owner'),
+    mk('span', null, ', because they have access to '), data_('span', null, r.folder || 'your Marketing folder'), mk('span', null, ' in Google Drive.'));
+  host.appendChild(line);
+  if (Number(r.others)) host.appendChild(mk('p', 'quiet', n0(r.others) + ' more ' + plural(r.others, 'person has', 'people have') + ' access to it in Google Drive but ' + plural(r.others, 'is not a person', 'are not people') + ' of this business in the Tool, so ' + plural(r.others, 'sees', 'see') + ' nothing here.'));
+  host.appendChild(mk('p', 'quiet', (r.read_at ? 'Who has access was read from Google Drive on ' + day(r.read_at) + '.' : 'Who has access has not been read from Google Drive yet.')
+    + (r.fresh ? '' : ' Until it is read again, only the owner sees the marketing data.') + ' To change who sees it, change who has access to the folder in Google Drive.'));
+  if (r.mine) host.appendChild(mk('p', 'notice flagged', r.mine));
+  if (!r.owner || !(r.choices || []).length) return;
+  const label = mk('label', 'mk-hand-label', 'Your Marketing folder');
+  const sel = C.el('select'); sel.className = 'mk-why'; sel.setAttribute('aria-label', 'Your Marketing folder');
+  for (const c of r.choices) {
+    const o = C.el('option'); o.value = c.id; o.textContent = c.label + ' (' + n0(c.members) + ' ' + plural(c.members, 'person', 'people') + ')';
+    if (c.id === r.folder_id) o.selected = true;
+    sel.appendChild(o);
+  }
+  label.appendChild(sel);
+  const go = mk('button', 'go ghost', 'Use this folder'); go.type = 'button';
+  const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
+  go.addEventListener('click', async () => {
+    go.disabled = true; said.textContent = '';
+    const s = await rpc('marketing_folder_set', { p_drive: sel.value });
+    go.disabled = false;
+    if (s && s.ok === true) { await drawWhoSees(host); return; }
+    said.className = 'mk-said stalled'; said.textContent = 'Not changed: ' + String((s && s.reason) || 'no reason was given') + '.';
+  });
+  host.append(label, go, said);
+  host.appendChild(mk('p', 'quiet', r.how === 'chosen' ? 'Chosen by you on ' + day(r.chosen_at) + '.' : 'Not chosen yet: this is the shared drive that holds your LinkedIn connections export.'));
 }
 
 async function drawLast(host, given) {
