@@ -2364,4 +2364,5 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
   .mk-item-btn { padding: calc(var(--u) * 3); }
   .mk-subject, .mk-text, .mk-why, .mk-hand-pick { font-size: 16px; min-height: 44px; }
   .mk-part { min-height: 44px; }
+  details > summary.mk-hand-label { min-height: 44px; display: flex; align-items: center; }   /* campaign-engine: Sending's two openers */
 }
