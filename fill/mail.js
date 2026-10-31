@@ -570,7 +570,7 @@ function drawAttnCard(read, it) {
   read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
   const card = mk('article', 'mailx-att-card mailx-matter-card' + (it.kind === 'thought' ? ' mailx-att-thought' : ''));
   const eyebrow = it.kind === 'thought' ? 'Left for you' : it.kind === 'money' ? 'Money' : it.following ? 'Following'
-    : it.kind === 'impostor' ? 'Pretending to be someone of your business' : it.kind === 'new_business' ? 'New business' : mode === 'ai' ? 'For you' : 'Worth your attention';
+    : it.kind === 'impostor' ? 'Pretending to be someone of your business' : it.kind === 'new_business' ? (it.pitch ? 'Looks like a pitch' : 'New business') : mode === 'ai' ? 'For you' : 'Worth your attention';
   card.appendChild(mk('p', 'eyebrow', eyebrow));
   const h = mk('h2', 'mailx-subject', String(it.kind === 'email' || it.following ? (it.subject || it.title || '(no subject)') : (it.what || '')));
   card.appendChild(h);
@@ -1214,7 +1214,7 @@ function shortWhy(w) {
 function whyTag(it) {
   const k = it.kind === 'money' ? ['money', 'Money'] : it.kind === 'thought' ? ['room', 'Left for you']
     : it.kind === 'impostor' || it.kind === 'scam_alert' ? ['scam', 'Scam']
-    : it.kind === 'new_business' ? ['money', 'New business']
+    : it.kind === 'new_business' ? (it.pitch ? ['people', 'Looks like a pitch'] : ['money', 'New business'])   // rulings-1049: every reading shown, pitches marked
     : it.about === 'invite' ? ['people', 'Asks if this time works']
     : it.following || it.news ? ['people', it.news ? 'New in what you follow' : 'Following']
     : [it.is_money ? 'money' : 'people', shortWhy(it.why) || (it.is_money ? 'Money' : 'Waiting on you')];
