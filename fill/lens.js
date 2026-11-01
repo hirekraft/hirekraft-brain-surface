@@ -1539,9 +1539,11 @@ function stageKey(groupKey, o) {
   how.textContent = KEY_HOW[o.key] ?? "";
   const form = el("form", "");
   const wp = o.key === "wordpress";
+  // seat wordpress-site (2026-11-01): the address box takes any address on the site, with or without https:// (the browser's url box
+  // refused "hirekraft.ai"); system-read cuts it back to the site (wpSite) and tries the root when a page address is given.
   const field = `display:block;margin:.5rem 0 1rem;width:100%;max-width:28rem;font:inherit;padding:.6rem;border:1px solid currentColor;border-radius:6px;background:none;color:inherit`;
   form.innerHTML = (wp ? `<label for="site-in"><b>Your website's address</b></label>`
-      + `<input id="site-in" type="url" autocomplete="url" spellcheck="false" required placeholder="https://yourcompany.com" style="${field}">`
+      + `<input id="site-in" type="text" inputmode="url" autocomplete="url" spellcheck="false" autocapitalize="off" required placeholder="yourcompany.com" style="${field}">`
       + `<label for="user-in"><b>Your WordPress user name</b></label>`
       + `<input id="user-in" type="text" autocomplete="username" spellcheck="false" required style="${field}">` : "")
     + `<label for="key-in"><b>${wp ? "Paste the application password" : "Paste the key"}</b></label>`
