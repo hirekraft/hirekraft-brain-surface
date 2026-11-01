@@ -1436,6 +1436,29 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
 .ai2-mcard { min-width: 0; overflow-wrap: anywhere; }
 .ai2-mcard .ai2-label + .ai2-lines, .ai2-mcard .ai2-lines + .ai2-label { margin-top: calc(var(--u) * 2); }
 .ai2-mcard .ai2-big + .ai2-lines { margin-top: calc(var(--u) * 1); }
+/* AT A GLANCE (seat ai-tab-clear, 2026-11-01; Alex: "too cramped, too misleading"): three questions, one sentence each, one
+   picture, one action; the rest folded below. One weight for the sentences, the picture the only strong mark. */
+.ai2-glance { max-width: 720px; }
+.ai2-q { margin: 0 0 var(--gap); }
+.ai2-q:last-child { margin-bottom: 0; }
+.ai2-qh { margin: 0; font-size: var(--t-small); font-weight: var(--w-mid); color: var(--ink-3); }
+.ai2-q .ai2-sentence { margin-top: calc(var(--u) * 1); overflow-wrap: anywhere; }
+.ai2-pic { display: grid; gap: calc(var(--u) * 3); margin: 0 0 var(--gap); max-width: 640px; }
+.ai2-pic-row { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) 6.5em;   /* fixed outer columns: both bars on one scale */ align-items: center; column-gap: calc(var(--u) * 3); }
+.ai2-pic-name { display: flex; flex-direction: column; min-width: 0; }
+.ai2-pic-name .ai2-mtitle { font-weight: var(--w-mid); color: var(--ink); }
+.ai2-pic-name .ai2-small { margin: 0; }
+.ai2-pic-track { position: relative; height: 18px; min-width: 0; }
+.ai2-pic-fill, .ai2-pic-exp { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
+.ai2-pic-fill { background: var(--act); }
+.ai2-pic-last .ai2-pic-fill { background: var(--ink-4); }
+.ai2-pic-exp { border: 1.5px dashed var(--act); background: transparent; }
+.ai2-pic-usd { font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; }
+.ai2-pic-est { grid-column: 1 / -1; }
+.ai2-act { min-height: 44px; margin-top: calc(var(--u) * 2); }
+.ai2-fold { border-top: 1px solid var(--line-2); padding: calc(var(--u) * 1) 0; }
+.ai2-fold > .ai2-block { margin-top: calc(var(--u) * 2); }
+.ai2-fold > .ai2-block > .ai2-h:first-child { display: none; }   /* the fold's own title names it */
 @media (min-width: 900px) {
   .ai-tab { max-width: 980px; }
   .ai2-how, .ai2-bal { display: inline-block; vertical-align: top; width: calc(50% - var(--gap)); }
@@ -2396,4 +2419,7 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
   .ai2-mrow { grid-template-columns: repeat(6, minmax(0, 1fr)); row-gap: 8px; }
   .ai2-mbar { min-height: 96px; font-size: 12px; }
   .ai2-mcards-two { grid-template-columns: minmax(0, 1fr); }
+  /* seat ai-tab-clear 2026-11-01: the picture's month name above its bar, so a long German month and the amount both fit */
+  .ai2-pic-row { grid-template-columns: minmax(0, 1fr) 6.5em; row-gap: 4px; }
+  .ai2-pic-name { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; gap: 0 8px; align-items: baseline; }
 }
