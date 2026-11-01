@@ -3016,6 +3016,8 @@ async function ask(question, files) {
   const slot = el("div", "answer-slot");
   const wait = el("p", "answer-wait working"); wait.textContent = added.length ? "Reading what you added and your records." : "Reading your records.";
   slot.appendChild(wait);
+  const requestId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : "";
+  const stopSteps = followSteps(requestId, wait, slot);
   turn.append(asked);
   if (added.length) { const w = el("p", "answer-with"); w.textContent = "With " + added.map((f) => f.name).join(", "); turn.append(w); }
   turn.append(slot);
@@ -3038,9 +3040,11 @@ async function ask(question, files) {
       // Her time zone travels with every question so lens-ask resolves 'last month' against her
       // today, never against the dates in the records (seat chat-layout, 2026-10-06).
       // plan_first (seat plan-first): this box can show a plan, so lens-ask may answer bigger work with one first.
-      body: JSON.stringify(Object.assign({ question: q, tz: zone(), plan_first: true }, lastAsked ? { follows: lastAsked } : {}, added.length ? { files: added } : {})),
+      // request_id (seat box-agent): when the box answers through the agent, it notes each step under this id; followSteps says it.
+      body: JSON.stringify(Object.assign({ question: q, tz: zone(), plan_first: true }, requestId ? { request_id: requestId } : {}, lastAsked ? { follows: lastAsked } : {}, added.length ? { files: added } : {})),
     });
     const body = await r.json().catch(() => null);
+    stopSteps();
     if (!body) { askProblem(slot, "The brain did not answer. Nothing was changed; try again in a moment."); return; }
     if (body.ok !== true) { askProblem(slot, body.error ?? "The brain did not take this question. Nothing was changed."); return; }
     // Save as test and Teach are drawn by renderAsk for the owner (seat teach-process). lastAsked is still the
@@ -3055,8 +3059,58 @@ async function ask(question, files) {
   } catch (e) {
     askProblem(slot, `The brain could not be reached. ${plainWords(String(e?.message ?? e ?? ""))}`);
   } finally {
+    stopSteps();
     asking = false;
   }
+}
+
+// WHAT THE BOX IS DOING (seat box-agent, 2026-11-01, decision 1051 slice 3). When the box answers through the agent, each step it takes
+// is noted in the brain as a code under this question's id (ask_progress, read as her: only her own question's row). The working sign
+// next to her question says the step in her words (these phrases are screen words, so words.js puts them in her language) with a count
+// of lookups, and after about 10 seconds says the answer takes a while. Nothing is noted when the box answers the earlier way, so the
+// sign then stays as it was. Part of SHOW; the working sign is seat working-sign's, not a second one.
+const STEP_SAYS = {
+  start: "Reading the question",
+  find: "Searching your mail, files and records",
+  facts_invoice: "Listing the invoices",
+  facts_bill: "Listing the bills",
+  facts_payment: "Listing the payments received",
+  facts_bill_payment: "Listing the payments made",
+  facts_credit_memo: "Listing the credit notes",
+  facts_customer: "Listing the customers",
+  facts_vendor: "Listing the suppliers",
+  facts_email: "Listing the emails",
+  facts_resume: "Listing the resumes",
+  contact: "Looking up the contact",
+  calendar: "Reading the calendar",
+  attention: "Reading what needs your attention",
+  guide: "Reading the guide to the Tool",
+  checking: "Checking what came back",
+  writing: "Writing the answer",
+  done: "Writing the answer",
+};
+function followSteps(requestId, wait, slot) {
+  if (!requestId) return () => {};
+  const t0 = Date.now();
+  let stopped = false, slow = null, timer = null;
+  const tick = async () => {
+    if (stopped) return;
+    if (!slow && Date.now() - t0 > 10000) {
+      slow = el("p", "quiet answer-slow"); slow.textContent = "This kind of answer takes up to a minute.";
+      wait.after(slow);
+    }
+    try {
+      const { data } = await sb.rpc("ask_progress_read", { p_request: requestId });
+      if (!stopped && data && data.code) {
+        const code = String(data.code);
+        const words = STEP_SAYS[code] || (code.startsWith("live_") ? "Reading a connected system" : code.startsWith("facts_") ? "Listing the records" : "Looking it up");
+        wait.textContent = words + (Number(data.step) > 0 ? " (" + Number(data.step) + ")" : "");
+      }
+    } catch (_) { /* the sign stays as it was; the answer is not affected */ }
+    if (!stopped) timer = setTimeout(tick, 1500);
+  };
+  timer = setTimeout(tick, 1200);
+  return () => { stopped = true; if (timer) clearTimeout(timer); if (slow) slow.remove(); };
 }
 
 // THE PREPARED QUESTIONS ARE GONE, removed 2026-09-27 at Alex's instruction.
