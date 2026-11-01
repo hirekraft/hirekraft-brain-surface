@@ -570,7 +570,7 @@ function drawAttnCard(read, it) {
   read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
   const card = mk('article', 'mailx-att-card mailx-matter-card' + (it.kind === 'thought' ? ' mailx-att-thought' : ''));
   const eyebrow = it.kind === 'thought' ? 'Left for you' : it.kind === 'money' ? 'Money' : it.following ? 'Following'
-    : it.kind === 'impostor' ? 'Pretending to be someone of your business' : it.kind === 'new_business' ? (it.pitch ? 'Looks like a pitch' : 'New business') : mode === 'ai' ? 'For you' : 'Worth your attention';
+    : it.kind === 'impostor' ? 'Pretending to be someone of your business' : it.kind === 'new_business' ? nbTag(it)[1] : mode === 'ai' ? 'For you' : 'Worth your attention';
   card.appendChild(mk('p', 'eyebrow', eyebrow));
   const h = mk('h2', 'mailx-subject', String(it.kind === 'email' || it.following ? (it.subject || it.title || '(no subject)') : (it.what || '')));
   card.appendChild(h);
@@ -1211,10 +1211,22 @@ function shortWhy(w) {
   const x = String(w || '').split('. ')[0].split('; ')[0].trim();
   return x.length > 48 ? x.slice(0, 46).trim() + '…' : x;
 }
+// WORK ORDERS (seat work-orders, decision 1056): the brain reads each new-business email by who sent it and what they want
+// (a client's work order in the business's own word, a new client, a partner's requirement, a notice, someone selling) and
+// gives the tag; an item from before that reading falls back to the earlier two tags. Selling sits at the bottom, never hidden.
+function nbTag(it) {
+  const lab = it.nb_intent;
+  if (lab === 'work_order') return ['money', it.tag || 'Work order'];
+  if (lab === 'lead') return ['money', 'New client'];
+  if (lab === 'partner') return ['money', 'Partner requirement'];
+  if (lab === 'notice') return ['people', 'Notice'];
+  if (lab === 'selling') return ['people', 'Selling to you'];
+  return it.pitch ? ['people', 'Looks like a pitch'] : ['money', 'New business'];
+}
 function whyTag(it) {
   const k = it.kind === 'money' ? ['money', 'Money'] : it.kind === 'thought' ? ['room', 'Left for you']
     : it.kind === 'impostor' || it.kind === 'scam_alert' ? ['scam', 'Scam']
-    : it.kind === 'new_business' ? (it.pitch ? ['people', 'Looks like a pitch'] : ['money', 'New business'])   // rulings-1049: every reading shown, pitches marked
+    : it.kind === 'new_business' ? nbTag(it)   // work-orders (decision 1056): read by relationship and intent; selling marked, never hidden
     : it.about === 'invite' ? ['people', 'Asks if this time works']
     : it.following || it.news ? ['people', it.news ? 'New in what you follow' : 'Following']
     : [it.is_money ? 'money' : 'people', shortWhy(it.why) || (it.is_money ? 'Money' : 'Waiting on you')];
