@@ -1,4 +1,7 @@
 // THE AI TAB (seat ai-tab, 2026-10-23; master_spec 4.40 §5.y, decisions 1005-1007). Owner only.
+// REDRAWN AS AN INSTRUMENT (seat ai-tab-clear, 2026-11-01; decision 1055; Alex: "too cramped, too misleading"): the top is
+// AT A GLANCE (glanceBlock below): how much, where it went, how long the balance lasts, one picture, one action; month by
+// month, day by day and the rest are folded one tap away. The numbered order below is the fallback when no glance comes.
 // REDRAWN IN THE OWNER'S ORDER (seat ai-tab-plain, 2026-10-26; decisions 1005, 1007, 1021, 1022). Alex that morning:
 // "I'm having issues understanding the cost and what's going where... is this now on top of something or beside
 // something?" and "user-friendly, to the point, and honest". The tab now answers, top to bottom:
@@ -80,10 +83,20 @@ function draw(wrap, ai, ctx) {
     wrap.appendChild(n);
     wrap.appendChild(monthsBlock(ai.months, null, el));
     if (ai.limit) wrap.appendChild(limitBlock(ai.limit, ctx, () => load(wrap, ctx)));
+  } else if (ai.glance && ai.glance.ok === true) {
+    // AT A GLANCE first (seat ai-tab-clear): three questions in plain sentences, one picture, one action; the rest one tap away
+    const lim = ai.limit ? limitBlock(ai.limit, ctx, () => load(wrap, ctx)) : null;
+    wrap.appendChild(glanceBlock(ai.glance, ai.limit, lim, el));
+    if (lim) wrap.appendChild(lim);
+    wrap.appendChild(fold('Month by month', [monthsBlock(ai.months, p, el)], el));
+    wrap.appendChild(fold('Day by day', [byDay(p, el, ai.glance)], el));
+    wrap.appendChild(fold('Next month, estimated, and everything else it costs', [nextMonth(p, el), costBlock(ai.cost, el)], el));
   } else {
+    // the brain gave no glance (an older brain, or it could not be made): the earlier order, said so
+    if (ai.glance && ai.glance.ok !== true) { const n = el('p', 'notice flagged'); n.textContent = 'The summary could not be made just now: ' + String(ai.glance.error || 'no reason was given') + '. The figures below are read directly.'; wrap.appendChild(n); }
     wrap.appendChild(howMuch(p, el, ai.cost));
     wrap.appendChild(balance(p.balance || {}, p, el));
-    wrap.appendChild(monthsBlock(ai.months, p, el));     // after the balance, so at desktop width the two above stay side by side
+    wrap.appendChild(monthsBlock(ai.months, p, el));
     if (ai.limit) wrap.appendChild(limitBlock(ai.limit, ctx, () => load(wrap, ctx)));
     wrap.appendChild(byDay(p, el));
     wrap.appendChild(nextMonth(p, el));
@@ -159,6 +172,138 @@ function howMuch(p, el, cost) {
     const no = el('p', 'ai2-small'); no.textContent = 'No total is shown: the database figure is an estimate and the fee is not set.';
     sec.append(h, list, no);
   }
+  return sec;
+}
+
+// AT A GLANCE (seat ai-tab-clear, 2026-11-01; Alex 15:06 PT on this tab: "it's too cramped, too misleading. It's not
+// user-friendly at all"). On Nov 1 the top led with "This month $9" while October's $499 sat lower, called one answer "about
+// $1.30 each", drew a one-bar day chart, and buried the balance. The top now answers three questions, each in one plain
+// sentence the brain writes (studio-core ai_glance, from the same two readings as the rest of the tab, so the box says the
+// same): how much (this month so far and last month in all), where it went (the one or two largest kinds of work), how
+// long the balance lasts; one picture (last month and this month on one scale); one action (the monthly limit). Everything
+// else is one tap away, folded. A pace for the month, a day-by-day chart and a cost per answer appear only when there are
+// enough days (7) or answers (20); an estimate is drawn as an outline, labeled, and never added to a real charge.
+// SUPERSEDES (same seat, Alex's words above): the big "AI this month" number with the "Everything it costs" list at the top,
+// and the balance block beside it; both remain only as the fallback when the brain gives no glance.
+function glanceBlock(G, L, lim, el) {
+  const sec = el('section', 'ai2-block ai2-glance');
+  const q = (title, text) => {
+    const d = el('div', 'ai2-q');
+    const h = el('h3', 'ai2-qh'); h.textContent = title;
+    const s = el('p', 'ai2-sentence'); s.textContent = String(text || '');
+    d.append(h, s);
+    sec.appendChild(d);
+    return d;
+  };
+  q('How much', G.how_much);
+  sec.appendChild(glancePicture(G.picture || {}, el));
+  q('Where it went', G.where);
+  const b = q('How long your balance lasts', G.balance);
+  const bf = G.balance_figures || {};
+  if (bf.set_up && Number(bf.put_in_usd) > 0) {
+    const left = Math.max(0, Number(bf.left_usd) || 0), put = Number(bf.put_in_usd);
+    const low = bf.state === 'low' || bf.state === 'answers_within_margin' || bf.state === 'stopped_at_zero';
+    const bar = el('div', 'ai2-bar' + (low ? ' ai2-bar-low' : ''));
+    bar.setAttribute('role', 'meter');
+    bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(put)); bar.setAttribute('aria-valuenow', String(left));
+    bar.setAttribute('aria-label', String(G.balance || ''));
+    const fill = el('span', 'ai2-bar-fill'); fill.style.width = Math.min(100, (left / put) * 100).toFixed(1) + '%';
+    bar.appendChild(fill);
+    b.appendChild(bar);
+  }
+  // the one action: the monthly limit (adding to the balance by card is not built yet; the studio adds to it by hand)
+  if (lim) {
+    const open = L && (L.set === true || L.state === 'near' || L.state === 'reached' || L.state === 'stopped');
+    if (!open) {
+      lim.hidden = true;
+      const go = el('button', 'go ai2-act'); go.type = 'button';
+      go.textContent = 'Set a monthly limit';
+      go.setAttribute('aria-expanded', 'false');
+      go.addEventListener('click', () => {
+        lim.hidden = !lim.hidden;
+        go.setAttribute('aria-expanded', String(!lim.hidden));
+        if (!lim.hidden) { lim.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); lim.querySelector('input')?.focus(); }
+      });
+      b.appendChild(go);
+    }
+  }
+  return sec;
+}
+
+// The one picture: last month in all and this month so far, on one scale. From day 7 the month's expected total is added as
+// an outline, labeled an estimate (it is never part of the solid bar).
+function glancePicture(P, el) {
+  const fig = el('div', 'ai2-pic');
+  fig.setAttribute('role', 'img');
+  const rows = [];
+  if (P.last) rows.push({ iso: P.last.month, usd: Number(P.last.usd) || 0, kind: 'last' });
+  if (P.this) rows.push({ iso: P.this.month, usd: Number(P.this.usd) || 0, kind: 'now', day: P.this.day, exp: P.this.expected_usd === null || P.this.expected_usd === undefined ? null : Number(P.this.expected_usd) });
+  const top = Math.max(1, ...rows.map((r) => Math.max(r.usd, r.exp || 0)));
+  const said = [];
+  for (const r of rows) {
+    const row = el('div', 'ai2-pic-row ai2-pic-' + r.kind);
+    const name = el('span', 'ai2-pic-name');
+    const m = el('span', 'ai2-mtitle'); m.setAttribute('translate', 'no'); m.dataset.iso = String(r.iso || '');
+    m.textContent = r.iso ? monthName(r.iso, 'long') : '';
+    const sub = el('span', 'ai2-small'); sub.textContent = r.kind === 'last' ? 'In all' : 'So far, day ' + r.day;
+    name.append(m, sub);
+    const track = el('span', 'ai2-pic-track');
+    if (r.exp !== null && r.exp !== undefined && r.exp > r.usd) {
+      const e = el('span', 'ai2-pic-exp'); e.style.width = Math.min(100, (r.exp / top) * 100).toFixed(1) + '%';
+      track.appendChild(e);
+    }
+    const f = el('span', 'ai2-pic-fill'); f.style.width = Math.max(r.usd > 0 ? 1 : 0, (r.usd / top) * 100).toFixed(1) + '%';
+    track.appendChild(f);
+    const v = el('span', 'ai2-pic-usd'); v.textContent = money(r.usd) ?? '$0.00';
+    row.append(name, track, v);
+    if (r.exp !== null && r.exp !== undefined) { const x = el('p', 'ai2-small ai2-pic-est'); x.textContent = 'Outline: about ' + dollars(r.exp) + ' for the whole month at the usual pace, an estimate.'; row.appendChild(x); }
+    fig.appendChild(row);
+    said.push((r.iso ? monthName(r.iso, 'long') : '') + ': ' + (money(r.usd) ?? '$0.00'));
+  }
+  fig.setAttribute('aria-label', said.join('; '));
+  // the switch beside her name changes the language: month names follow it
+  try {
+    new MutationObserver(() => {
+      if (!fig.isConnected) return;
+      fig.querySelectorAll('.ai2-mtitle').forEach((n) => { n.textContent = monthName(n.dataset.iso, 'long'); });
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  } catch (_) { /* the names stay as drawn */ }
+  return fig;
+}
+
+// Detail, one tap away: a folded part with its title. Nothing in it is lost, only folded.
+function fold(title, parts, el) {
+  const d = el('details', 'ai2-fold');
+  const s = el('summary', 'ai2-more-sum'); s.textContent = title;
+  d.appendChild(s);
+  for (const x of parts) if (x) d.appendChild(x);
+  return d;
+}
+
+// What else it costs (seat cost-dial's three lines, moved into the fold by ai-tab-clear): AI, the database (an estimate, said
+// so) and Verrandi's fee. Never added up.
+function costBlock(cost, el) {
+  if (!cost || cost.ok !== true) return null;
+  const sec = el('section', 'ai2-block');
+  const h = el('p', 'ai2-label'); h.textContent = 'Everything it costs you each month';
+  const list = el('div', 'ai2-all');
+  const row = (title, value, said) => {
+    const r = el('div', 'ai2-row');
+    const t = el('span', 'ai2-row-title'); t.textContent = title;
+    const v = el('span', 'ai2-row-usd'); v.textContent = value;
+    const s = el('p', 'ai2-row-said'); s.textContent = said;
+    r.append(t, v, s);
+    return r;
+  };
+  const a = cost.ai || {};
+  list.appendChild(row('AI', (money(a.this_month_usd) ?? '$0.00') + ' so far', 'Exactly what the AI makers charge.'));
+  const d = cost.database || {};
+  list.appendChild(row('Your database', d.known ? 'Estimated: about ' + (dollars(d.estimate_usd) ?? '?') : 'On their invoice',
+    d.known ? String(d.provider) + ' ' + String(d.plan) + ' plan, ' + String(d.size_gb) + ' GB. An estimate from ' + String(d.provider)
+      + '’s published list price (from ' + (dollars(d.list_from_usd) ?? '?') + ' a month); ' + String(d.provider) + ' bills you directly, and the exact figure is on their invoice.' : String(d.say || '')));
+  list.appendChild(row('Verrandi’s fee', 'Not set yet', 'Not decided yet. Nothing is charged for it today.'));
+  const no = el('p', 'ai2-small'); no.textContent = 'No total is shown: the database figure is an estimate and the fee is not set.';
+  sec.append(h, list, no);
   return sec;
 }
 
@@ -421,13 +566,15 @@ function monthCard(m, M, p, el) {
   }
   // each line is one of the screen's own words plus a figure, so it reads in her language
   const per = el('p', 'ai2-line');
+  // seat ai-tab-clear: a cost per answer only from 20 answers (the brain leaves it out below that, few_answers true)
   const asked = Number(m.answers) > 0 && m.per_answer_usd !== null && m.per_answer_usd !== undefined;
-  per.textContent = asked ? 'Cost per answer: about ' + money(m.per_answer_usd) : 'Cost per answer: no questions were answered this month.';
+  const few = !asked && Number(m.answers) > 0;
+  per.textContent = asked ? 'Cost per answer: about ' + money(m.per_answer_usd) : few ? 'Cost per answer: too few questions yet to tell.' : 'Cost per answer: no questions were answered this month.';
   card.appendChild(per);
   if (asked) { const q = el('p', 'ai2-small'); q.textContent = 'Questions answered, checks included: ' + Number(m.answers).toLocaleString('en-US'); card.appendChild(q); }
   if (Number(m.unpriced_calls) > 0) {
     const u = el('p', 'ai2-small');
-    u.textContent = Number(m.unpriced_calls).toLocaleString('en-US') + ' calls of this month were not priced and are not in these figures.';
+    u.textContent = 'Not in these figures: ' + Number(m.unpriced_calls).toLocaleString('en-US') + ' AI calls with no price recorded.';
     card.appendChild(u);
   }
   return card;
@@ -461,11 +608,13 @@ function boughtLines(lines, total, el, withOneTime) {
 
 // 4. Was anything unusual: one chart. Running cost in the action color; one-time reading in gray stripes, which
 // run off the top when they are far larger than a normal day (said on the chart in words, not hidden).
-function byDay(p, el) {
+function byDay(p, el, G) {
   const sec = el('section', 'ai2-block');
   const h = el('h3', 'ai2-h'); h.textContent = 'Day by day';
   sec.appendChild(h);
   const days = Array.isArray(p.daily) ? p.daily : [];
+  // seat ai-tab-clear: a one-bar chart on the 1st said nothing true; under 7 days it is said in words instead
+  if (G && G.per_day_ok === false) { const n = el('p', 'ai2-line'); n.textContent = 'Too early in the month to tell day by day.'; sec.appendChild(n); return sec; }
   if (!days.length) { const n = el('p', 'ai2-small'); n.textContent = 'Nothing spent yet this month.'; sec.appendChild(n); return sec; }
   const runs = Array.isArray(p.one_time_runs) ? p.one_time_runs : [];
   const running = days.map((d) => Math.max(0, Number(d.usd) - Number(d.one_time_usd)));
