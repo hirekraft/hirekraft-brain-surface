@@ -2181,7 +2181,7 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
 .mk-text { line-height: var(--lead-read); resize: vertical; }
 .mk-why { flex: 1 1 220px; width: auto; }
 .mk-said { font-size: var(--t-small); color: var(--ink-3); }
-.mk-said:empty { display: none; }
+.mk-said:empty { display: none; }   /* seat signals-outreach-2 (2026-11-01, decision 1053), next on this line: how each note goes, the tone choice, Give to with who has it; and .go[hidden] (found: display inline-flex overrode hidden, so Write a note stayed after it opened the note) */ .mk-person-via { color: var(--ink-3); font-size: var(--t-micro); } .mk-acts .go[hidden] { display: none; } .mk-tone { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1.5); align-items: center; } .mk-tone .go { margin-top: 0; min-height: var(--tap); padding: 4px 12px; } .mk-tone .go[aria-pressed='true'] { background: var(--act-soft); color: var(--ink); border-color: var(--act); font-weight: var(--w-mid); } .mk-hand-state { font-size: var(--t-small); color: var(--ink-2); overflow-wrap: anywhere; } .mk-give-note { width: 100%; } .mk-give-more > summary { cursor: pointer; color: var(--ink-3); } .mk-given { font-size: var(--t-small); color: var(--ink-2); padding: calc(var(--u) * 2) calc(var(--u) * 3); border-radius: var(--radius); background: var(--paper-2); overflow-wrap: anywhere; }
 
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
@@ -2389,7 +2389,7 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
   .mk-acts .go, .mk-email .go, .mk-note > .go, .mk-hand .go { flex: 1 1 100%; justify-content: center; min-height: 44px; }
   .mk-item-btn { padding: calc(var(--u) * 3); }
   .mk-subject, .mk-text, .mk-why, .mk-hand-pick { font-size: 16px; min-height: 44px; }
-  .mk-part { min-height: 44px; }
+  .mk-part { min-height: 44px; } .mk-tone .go { flex: 1 1 0; justify-content: center; min-height: 44px; } .mk-give-note { font-size: 16px; min-height: 44px; }   /* seat signals-outreach-2: the tone choice and the note for Give, thumb-sized */
   details > summary.mk-hand-label { min-height: 44px; display: flex; align-items: center; }   /* campaign-engine: Sending's two openers */
   /* seat ai-tab-months 2026-11-01: the twelve months in two rows of six (each press about 56px wide); this month and last
      month one under the other. */
