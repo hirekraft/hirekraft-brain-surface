@@ -1457,7 +1457,9 @@ const KEY_HOW = {
   cats: "In CATS, open Settings, then Administration, then API Keys, create a key named Verrandi (read only if CATS offers it), and copy it. The Tool only ever reads from CATS.",
   mercury: "In Mercury, open Settings, then API Tokens, create a token with Read Only access, and copy it. If Mercury asks for allowed IP addresses, say so here: the Tool cannot use a token tied to fixed addresses.",
   slack: "The app only reads, and only what you yourself can see in Slack. It lives in your own workspace, so Slack does not slow it down.",
-  elasticemail: "In Elastic Email, open Settings, then Manage API Keys, and create a key named for this Tool. Read access is enough to connect; copy it (Elastic shows it once). The Tool reads your sending domains and their checks, bounces, complaints, unsubscribes, opens, clicks and where replies go. It sends nothing through Elastic: sending stays switched off until you switch it on.",
+  // seat elastic-history 2026-11-01: says what is true since campaign-engine round 2 (sends approved campaigns behind the test lock,
+  // unsubscribes kept in step both ways) and since the history is read in. Superseded words: "Read access is enough", "It sends nothing".
+  elasticemail: "In Elastic Email, open Settings, then Manage API Keys, and create a key named for this Tool with: Send email via HTTP, Activity, Contacts (view and modify), Settings (view) and Campaigns (view, so every past campaign shows by name). Copy it (Elastic shows it once). The Tool reads your whole sending history (every month's results, each person's opens and clicks, recent emails one by one), your sending domains and their checks. It sends only the campaigns you approve, and none until you switch sending on. Anyone who unsubscribes or marks an email as spam, here or in Elastic, is kept off in both.",
   wordpress: "In WordPress, signed in as an administrator, open Users, then Profile, scroll to Application Passwords, type a name for this Tool and press Add New Application Password, then copy it (WordPress shows it once). The Tool reads your pages, posts and drafts, and the inquiry form entries if your form plugin keeps them. It publishes nothing.",
 };
 // Slack's internal-app manifest (read-only USER scopes: the token reads exactly what the installing person sees).
@@ -1491,7 +1493,7 @@ const SLACK_STEPS = [
 function connectedSaid(kind, b) {
   const n = (x) => Number(x ?? 0).toLocaleString("en-US");
   if (kind === "elasticemail") return `It has ${n(b.domains)} sending ${b.domains === 1 ? "domain" : "domains"}: ${n(b.verified)} verified, `
-    + `${n(b.spf)} passing SPF, ${n(b.dkim)} passing DKIM and ${n(b.dmarc)} with DMARC. Nothing is sent through it. `;
+    + `${n(b.spf)} passing SPF, ${n(b.dkim)} passing DKIM and ${n(b.dmarc)} with DMARC. Your sending history is being read in; it shows under Marketing and sales, What came back, within minutes. It sends only campaigns you approve, and none until you switch sending on. `;
   if (kind === "wordpress") return `${b.can_edit ? "" : "That user cannot see drafts, so only published pages and posts are read. "}${b.forms_note ?? ""} Nothing is published. `;
   return "";
 }
@@ -1530,7 +1532,9 @@ function stageKey(groupKey, o) {
   $("#connect-sub").textContent = "";
   const n = el("div", "notice flagged");
   n.innerHTML = `<b>${escape(o.name)} has no per-person boundary.</b> A key opens the whole account, so only you `
-    + `connect it and only your questions read it. The Tool only reads; it never changes anything in ${escape(o.name)}.`;
+    + `connect it and only your questions read it. ` + (o.key === "elasticemail"
+      ? `The Tool reads your sending history and results; it sends only campaigns you approve, none until you switch sending on, and keeps unsubscribes in step both ways.`
+      : `The Tool only reads; it never changes anything in ${escape(o.name)}.`);
   const how = el("p", "quiet");
   how.textContent = KEY_HOW[o.key] ?? "";
   const form = el("form", "");
@@ -1565,7 +1569,7 @@ function stageKey(groupKey, o) {
       out.innerHTML = "";
       const msg = el("div", body?.ok ? "notice" : "notice flagged");
       msg.textContent = body?.ok
-        ? `${o.name} is connected. ${connectedSaid(o.key, body)}${o.key === "elasticemail" || o.key === "wordpress" ? "The box does not read it yet: answering from it is the next step." : "Ask the box about it in your own words."}`
+        ? `${o.name} is connected. ${connectedSaid(o.key, body)}${o.key === "wordpress" ? "The box does not read it yet: answering from it is the next step." : o.key === "elasticemail" ? "The box learns your sending history next; until then it is all on What came back." : "Ask the box about it in your own words."}`
         : `Not connected: ${body?.reason ?? body?.error ?? "no reason was given"} Nothing was kept.`;
       out.appendChild(msg);
       if (body?.ok) await refreshBrain();
@@ -3835,7 +3839,7 @@ function drawLens() {
   }
   // SIGNALS AND OUTREACH (seat job-alerts, 2026-10-30): companies hiring where the business knows someone, a note per person, Hand to a colleague.
   if (lensKey === 'marketing') {
-    import('./marketing.js?v=2026-10-31-campaign-engine-2').then((M) => M.drawMarketing(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, viewer: () => shape?.viewer }))
+    import('./marketing.js?v=2026-11-01-elastic-history').then((M) => M.drawMarketing(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, viewer: () => shape?.viewer }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Marketing and sales tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
