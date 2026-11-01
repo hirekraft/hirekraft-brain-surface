@@ -78,12 +78,13 @@ function draw(wrap, ai, ctx) {
     const n = el('p', 'notice flagged');
     n.textContent = 'This month’s spending could not be read just now: ' + String(p?.error ?? 'no reason was given') + '. Nothing here is a claim either way.';
     wrap.appendChild(n);
+    wrap.appendChild(monthsBlock(ai.months, null, el));
     if (ai.limit) wrap.appendChild(limitBlock(ai.limit, ctx, () => load(wrap, ctx)));
   } else {
     wrap.appendChild(howMuch(p, el, ai.cost));
     wrap.appendChild(balance(p.balance || {}, p, el));
+    wrap.appendChild(monthsBlock(ai.months, p, el));     // after the balance, so at desktop width the two above stay side by side
     if (ai.limit) wrap.appendChild(limitBlock(ai.limit, ctx, () => load(wrap, ctx)));
-    wrap.appendChild(bought(p, el));
     wrap.appendChild(byDay(p, el));
     wrap.appendChild(nextMonth(p, el));
   }
@@ -279,34 +280,179 @@ function balance(b, p, el) {
   return sec;
 }
 
-// 3. What it bought: three lines that add up, visibly, to the big number.
-function bought(p, el) {
-  const sec = el('section', 'ai2-block');
-  const h = el('h3', 'ai2-h'); h.textContent = 'What it bought';
+// MONTH BY MONTH (seat ai-tab-months, 2026-11-01; Alex 13:42 PT: "AI this month for November ... a way to also go to the
+// other month ... last month and compares it over time"). The last 12 months as small bars, each a press; the chosen
+// month shows what it bought, which AI maker and model, and the cost per answer; one sentence compares it with the month
+// before and names the largest change by kind of work. Every figure and the sentence come from the brain's meter
+// (studio-core ai_months, read once with the tab), so the box says the same. On the first seven days of a month the
+// default is this month so far WITH last month beside it, never a near-empty month alone.
+// SUPERSEDES (same seat and date): the separate "What it bought" block for this month only; it is now the chosen month's
+// first part (this month still with its one-time reading, from ai_spend_plain, as before).
+// Month names are dates as data: written in the screen's own language by the browser (translate="no"), redrawn when
+// the language switch changes it.
+const monthName = (iso, kind) => {
+  const d = new Date(String(iso).slice(0, 10) + 'T12:00:00Z');
+  const lang = document.documentElement.lang || 'en';
+  try { return d.toLocaleDateString(lang, kind === 'short' ? { month: 'short', timeZone: 'UTC' } : { month: 'long', year: 'numeric', timeZone: 'UTC' }); }
+  catch (_) { return d.toLocaleDateString('en-US', { month: kind === 'short' ? 'short' : 'long', timeZone: 'UTC' }); }
+};
+
+function monthsBlock(M, p, el) {
+  const sec = el('section', 'ai2-block ai2-months');
+  const h = el('h3', 'ai2-h'); h.textContent = 'Month by month';
   sec.appendChild(h);
-  if (p.adds_up !== true) {
+  if (!M || M.ok !== true || !Array.isArray(M.months) || !M.months.length) {
     const n = el('p', 'notice flagged');
-    n.textContent = 'The three parts do not add up to this month’s total (' + (money(p.check_usd) ?? 'unknown') + ' on the meter), so they are not shown. This is being looked at.';
+    n.textContent = 'The months could not be read just now: ' + String(M?.error ?? 'no reason was given') + '. Nothing here is a claim either way.';
     sec.appendChild(n);
     return sec;
   }
+  const months = M.months;
+  const byKey = new Map(months.map((m) => [String(m.month), m]));
+  const top = Math.max(1, ...months.map((m) => Number(m.usd) || 0));
+  const row = el('div', 'ai2-mrow');
+  row.setAttribute('role', 'group');
+  row.setAttribute('aria-label', 'Choose a month');
+  const panel = el('div', 'ai2-mpanel');
+  panel.setAttribute('aria-live', 'polite');
+  const btns = [];
+  const choose = (key, beside) => {
+    for (const b of btns) b.setAttribute('aria-pressed', String(b.dataset.month === key));
+    panel.innerHTML = '';
+    const m = byKey.get(key);
+    if (!m) return;
+    const say = el('p', 'ai2-sentence ai2-msay'); say.textContent = String(m.sentence || '');
+    panel.appendChild(say);
+    const cards = el('div', beside ? 'ai2-mcards ai2-mcards-two' : 'ai2-mcards');
+    cards.appendChild(monthCard(m, M, p, el));
+    const b = beside ? byKey.get(beside) : null;
+    if (b) cards.appendChild(monthCard(b, M, p, el));
+    panel.appendChild(cards);
+  };
+  for (const m of months) {
+    const b = el('button', 'ai2-mbar' + (m.so_far ? ' ai2-mnow' : '') + (m.metered && !m.priced ? ' ai2-munpriced' : '') + (!m.metered ? ' ai2-mnone' : ''));
+    b.type = 'button';
+    b.dataset.month = String(m.month);
+    const usd = Number(m.usd) || 0;
+    const v = el('span', 'ai2-mval');
+    v.textContent = !m.metered ? '–' : !m.priced ? 'Not priced' : dollars(usd) ?? '$0';
+    const col = el('span', 'ai2-mcol');
+    const fill = el('span', 'ai2-mfill');
+    fill.style.height = (m.metered && m.priced ? Math.max(usd > 0 ? 3 : 0, (usd / top) * 100) : 0).toFixed(1) + '%';
+    col.appendChild(fill);
+    const name = el('span', 'ai2-mname'); name.setAttribute('translate', 'no');
+    name.dataset.iso = String(m.month);
+    name.textContent = monthName(m.month, 'short');
+    b.append(v, col, name);
+    if (m.so_far) { const s = el('span', 'ai2-mdays'); s.textContent = 'So far, day ' + m.day; b.appendChild(s); }
+    b.setAttribute('aria-label', String(m.sentence || ''));
+    b.addEventListener('click', () => choose(String(m.month), m.so_far && M.beside ? String(M.beside) : null));
+    btns.push(b);
+    row.appendChild(b);
+  }
+  sec.append(row, panel);
+  if (M.checked && M.checked.ok !== true) {
+    const n = el('p', 'notice flagged');
+    n.textContent = 'Earlier months could not be checked against the meter just now, so their figures are not shown. This month is read directly.';
+    sec.appendChild(n);
+  }
+  choose(String(M.selected), M.beside ? String(M.beside) : null);
+  // the switch beside her name changes the language: month names follow it
+  try {
+    new MutationObserver(() => {
+      if (!sec.isConnected) return;
+      sec.querySelectorAll('.ai2-mname').forEach((n) => { n.textContent = monthName(n.dataset.iso, 'short'); });
+      sec.querySelectorAll('.ai2-mtitle').forEach((n) => { n.textContent = monthName(n.dataset.iso, 'long'); });
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  } catch (_) { /* the names stay as drawn */ }
+  return sec;
+}
+
+// One month: what it bought (three lines adding up to its total), which AI maker and model, the cost per answer.
+function monthCard(m, M, p, el) {
+  const card = el('div', 'ai2-mcard');
+  const t = el('p', 'ai2-label ai2-mtitle'); t.setAttribute('translate', 'no');
+  t.dataset.iso = String(m.month);
+  t.textContent = monthName(m.month, 'long');
+  card.appendChild(t);
+  if (m.so_far) { const s = el('p', 'ai2-small'); s.textContent = 'So far, day ' + m.day; card.appendChild(s); }
+  const refused = M.checked && M.checked.ok !== true && !m.so_far;
+  if (!m.metered || !m.priced || refused) {
+    const n = el('p', 'ai2-line');
+    n.textContent = refused ? 'Not shown: this month could not be checked against the meter just now.'
+      : !m.metered ? 'No AI cost is recorded for this month.' : 'Not priced: the AI calls of this month were recorded before prices were kept.';
+    card.appendChild(n);
+    return card;
+  }
+  // this month's figure is the one at the top of the tab (ai_spend_plain); both read the same meter rows
+  const big = el('p', 'ai2-big ai2-mid'); big.textContent = money(m.so_far && p && p.this_month_usd !== undefined ? p.this_month_usd : m.usd) ?? '$0.00';
+  card.appendChild(big);
+  // this month keeps the one-time reading inside each line (ai_spend_plain, checked against the meter); other months read
+  // their lines from the months
+  if (m.so_far && p && p.adds_up !== true) {
+    const n = el('p', 'notice flagged');
+    n.textContent = 'The three parts do not add up to this month’s total (' + (money(p.check_usd) ?? 'unknown') + ' on the meter), so they are not shown. This is being looked at.';
+    card.appendChild(n);
+  } else {
+    const now = m.so_far && p && Array.isArray(p.lines);
+    card.appendChild(boughtLines(now ? p.lines : m.lines, now ? p.this_month_usd : m.usd, el, now));
+  }
+  const models = Array.isArray(m.by_model) ? m.by_model : [];
+  if (models.length) {
+    const h = el('p', 'ai2-label'); h.textContent = 'By AI maker and model';
+    const list = el('div', 'ai2-lines');
+    const shown = models.slice(0, 4), rest = models.slice(4);
+    for (const x of shown) {
+      const r = el('div', 'ai2-row');
+      const n = el('span', 'ai2-row-title'); n.setAttribute('translate', 'no'); n.textContent = String(x.name || x.model || '');
+      const v = el('span', 'ai2-row-usd'); v.textContent = money(x.usd) ?? '$0.00';
+      const s = el('p', 'ai2-row-said'); s.setAttribute('translate', 'no'); s.textContent = String(x.maker || '');
+      r.append(n, v, s);
+      list.appendChild(r);
+    }
+    if (rest.length) {
+      const r = el('div', 'ai2-row');
+      const n = el('span', 'ai2-row-title'); n.textContent = 'Other models';
+      const v = el('span', 'ai2-row-usd'); v.textContent = money(rest.reduce((a, x) => a + (Number(x.usd) || 0), 0)) ?? '$0.00';
+      r.append(n, v);
+      list.appendChild(r);
+    }
+    card.append(h, list);
+  }
+  const per = el('p', 'ai2-line');
+  per.textContent = Number(m.answers) > 0 && m.per_answer_usd !== null && m.per_answer_usd !== undefined
+    ? 'Cost per answer: about ' + money(m.per_answer_usd) + ' (' + Number(m.answers).toLocaleString('en-US') + ' questions answered, checks included)'
+    : 'Cost per answer: no questions were answered this month.';
+  card.appendChild(per);
+  if (Number(m.unpriced_calls) > 0) {
+    const u = el('p', 'ai2-small');
+    u.textContent = Number(m.unpriced_calls).toLocaleString('en-US') + ' calls of this month were not priced and are not in these figures.';
+    card.appendChild(u);
+  }
+  return card;
+}
+
+// What it bought: three lines that add up, visibly, to the month's total.
+function boughtLines(lines, total, el, withOneTime) {
   const list = el('div', 'ai2-lines');
-  for (const l of (Array.isArray(p.lines) ? p.lines : [])) {
+  for (const l of (Array.isArray(lines) ? lines : [])) {
     const row = el('div', 'ai2-row');
     const t = el('span', 'ai2-row-title'); t.textContent = l.title;
     const v = el('span', 'ai2-row-usd'); v.textContent = money(l.usd) ?? '$0.00';
-    const said = el('p', 'ai2-row-said');
-    said.textContent = String(l.said || '') + (Number(l.one_time_usd) >= 0.5 ? ' Includes ' + money(l.one_time_usd) + ' of one-time reading.' : '');
-    row.append(t, v, said);
+    row.append(t, v);
+    if (l.said || (withOneTime && Number(l.one_time_usd) >= 0.5)) {
+      const said = el('p', 'ai2-row-said');
+      said.textContent = String(l.said || '') + (withOneTime && Number(l.one_time_usd) >= 0.5 ? ' Includes ' + money(l.one_time_usd) + ' of one-time reading.' : '');
+      row.appendChild(said);
+    }
     list.appendChild(row);
   }
   const tot = el('div', 'ai2-row ai2-total');
   const tt = el('span', 'ai2-row-title'); tt.textContent = 'Together';
-  const tv = el('span', 'ai2-row-usd'); tv.textContent = money(p.this_month_usd) ?? '$0.00';
+  const tv = el('span', 'ai2-row-usd'); tv.textContent = money(total) ?? '$0.00';
   tot.append(tt, tv);
   list.appendChild(tot);
-  sec.appendChild(list);
-  return sec;
+  return list;
 }
 
 // 4. Was anything unusual: one chart. Running cost in the action color; one-time reading in gray stripes, which
