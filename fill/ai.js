@@ -419,11 +419,12 @@ function monthCard(m, M, p, el) {
     }
     card.append(h, list);
   }
+  // each line is one of the screen's own words plus a figure, so it reads in her language
   const per = el('p', 'ai2-line');
-  per.textContent = Number(m.answers) > 0 && m.per_answer_usd !== null && m.per_answer_usd !== undefined
-    ? 'Cost per answer: about ' + money(m.per_answer_usd) + ' (' + Number(m.answers).toLocaleString('en-US') + ' questions answered, checks included)'
-    : 'Cost per answer: no questions were answered this month.';
+  const asked = Number(m.answers) > 0 && m.per_answer_usd !== null && m.per_answer_usd !== undefined;
+  per.textContent = asked ? 'Cost per answer: about ' + money(m.per_answer_usd) : 'Cost per answer: no questions were answered this month.';
   card.appendChild(per);
+  if (asked) { const q = el('p', 'ai2-small'); q.textContent = 'Questions answered, checks included: ' + Number(m.answers).toLocaleString('en-US'); card.appendChild(q); }
   if (Number(m.unpriced_calls) > 0) {
     const u = el('p', 'ai2-small');
     u.textContent = Number(m.unpriced_calls).toLocaleString('en-US') + ' calls of this month were not priced and are not in these figures.';
@@ -433,11 +434,14 @@ function monthCard(m, M, p, el) {
 }
 
 // What it bought: three lines that add up, visibly, to the month's total.
+// The three names are the screen's own words (written here so they are in the English source and every language gets
+// them); the brain's title is used only for a line this screen does not know.
+const LINE_TITLE = { finds: 'Finds', understands: 'Understands', thinks: 'Thinks' };
 function boughtLines(lines, total, el, withOneTime) {
   const list = el('div', 'ai2-lines');
   for (const l of (Array.isArray(lines) ? lines : [])) {
     const row = el('div', 'ai2-row');
-    const t = el('span', 'ai2-row-title'); t.textContent = l.title;
+    const t = el('span', 'ai2-row-title'); t.textContent = LINE_TITLE[l.key] ?? l.title;
     const v = el('span', 'ai2-row-usd'); v.textContent = money(l.usd) ?? '$0.00';
     row.append(t, v);
     if (l.said || (withOneTime && Number(l.one_time_usd) >= 0.5)) {
