@@ -1410,6 +1410,32 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
 .ai2-limit-field { display: flex; flex-direction: column; gap: 4px; }
 .ai2-limit-field .ai2-small { margin: 0; }
 .ai2-limit-in { width: 9em; min-height: 44px; font-size: 16px; padding: 0 calc(var(--u) * 3); border: 1px solid var(--ink-4); border-radius: var(--radius); background: var(--paper); color: var(--ink); font-variant-numeric: tabular-nums; }
+/* MONTH BY MONTH (seat ai-tab-months, 2026-11-01). Twelve months as small bars, each a press; the chosen month is
+   outlined (aria-pressed), this month carries "So far, day N". Bars are the action color (house rule 3: one meaning);
+   a month not priced is a dashed outline with its words, a month before the meter an empty slot with a dash. Twelve in
+   one row from 721px; on a phone two rows of six, so each press stays 44px or wider (phone block). Long German words
+   wrap, never clip. */
+.ai2-mrow { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; max-width: 980px; }
+.ai2-mbar { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-end; min-height: 104px; min-width: 0;
+  padding: 4px 2px; border: 1px solid transparent; border-radius: var(--radius); background: transparent; color: var(--ink-2);
+  font: inherit; font-size: 11px; line-height: 1.2; cursor: pointer; text-align: center; overflow-wrap: anywhere; }
+.ai2-mbar:hover { background: var(--act-soft); }
+.ai2-mbar[aria-pressed="true"] { border-color: var(--act); background: var(--act-soft); color: var(--ink); }
+.ai2-mbar:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+.ai2-mval { font-variant-numeric: tabular-nums; color: var(--ink); min-height: 1.2em; }
+.ai2-mcol { position: relative; display: block; height: 52px; margin: 2px 0; border-bottom: 1px solid var(--ink-4); }
+.ai2-mfill { position: absolute; left: 18%; right: 18%; bottom: 0; border-radius: 2px 2px 0 0; background: var(--act); }
+.ai2-munpriced .ai2-mcol { border: 1px dashed var(--ink-4); border-bottom: 0; border-radius: 2px 2px 0 0; margin-left: 18%; margin-right: 18%; }
+.ai2-munpriced .ai2-mval, .ai2-mnone .ai2-mval { color: var(--ink-3); }
+.ai2-mname { color: var(--ink-2); }
+.ai2-mnow .ai2-mname { font-weight: var(--w-mid); color: var(--ink); }
+.ai2-mdays { color: var(--ink-3); font-size: 10px; }
+.ai2-msay { margin-top: calc(var(--u) * 3); }
+.ai2-mcards { display: grid; grid-template-columns: minmax(0, 560px); gap: var(--gap); margin-top: calc(var(--u) * 3); }
+.ai2-mcards-two { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 980px; }
+.ai2-mcard { min-width: 0; overflow-wrap: anywhere; }
+.ai2-mcard .ai2-label + .ai2-lines, .ai2-mcard .ai2-lines + .ai2-label { margin-top: calc(var(--u) * 2); }
+.ai2-mcard .ai2-big + .ai2-lines { margin-top: calc(var(--u) * 1); }
 @media (min-width: 900px) {
   .ai-tab { max-width: 980px; }
   .ai2-how, .ai2-bal { display: inline-block; vertical-align: top; width: calc(50% - var(--gap)); }
@@ -2365,4 +2391,9 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
   .mk-subject, .mk-text, .mk-why, .mk-hand-pick { font-size: 16px; min-height: 44px; }
   .mk-part { min-height: 44px; }
   details > summary.mk-hand-label { min-height: 44px; display: flex; align-items: center; }   /* campaign-engine: Sending's two openers */
+  /* seat ai-tab-months 2026-11-01: the twelve months in two rows of six (each press about 56px wide); this month and last
+     month one under the other. */
+  .ai2-mrow { grid-template-columns: repeat(6, minmax(0, 1fr)); row-gap: 8px; }
+  .ai2-mbar { min-height: 96px; font-size: 12px; }
+  .ai2-mcards-two { grid-template-columns: minmax(0, 1fr); }
 }
