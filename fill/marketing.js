@@ -511,6 +511,9 @@ function boundary(b) {
   const out = mk('div', 'mk-boundary');
   out.append(mk('p', 'state', 'From ' + read + ' job alerts in your mail in the last ' + b.days + ' days: ' + b.companies_hiring + ' companies hiring, ' + b.companies_with_people + ' where you know someone.'));
   if (waiting) out.append(mk('p', 'state', waiting + ' more alerts are still being read. This list grows as they are.'));
+  // seat signals-outreach-2 (decision 1053 (1)): every job board is read the same way; the line says which ones reached the mail
+  const boards = Object.keys((b && b.boards) || {}).filter((k) => k !== 'Other');
+  if (boards.length) out.append(mk('p', 'state', 'Read from: ' + boards.map((k) => k + ' (' + b.boards[k] + ')').join(', ') + '. Job alerts from Indeed, Glassdoor, ZipRecruiter, Google and company career pages are read the same way as soon as they reach your mail.'));
   if (failed) out.append(mk('p', 'state', failed + ' alerts could not be read and are left out.'));
   if (other) out.append(mk('p', 'state', other + ' emails that looked like alerts were newsletters or requests from other recruiters, so they are left out.'));
   if (b.closed_to_you) out.append(mk('p', 'state', b.closed_to_you + ' alerts are in mailboxes you cannot open, so they are left out.'));
@@ -551,7 +554,7 @@ function drawList(stage) {
     const known = mk('p', 'mk-item-known', 'You know ' + it.known + (it.known === 1 ? ' person there.' : ' people there.') + (it.you_follow ? ' You follow them on LinkedIn.' : ''));
     const meta = mk('p', 'mk-item-meta');
     const bits = ['Last seen ' + day(it.last_at)];
-    if (it.handed && it.handed.length) bits.push('Handed to ' + it.handed.map((h) => h.to).join(', '));
+    if (it.handed && it.handed.length) bits.push('With ' + it.handed.map((h) => h.to).join(', '));
     if (it.done) bits.push('Done'); else if (it.handled) bits.push(it.handled + ' of ' + it.people.length + ' handled');
     meta.textContent = bits.join(' · ');
     b.append(line, known, meta);
@@ -584,31 +587,25 @@ function drawItem(stage, key) {
     const li = mk('li', 'mk-role');
     li.append(data_('span', 'mk-role-title', r.title));
     if (r.location) li.append(document.createTextNode(' · '), data_('span', 'mk-role-where', r.location));
+    // seat signals-outreach-2: the same opening on several boards is one role, with every board that listed it
+    if (r.sources && r.sources.length) li.append(document.createTextNode(' · '), mk('span', 'mk-role-where', 'Seen on'), document.createTextNode(' '), data_('span', 'mk-role-where', r.sources.join(', ')));
     if (r.link) { const a = mk('a', 'mk-role-link', 'Open the job'); a.href = r.link; a.target = '_blank'; a.rel = 'noopener'; li.append(document.createTextNode(' '), a); }
     rl.appendChild(li);
   }
   roles.appendChild(rl);
   stage.appendChild(roles);
 
-  // HAND TO (owner only): her explicit choice, per item.
-  if (data.owner && (data.handable || []).length) {
-    const hand = mk('section', 'mk-hand');
-    const label = mk('label', 'mk-hand-label', 'Hand this to');
-    const sel = mk('select', 'mk-hand-pick');
-    for (const p of data.handable) { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; o.translate = false; sel.appendChild(o); }
-    label.appendChild(sel);
-    const go = mk('button', 'go ghost', 'Hand to'); go.type = 'button';
-    const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
-    const now = mk('p', 'state', (it.handed || []).length ? 'Handed to ' + it.handed.map((h) => h.to + ' on ' + day(h.at)).join(', ') + '.' : 'Only you see this until you hand it to someone.');
-    go.addEventListener('click', async () => {
-      go.disabled = true; said.className = 'mk-said working no-late'; said.textContent = 'Handing it over';
-      const r = await rpc('job_alert_hand', { p_key: key, p_to: sel.value, p_take_back: false });
-      go.disabled = false;
-      if (r.ok) { said.className = 'mk-said state'; said.textContent = 'Handed over with ' + r.people + ' people. It is in their list now.'; reload(stage); }
-      else { said.className = 'mk-said stalled'; said.textContent = 'Not handed: ' + (r.reason || 'no reason was given') + '.'; }
-    });
-    hand.append(now, label, go, said);
-    stage.appendChild(hand);
+  // GIVE TO (seat signals-outreach-2, 2026-11-01, decision 1053 (5); Alex: "the hand to part ... looks a bit clunky"). One press per
+  // colleague who works on marketing (Give to Erin), an optional note that travels with it, and one line saying who has it and
+  // how far they are. Anyone else under Someone else. Replaces seat job-alerts' select-and-button Hand this to (retired 2026-11-01).
+  if (data.owner && (data.handable || []).length) stage.appendChild(giveBox(stage, it, key));
+  if (!data.owner && (it.handed || []).length && (it.handed[0].note || it.handed[0].by)) {
+    const h = it.handed[0];
+    const given = mk('p', 'mk-given');
+    if (h.by) given.append(data_('span', 'mk-co', h.by), document.createTextNode(' '));
+    given.append(mk('span', null, (h.by ? 'gave you this on ' : 'Given to you on ') + day(h.at) + (h.note ? ':' : '.')));
+    if (h.note) given.append(document.createTextNode(' '), data_('span', null, h.note));
+    stage.appendChild(given);
   }
 
   const ppl = mk('section', 'mk-people');
@@ -617,6 +614,57 @@ function drawItem(stage, key) {
   for (const p of it.people) ul.appendChild(personRow(it, p, stage));
   ppl.appendChild(ul);
   stage.appendChild(ppl);
+}
+
+function giveBox(stage, it, key) {
+  const box = mk('section', 'mk-hand');
+  const has = it.handed || [];
+  const total = (it.people || []).length, handled = Number(it.handled || 0);
+  const state = mk('p', 'mk-hand-state');
+  if (has.length) {
+    state.append(mk('span', null, 'With'), document.createTextNode(' '), data_('span', 'mk-co', has.map((h) => h.to).join(', ')), document.createTextNode(' '),
+      mk('span', null, 'since ' + day(has[0].at) + '. ' + (it.done ? 'Done.' : handled + ' of ' + total + ' handled.')));
+    if (has[0].note) state.append(document.createTextNode(' '), mk('span', null, 'Your note:'), document.createTextNode(' '), data_('span', null, has[0].note));
+  } else state.append(mk('span', null, 'Nobody else has this yet. Give it to someone and it is in their list at once.'));
+  const note = mk('input', 'mk-why mk-give-note'); note.type = 'text'; note.maxLength = 400;
+  note.placeholder = 'A note for them (optional)'; note.setAttribute('aria-label', 'A note for them (optional)');
+  const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
+  const row = mk('div', 'mk-acts');
+  const give = async (b, to, name, back) => {
+    b.disabled = true; said.className = 'mk-said working no-late'; said.textContent = back ? 'Taking it back' : 'Giving it';
+    const r = await rpc('job_alert_hand', { p_key: key, p_to: to, p_take_back: !!back, p_note: back ? null : (note.value || null) });
+    b.disabled = false;
+    if (r.ok) { said.className = 'mk-said state'; said.textContent = back ? 'Taken back.' : 'Given, with ' + r.people + ' ' + plural(r.people, 'person', 'people') + '. It is in their list now.'; reload(stage); }
+    else { said.className = 'mk-said stalled'; said.textContent = (back ? 'Not taken back: ' : 'Not given: ') + (r.reason || 'no reason was given') + '.'; }
+  };
+  const holding = new Set(has.map((h) => h.to_id));
+  const named = (label, person) => { const b = mk('button', 'go', null); b.type = 'button'; const in_ = mk('span', null); in_.append(mk('span', null, label), document.createTextNode(' '), data_('span', null, String(person.name || '').split(' ')[0])); b.append(in_); return b; };   // one inner span: a button is a flex box and would drop the space
+  const first = data.handable.filter((x) => x.marketing);
+  const lead = first.length ? first : data.handable.slice(0, 1);
+  for (const x of lead) {
+    if (holding.has(x.id)) continue;
+    const b = named('Give to', x); b.addEventListener('click', () => give(b, x.id, x.name, false)); row.appendChild(b);
+  }
+  for (const h of has) {
+    const b = named('Take back from', { name: h.to }); b.className = 'go ghost'; b.addEventListener('click', () => give(b, h.to_id, h.to, true)); row.appendChild(b);
+  }
+  const rest = data.handable.filter((x) => !lead.includes(x) && !holding.has(x.id));
+  box.append(state);
+  if (row.children.length || rest.length) box.append(note);
+  box.append(row);
+  if (rest.length) {
+    const more = mk('details', 'mk-give-more');
+    more.appendChild(mk('summary', 'mk-hand-label', 'Someone else'));
+    const sel = mk('select', 'mk-hand-pick'); sel.setAttribute('aria-label', 'Who');
+    for (const x of rest) { const o = document.createElement('option'); o.value = x.id; o.textContent = x.name; o.translate = false; sel.appendChild(o); }
+    const go = mk('button', 'go ghost', 'Give'); go.type = 'button';
+    go.addEventListener('click', () => give(go, sel.value, (rest.find((x) => x.id === sel.value) || {}).name || '', false));
+    const line = mk('div', 'mk-acts'); line.append(sel, go);
+    more.appendChild(line);
+    box.append(more);
+  }
+  box.append(said);
+  return box;
 }
 
 async function reload(stage) {
@@ -670,6 +718,8 @@ function personRow(it, p, stage) {
   }
   const tie = tieWords(p.tie);
   if (tie) from.append(document.createTextNode(' ' + tie));
+  // seat signals-outreach-2 (decision 1053 (2)): ONE channel per person, decided in the brain (job_alert_channel)
+  const via = mk('p', 'mk-person-via', p.channel === 'linkedin' ? 'By LinkedIn message: you paste it in LinkedIn.' : p.channel === 'email' ? 'By email from your mailbox.' : 'No email address or LinkedIn profile on file.');
   const status = mk('p', 'mk-person-step state', stepWords(p.step));
   status.hidden = !status.textContent;
   const acts = mk('div', 'mk-acts');
@@ -697,24 +747,58 @@ function personRow(it, p, stage) {
     acts.append(why, ok); why.focus();
   });
   acts.appendChild(skip);
-  li.append(top, from, status, acts, skipSaid, note);
+  li.append(top, from, via, status, acts, skipSaid, note);
   return li;
 }
 
-async function fillNote(box, it, p, again, status) {
+// THE NOTE (rewritten by seat signals-outreach-2, 2026-11-01, decision 1053 (2) and (3)). One channel per person: a LinkedIn message
+// is copied and LinkedIn opens, and it is logged as sent only when she presses Done; an email goes from her mailbox through mail-send
+// (the 14-day rule and the test lock apply there). Tone Warm, Brief or Formal, remembered per person. A note that failed the wording
+// or clarity check never reaches this screen (the brain and job-alerts hold it back): she sees the reason instead. Superseded here:
+// both an email and a LinkedIn note for everyone with both, and the 'broke one of your wording rules' warning above a failed note.
+const TONE_WORDS = [['warm', 'Warm'], ['brief', 'Brief'], ['formal', 'Formal']];
+
+function toneRow(box, it, p, status, tone, channel) {
+  const row = mk('div', 'mk-tone'); row.setAttribute('role', 'group'); row.setAttribute('aria-label', 'Tone');
+  row.append(mk('span', 'mk-note-kind', 'Tone'));
+  for (const [k, label] of TONE_WORDS) {
+    const b = mk('button', 'go ghost', label); b.type = 'button'; b.setAttribute('aria-pressed', k === (tone || 'warm') ? 'true' : 'false');
+    b.addEventListener('click', () => fillNote(box, it, p, true, status, { channel, tone: k }));
+    row.appendChild(b);
+  }
+  return row;
+}
+
+async function fillNote(box, it, p, again, status, opts) {
+  opts = opts || {};
   box.innerHTML = '';
-  const w = mk('p', 'working', again ? 'Writing it again' : 'Writing a short note in your voice');
-  box.appendChild(w);
-  const r = await post(DRAFT, { action: 'draft', key: it.key, person_id: p.id, again: !!again });
+  box.appendChild(mk('p', 'working', again ? 'Writing it again' : 'Writing a short note in your voice'));
+  const ask = { action: 'draft', key: it.key, person_id: p.id, again: !!again };
+  if (opts.channel) ask.channel = opts.channel;
+  if (opts.tone) ask.tone = opts.tone;
+  const r = await post(DRAFT, ask);
   box.innerHTML = '';
+  const channel = (r && r.channel) || opts.channel || p.channel;
+  const channels = (r && r.channels) || [];
+  box.appendChild(toneRow(box, it, p, status, (r && r.tone) || opts.tone, channel));
+  const other = channel === 'email' ? 'linkedin' : 'email';
+  const swap = () => {
+    if (!channels.includes(other)) return null;
+    const b = mk('button', 'go ghost', other === 'email' ? 'Write an email instead' : 'Write a LinkedIn message instead'); b.type = 'button';
+    b.addEventListener('click', () => fillNote(box, it, p, false, status, { channel: other, tone: (r && r.tone) || opts.tone }));
+    return b;
+  };
   if (!r || r.ok !== true || !r.draft) {
-    box.append(mk('p', 'stalled', 'No note: ' + String((r && r.reason) || 'no reason was given') + '.'));
-    const t = mk('button', 'go ghost', 'Try again'); t.type = 'button'; t.addEventListener('click', () => fillNote(box, it, p, true, status));
-    box.appendChild(t);
+    const why = String((r && r.reason) || 'no reason was given');
+    box.append(mk('p', 'stalled', (why.startsWith('No note') ? why : 'No note: ' + why) + '.'));
+    const row = mk('div', 'mk-acts');
+    const t = mk('button', 'go ghost', 'Write it again'); t.type = 'button'; t.addEventListener('click', () => fillNote(box, it, p, true, status, { channel, tone: (r && r.tone) || opts.tone }));
+    row.appendChild(t);
+    const s2 = swap(); if (s2) row.appendChild(s2);
+    box.appendChild(row);
     return;
   }
   const d = r.draft;
-  if (d.ok === false) box.append(mk('p', 'stalled', 'This note broke one of your wording rules (' + String(d.fail || '') + '), so it is not ready. Write it again, or change it before you use it.'));
   const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
   const mark = async (step, why) => {
     const s = await rpc('job_alert_step', { p_key: it.key, p_person: p.id, p_step: step, p_why: why || null });
@@ -723,12 +807,12 @@ async function fillNote(box, it, p, again, status) {
     return s.ok;
   };
 
-  if (d.email !== null && d.email !== undefined && p.email) {
+  if (channel === 'email' && p.email) {
     const em = mk('div', 'mk-email');
-    em.append(mk('p', 'mk-note-kind', 'Email'));
+    em.append(mk('p', 'mk-note-kind', 'Email from your mailbox'));
     const to = mk('p', 'mk-note-to'); to.append(mk('span', null, 'To '), data_('span', null, p.email));
     const subj = mk('input', 'mk-subject'); subj.type = 'text'; subj.value = d.subject || ''; subj.setAttribute('aria-label', 'Subject');
-    const text = mk('textarea', 'mk-text'); text.rows = 7; text.value = d.email || ''; text.setAttribute('aria-label', 'Your email');
+    const text = mk('textarea', 'mk-text'); text.rows = 6; text.value = d.email || ''; text.setAttribute('aria-label', 'Your email');
     const send = mk('button', 'go', 'Send from my mailbox'); send.type = 'button';
     send.addEventListener('click', async () => {
       const mailbox = String((C.viewer && C.viewer().email) || '').toLowerCase();
@@ -745,28 +829,30 @@ async function fillNote(box, it, p, again, status) {
     });
     em.append(to, subj, text, send);
     box.appendChild(em);
-  }
-  if (d.note !== null && d.note !== undefined && p.profile) {
+  } else if (channel === 'linkedin' && p.profile) {
     const li = mk('div', 'mk-linkedin');
-    li.append(mk('p', 'mk-note-kind', 'LinkedIn message'));
+    li.append(mk('p', 'mk-note-kind', 'LinkedIn message: you paste it, the Tool never posts on LinkedIn'));
     const text = mk('textarea', 'mk-text'); text.rows = 4; text.value = d.note || ''; text.setAttribute('aria-label', 'Your LinkedIn message');
     const row = mk('div', 'mk-acts');
-    const copy = mk('button', 'go', 'Copy note'); copy.type = 'button';
-    copy.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(text.value); said.className = 'mk-said state'; said.textContent = 'Copied. Paste it in LinkedIn, then press Sent.'; }
-      catch (_) { text.select(); said.className = 'mk-said state'; said.textContent = 'Selected. Copy it, paste it in LinkedIn, then press Sent.'; }
-      mark('copied');
+    const go = mk('button', 'go', 'Copy and open LinkedIn'); go.type = 'button';
+    go.addEventListener('click', () => {
+      // both inside the press itself, so the browser allows the copy and the new tab
+      const copied = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text.value) : Promise.reject(new Error('no clipboard'));
+      window.open(p.profile, '_blank', 'noopener');
+      copied.then(() => { said.className = 'mk-said state'; said.textContent = 'Copied, and LinkedIn is open in a new tab. Paste it in a message to them, send it there, then press Done.'; })
+        .catch(() => { text.select(); said.className = 'mk-said state'; said.textContent = 'LinkedIn is open in a new tab. The message is selected: copy it, paste it there, send it, then press Done.'; });
+      mark('copied'); rpc('job_alert_step', { p_key: it.key, p_person: p.id, p_step: 'profile', p_why: null });
     });
-    const prof = mk('a', 'go ghost', 'Open profile'); prof.href = p.profile; prof.target = '_blank'; prof.rel = 'noopener';
-    prof.addEventListener('click', () => { mark('profile'); });
-    const sent = mk('button', 'go ghost', 'Sent'); sent.type = 'button';
-    sent.addEventListener('click', () => mark('sent'));
-    row.append(copy, prof, sent);
+    const done = mk('button', 'go ghost', 'Done, I sent it'); done.type = 'button';
+    done.addEventListener('click', async () => { if (await mark('sent')) { said.className = 'mk-said state'; said.textContent = 'Logged as sent on LinkedIn by you.'; } });
+    row.append(go, done);
     li.append(text, row);
     box.appendChild(li);
-  }
-  if (!p.email && !p.profile) box.append(mk('p', 'state', 'There is no email address or LinkedIn profile on file for this person.'));
+  } else box.append(mk('p', 'state', 'There is no email address or LinkedIn profile on file for this person.'));
+  const row = mk('div', 'mk-acts');
   const redo = mk('button', 'go ghost', 'Write it again'); redo.type = 'button';
-  redo.addEventListener('click', () => fillNote(box, it, p, true, status));
-  box.append(said, redo);
+  redo.addEventListener('click', () => fillNote(box, it, p, true, status, { channel, tone: r.tone }));
+  row.appendChild(redo);
+  const s2 = swap(); if (s2) row.appendChild(s2);
+  box.append(said, row);
 }
