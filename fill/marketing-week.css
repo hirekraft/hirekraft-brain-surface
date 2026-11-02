@@ -18,6 +18,15 @@
 .mkw-out, .mkw-scheduled { background: var(--paper-2); }
 .mkw-panel { display: grid; gap: calc(var(--u) * 2.5); max-width: 40rem; min-width: 0; }
 .mkw-state { font-weight: var(--w-mid); }
+/* saved by the team (seat marketing-week-2, decision 1062): unsure saves for the owner, her own open saves for each person */
+.mkw-saved-box { display: grid; gap: calc(var(--u) * 2); min-width: 0; }
+.mkw-saved-box:empty { display: none; }
+.mkw-saved > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+.mkw-saved-row { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 1) calc(var(--u) * 3); padding: calc(var(--u) * 2) 0; border-top: 1px solid var(--line); min-width: 0; }
+.mkw-saved-row .mkw-card-title { flex: 1 1 14rem; min-width: 0; overflow-wrap: anywhere; }
+.mkw-saved-row .go { min-height: 44px; }
+.mkw-saved-row .mk-said { flex-basis: 100%; margin: 0; }
+.mkw-saved-row .mk-said:empty { display: none; }
 /* the LinkedIn look */
 .mkw-li { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); padding: calc(var(--u) * 3); display: grid; gap: calc(var(--u) * 2.5); min-width: 0; }
 .mkw-li-top { display: flex; gap: calc(var(--u) * 2.5); align-items: center; }
