@@ -615,6 +615,34 @@ function drawItem(stage, key) {
     // seat job-search-helper: an opening the daily web search found says which of the business's own words it searched for
     if (r.found && r.found.length) li.append(document.createTextNode(' · '), mk('span', 'mk-role-where', 'Found by the daily web search for'), document.createTextNode(' '), data_('span', 'mk-role-where', r.found.map((f) => f.term).join(', ')));
     if (r.link) { const a = mk('a', 'mk-role-link', 'Open the job'); a.href = r.link; a.target = '_blank'; a.rel = 'noopener'; li.append(document.createTextNode(' '), a); }
+    // seat bench-match-2 (decision 1056): who of ours fits this opening, the same match as Who we have (bench_fit_show in the brain).
+    // Held back, being worked out or nobody is said in words, never an empty list. Bench classes in skin.css; no styling here.
+    if (r.fit && r.fit.line) {
+      const best = Array.isArray(r.fit.best) ? r.fit.best : [];
+      const fb = mk(best.length ? 'details' : 'div', 'bench-out');
+      const head = mk(best.length ? 'summary' : 'p', best.length ? 'ai2-more-sum' : 'bench-said', String(r.fit.line) + (best.length ? ' Show who' : ''));
+      fb.appendChild(head);
+      const ul = mk('ul', 'bench-list');
+      for (const b of best) {
+        const p = mk('li', 'bench-person');
+        const top = mk('div', 'bench-top');
+        top.append(data_('span', 'bench-name', b.name || 'Name not kept'), mk('span', 'bench-tag' + (b.met === b.of ? ' all' : ''), b.met === b.of ? 'All ' + b.of : b.met + ' of ' + b.of));
+        p.appendChild(top);
+        for (const w of (b.why || [])) {
+          const q = mk('p', 'bench-why');
+          q.appendChild(data_('strong', null, String(w.line || '') + (w.word && w.word !== String(w.line || '').toLowerCase() ? ' (as ' + w.word + ')' : '')));
+          if (w.quote) q.appendChild(data_('span', null, ': ' + String.fromCharCode(34) + String(w.quote) + String.fromCharCode(34)));
+          p.appendChild(q);
+        }
+        const f = mk('p', 'bench-facts', b.last_contact ? 'Last contact ' + b.last_contact : 'No contact kept');
+        if (b.url) { const a = mk('a', null, 'Open in CATS'); a.href = b.url; a.target = '_blank'; a.rel = 'noopener'; f.append(document.createTextNode(' · '), a); }
+        p.appendChild(f);
+        ul.appendChild(p);
+      }
+      if (ul.childNodes.length) fb.appendChild(ul);
+      if (best.length && r.fit.said) fb.appendChild(mk('p', 'bench-said', String(r.fit.said)));
+      li.appendChild(fb);
+    }
     rl.appendChild(li);
   }
   roles.appendChild(rl);
