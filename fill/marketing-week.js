@@ -83,7 +83,9 @@ function draw() {
   const appr = ps.filter((p) => p.state !== 'draft').length, out = ps.filter((p) => p.state === 'out' || p.state === 'scheduled').length;
   if (ps.length) {
     box.appendChild(mk('p', 'mkw-count', ps.length + ' finished: ' + posts + ' ' + plural(posts, 'post', 'posts') + ', ' + mails + ' ' + plural(mails, 'email', 'emails')
-      + ' · ' + appr + ' approved · ' + out + ' out or in Sending.'));
+      + ' · ' + appr + ' approved · ' + out + ' out or in Sending.'
+      // seat plan-speed-drafts (decision 1060 (2)): drafts the Tool wrote for plan items with no approved words are counted apart
+      + (ps.some((p) => (p.source || {}).origin === 'drafted') ? ' ' + ps.filter((p) => (p.source || {}).origin === 'drafted').length + ' written by the Tool.' : '')));
   }
   if (Number(D.held_back)) box.appendChild(mk('p', 'state', D.held_back + ' finished ' + plural(D.held_back, 'piece', 'pieces') + ' this week ' + plural(D.held_back, 'is', 'are') + ' not shown to you. ' + (D.held_back_why || '')));
   const saved = mk('div', 'mkw-saved-box'); box.appendChild(saved); savedBox(saved);
@@ -176,8 +178,13 @@ function drawPanel(panel, p) {
   panel.appendChild(mk('p', 'eyebrow', (CH[p.channel] || p.channel) + ' · ' + day(p.day) + (p.at ? ', ' + p.at : '')));
   panel.appendChild(p.kind === 'email' ? inboxLook(p) : linkedinLook(p));
   const src = p.source || {};
-  panel.appendChild(mk('p', 'mk-item-meta', (src.origin === 'approved_document' ? 'Kept word for word from the approved document ' : 'Kept word for word from ')
-    + '“' + (src.title || 'a saved chat') + '”, part “' + (src.part || '') + '”.'));
+  if (src.origin === 'drafted') {
+    // seat plan-speed-drafts: a draft the Tool wrote from the marketing foundation and this plan line; nobody has approved its words
+    panel.appendChild(mk('p', 'mk-item-meta', 'Written by the Tool from your marketing foundation and the plan line “' + (src.part || '') + '”. Read it before you approve it.'));
+  } else {
+    panel.appendChild(mk('p', 'mk-item-meta', (src.origin === 'approved_document' ? 'Kept word for word from the approved document ' : 'Kept word for word from ')
+      + '“' + (src.title || 'a saved chat') + '”, part “' + (src.part || '') + '”.'));
+  }
   if (p.item) { const m = mk('p', 'mk-item-meta'); m.append(mk('span', null, 'In the plan below as: '), data_('span', null, p.item.title)); panel.appendChild(m); }
   if (p.flag) panel.appendChild(mk('p', 'stalled', p.flag));
   if (p.wording_fail) panel.appendChild(mk('p', 'stalled', 'Breaks one of your wording rules: ' + p.wording_fail + '. Change it before it is approved.'));
