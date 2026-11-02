@@ -8,18 +8,71 @@
 let here = null;   // one question per page: does this business have Bench, and is someone signed in
 const STATES = [['submitted', 'Submitted'], ['interviewing', 'Interviewing'], ['placed', 'Placed'], ['not_a_fit', 'Not a fit']];
 
+// ON TOP, NOT BEHIND A PRESS (seat mail-clean, 2026-11-02; Alex 13:11 PT: "where's all the job requirements coming in and then the
+// match with what we have"). On an open requirement the card opens with Who we have already asked: the count, then the first three
+// people each with why (the first requirement line their resume meets, quoted); Show all N is one press for the full list with
+// states. The answer is kept per order for the page (one ask per order, not one per redraw). SUPERSEDES the Who we have press.
+const asked = new Map();   // order id -> Promise of the first answer
 export function drawBench(card, row, it, h) {
   if (!it || !it.wo_id) return;
   if (!here) here = h.sb.rpc('bench_here').then((x) => !x.error && x.data === true).catch(() => false);
   here.then((yes) => {
     if (!yes) return;
-    const b = h.mk('button', 'go', 'Who we have'); b.type = 'button';
-    const out = h.mk('div', 'bench-out');
-    const wrap = h.mk('div', 'bench-press');   // the press and its answer together, so the answer is next to the press
-    b.addEventListener('click', () => load(it, b, out, h, false));
-    wrap.append(b, out);
+    const out = h.mk('div', 'bench-out bench-top-out');
+    const wrap = h.mk('section', 'bench-press bench-first');
+    wrap.setAttribute('aria-label', 'Who we have');
+    wrap.appendChild(out);
     card.appendChild(wrap);
+    first(it, out, h);
   });
+}
+
+function ask(it, all, h) {
+  return h.sb.rpc('bench_shortlist', { p_wo: it.wo_id, p_all: all })
+    .then((x) => (x.error ? { ok: false, reason: x.error.message } : x.data), (e) => ({ ok: false, reason: String((e && e.message) || e) }));
+}
+function first(it, out, h) {
+  out.className = 'bench-out bench-top-out mailx-att-out working';
+  out.textContent = 'Looking for who we have for this ' + (it.word || 'requirement') + '.';
+  if (!asked.has(it.wo_id)) {
+    const p = ask(it, false, h);
+    asked.set(it.wo_id, p);
+    p.then((r) => { if (!r || r.ok !== true) asked.delete(it.wo_id); });   // a failed ask is asked again next time
+  }
+  asked.get(it.wo_id).then((r) => {
+    if (!r || r.present === false) { out.className = 'bench-out'; out.textContent = ''; return; }
+    if (r.ok !== true) { out.className = 'bench-out mailx-att-out state stalled'; out.textContent = 'Not searched. ' + h.plainWords(String(r.reason || '')); return; }
+    drawTop(it, r, out, h);
+  });
+}
+function drawTop(it, r, out, h) {
+  out.innerHTML = ''; out.className = 'bench-out bench-top-out';
+  const hd = h.mk('h3', 'mailx-matter-h', 'Who we have');
+  out.append(hd, h.mk('p', 'bench-count', String(r.line || '')));
+  const rows = Array.isArray(r.rows) ? r.rows.slice(0, 3) : [];
+  const ul = h.mk('ul', 'bench-list bench-three');
+  for (const p of rows) {
+    const li = h.mk('li', 'bench-person');
+    const top = h.mk('div', 'bench-top');
+    const nm = h.mk('span', 'bench-name', String(p.name || 'Name not kept')); nm.translate = false; top.appendChild(nm);
+    top.appendChild(h.mk('span', 'bench-tag' + (p.met === p.of ? ' all' : ''), p.met === p.of ? 'All ' + p.of : p.met + ' of ' + p.of));
+    if (p.state && p.state !== 'proposed') top.appendChild(h.mk('span', 'bench-state', String(p.state_words || p.state)));
+    li.appendChild(top);
+    const w = (Array.isArray(p.why) ? p.why : [])[0];
+    if (w) {
+      const q = h.mk('p', 'bench-why');
+      const l = h.mk('strong', null, String(w.line || '')); l.translate = false; q.appendChild(l);
+      if (w.quote) { const t = h.mk('span', null, ': "' + String(w.quote).slice(0, 140) + (String(w.quote).length > 140 ? '…' : '') + '"'); t.translate = false; q.appendChild(t); }
+      li.appendChild(q);
+    }
+    ul.appendChild(li);
+  }
+  if (ul.childNodes.length) out.appendChild(ul);
+  if ((r.count || 0) > rows.length) {
+    const more = h.mk('button', 'go ghost', 'Show all ' + r.count); more.type = 'button';
+    more.addEventListener('click', () => load(it, more, out, h, (r.count || 0) > (r.shown || 0)));
+    out.appendChild(more);
+  }
 }
 
 async function load(it, btn, out, h, all) {
