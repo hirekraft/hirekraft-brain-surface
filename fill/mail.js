@@ -49,7 +49,7 @@
 import { conversation, composer, askDraft } from './answer.js?v=2026-10-29-mail-invites';
 import { fmtDate } from './dates.js?v=2026-10-22-dates';
 import { plainWords } from './plain.js?v=2026-10-27-mail-views';
-import { drawBench } from './bench.js?v=2026-11-02-bench-shortlist-1';   // Bench (staffing): Who we have on a requirement, only where the business has it
+import { drawBench } from './bench.js?v=2026-11-02-mail-clean';   // Bench (staffing): Who we have on a requirement, only where the business has it
 import { screenLang, screenLangName } from './words.js?v=2026-10-29-thinkrooms-3';   // See it in <language> (seat language-and-nudge)
 
 // VIEWS IN THE LEFT COLUMN (seat mail-views, 2026-10-27; Alex 14:41 PT: "Worth your attention should be ... on the left-hand
@@ -540,7 +540,7 @@ function drawAttnList(list) {
   for (const it of shown) {
     if (isSeller(it) && !sellHead) { sellHead = true; ul.appendChild(sellerHead(sellers)); }
     const li = matterRow(it, () => { pick = it; open = null; markSeen('attention', 'attention', [it.key]); setView('read'); drawList(); drawRead(); }, pick && pick.key === it.key);
-    if (isSeller(it)) sellerClear(li, it);
+    if (isSeller(it) || isNotice(it)) sellerClear(li, it);   // a notice leaves in one press too (seat mail-clean)
     ul.appendChild(li);
   }
   if (!sellHead && sellSaid && attn.more) ul.appendChild(sellerHead(0));
@@ -565,6 +565,7 @@ function drawAttnList(list) {
 // it; a requirement, a new client, a partner or a work order must be opened (isSeller is the one condition).
 let sellSaid = null;        // { key, line, id, busy }: the last seller cleared here, its line and Undo survive the redraw
 function isSeller(it) { return it && it.kind === 'new_business' && it.nb_intent === 'selling'; }
+function isNotice(it) { return it && it.kind === 'new_business' && it.nb_intent === 'notice'; }
 function sellerHead(n) {
   const li = mk('li', 'mailx-sell-head');
   const h = mk('h4', 'mailx-sell-title');
@@ -634,8 +635,125 @@ function drawFollowList(list) {
 
 // The right pane: the matter. Where it stands (and that AI wrote it, from which emails), the latest words, the choices, why it is
 // here behind one press, and its emails one press away each.
+// THE EMAIL AS AN EMAIL (seat mail-clean, 2026-11-02; Alex 13:11 PT: "instead of the summary, we would have actually just the
+// email, just like a regular email, and then be able to act on that"). Every For you item that is one email (a requirement, a new
+// client, a notice, a seller, an open order, an email waiting on her) shows: the Tool's one line above, one row of presses (Reply,
+// Forward, the one thing the Tool suggests, Not for this list), then the email itself the way the Mail tab shows it (sender, date,
+// subject, the body as it was sent in the sandboxed frame, links as links, pictures held until she asks, signature, footer and
+// earlier messages behind Show all). Why it is here and what was read stay one press below. SUPERSEDES on these cards: Where it
+// stands, The latest words and What they wrote shown in place of the email.
+const cardMail = new Map();   // source|id -> Promise of the thread read, once per page per email
+function isMailItem(it) {
+  return !!(it && it.open_source && it.open_id && !it.invite && !it.following && !String(it.key || '').startsWith('invite:')
+    && ['new_business', 'work_order', 'email'].includes(it.kind));
+}
+function cardThread(it) {
+  const k = it.open_source + '|' + it.open_id;
+  if (!cardMail.has(k)) {
+    const p = live('thread', { source_key: it.open_source, thread_id: it.open_id });
+    p.catch(() => cardMail.delete(k));   // a failed read is asked again next time, not kept
+    cardMail.set(k, p);
+  }
+  return cardMail.get(k);
+}
+function emailInCard(slot, it) {
+  slot.className = 'mailx-card-mail';
+  slot.appendChild(mk('p', 'quiet working', 'Opening the email.'));
+  cardThread(it).then((t) => {
+    slot.innerHTML = '';
+    const msgs = (t && t.messages) || [];
+    const mine = String(addrOf(it.open_source) || '').toLowerCase();
+    const m = msgs.find((x) => x.id === it.open_id) || [...msgs].reverse().find((x) => String(x.from_email || '').toLowerCase() !== mine) || msgs[msgs.length - 1];
+    if (!m) { slot.appendChild(mk('p', 'quiet', 'This email has no words to show.')); return; }
+    const who = mk('div', 'mailx-sender');
+    who.appendChild(avatar(m.from_name || m.from_email, 'people', true));
+    const wn = mk('div', 'mailx-sender-words');
+    const nm = mk('span', 'mailx-sender-name', m.from_name || m.from_email || ''); nm.translate = false;
+    const ad = mk('span', 'mailx-sender-addr', [m.from_email, when(m.date)].filter(Boolean).join(' · ')); ad.translate = false;
+    wn.append(nm, ad); who.appendChild(wn);
+    if (t.gmail_url) { const a = mk('a', 'mailx-gmail', 'Open in Gmail'); a.href = t.gmail_url; a.target = '_blank'; a.rel = 'noopener'; who.appendChild(a); }
+    slot.appendChild(who);
+    const sj = mk('h3', 'mailx-subject mailx-card-subject', m.subject || t.subject || '(no subject)'); sj.translate = false;
+    slot.appendChild(sj);
+    if (m.to) { const to = mk('p', 'quiet mailx-to', 'to ' + m.to + (m.cc ? ', cc ' + m.cc : '')); to.translate = false; slot.appendChild(to); }
+    const atts = Array.isArray(it.attachments) ? it.attachments : [];
+    if (atts.length) {
+      const ul = mk('ul', 'mailx-att-chips');
+      for (const a of atts) { const li = mk('li', 'mailx-att-chip', String(a.file_name || 'a file')); li.translate = false; li.title = a.read ? 'Read into it' : 'Not read: ' + plainWords(String(a.why_not || 'no text in it')); ul.appendChild(li); }
+      slot.appendChild(ul);
+    }
+    const box = mk('article', 'mailx-mail');
+    box.appendChild(messageContent(m));
+    slot.appendChild(box);
+    if (msgs.length > 1) {
+      const o = mk('button', 'mailx-toggle', 'Show the whole conversation (' + msgs.length + ' emails)'); o.type = 'button';
+      o.addEventListener('click', () => openEmail(it.open_source, it.open_id));
+      slot.appendChild(o);
+    }
+  }, (e) => {
+    slot.innerHTML = '';
+    slot.appendChild(mk('p', 'state stalled', 'This email could not be opened here. ' + plainWords(String((e && e.message) || ''))));
+    const fall = it.words || passageOf(it);
+    if (fall) { const q = mk('blockquote', 'mailx-matter-passage-full', String(fall)); q.translate = false; slot.appendChild(q); }
+  });
+}
+// The one row of presses on top. Reply drafts the answer in the email (nothing is sent until she sends it); Forward opens the
+// forward composer; then the one thing the Tool suggests for this email; then Not for this list (an order leaves by its state).
+function mailCardActs(it, row, out) {
+  const b = (label, cls, fn) => { const x = mk('button', cls, label); x.type = 'button'; x.addEventListener('click', () => fn(x)); row.appendChild(x); return x; };
+  b('Reply', 'go', () => { pendingCompose = 'draft'; openEmail(it.open_source, it.open_id); });
+  b('Forward', 'go ghost', () => { pendingCompose = 'forward'; openEmail(it.open_source, it.open_id); });
+  const comm = String(it.key || '').split(':').slice(1).join(':');
+  if (it.kind === 'new_business' && ['work_order', 'lead', 'partner'].includes(it.nb_intent)) {
+    b('Open as ' + capWord(it.nb_word || 'work order'), 'go ghost', (x) => orderCall('work_order_open', { p_comm: comm }, x, out, 'Opening it.', [it.key, 'work_order:' + comm]));
+  } else if (it.kind === 'work_order') {
+    const st = { open: ['in_progress', 'In progress'], in_progress: ['delivered', 'Delivered'], delivered: ['done', 'Done'] }[it.state];
+    if (st) b(st[1], 'go ghost', (x) => orderCall('work_order_set', { p_id: it.wo_id, p_state: st[0] }, x, out, 'Keeping it.', [it.key]));
+  } else if (it.kind === 'email') {
+    b('Got it', 'go ghost', (x) => choose(it, 'got_it', x, out));
+  }
+  if (it.kind !== 'work_order') b('Not for this list', 'go ghost', (x) => choose(it, 'not_for_this_list', x, out));
+}
+function drawMailCard(read, it, eyebrow) {
+  const card = mk('article', 'mailx-att-card mailx-matter-card mailx-mail-card');
+  card.appendChild(mk('p', 'eyebrow', eyebrow));
+  const said = it.kind === 'email' ? firstSentence(stateOf(it) || String(it.why || '')) : String(it.what || '');
+  if (said) { const s1 = mk('p', 'mailx-att-sum', said); s1.translate = false; card.appendChild(s1); }
+  const out = mk('div', 'mailx-att-out'); out.setAttribute('aria-live', 'polite');
+  const row = mk('div', 'mailx-att-acts');
+  mailCardActs(it, row, out);
+  card.append(row, out);
+  saidLine(out, it.key);
+  if (it.kind === 'work_order') {   // seat bench-shortlist + mail-clean: who we have, on top, before the email
+    const top = mk('div', 'mailx-card-bench');
+    card.appendChild(top);
+    drawBench(top, row, it, { sb: C.sb, mk, plainWords });
+  }
+  const slot = mk('div');
+  card.appendChild(slot);
+  emailInCard(slot, it);
+  // Below the email, quiet: the order's facts and its other states; why this is here and what was read, one press.
+  if (it.kind === 'work_order') drawOrderBelow(card, it);
+  const t = mk('button', 'mailx-toggle', 'Why this is here'); t.type = 'button'; t.setAttribute('aria-expanded', 'false');
+  const box = mk('div', 'mailx-matter-why'); box.hidden = true;
+  if (it.kind === 'email' && stateOf(it)) { const p = mk('p', 'mailx-att-why', stateOf(it)); p.translate = false; box.appendChild(p); }
+  if (it.why) box.appendChild(mk('p', 'mailx-att-why', String(it.why)));
+  const checked = Array.isArray(it.checked) ? it.checked.join(' ') : '';
+  if (checked) box.appendChild(mk('p', 'mailx-att-checked', 'What was checked: ' + checked));
+  if (it.kind === 'email') {
+    const k = mk('button', 'go ghost', 'Keep me posted'); k.type = 'button';
+    k.addEventListener('click', () => choose(it, 'keep_me_posted', k, out));
+    box.appendChild(k);
+  }
+  t.addEventListener('click', () => { box.hidden = !box.hidden; t.setAttribute('aria-expanded', box.hidden ? 'false' : 'true'); });
+  if (box.childNodes.length) card.append(t, box);
+  read.appendChild(card);
+}
 function drawAttnCard(read, it) {
   read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
+  if (isMailItem(it)) {
+    return drawMailCard(read, it, it.kind === 'new_business' ? nbTag(it)[1] : it.kind === 'work_order' ? orderTag(it) : mode === 'ai' ? 'For you' : 'Worth your attention');
+  }
   const card = mk('article', 'mailx-att-card mailx-matter-card' + (it.kind === 'thought' ? ' mailx-att-thought' : ''));
   const eyebrow = it.kind === 'thought' ? 'Left for you' : it.kind === 'money' ? 'Money' : it.following ? 'Following'
     : it.kind === 'impostor' ? 'Pretending to be someone of your business' : it.kind === 'new_business' ? nbTag(it)[1] : it.kind === 'work_order' ? orderTag(it) : mode === 'ai' ? 'For you' : 'Worth your attention';
@@ -1346,6 +1464,34 @@ function drawOrder(card, it, row, out) {
   row.appendChild(cl);
   drawBench(card, row, it, { sb: C.sb, mk, plainWords });   // seat bench-shortlist: absent unless the business has Bench
 }
+// Under the email on an open order (seat mail-clean): what was read into it in four short facts, the other states, and Close.
+function drawOrderBelow(card, it) {
+  const facts = mk('dl', 'mailx-order-facts');
+  const fact = (k, v) => { if (!v) return; facts.appendChild(mk('dt', null, k)); const d = mk('dd', null, String(v)); d.translate = false; facts.appendChild(d); };
+  fact('For', it.for_whom); fact('Their client', it.end_client); fact('Contact', [it.contact_name, it.contact_email].filter(Boolean).join(', ')); fact('Wanted by', it.by_when);
+  if (facts.childNodes.length) card.appendChild(facts);
+  const row = mk('div', 'mailx-att-acts mailx-order-states');
+  const out = mk('div', 'mailx-att-out'); out.setAttribute('aria-live', 'polite');
+  const first = { open: 'in_progress', in_progress: 'delivered', delivered: 'done' }[it.state];
+  const next = { open: [['delivered', 'Delivered'], ['done', 'Done']], in_progress: [['done', 'Done']], delivered: [['in_progress', 'Back to in progress']] }[it.state] || [];
+  for (const [st, label] of next) {
+    if (st === first) continue;
+    const b = mk('button', 'go ghost', label); b.type = 'button';
+    b.addEventListener('click', () => orderCall('work_order_set', { p_id: it.wo_id, p_state: st }, b, out, 'Keeping it.', [it.key]));
+    row.appendChild(b);
+  }
+  const cl = mk('button', 'go ghost', 'Close'); cl.type = 'button';
+  cl.addEventListener('click', () => {
+    if (out.querySelector('.mailx-order-close')) return;
+    const f = mk('div', 'mailx-order-close');
+    const inp = mk('input', null); inp.type = 'text'; inp.placeholder = 'Why is it closed?'; inp.setAttribute('aria-label', 'Why is it closed?');
+    const ok = mk('button', 'go', 'Close it'); ok.type = 'button';
+    ok.addEventListener('click', () => orderCall('work_order_set', { p_id: it.wo_id, p_state: 'closed', p_reason: inp.value }, ok, out, 'Closing it.', [it.key]));
+    f.append(inp, ok); out.innerHTML = ''; out.className = 'mailx-att-out'; out.appendChild(f); inp.focus();
+  });
+  row.appendChild(cl);
+  card.append(row, out);
+}
 async function orderCall(fn, args, btn, out, working, keys) {
   btn.disabled = true; out.className = 'mailx-att-out working'; out.textContent = working;
   let r = null;
@@ -2025,6 +2171,23 @@ const RX_ORIGINAL = /^--+ ?(Original Message|Ursprüngliche Nachricht|Mensaje or
 const RX_URL = new RegExp('https?://[^ ' + TAB + NL + '<>"]+', 'g');
 const URL_TRAIL = ".,;:!?)]'";
 
+// THE SIGNATURE, THE LEGAL FOOTER AND THE QUOTED HISTORY BEHIND ONE "SHOW ALL" (seat mail-clean, 2026-11-02; Alex 13:11 PT: "the
+// emails look very cluttered ... just like a regular email"). A sign-off line (Best regards, Thanks, Mit freundlichen Grüßen, "-- ",
+// a dashed rule) starts the fold when real words stand above it; so does the earlier message. One fold, the earlier of the two.
+const RX_SIGNOFF = /^(-- ?|[-_=]{5,}|((best|kind|warm|warmest|many)[ ,]+)?(regards|wishes)[,.!]?|(thanks|thank you|many thanks|thanks again|cheers|best|sincerely|yours sincerely|yours truly|respectfully)[,.!]?|(mit freundlichen grüßen|freundliche grüße|viele grüße|beste grüße|herzliche grüße|liebe grüße|schöne grüße|grüße|gruß|saludos|cordialement|bien à vous)[,.!]?)$/i;
+function signoffStart(lines) {
+  let words = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i].trim();
+    if (i > 0 && words >= 20 && l.length <= 40 && RX_SIGNOFF.test(l)) return i;
+    words += l.length;
+  }
+  return -1;
+}
+function foldAt(lines) {
+  const q = quoteStart(lines), g = signoffStart(lines);
+  return q > 0 && g > 0 ? Math.min(q, g) : Math.max(q, g);
+}
 function quoteStart(lines) {
   for (let i = 1; i < lines.length; i++) {
     const l = lines[i].trim();
@@ -2046,11 +2209,17 @@ function linkify(node, text) {
   for (const hit of text.matchAll(RX_URL)) {
     let u = hit[0];
     while (u && URL_TRAIL.includes(u[u.length - 1])) u = u.slice(0, -1);
-    node.appendChild(document.createTextNode(text.slice(at, hit.index)));
-    const a = mk('a', 'mailx-url', u);
+    // Outlook's plain text writes a link as "words <https://...>": the brackets go and the link reads as its site's name.
+    const angled = text[hit.index - 1] === '<' && (text[hit.index + u.length] === '>' || u.endsWith('>'));
+    if (angled && u.endsWith('>')) u = u.slice(0, -1);
+    node.appendChild(document.createTextNode(text.slice(at, angled ? hit.index - 1 : hit.index)));
+    let label = u;
+    if (angled) { try { label = new URL(u).hostname.replace(/^www[.]/, ''); } catch (_) { label = u; } }
+    const a = mk('a', 'mailx-url', label);
     a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    if (angled) a.title = u;
     node.appendChild(a);
-    at = hit.index + u.length;
+    at = hit.index + u.length + (angled && text[hit.index + u.length] === '>' ? 1 : 0);
   }
   node.appendChild(document.createTextNode(text.slice(at)));
 }
@@ -2059,11 +2228,11 @@ function plainMessage(text) {
   const box = mk('div', 'mailx-text');
   if (!text) { box.textContent = '(no text)'; return box; }
   const lines = String(text).split(NL);
-  const cut = quoteStart(lines);
+  const cut = foldAt(lines);
   linkify(box, (cut > 0 ? lines.slice(0, cut) : lines).join(NL).trimEnd());
   if (cut > 0) {
     const d = mk('details', 'mailx-quote');
-    d.appendChild(mk('summary', null, 'Show the earlier message'));
+    d.appendChild(mk('summary', null, 'Show all'));
     const q = mk('div', 'mailx-text');
     linkify(q, lines.slice(cut).join(NL));
     d.appendChild(q);
@@ -2114,18 +2283,33 @@ function prepareHtml(html) {
 // without a script). Gmail and Apple wrap it in one element; Outlook marks where it starts
 // and puts it after the marker. A forward is not folded: the forwarded mail is the content.
 function foldQuote(doc) {
-  const q = doc.querySelector('.gmail_quote, blockquote[type="cite"], .yahoo_quoted, #divRplyFwdMsg, #appendonsend');
-  if (!q || !q.parentNode) return;
-  if (/forwarded message/i.test(String(q.textContent || '').slice(0, 300))) return;
+  let q = doc.querySelector('.gmail_quote, blockquote[type="cite"], .yahoo_quoted, #divRplyFwdMsg, #appendonsend');
+  if (q && /forwarded message/i.test(String(q.textContent || '').slice(0, 300))) q = null;
+  // The signature and legal footer fold with it (seat mail-clean): the sender's own signature block, else the first short sign-off
+  // line with real words above it. Everything from the earlier of the two to the end goes behind one Show all.
+  let g = doc.querySelector('.gmail_signature, [data-smartmail="gmail_signature"], #Signature, div[id^="Signature"]');
+  if (!g) {
+    for (const el of doc.body.querySelectorAll('p, div, td, span, font')) {
+      if (el.querySelector('p, div, td, table')) continue;
+      const t = String(el.textContent || '').replace(/[\s\u00a0]+/g, ' ').trim();
+      if (t.length && t.length <= 40 && RX_SIGNOFF.test(t)) { g = el; break; }
+    }
+  }
+  const before = (n) => { try { const r = doc.createRange(); r.setStart(doc.body, 0); r.setEndBefore(n); return r.toString().replace(/\s+/g, ' ').trim().length; } catch (_) { return 0; } };
+  if (g && before(g) < 20) g = null;
+  if (q && g && (g.compareDocumentPosition(q) & 4) === 0) g = null;   // the quote comes first: fold from it
+  const start = g || q;
+  if (!start || !start.parentNode) return;
   const d = doc.createElement('details');
   d.className = 'mailx-quote';
   const s = doc.createElement('summary');
-  s.textContent = 'Show the earlier message';
+  s.textContent = 'Show all';
   d.appendChild(s);
-  q.parentNode.insertBefore(d, q);
-  const outlook = q.id === 'divRplyFwdMsg' || q.id === 'appendonsend';
-  let n = q;
-  while (n) { const next = outlook ? n.nextSibling : null; d.appendChild(n); n = next; }
+  const r = doc.createRange();
+  r.setStartBefore(start);
+  r.setEndAfter(doc.body.lastChild);
+  d.appendChild(r.extractContents());
+  doc.body.appendChild(d);
 }
 
 function frameDoc(doc, images) {
