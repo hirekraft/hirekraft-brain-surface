@@ -8,7 +8,7 @@
 // events when they are connected (seat systems-connect), and until then the screen says so. Each campaign's results from the
 // email engine (delivered, opened, clicked, bounced, marked as spam, unsubscribed) are read back every 15 minutes by mail-send's
 // campaign run (seat campaign-engine, 2026-10-31, decision 1050) and shown per campaign below; each person's in Latest.
-// Drawn from what the brain returns (mk_back_view); the brain refuses anyone but the owner, with the reason.
+// Drawn from what the brain returns (mk_back_view); the brain refuses anyone but the owner or a marketing colleague (since 2026-11-02, decision 1058), with the reason.
 // YOUR EMAIL HISTORY (seat elastic-history, 2026-11-01, decision 1054 item 1): everything the business sent through its email
 // engine before and outside the Tool, kept by system-read's walk and returned by the one reader (mk_engine_history_for, in
 // mk_back_view as history): every month's statistics, each person's lifetime opens and clicks, campaigns by name with replies
@@ -16,6 +16,13 @@
 // No colour, size or font here; no regex literals, no backslashes.
 
 let C = null;
+// ROUND 2 (seat marketing-build-b, 2026-11-02, decision 1059, approved design Ha5qD1aq92RUxXAiwzY9h3 v7, row "Round 2, Nov 2: instrument").
+// One question ("Who is listening, and who came forward first?"), one picture (twelve months of opened and bounced, the August
+// block outlined), and one action per person who came forward (Write a note to a reply, Add to a list for an opener). Drawn
+// from ONE reader, mk_back_story (brain, owner or a marketing colleague, decisions 1050 and 1058). Replies from the business's
+// own domain are left out and counted. The full record of earlier rounds (Latest, by list, the whole Elastic history) is kept
+// one press below. Mount contract with seat marketing-build-a: mount(el, ctx); drawBack stays for the shell of today.
+const BAR_MAX = 100;   // both bars are percents of the month: opened of delivered, bounced of sent
 const KIND = { reply: 'Reply', call_booked: 'Call booked', opening: 'Opening received', open: 'Opened', click: 'Clicked', unsubscribe: 'Unsubscribed', bounce: 'Bounced', complaint: 'Marked as spam', delivered: 'Delivered' };
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
 const data_ = (tag, cls, text) => { const n = mk(tag, cls, text); n.translate = false; return n; };
@@ -23,13 +30,9 @@ const n0 = (x) => Number(x || 0).toLocaleString('en-US');
 const day = (iso) => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
 const time = (iso) => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
 
-export async function drawBack(stage, ctx) {
-  C = ctx;
-  stage.innerHTML = '';
-  const head = mk('div', 'mk-head');
-  head.append(mk('h2', 'mk-title', 'What came back'), mk('p', 'mk-lede', 'Replies, calls booked and openings that came from what you sent, each linked to what brought it. It fills by itself.'));
-  stage.appendChild(head);
-  const w = mk('p', 'working no-late', 'Reading what came back');
+// THE FULL RECORD (seat marketing-parts and seat elastic-history): kept whole, now one press below the story (round 2).
+async function drawDetail(stage) {
+  const w = mk('p', 'working no-late', 'Reading the full record');
   stage.appendChild(w);
   let r;
   try { const { data: d, error } = await C.sb.rpc('mk_back_view', {}); r = error ? { ok: false, reason: error.message } : d; }
@@ -169,4 +172,128 @@ function drawHistory(stage, h) {
   sec.appendChild(mk('p', 'quiet', 'Read from ' + name + (h.read_at ? ' (last ' + time(h.read_at) + ')' : '') + ': new results every 15 minutes, each month every 6 hours, each person once a day. '
     + name + ' keeps the email-by-email log for recent weeks only' + (h.log_from ? ' (here from ' + day(h.log_from) + ')' : '') + ', so older emails count in the months and in the totals for each person, not one by one.'));
   stage.appendChild(sec);
+}
+
+// ── ROUND 2: THE STORY (seat marketing-build-b) ─────────────────────────────────────────────────────────────────────────────
+const monthShort = (iso) => { const d = new Date(String(iso).slice(0, 10) + 'T12:00:00Z'); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }); };
+const pct = (a, b) => (Number(b) > 0 ? Math.round((Number(a) * 1000) / Number(b)) / 10 : 0);
+
+const STYLE = 'marketing-r2.css?v=2026-11-02-marketing-build-b';   // this part's look (seat marketing-build-b), loaded once by whichever part mounts first
+const ensureStyle = () => { try { if (!document.querySelector('link[data-mk-r2]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = new URL(STYLE, import.meta.url).href; l.setAttribute('data-mk-r2', '1'); document.head.appendChild(l); } } catch (e) { /* no document: tests */ } };
+export async function mount(stage, ctx) {
+  ensureStyle();
+  C = Object.assign({ el: (t, c) => { const n = document.createElement(t); if (c) n.className = c; return n; } }, ctx || {});
+  stage.innerHTML = '';
+  const head = mk('div', 'mk-head');
+  head.append(mk('h2', 'mk-title', 'What came back'), mk('p', 'mk-lede', 'Who is listening, and who came forward first?'));
+  stage.appendChild(head);
+  const w = mk('p', 'working no-late', 'Reading twelve months of what you sent');
+  stage.appendChild(w);
+  let r;
+  try { const { data: d, error } = await C.sb.rpc('mk_back_story', {}); r = error ? { ok: false, reason: error.message } : d; }
+  catch (e) { r = { ok: false, reason: String((e && e.message) || e) }; }
+  w.remove();
+  if (!r || r.ok !== true) { stage.appendChild(mk('p', 'notice flagged', 'This could not be read just now: ' + String((r && (r.reason || r.error)) || 'no reason was given') + '. Nothing here is a claim either way.')); return; }
+  stage.appendChild(story(r));
+  stage.appendChild(chart(r.months || []));
+  stage.appendChild(forward(stage, r));
+  const det = mk('details', 'mk-hand');
+  det.appendChild(mk('summary', 'mk-hand-label', 'The full record: every month, every campaign, every reply'));
+  const host = mk('div');
+  det.appendChild(host);
+  let drawn = false;
+  det.addEventListener('toggle', () => { if (det.open && !drawn) { drawn = true; drawDetail(host); } });
+  stage.appendChild(det);
+  stage.appendChild(rules());
+}
+export const drawBack = mount;
+try { window.MK_PARTS = Object.assign(window.MK_PARTS || {}, { back: { mount } }); } catch (e) { /* no window: tests */ }
+
+function story(r) {
+  const b = r.before || {}, s = r.since || {};
+  const p = mk('p', 'mk-story');
+  const ob = pct(b.opened, b.delivered), os = pct(s.opened, s.delivered);
+  if (Number(s.delivered)) {
+    p.textContent = 'Since September you send fewer emails, and more of them are read: ' + os + ' percent opened (' + n0(s.opened) + ' of ' + n0(s.delivered)
+      + ' delivered), against ' + ob + ' percent from May to July, before Google blocked the newsletter in August.';
+  } else p.textContent = 'Nothing has been delivered since September yet.';
+  return p;
+}
+
+function chart(ms) {
+  const sec = mk('section', 'mk-chart');
+  const fig = mk('div', 'mk-bars');
+  fig.setAttribute('role', 'img');
+  const said = [];
+  for (const m of ms) {
+    const col = mk('div', 'mk-bar-col' + (m.block ? ' mk-block' : ''));
+    const pair = mk('div', 'mk-bar-pair');
+    const o = mk('span', 'mk-bar mk-bar-open'); o.style.height = Math.max(1, Math.min(BAR_MAX, Number(m.open_pct) || 0)) + '%';
+    const b = mk('span', 'mk-bar mk-bar-bounce'); b.style.height = Math.max(1, Math.min(BAR_MAX, Number(m.bounce_pct) || 0)) + '%';
+    o.title = monthShort(m.month) + ': ' + (m.open_pct || 0) + ' percent opened'; b.title = monthShort(m.month) + ': ' + (m.bounce_pct || 0) + ' percent bounced';
+    pair.append(o, b);
+    col.append(pair, mk('span', 'mk-bar-label', monthShort(m.month)));
+    fig.appendChild(col);
+    said.push(monthShort(m.month) + ' ' + (m.open_pct || 0) + ' percent opened, ' + (m.bounce_pct || 0) + ' percent bounced');
+  }
+  fig.setAttribute('aria-label', said.join('; '));
+  const key = mk('p', 'mk-bar-key');
+  key.append(mk('span', 'mk-key-open', 'Opened, of what was delivered'), mk('span', 'mk-key-bounce', 'Bounced, of what was sent'));
+  sec.append(fig, key);
+  const blk = ms.find((m) => m.block);
+  if (blk) sec.appendChild(mk('p', 'quiet', monthShort(blk.month) + ' (outlined): Google blocked the newsletter; ' + n0(blk.bounced) + ' of ' + n0(blk.sent) + ' emails bounced.'));
+  return sec;
+}
+
+function forward(stage, r) {
+  const sec = mk('section', 'mk-people');
+  sec.appendChild(mk('h3', 'mk-sub', 'Who came forward first'));
+  const ps = r.forward || [];
+  if (!ps.length) sec.appendChild(mk('p', 'state', 'Nobody replied in the last 90 days or opened in the last 30.'));
+  const ul = mk('ul', 'mk-person-list');
+  const lists = r.lists || [];
+  for (const x of ps) {
+    const li = mk('li', 'mk-person');
+    const top = mk('div', 'mk-person-top');
+    top.appendChild(data_('span', 'mk-person-name', x.name || x.address));
+    if (x.company) { top.appendChild(document.createTextNode(' ')); top.appendChild(data_('span', 'mk-person-title', x.company)); }
+    li.appendChild(top);
+    li.appendChild(mk('p', 'mk-person-from', x.rank === '1' ? 'Wrote back on ' + day(x.replied_at) + '.' : 'Opened on ' + day(x.opened_at) + (Number(x.opens) > 1 ? ', ' + n0(x.opens) + ' opens over the years.' : '.')));
+    const acts = mk('div', 'mk-acts');
+    const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
+    if (x.action === 'none') li.appendChild(mk('p', 'stalled', x.dns === 'bounced' ? 'Do not email: the address bounced.' : 'Do not email: they unsubscribed or marked an email as spam.'));
+    else if (x.action === 'note') {
+      const a = mk('a', 'go', 'Write a note');
+      a.href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(x.address); a.target = '_blank'; a.rel = 'noopener';
+      acts.appendChild(a);
+    } else if (lists.length) {
+      const b = mk('button', 'go ghost', 'Add to ' + lists[0].question); b.type = 'button'; b.translate = false;
+      b.addEventListener('click', async () => {
+        b.disabled = true; said.className = 'mk-said working no-late'; said.textContent = 'Adding';
+        let v; try { const { data: d, error } = await C.sb.rpc('mk_list_add', { p_list: lists[0].id, p_address: x.address }); v = error ? { ok: false, reason: error.message } : d; } catch (e) { v = { ok: false, reason: String(e) }; }
+        if (v && v.ok) { said.className = 'mk-said'; said.textContent = v.inside ? 'Added.' : 'Kept off the list: ' + String(v.why_out) + '.'; }
+        else { b.disabled = false; said.className = 'mk-said stalled'; said.textContent = 'Not added: ' + String((v && v.reason) || 'no reason was given') + '.'; }
+      });
+      acts.appendChild(b);
+    } else li.appendChild(mk('p', 'quiet', 'Make a list in Lists, then add them here.'));
+    li.append(acts, said);
+    ul.appendChild(li);
+  }
+  sec.appendChild(ul);
+  if (Number(r.replied_own_left_out)) sec.appendChild(mk('p', 'quiet', n0(r.replied_own_left_out) + ' ' + (Number(r.replied_own_left_out) === 1 ? 'reply' : 'replies') + ' from your own colleagues left out.'));
+  sec.appendChild(mk('p', 'quiet', n0(r.opened_30) + ' people opened an email in the last 30 days.'));
+  return sec;
+}
+
+function rules() {
+  const det = mk('details', 'mk-rules');
+  det.appendChild(mk('summary', 'mk-hand-label', 'Rules'));
+  for (const line of [
+    'Opened is a share of what was delivered; bounced is a share of what was sent. Both come from your email engine, month by month.',
+    'A month where more than a fifth of the emails bounced is outlined: in August 2026 Google blocked the newsletter.',
+    'Who came forward first: people who wrote back in the last 90 days, then people who opened in the last 30, newest first. Replies from your own colleagues are left out.',
+    'Write a note opens a new email to that person in your own mailbox; nothing is sent until you send it. Add to a list puts them on your newest list, unless they may not be emailed.',
+    'Opens are a signal only: some mail programs open emails by themselves.',
+  ]) det.appendChild(mk('p', 'state', line));
+  return det;
 }
