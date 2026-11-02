@@ -1,8 +1,8 @@
 // fill/marketing-send.js - THE MARKETING AND SALES TAB, part SENDING (seat marketing-parts, 2026-10-30, decisions 1039, 1044).
 //
 // WHAT IT DOES FOR HER. A campaign email goes to one of her lists in small daily batches, within her sending limits (seat
-// rulings-1049, 2026-10-31, replacing the grow-by-half warm-up): 50 a day in week 1, 100 in week 2, 250 in week 3, then at most
-// 500, everyone at most once in 30 days, and a pause by itself over 3 percent bounces or 0.1 percent complaints. She changes the
+// rulings-1049, 2026-10-31; each step earned by opens since 2026-11-02, seat marketing-build-b): 50 a day to start, then 100, 250, then
+// at most 500, everyone at most once in 30 days, and a pause by itself over 3 percent bounces or 0.1 percent complaints. She changes the
 // limits here (Sending limits); the brain keeps them (mk_send_limits) and every batch obeys them. Every day's batch waits for
 // her Approve. Before anyone goes in a batch the Tool checks: not emailed in the last 30 days, not unsubscribed, not at an
 // active client, address never bounced; everyone left out says why. One-to-one notes go from her own mailbox (Signals and
@@ -13,10 +13,20 @@
 // shows the rules every campaign email meets, each checked, and what to add when one is not met: the postal address (in every
 // footer), a sending address on a subdomain of her domain, the engine connected, the domain verified there with SPF, DKIM and
 // DMARC passing. The checks are the brain's (mk_send_rules), read live from the engine by mail-send; this screen only shows them.
-// Drawn from what the brain returns (mk_send_view); the brain refuses anyone but the owner, with the reason.
+// Drawn from what the brain returns (mk_send_view); the brain refuses anyone but the owner or a marketing colleague (since 2026-11-02, decision 1058), with the reason.
 // No colour, size or font here; no regex literals, no backslashes.
 
 let C = null;
+let STAGE = null;   // the part's own section; every change redraws it whole
+// ROUND 2 (seat marketing-build-b, 2026-11-02, decision 1059, approved design Ha5qD1aq92RUxXAiwzY9h3 v7): SENDING IS A COCKPIT.
+// One question ("Can we send today, and how much?"), one picture (sent today of allowed, the warm-up ladder with the step lit and
+// what earns the next one, two health meters against their pause marks, the August block as context, the complete do-not-send
+// count), the batches waiting, and ONE next step. Drawn from ONE reader, mk_cockpit (brain). Approve is pressed by Erin or Alex
+// (decision 1058 (4)); starting a campaign and changing the limits stay with the owner. WARM-UP BY OPENS (this seat's brain file
+// 1): the next step is earned when at least 20 percent of what went out at a step is opened, not when a week has passed
+// (rulings-1049's calendar weeks are superseded, seat marketing-build-b, 2026-11-02).
+// Nothing sends while mail-send's test lock is on; the cockpit says so. The campaigns, the rules every email meets and the
+// limits are kept one press below. Mount contract with seat marketing-build-a: mount(el, ctx); drawSend stays for today's shell.
 const OUT = { emailed: 'emailed by you recently', campaign_recent: 'had a campaign email recently', note_recent: 'had a note about a job recently',
   unsubscribed: 'unsubscribed', client: 'at a current client', bounced: 'their address bounced before' };
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
@@ -32,19 +42,13 @@ async function rpc(name, args) {
   } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; }
 }
 
-export async function drawSend(stage, ctx) {
-  C = ctx;
-  stage.innerHTML = '';
-  const head = mk('div', 'mk-head');
-  head.append(mk('h2', 'mk-title', 'Sending'), mk('p', 'mk-lede', 'Campaign emails go out in small daily batches you approve, growing only while they land well.'));
-  stage.appendChild(head);
+// THE CAMPAIGNS AND SETTINGS (earlier rounds), one press below the cockpit since round 2.
+async function drawDetail(stage) {
   const w = mk('p', 'working no-late', 'Reading your campaigns');
   stage.appendChild(w);
   const v = await rpc('mk_send_view', {});
   w.remove();
   if (!v || v.ok !== true) { stage.appendChild(mk('p', 'notice flagged', 'This could not be read just now: ' + String((v && (v.reason || v.error)) || 'no reason was given') + '.')); return; }
-  stage.appendChild(mk('p', 'notice', v.engine ? "Nothing goes to anyone yet: the Tool's own sending is being tested, so a batch you approve is held, and says why."
-    : "Nothing is sent yet. Your email engine is not connected (Brain tab, Add a source, Systems) and the Tool's own sending is being tested, so a batch you approve is held, and says why."));
   for (const c of (v.campaigns || [])) stage.appendChild(campaignCard(stage, c));
   stage.appendChild(startBox(stage, v.lists || []));
   stage.appendChild(readyPart(stage, v.sending || {}, v.ready || null, v.engine || null));
@@ -83,7 +87,7 @@ function readyPart(stage, S, R, E) {
     save.disabled = true; said.className = 'mk-said working no-late'; said.textContent = 'Saving';
     const r = await rpc('mk_sending_set', { p_set: body });
     save.disabled = false;
-    if (r && r.ok === true) { drawSend(stage, C); return; }
+    if (r && r.ok === true) { mount(STAGE, C); return; }
     said.className = 'mk-said stalled'; said.textContent = 'Not saved: ' + String((r && r.reason) || 'no reason was given');
   });
   det.append(save, said);
@@ -93,7 +97,7 @@ function readyPart(stage, S, R, E) {
 
 // SENDING LIMITS (seat rulings-1049, 2026-10-31): the numbers every batch obeys, in words, and changeable here by the owner.
 const LIMITS = [
-  ['week1', 'People a day in week 1'], ['week2', 'People a day in week 2'], ['week3', 'People a day in week 3'], ['day_max', 'At most, a day, after that'],
+  ['week1', 'People a day, first step'], ['week2', 'People a day, second step'], ['week3', 'People a day, third step'], ['day_max', 'At most, a day, after that'],
   ['campaign_gap_days', 'Days between two campaign emails to the same person'], ['note_gap_days', 'Days between two job notes to the same person'],
   ['bounce_pause_pct', "Pause when a day's bounces pass (percent)"], ['complaint_pause_pct', "Pause when a day's spam complaints pass (percent)"],
 ];
@@ -101,13 +105,13 @@ function limitsPart(stage, L, T) {
   const sec = mk('section', 'mk-people');
   sec.appendChild(mk('h3', 'mk-sub', 'Sending limits'));
   for (const line of [
-    'Warm-up: at most ' + n0(L.week1) + ' people a day in week 1, ' + n0(L.week2) + ' in week 2, ' + n0(L.week3) + ' in week 3, then at most ' + n0(L.day_max) + ' a day, all campaigns together.',
+    'Warm-up: ' + n0(L.week1) + ' people a day to start, then ' + n0(L.week2) + ', then ' + n0(L.week3) + ', then at most ' + n0(L.day_max) + ' a day, all campaigns together. Each next step is earned by opens, not by time: after ' + n0(L.earn_days || 2) + ' full days at a step, when at least ' + (L.earn_open_pct || 20) + ' percent of those emails were opened and bounces stayed under the pause limit.',
     'The same person gets a campaign email at most once every ' + n0(L.campaign_gap_days) + ' days, and a note about a job at most once every ' + n0(L.note_gap_days) + ' days. Nobody who unsubscribed ever gets one.',
     "Sending pauses by itself, and says why, when a day's bounces pass " + L.bounce_pause_pct + ' percent or its spam complaints pass ' + L.complaint_pause_pct + ' percent.',
     'Before anyone goes in a batch: not at a current client, address never bounced. Everyone left out says why.',
     'One-to-one notes go from your own mailbox, in Signals and outreach. Campaigns never do.',
   ]) sec.appendChild(mk('p', 'state', line));
-  if (T && T.size !== undefined) sec.appendChild(mk('p', 'quiet', T.pause ? String(T.why || 'Sending is paused.') : 'Today: week ' + n0(T.week) + ', up to ' + n0(T.size) + ' people can go out.'));
+  if (T && T.size !== undefined) sec.appendChild(mk('p', 'quiet', T.pause ? String(T.why || 'Sending is paused.') : 'Today: step ' + n0(T.step || T.week) + ', up to ' + n0(T.size) + ' people can go out.'));
   sec.appendChild(mk('p', 'quiet', String(L.said || '') + (L.set_at ? ' (' + day(L.set_at) + ')' : '')));
   const det = C.el('details');
   det.appendChild(mk('summary', 'mk-hand-label', 'Change the limits'));
@@ -126,7 +130,7 @@ function limitsPart(stage, L, T) {
     save.disabled = true; said.textContent = '';
     const r = await rpc('mk_limits_set', { p_limits: body });
     save.disabled = false;
-    if (r && r.ok === true) { drawSend(stage, C); return; }
+    if (r && r.ok === true) { mount(STAGE, C); return; }
     said.className = 'mk-said stalled'; said.textContent = 'Not saved: ' + String((r && r.reason) || 'no reason was given');
   });
   det.append(save, said);
@@ -137,7 +141,7 @@ function limitsPart(stage, L, T) {
 function startBox(stage, lists) {
   const box = mk('section', 'mk-hand');
   box.appendChild(mk('h3', 'mk-sub', 'Start a campaign'));
-  if (!lists.length) { box.appendChild(mk('p', 'quiet', 'Make a list first, in Plan. A campaign goes to one list.')); return box; }
+  if (!lists.length) { box.appendChild(mk('p', 'quiet', 'Make a list first, in Lists. A campaign goes to one list.')); return box; }
   const lab = mk('label', 'mk-hand-label', 'To the list');
   const sel = mk('select', 'mk-hand-pick');
   for (const l of lists) { const o = document.createElement('option'); o.value = l.id; o.textContent = l.question + ' (' + n0(l.in) + ')'; o.translate = false; sel.appendChild(o); }
@@ -153,7 +157,7 @@ function startBox(stage, lists) {
     const r = await rpc('mk_campaign_make', { p_list: sel.value, p_subject: subj.value, p_body: body.value, p_plan_item: null });
     go.disabled = false;
     if (!r.ok) { said.className = 'mk-said stalled'; said.textContent = 'Not started: ' + (r.reason || 'no reason was given'); return; }
-    drawSend(stage, C);
+    mount(STAGE, C);
   });
   box.append(lab, sl, bl, go, said);
   return box;
@@ -171,7 +175,7 @@ function campaignCard(stage, c) {
   for (const b of (c.batches || []).slice(0, 5)) li.appendChild(batchRow(stage, b));
   const acts = mk('div', 'mk-acts');
   const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
-  const set = async (state) => { const r = await rpc('mk_campaign_set', { p_campaign: c.id, p_state: state }); if (r.ok) drawSend(stage, C); else { said.className = 'mk-said stalled'; said.textContent = 'Not changed: ' + (r.reason || 'no reason was given') + '.'; } };
+  const set = async (state) => { const r = await rpc('mk_campaign_set', { p_campaign: c.id, p_state: state }); if (r.ok) mount(STAGE, C); else { said.className = 'mk-said stalled'; said.textContent = 'Not changed: ' + (r.reason || 'no reason was given') + '.'; } };
   if (c.state === 'paused') { const r = mk('button', 'go ghost', 'Resume'); r.type = 'button'; r.addEventListener('click', () => set('running')); acts.appendChild(r); }
   if (c.state === 'running' || c.state === 'paused') { const s = mk('button', 'go ghost', 'Stop this campaign'); s.type = 'button'; s.addEventListener('click', () => set('stopped')); acts.appendChild(s); }
   li.append(acts, said);
@@ -196,7 +200,7 @@ function batchRow(stage, b) {
   const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
   if (b.state === 'waiting') {
     const a = mk('button', 'go', 'Approve'); a.type = 'button';
-    a.addEventListener('click', async () => { a.disabled = true; const r = await rpc('mk_batch_approve', { p_batch: b.id }); if (r.ok) drawSend(stage, C); else { a.disabled = false; said.className = 'mk-said stalled'; said.textContent = 'Not approved: ' + (r.reason || 'no reason was given') + '.'; } });
+    a.addEventListener('click', async () => { a.disabled = true; const r = await rpc('mk_batch_approve', { p_batch: b.id }); if (r.ok) mount(STAGE, C); else { a.disabled = false; said.className = 'mk-said stalled'; said.textContent = 'Not approved: ' + (r.reason || 'no reason was given') + '.'; } });
     acts.appendChild(a);
   }
   const who = mk('button', 'go ghost', 'Who is in it'); who.type = 'button';
@@ -221,4 +225,114 @@ async function people(host, batch, inside) {
     ul.appendChild(li);
   }
   host.appendChild(ul);
+}
+
+// ── ROUND 2: THE COCKPIT (seat marketing-build-b) ───────────────────────────────────────────────────────────────────────────
+const mon = (iso) => { const d = new Date(String(iso).slice(0, 10) + 'T12:00:00Z'); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }); };
+
+const STYLE = 'marketing-r2.css?v=2026-11-02-marketing-build-b';   // this part's look (seat marketing-build-b), loaded once by whichever part mounts first
+const ensureStyle = () => { try { if (!document.querySelector('link[data-mk-r2]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = new URL(STYLE, import.meta.url).href; l.setAttribute('data-mk-r2', '1'); document.head.appendChild(l); } } catch (e) { /* no document: tests */ } };
+export async function mount(stage, ctx) {
+  ensureStyle();
+  C = Object.assign({ el: (t, c) => { const n = document.createElement(t); if (c) n.className = c; return n; } }, ctx || {});
+  STAGE = stage;
+  stage.innerHTML = '';
+  const head = mk('div', 'mk-head');
+  head.append(mk('h2', 'mk-title', 'Sending'), mk('p', 'mk-lede', 'Can we send today, and how much?'));
+  stage.appendChild(head);
+  const w = mk('p', 'working no-late', "Reading today's sending");
+  stage.appendChild(w);
+  const v = await rpc('mk_cockpit', {});
+  w.remove();
+  if (!v || v.ok !== true) { stage.appendChild(mk('p', 'notice flagged', 'This could not be read just now: ' + String((v && (v.reason || v.error)) || 'no reason was given') + '.')); return; }
+  stage.appendChild(gauge(v));
+  stage.appendChild(health(v));
+  stage.appendChild(waiting(v));
+  stage.appendChild(mk('p', 'notice', "Nothing goes to anyone yet: the Tool's own sending is locked while it is tested. A batch you approve is held, and says why."));
+  const det = mk('details', 'mk-hand');
+  det.appendChild(mk('summary', 'mk-hand-label', 'Campaigns, the rules every email meets, and the limits'));
+  const host = mk('div');
+  det.appendChild(host);
+  let drawn = false;
+  det.addEventListener('toggle', () => { if (det.open && !drawn) { drawn = true; drawDetail(host); } });
+  stage.appendChild(det);
+}
+export const drawSend = (stage, ctx) => mount(stage, ctx);
+try { window.MK_PARTS = Object.assign(window.MK_PARTS || {}, { send: { mount } }); } catch (e) { /* no window: tests */ }
+
+function gauge(v) {
+  const sec = mk('section', 'mk-gauge');
+  const t = v.today || {}, wu = v.warmup || {}, e = wu.earn || {};
+  const big = mk('p', 'mk-big');
+  big.append(mk('span', 'mk-big-n', n0(t.sent)), mk('span', 'mk-big-of', 'sent today of ' + n0(t.allowed) + ' allowed'));
+  sec.appendChild(big);
+  if (t.paused) { sec.appendChild(mk('p', 'stalled', String(wu.why || 'Sending is paused.'))); return sec; }
+  const lad = mk('ol', 'mk-ladder');
+  (wu.ladder || []).forEach((n, i) => {
+    const li = mk('li', 'mk-step' + (i + 1 === Number(wu.step) ? ' mk-step-on' : (i + 1 < Number(wu.step) ? ' mk-step-done' : '')), n0(n) + ' a day');
+    if (i + 1 === Number(wu.step)) li.setAttribute('aria-current', 'step');
+    lad.appendChild(li);
+  });
+  sec.appendChild(lad);
+  if (e.next) {
+    sec.appendChild(mk('p', 'state', 'The next step, ' + n0(e.next) + ' a day, is earned by opens, not by time: once ' + n0(e.need_sent) + ' emails have gone out at this step and at least '
+      + e.open_pct + ' percent of them were opened. So far at this step: ' + n0(e.sent) + ' sent, ' + n0(e.opened) + ' opened.'));
+  } else sec.appendChild(mk('p', 'state', 'At the top step: at most ' + n0(t.allowed) + ' a day.'));
+  return sec;
+}
+
+function meter(label, value, mark, unit) {
+  const box = mk('div', 'mk-meter');
+  const bar = mk('div', 'mk-meter-bar');
+  const fill = mk('span', 'mk-meter-fill' + (Number(value) > Number(mark) ? ' mk-meter-over' : ''));
+  const full = Math.max(Number(mark) * 2, Number(value), 0.0001);
+  fill.style.width = Math.min(100, (Number(value) / full) * 100) + '%';
+  const tick = mk('span', 'mk-meter-mark'); tick.style.left = Math.min(100, (Number(mark) / full) * 100) + '%';
+  bar.append(fill, tick);
+  bar.setAttribute('role', 'img'); bar.setAttribute('aria-label', label + ' ' + value + unit + ', pause at ' + mark + unit);
+  box.append(mk('p', 'mk-meter-label', label + ': ' + value + unit + ' (sending pauses above ' + mark + unit + ')'), bar);
+  return box;
+}
+
+function health(v) {
+  const sec = mk('section', 'mk-people');
+  sec.appendChild(mk('h3', 'mk-sub', 'Health'));
+  const h = v.health, L = v.limits || {};
+  if (h) {
+    sec.appendChild(mk('p', 'quiet', 'Your last sending month, ' + mon(h.month) + ': ' + n0(h.sent) + ' sent, ' + n0(h.delivered) + ' delivered, ' + h.open_pct + ' percent opened.'));
+    sec.appendChild(meter('Bounces', Number(h.bounce_pct || 0), Number(L.bounce_pause_pct || 3), ' percent'));
+    sec.appendChild(meter('Marked as spam', Number(h.complaint_pct || 0), Number(L.complaint_pause_pct || 0.1), ' percent'));
+  } else sec.appendChild(mk('p', 'quiet', 'No sending month has been read from your email engine yet.'));
+  const b = v.block;
+  if (b) sec.appendChild(mk('p', 'state', 'Why the start is small: in ' + mon(b.month) + ' Google blocked the newsletter (' + n0(b.bounced) + ' of ' + n0(b.sent)
+    + ' emails bounced, ' + b.bounce_pct + ' percent). The cause was fixed on August 21 (SPF), and a new sending address is warming up.'));
+  const d = v.dns || {};
+  sec.appendChild(mk('p', 'state', 'Never emailed: ' + n0(d.total) + ' addresses (' + n0(d.unsubscribed) + ' unsubscribed or marked an email as spam, ' + n0(d.bounced)
+    + ' bounced), every one your email engine holds' + (d.engine_read_at ? ', read ' + day(d.engine_read_at) : '') + '.'));
+  return sec;
+}
+
+function waiting(v) {
+  const sec = mk('section', 'mk-hand');
+  sec.appendChild(mk('h3', 'mk-sub', 'Next step'));
+  const ws = v.waiting || [];
+  const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
+  if (ws.length) {
+    const x = ws[0];
+    const a = mk('button', 'go', 'Approve ' + x.subject + ' · ' + n0(x.in) + ' people'); a.type = 'button';
+    a.addEventListener('click', async () => {
+      a.disabled = true; said.className = 'mk-said working no-late'; said.textContent = 'Approving';
+      const r = await rpc('mk_batch_approve', { p_batch: x.batch });
+      if (r.ok) { mount(STAGE, C); return; }
+      a.disabled = false; said.className = 'mk-said stalled'; said.textContent = 'Not approved: ' + (r.reason || 'no reason was given') + '.';
+    });
+    sec.appendChild(a);
+    if (ws.length > 1) sec.appendChild(mk('p', 'quiet', 'And ' + n0(ws.length - 1) + ' more waiting, below under Campaigns.'));
+  } else if (!Number(v.lists)) {
+    sec.appendChild(mk('p', 'state', 'Nothing is waiting for approval. First make the warm-up list: Lists, Make this list.'));
+  } else if (!Number(v.campaigns)) {
+    sec.appendChild(mk('p', 'state', 'Nothing is waiting for approval. Start the first campaign to your warm-up list: below, Campaigns, Start a campaign.'));
+  } else sec.appendChild(mk('p', 'state', 'Nothing is waiting for approval.' + (Number(v.held) ? ' ' + n0(v.held) + ' approved ' + (Number(v.held) === 1 ? 'batch is' : 'batches are') + ' held while sending is locked.' : '')));
+  sec.appendChild(said);
+  return sec;
 }
