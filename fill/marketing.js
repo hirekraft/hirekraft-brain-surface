@@ -24,7 +24,7 @@ let openKey = null;
 const DRAFT = '/functions/v1/job-alerts';
 const SEND = '/functions/v1/mail-send';
 const KNOWN_FROM = { hubspot: 'your CRM', linkedin: 'your LinkedIn connections', cats: 'your applicant tracking', catsone: 'your applicant tracking' };
-const DONE_STEPS = ['sent', 'skipped', 'email_held', 'email_sent'];
+const DONE_STEPS = ['sent', 'skipped', 'email_held', 'email_sent'];   /* seat marketing-week-3 (2026-11-02): the week's LinkedIn messages (fill/marketing-outreach.js) show each person with Signals' own row below, not a copy */ export function outreachRow(ctx, it, p) { if (!C) C = ctx; return personRow(it, p, null); }
 
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
 const data_ = (tag, cls, text) => { const n = mk(tag, cls, text); n.translate = false; return n; };   // a name, a company, a title: never translated
@@ -49,7 +49,7 @@ async function post(path, body) {
   } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; }
 }
 
-export function drawMarketing(body, ctx) { C = ctx; import('./marketing-shell.js?v=2026-11-02-plan-speed-drafts').then((M) => M.drawShell(body, ctx, { signals: (s) => { C = ctx; load(s); }, reads: (s) => { C = ctx; drawReads(s); } })).catch((e) => { body.innerHTML = ''; body.appendChild(mk('p', 'notice flagged', 'The Marketing and sales tab could not be loaded: ' + String((e && e.message) || e))); }); return;   // THE SHELL (seat marketing-build-a, 2026-11-02, decision 1059): the tab opens through fill/marketing-shell.js; the round-1 part row below (seat marketing-parts, with marketing-build-b's Lists button) is superseded by Alex's approval of the round 2 design and no longer runs; it goes at the next whole edit of this file.
+export function drawMarketing(body, ctx) { C = ctx; import('./marketing-shell.js?v=2026-11-02-marketing-week-3').then((M) => M.drawShell(body, ctx, { signals: (s) => { C = ctx; load(s); }, reads: (s) => { C = ctx; drawReads(s); } })).catch((e) => { body.innerHTML = ''; body.appendChild(mk('p', 'notice flagged', 'The Marketing and sales tab could not be loaded: ' + String((e && e.message) || e))); }); return;   // THE SHELL (seat marketing-build-a, 2026-11-02, decision 1059): the tab opens through fill/marketing-shell.js; the round-1 part row below (seat marketing-parts, with marketing-build-b's Lists button) is superseded by Alex's approval of the round 2 design and no longer runs; it goes at the next whole edit of this file.
   C = ctx;
   body.innerHTML = '';
   const wrap = mk('div', 'mk');
