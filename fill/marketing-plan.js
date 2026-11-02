@@ -1,33 +1,35 @@
-// fill/marketing-plan.js - THE MARKETING AND SALES TAB, part PLAN (seat marketing-parts, 2026-10-30, decisions 1039 and 1044).
-// Alex, 2026-10-30 13:42 PT, on the mockup: "yes".
+// fill/marketing-plan.js - THE MARKETING AND SALES TAB, part PLAN: the weekly board (seat marketing-build-a, 2026-11-02, decision 1059;
+// design round 2 approved; decisions 1055, 1058). Part of SHOW. Replaces the round-1 Plan (seat marketing-parts, 2026-10-30, and
+// plan-from-chats, 2026-11-01): its "Planned in your chats" list became this board, and its lists moved to the Lists part (seat
+// marketing-build-b). Superseded 2026-11-02 by Alex's approval of the round 2 design (decision 1059).
 //
-// WHAT IT DOES FOR HER. She says what the next weeks should be about ("plan November around AI cuts both ways") and the Tool
-// makes a 2 to 4 week calendar: posts, email batches to a list, website pages and follow-ups, each on a day, with the words
-// for posts and emails. She changes it the same way ("move the batch to Tuesday", "add a post about rates"). Every item is
-// checked against her wording rules (never "we saw your posting", no referrals, no testimonials, never a client's name); one
-// that breaks a rule says which. Lists are questions she asked ("SAP program leads at companies hiring, not contacted in 6
-// months"); the brain works out who is on each one, keeps it current daily, and says for every person why they are on it and
-// where they come from, and for every person left out, why.
-// PLANNED IN YOUR CHATS (seat plan-from-chats, 2026-11-01, decision 1053 item 4) comes first: the plan worked out in the saved AI
-// chats, read by the Tool (mk_plan_calendar), shown to everyone for the chats they may open.
-// Everything here is drawn from what the brain returns (mk_plan_view, mk_list_view) and made by edge function job-alerts
-// (actions plan and list). Nothing here decides who may see what: the brain refuses anyone but the owner, and that refusal is
-// shown with its reason. Nothing is sent or posted from this part.
-// No colour, size or font here (the looks' tokens in skin.css); no regex literals, no backslashes.
+// WHAT IT DOES FOR HER. One question: what goes out this week, where, and to whom? One picture: the week as columns, today first,
+// each item a card on its day (dated items from the plan worked out in the saved AI chats; weekly items on the days their rhythm
+// names). One action per item, by its channel: a LinkedIn post, company page or group post is COPIED and LinkedIn OPENED for her to
+// post (the Tool never posts on LinkedIn); a website article becomes a WordPress DRAFT that a person publishes (the Tool never
+// publishes); an email is HANDED TO SENDING, where it is approved as a campaign. Then Done, Skip (with why) or Move (to a day).
+// Every item says which chat it came from and opens that message; "See how it changed" shows the earlier words.
+// Everything shown comes from the brain as the signed-in person (mk_plan_week); presses go to mk_plan_act, which refuses an item she
+// may not open. Nothing here decides who may see what. No colour, size or font here (skin.css); no regex literals, no backslashes.
 
-let C = null;
-let view = null;
-const MAKE = '/functions/v1/job-alerts';
-const KIND = { post: 'Post', email_batch: 'Email batch', page: 'Website page', follow_up: 'Follow-up' };
-const FROM = { hubspot: 'your CRM', linkedin: 'your LinkedIn connections', cats: 'your applicant tracking' };
+let C = null, host = null, picked = null, D = null;
+const SYS = '/functions/v1/system-read';
+const STATUS = { agreed: 'Agreed', draft: 'Draft', done: 'Done' };
+const KIND = { post: 'Post', email: 'Email', page: 'Website page', follow_up: 'Follow-up', campaign: 'Campaign', other: 'Task' };
+const FIRE = { linkedin: 'Copy and open LinkedIn', company_page: 'Copy and open the company page', group: 'Copy and open the group',
+  website: 'Make a WordPress draft', email: 'Hand to Sending', mark: 'Mark done' };
+const OPEN_AT = { linkedin: 'https://www.linkedin.com/feed/?shareActive=true', company_page: 'https://www.linkedin.com/feed/', group: 'https://www.linkedin.com/groups/' };
+const CH = { linkedin: 'li', company_page: 'li', group: 'li', website: 'web', email: 'mail', mark: 'other' };
 
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
 const data_ = (tag, cls, text) => { const n = mk(tag, cls, text); n.translate = false; return n; };
-const n0 = (x) => Number(x || 0).toLocaleString('en-US');
 const plural = (k, one, many) => (Number(k) === 1 ? one : many);
 const day = (iso) => { if (!iso) return ''; const d = new Date(String(iso).length === 10 ? iso + 'T12:00:00' : iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
-const wday = (iso) => { const d = new Date(String(iso).slice(0, 10) + 'T12:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); };
-const fromWords = (list) => { const w = (list || []).map((s) => FROM[s] || 'your records'); return w.length > 1 ? w.slice(0, -1).join(', ') + ' and ' + w[w.length - 1] : (w[0] || 'your records'); };
+const short = (iso) => { const d = new Date(String(iso).slice(0, 10) + 'T12:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
+const wd = (iso) => { const d = new Date(String(iso).slice(0, 10) + 'T12:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { weekday: 'short' }); };
+const addDays = (iso, n) => { const d = new Date(String(iso).slice(0, 10) + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+const whose = (it, who) => { if (!who) return true; const o = String(it.owned_by || '').trim().toLowerCase(); return o !== '' && o.split(' ')[0] === who.toLowerCase(); };
+const words = (it) => String((typeof it.draft === 'string' && it.draft) || it.what || it.title || '');
 
 async function rpc(name, args) {
   try {
@@ -36,204 +38,280 @@ async function rpc(name, args) {
     return d || { ok: false, reason: 'No answer came back.' };
   } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; }
 }
-
-async function post(body) {
+async function post(path, body) {
   try {
     const { data: s } = await C.sb.auth.getSession();
     const jwt = s && s.session && s.session.access_token;
     if (!jwt) return { ok: false, reason: 'You are not signed in on this browser.' };
-    const r = await fetch(C.url + MAKE, { method: 'POST', headers: { Authorization: 'Bearer ' + jwt, apikey: C.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const r = await fetch(C.url + path, { method: 'POST', headers: { Authorization: 'Bearer ' + jwt, apikey: C.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const j = await r.json().catch(() => null);
     return j || { ok: false, reason: 'The answer came back with ' + r.status + '.' };
   } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; }
 }
+function copyText(text) {
+  try { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(() => true, () => copyOld(text)); } catch (_) { /* below */ }
+  return Promise.resolve(copyOld(text));
+}
+function copyOld(text) {
+  try { const t = document.createElement('textarea'); t.value = text; t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select(); const ok = document.execCommand('copy'); t.remove(); return ok; } catch (_) { return false; }
+}
+function say(said, cls, text) { said.className = 'mk-said ' + cls; said.textContent = text; }
+// After a press the week is read again; if the line under the button was redrawn away (the next-step card), the shell keeps it.
+function keep(said, ctx) { if (!said.isConnected && ctx.note && said.textContent) ctx.note(said.textContent, said.classList.contains('stalled')); }
 
-// The working sign, next to the button she pressed, with a plain line; over 10 seconds it says so.
-function working(after, line, longLine) {
-  const w = mk('p', 'working', line);
-  after.after(w);
-  const t = setTimeout(() => { w.textContent = longLine; }, 10000);
-  return () => { clearTimeout(t); w.remove(); };
+// THE ONE BUTTON of an item, by its channel. Used on the board and by the shell's next-step card.
+export function fireButton(it, said, ctx) {
+  C = C || ctx;
+  const kind = it.fire || 'mark';
+  if (kind === 'website' && it.wp_draft && it.wp_draft.wp_id) {
+    const a = mk('a', 'go', it.wp_draft.now === 'publish' ? 'Open the published article' : 'Open the draft in WordPress');
+    a.href = it.wp_draft.link || '#'; a.target = '_blank'; a.rel = 'noopener';
+    return a;
+  }
+  const b = mk('button', 'go', FIRE[kind]); b.type = 'button';
+  b.addEventListener('click', () => fire(it, b, said, ctx));
+  return b;
 }
 
-export async function drawPlan(stage, ctx) {
-  C = ctx;
-  stage.innerHTML = '';
-  const head = mk('div', 'mk-head');
-  head.append(mk('h2', 'mk-title', 'Plan'), mk('p', 'mk-lede', 'What you will post, send and publish over the next weeks, made from what you ask. Change it the same way.'));
-  stage.appendChild(head);
-  const body = mk('div');
-  stage.appendChild(body);
-  body.appendChild(mk('p', 'working no-late', 'Reading your plan and your lists'));
-  const [cal, v] = await Promise.all([rpc('mk_plan_calendar', {}), rpc('mk_plan_view', {})]);
-  view = v;
-  body.innerHTML = '';
-  // THE PLAN FROM YOUR CHATS first (seat plan-from-chats, decision 1053 item 4): everyone sees the items of the chats they may open.
-  body.appendChild(chatsPlan(cal));
-  if (!view || view.ok !== true) {
-    body.appendChild(mk('p', 'notice flagged', 'Making a new plan and lists could not be shown: ' + String((view && (view.reason || view.error)) || 'no reason was given') + '.'));
+async function fire(it, b, said, ctx) {
+  const kind = it.fire || 'mark';
+  if (OPEN_AT[kind]) {
+    const copying = copyText(words(it));
+    const win = window.open(OPEN_AT[kind], '_blank', 'noopener');
+    const copied = await copying;
+    b.disabled = true;
+    const r = await rpc('mk_plan_act', { p_item: it.id, p_week: ctx.week && ctx.week.week_of, p_act: 'fired', p_why: null, p_to_day: null, p_fired: 'copied_opened' });
+    b.disabled = false;
+    const where = kind === 'group' ? 'the group' : kind === 'company_page' ? 'the company page' : 'your LinkedIn';
+    say(said, copied ? 'state' : 'stalled', (copied ? 'Copied. ' : 'It could not be copied here; select the words below and copy them. ')
+      + (win === null ? 'Your browser kept LinkedIn from opening; open it yourself. ' : 'LinkedIn is open in a new tab. ')
+      + 'Paste it on ' + where + ' and post it there, then press Done.' + (r.ok ? '' : ' (Not recorded: ' + (r.reason || 'no reason was given') + '.)'));
+    if (ctx.refresh) await redraw(ctx);
+    keep(said, ctx);
     return;
   }
-  body.appendChild(askBox(stage));
-  body.appendChild(calendar(view.plan));
-  body.appendChild(listsPart(stage));
+  if (kind === 'website') {
+    b.disabled = true; say(said, 'working no-late', 'Making the draft in WordPress');
+    const t = setTimeout(() => { say(said, 'working', 'Still making the draft in WordPress (it reads the site before and after)'); }, 10000);
+    const r = await post(SYS, { action: 'wp_draft', item_id: it.id, week_of: ctx.week && ctx.week.week_of });
+    clearTimeout(t); b.disabled = false;
+    if (r && r.ok === true) {
+      say(said, 'state', (r.already ? 'This draft was made before, on ' + day(r.made_at) + '. ' : 'Made as a draft in WordPress. Nothing was published: ' + (r.published_before ?? '') + ' published articles before and after. ') + 'A person publishes it in WordPress.');
+      if (r.link) { const a = mk('a', 'go ghost', 'Open the draft in WordPress'); a.href = r.link; a.target = '_blank'; a.rel = 'noopener'; said.after(a); }
+      if (ctx.refresh) await redraw(ctx);
+      keep(said, ctx);
+    } else say(said, 'stalled', 'No draft was made: ' + String((r && (r.reason || r.error)) || 'no reason was given') + '.');
+    return;
+  }
+  if (kind === 'email') {
+    const r = await rpc('mk_plan_act', { p_item: it.id, p_week: ctx.week && ctx.week.week_of, p_act: 'fired', p_why: null, p_to_day: null, p_fired: 'to_sending' });
+    if (!r.ok) { say(said, 'stalled', 'Not handed over: ' + (r.reason || 'no reason was given') + '.'); return; }
+    if (ctx.go) ctx.go('send', { plan_item: it.id, week_of: ctx.week && ctx.week.week_of, title: it.title, what: it.what, draft: it.draft, audience: it.audience });
+    return;
+  }
+  await act(it, 'done', null, null, said, ctx);
 }
 
-// ---- THE PLAN FROM YOUR CHATS (seat plan-from-chats, 2026-11-01, decision 1053 item 4) -------------------------------------------
-// Alex, 2026-11-01: "I imported the plan ... all these chats from Claude, from Erin ... posts ... email marketing, the calendar ...
-// it's not there." Every post, email, page and follow-up worked out in the saved AI chats, week by week and by channel, each opening
-// the chat and the message it came from. The brain decides everything shown (mk_plan_calendar): which items she may see (the chats
-// she may open; for the Marketing folder people, chats their owner shared), how many are held back and why, the later word winning,
-// and each item's history (mk_plan_item_history). This part only lays it out.
-const STATUS = { agreed: 'Agreed', draft: 'Draft', done: 'Done' };
-const KIND_C = { post: 'Post', email: 'Email', page: 'Website page', follow_up: 'Follow-up', campaign: 'Campaign', other: 'Other' };
-const CHANNEL_ORDER = ['LinkedIn', 'LinkedIn company page', 'LinkedIn group', 'Email', 'Website', 'Other'];
-const CHANNEL_SAY = { 'LinkedIn': 'LinkedIn, personal profile', 'LinkedIn company page': 'LinkedIn company page', 'LinkedIn group': 'LinkedIn groups', 'Email': 'Email', 'Website': 'Website', 'Other': 'Other places' };
-const mondayOf = (d0) => { const d = new Date(d0); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toISOString().slice(0, 10); };
-
-function chatsPlan(cal) {
-  const sec = mk('section', 'mk-roles mk-chats-plan');
-  sec.appendChild(mk('h3', 'mk-sub', 'Planned in your chats'));
-  if (!cal || cal.ok !== true) {
-    sec.appendChild(mk('p', 'notice flagged', 'The plan from your chats could not be shown: ' + String((cal && cal.reason) || 'no reason was given') + '.'));
-    return sec;
-  }
-  const r = cal.reach || {};
-  const items = cal.items || [];
-  const every = cal.every || [];
-  const read = mk('p', 'quiet');
-  read.textContent = 'Read from ' + n0(r.chats_read) + ' saved ' + plural(r.chats_read, 'chat', 'chats') + '; ' + n0(r.chats_with_plan) + ' of them plan posts, emails or pages.' +
-    (Number(r.chats_owed) ? ' ' + n0(r.chats_owed) + ' ' + plural(r.chats_owed, 'chat is', 'chats are') + ' still being read.' : '');
-  sec.appendChild(read);
-  if (Number(cal.held_back)) sec.appendChild(mk('p', 'state', n0(cal.held_back) + ' ' + plural(cal.held_back, 'item is', 'items are') + ' held back from you. ' + String(cal.held_back_why || '')));
-  if (!items.length && !every.length) {
-    sec.appendChild(mk('p', 'quiet', Number(r.chats_owed) ? 'Nothing found yet. The Tool is still reading your chats.' : 'No plan items were found in the chats you may open.'));
-    return sec;
-  }
-  sec.appendChild(findBox(sec));
-  const thisWeek = mondayOf(new Date());
-  const ahead = items.filter((it) => String(it.week_of) >= thisWeek);
-  sec.appendChild(mk('h3', 'mk-sub', 'The weeks ahead'));
-  if (!ahead.length) {
-    sec.appendChild(mk('p', 'stalled', r.last_week ? 'Nothing in your chats is planned for this week or later. The last planned week is the week of ' + day(r.last_week) + '.' : 'Nothing in your chats is planned for this week or later.'));
-  } else sec.appendChild(weeksBlock(ahead));
-  if (every.length) {
-    sec.appendChild(mk('h3', 'mk-sub', 'The rhythm your chats agreed'));
-    const ul = mk('ul', 'mk-list');
-    for (const it of every) ul.appendChild(chatItem(it, true));
-    sec.appendChild(ul);
-  }
-  // EARLIER WEEKS, one at a time, newest first: the calendar by channel, with Earlier week and Later week.
-  const past = items.filter((it) => String(it.week_of) < thisWeek);
-  if (past.length) {
-    const weeks = [...new Set(past.map((it) => String(it.week_of)))].sort().reverse();
-    sec.appendChild(mk('h3', 'mk-sub', 'Earlier weeks'));
-    const nav = mk('div', 'mk-acts');
-    const prev = mk('button', 'go ghost', 'Earlier week'); prev.type = 'button';
-    const next = mk('button', 'go ghost', 'Later week'); next.type = 'button';
-    const where = mk('p', 'mk-item-meta'); where.setAttribute('aria-live', 'polite');
-    nav.append(prev, next);
-    const host = mk('div');
-    let at = 0;
-    const show = () => {
-      host.innerHTML = '';
-      host.appendChild(weeksBlock(past.filter((it) => String(it.week_of) === weeks[at])));
-      where.textContent = 'Week ' + (at + 1) + ' of ' + weeks.length + ' planned weeks, newest first.';
-      prev.disabled = at >= weeks.length - 1; next.disabled = at <= 0;
-    };
-    prev.addEventListener('click', () => { if (at < weeks.length - 1) { at++; show(); } });
-    next.addEventListener('click', () => { if (at > 0) { at--; show(); } });
-    sec.append(where, nav, host);
-    show();
-  }
-  return sec;
+async function act(it, what, why, toDay, said, ctx) {
+  say(said, 'working no-late', what === 'done' ? 'Marking it done' : what === 'skipped' ? 'Skipping it' : what === 'moved' ? 'Moving it' : 'Putting it back');
+  const r = await rpc('mk_plan_act', { p_item: it.id, p_week: ctx.week && ctx.week.week_of, p_act: what, p_why: why, p_to_day: toDay, p_fired: null });
+  if (!r.ok) { say(said, 'stalled', 'Not changed: ' + (r.reason || 'no reason was given') + '.'); return; }
+  say(said, 'state', what === 'done' ? 'Done.' : what === 'skipped' ? 'Skipped.' : what === 'moved' ? 'Moved to ' + short(toDay) + '.' : 'Open again.');
+  if (ctx.refresh) await redraw(ctx);
+  keep(said, ctx);
 }
 
-// A WEEK BY CHANNEL: one heading per week, then each channel with its items in day order.
-function weeksBlock(items) {
-  const box = mk('div');
-  const weeks = [...new Set(items.map((it) => String(it.week_of)))].sort();
-  for (const wk of weeks) {
-    box.appendChild(mk('h4', 'mk-sub', 'Week of ' + day(wk)));
-    const inWeek = items.filter((it) => String(it.week_of) === wk);
-    const chans = [...new Set(inWeek.map((it) => it.channel))].sort((a, b) => CHANNEL_ORDER.indexOf(a) - CHANNEL_ORDER.indexOf(b));
-    for (const ch of chans) {
-      box.appendChild(mk('p', 'eyebrow', CHANNEL_SAY[ch] || ch));
-      const ul = mk('ul', 'mk-list');
-      for (const it of inWeek.filter((x) => x.channel === ch)) ul.appendChild(chatItem(it, false));
-      box.appendChild(ul);
-    }
+async function redraw(ctx) {
+  const d = await ctx.refresh();
+  if (d) D = d;
+  if (host && host.isConnected && host.querySelector('.mk2-board') && d) drawBoard(ctx);   // only when the board is the part shown
+}
+
+export async function mount(el, ctx) {
+  C = ctx; host = el; D = ctx.week;
+  if (!D || D.ok !== true || (ctx.handoff && ctx.handoff.week)) D = await ctx.refresh(ctx.handoff && ctx.handoff.week);
+  drawBoard(ctx);
+}
+
+function drawBoard(ctx) {
+  host.innerHTML = '';
+  const head = mk('div', 'mk-head');
+  head.append(mk('h2', 'mk-title', 'What goes out this week, where, and to whom?'));
+  host.appendChild(head);
+  if (!D || D.ok !== true) {
+    host.appendChild(mk('p', 'notice flagged', 'The plan could not be read just now: ' + String((D && D.reason) || 'no reason was given') + '. Nothing here is a claim either way.'));
+    return;
+  }
+  const who = ctx.who || null;
+  // the week tabs: last week, this week, the next two, each with its count
+  const tabs = mk('div', 'mk2-weeks'); tabs.setAttribute('role', 'tablist');
+  const thisWeek = addDays(D.today, -(((new Date(D.today + 'T12:00:00').getDay() + 6) % 7)));
+  for (const w of (D.weeks || [])) {
+    const b = mk('button', 'mk2-week'); b.type = 'button'; b.setAttribute('role', 'tab');
+    b.setAttribute('aria-selected', w.week_of === D.week_of ? 'true' : 'false');
+    b.append(mk('span', null, w.week_of === thisWeek ? 'This week' : short(w.week_of)), document.createTextNode(' '), data_('span', 'mk2-week-n', String(w.items)));
+    b.addEventListener('click', async () => { picked = null; const d = await ctx.refresh(w.week_of); D = d; drawBoard({ ...ctx, week: d }); });
+    tabs.appendChild(b);
+  }
+  host.appendChild(tabs);
+  // the days: today first in the current week, then the rest; Saturday and Sunday only when something is on them
+  const days = [];
+  for (let k = 0; k < 7; k++) days.push(addDays(D.week_of, k));
+  const dow = (iso) => ((new Date(iso + 'T12:00:00').getDay() + 6) % 7) + 1;
+  const dated = (dd) => (D.items || []).filter((x) => x.day === dd);
+  const weekly = (dd) => (D.every || []).filter((x) => (x.days || []).includes(dow(dd)));
+  let cols = days.filter((dd) => dow(dd) <= 5 || dated(dd).length || weekly(dd).length);
+  const inWeek = D.today >= D.week_of && D.today <= addDays(D.week_of, 6);
+  if (inWeek) cols = [...cols.filter((dd) => dd >= D.today), ...cols.filter((dd) => dd < D.today)];
+  const board = mk('div', 'mk2-board');
+  const all = [];
+  for (const dd of cols) {
+    const col = mk('section', 'mk2-day' + (dd === D.today ? ' mk2-today' : '') + (inWeek && dd < D.today ? ' mk2-past' : ''));
+    col.appendChild(mk('h3', 'mk2-day-head', (dd === D.today ? 'Today, ' : '') + wd(dd) + ' ' + short(dd)));
+    const list = mk('div', 'mk2-cards');
+    for (const it of dated(dd)) { list.appendChild(card(it, who, ctx)); all.push(it); }
+    col.appendChild(list);
+    col.appendChild(weeklyFold(weekly(dd), who, ctx, all));
+    board.appendChild(col);
+  }
+  const anyCol = mk('section', 'mk2-day mk2-any');
+  anyCol.appendChild(mk('h3', 'mk2-day-head', 'Any day this week'));
+  const undated = (D.items || []).filter((x) => !x.day);
+  const anyList = mk('div', 'mk2-cards');
+  for (const it of undated) { anyList.appendChild(card(it, who, ctx)); all.push(it); }
+  anyCol.appendChild(anyList);
+  anyCol.appendChild(weeklyFold((D.every || []).filter((x) => !(x.days || []).length), who, ctx, all));
+  board.appendChild(anyCol);
+  host.appendChild(board);
+  if (!(D.items || []).length) host.appendChild(mk('p', 'state', 'Nothing in the plan is dated for this week' + (Number(D.held_back) ? ' that you may see' : '') + '; the weekly rhythm is under each day.'));
+  if (Number(D.held_back)) host.appendChild(mk('p', 'state', D.held_back + ' ' + plural(D.held_back, 'item this week comes', 'items this week come') + ' from chats private to the person who saved them, or not shared with you. They appear here when the chat is shared.'));
+  // the picked item, under the board
+  const KR = { post: 0, email: 1, page: 2, campaign: 3, follow_up: 4, other: 5 };   // the same order as the next-step card
+  const first = (f) => all.filter(f).sort((a, b) => (KR[a.kind] ?? 9) - (KR[b.kind] ?? 9))[0];
+  const pick = all.find((x) => picked && x.id === picked.id) || first((x) => x.state === 'open' && x.day === D.today && whose(x, who)) || first((x) => x.state === 'open' && whose(x, who) && x.day) || null;
+  const panel = mk('section', 'mk2-panel'); panel.setAttribute('aria-live', 'polite');
+  host.appendChild(panel);
+  if (pick) drawPanel(panel, pick, ctx); else panel.appendChild(mk('p', 'quiet', 'Press an item to see it and its one button.'));
+  const r = D.reach || {};
+  host.appendChild(mk('p', 'mk-item-meta', 'Read from ' + (r.chats_read || 0) + ' saved ' + plural(r.chats_read, 'chat', 'chats') + ', ' + (r.chats_with_plan || 0) + ' of them with plan items' + (r.read_at ? ', last read ' + day(r.read_at) : '') + '.' + (Number(r.chats_owed) ? ' ' + r.chats_owed + ' still being read.' : '')));
+}
+
+function card(it, who, ctx) {
+  const b = mk('button', 'mk2-card mk2-ch-' + (CH[it.fire] || 'other') + (whose(it, who) ? '' : ' mk2-faded') + (it.state === 'done' || it.state === 'skipped' ? ' mk2-closed' : it.state === 'fired' ? ' mk2-fired' : '') + (picked && picked.id === it.id ? ' mk2-picked' : ''));
+  b.type = 'button';
+  b.appendChild(data_('span', 'mk2-card-ch', it.channel || 'Other'));
+  b.appendChild(data_('span', 'mk2-card-title', it.title));
+  const meta = [];   // her own words (rhythm, owner) are never translated; the state is the Tool's words
+  if (it.cadence) meta.push(it.cadence);
+  if (it.owned_by) meta.push(it.owned_by);
+  if (meta.length) b.appendChild(data_('span', 'mk2-card-meta', meta.join(' · ')));
+  const st = it.state === 'done' ? (it.act && it.act.by ? 'Done by ' + it.act.by : 'Done') : it.state === 'skipped' ? 'Skipped'
+    : it.state === 'fired' ? (it.act && it.act.fired === 'draft_made' ? 'Draft made' : it.act && it.act.fired === 'to_sending' ? 'In Sending' : 'Copied and opened') : '';
+  if (st || it.moved) b.appendChild(mk('span', 'mk2-card-meta', [st, it.moved ? 'Moved from ' + short(it.planned_day) : ''].filter(Boolean).join(' · ')));
+  b.addEventListener('click', () => { picked = it; drawBoard(ctx); const p = host.querySelector('.mk2-panel'); if (p && p.scrollIntoView) p.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
+  return b;
+}
+
+// The weekly rhythm under a day: hers shown, the others folded with their count.
+function weeklyFold(items, who, ctx, all) {
+  const box = mk('div', 'mk2-weekly');
+  if (!items.length) return box;
+  const mine = items.filter((x) => whose(x, who)), rest = items.filter((x) => !whose(x, who));
+  for (const it of mine) { box.appendChild(card(it, who, ctx)); all.push(it); }
+  if (rest.length) {
+    const det = mk('details', 'mk2-more');
+    det.appendChild(mk('summary', 'mk-hand-label', (who ? rest.length + ' weekly for others' : rest.length + ' weekly')));
+    for (const it of rest) { det.appendChild(card(it, who, ctx)); all.push(it); }
+    if (picked && rest.some((x) => x.id === picked.id)) det.open = true;
+    box.appendChild(det);
   }
   return box;
 }
 
-function chatItem(it, rhythm) {
-  const li = mk('li', 'mk-item');
-  const meta = mk('p', 'mk-item-meta');
-  if (rhythm) meta.appendChild(data_('span', null, it.cadence));
-  else meta.appendChild(mk('span', null, it.day ? wday(it.day) : 'During the week'));
-  meta.append(document.createTextNode(' · '), mk('span', null, KIND_C[it.kind] || it.kind), document.createTextNode(' · '), mk('span', null, STATUS[it.status] || it.status));
-  if (rhythm) meta.append(document.createTextNode(' · '), mk('span', null, CHANNEL_SAY[it.channel] || it.channel));
-  li.appendChild(meta);
-  li.appendChild(data_('p', 'mk-item-line', it.title));
-  if (it.what) li.appendChild(data_('p', 'mk-item-known', it.what));
-  if (it.audience) { const a = mk('p', 'state', 'For: '); a.appendChild(data_('span', null, it.audience)); li.appendChild(a); }
-  if (it.owned_by) { const o = mk('p', 'state', 'Done by: '); o.appendChild(data_('span', null, it.owned_by)); li.appendChild(o); }
-  if (it.wording_fail) li.appendChild(mk('p', 'stalled', 'This breaks one of your wording rules (' + it.wording_fail + '). Change it before you use it.'));
-  if (it.disagrees) li.appendChild(mk('p', 'stalled', 'Another chat planned something different here. This is the later word.'));
-  if (it.draft) {
-    const det = C.el('details');
-    const sum = mk('summary', null, it.kind === 'email' ? 'See the email' : 'See the words');
-    sum.style.minHeight = '44px'; sum.style.display = 'flex'; sum.style.alignItems = 'center'; sum.style.cursor = 'pointer';
-    const words = data_('div', 'mk-item-known', it.draft); words.style.whiteSpace = 'pre-wrap';
-    det.append(sum, words);
-    li.appendChild(det);
-  }
+function drawPanel(panel, it, ctx) {
+  panel.innerHTML = '';
+  panel.appendChild(data_('h3', 'mk2-panel-title', it.title));
+  const meta = [it.channel || 'Other'];   // her own words, never translated
+  if (it.audience) meta.push(it.audience);
+  if (it.owned_by) meta.push(it.owned_by);
+  if (it.cadence) meta.push(it.cadence);
+  panel.appendChild(data_('p', 'mk-item-meta', meta.join(' · ')));
+  panel.appendChild(mk('p', 'mk-item-meta', [KIND[it.kind] || it.kind, it.day && !it.cadence ? wd(it.day) + ' ' + short(it.day) : '', STATUS[it.status] || it.status || ''].filter(Boolean).join(' · ')));
+  if (it.act) panel.appendChild(mk('p', 'state', (it.act.act === 'done' ? 'Done' : it.act.act === 'skipped' ? 'Skipped' : it.act.fired === 'draft_made' ? 'Draft made' : it.act.fired === 'to_sending' ? 'Handed to Sending' : 'Copied and opened')
+    + ' by ' + (it.act.by || 'someone') + ' on ' + day(it.act.at) + (it.act.why ? ': ' + it.act.why : '') + '.'));
+  else if (it.said_done) panel.appendChild(mk('p', 'state', 'Said to be done in the chat.'));
+  if (words(it)) { const t = data_('div', 'mk2-words', words(it).slice(0, 3000)); panel.appendChild(t); }
+  if (it.wording_fail) panel.appendChild(mk('p', 'stalled', 'Breaks one of your wording rules: ' + it.wording_fail + '. Change it before it goes out.'));
+  const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
   const acts = mk('div', 'mk-acts');
-  const out = mk('div');
+  if (it.state === 'open' || it.state === 'fired') {
+    acts.appendChild(fireButton(it, said, ctx));
+    if (it.fire !== 'mark') { const d = mk('button', 'go ghost', 'Done'); d.type = 'button'; d.addEventListener('click', () => act(it, 'done', null, null, said, ctx)); acts.appendChild(d); }
+  } else {
+    const u = mk('button', 'go ghost', 'Open it again'); u.type = 'button'; u.addEventListener('click', () => act(it, 'undone', null, null, said, ctx)); acts.appendChild(u);
+  }
+  panel.appendChild(acts);
+  if (it.state === 'open' || it.state === 'fired') {
+    const more = mk('div', 'mk-acts mk2-more-acts');
+    const why = mk('input', 'mk-why'); why.type = 'text'; why.maxLength = 300; why.placeholder = 'Why skip it (a few words)'; why.setAttribute('aria-label', 'Why skip it');
+    const skip = mk('button', 'go ghost', 'Skip'); skip.type = 'button';
+    skip.addEventListener('click', () => { if (String(why.value).trim().length < 3) { say(said, 'stalled', 'Say in a few words why it is skipped.'); why.focus(); return; } act(it, 'skipped', why.value, null, said, ctx); });
+    more.append(why, skip);
+    if (!it.cadence) {
+      const sel = C.el('select'); sel.className = 'mk-hand-pick'; sel.setAttribute('aria-label', 'Move to');
+      const o0 = C.el('option'); o0.value = ''; o0.textContent = 'Move to'; sel.appendChild(o0);
+      for (let k = 0; k < 12; k++) {
+        const dd = addDays(D.week_of, k);
+        const dw = ((new Date(dd + 'T12:00:00').getDay() + 6) % 7) + 1;
+        if (dw > 5 || dd === it.day || dd < D.today) continue;
+        const o = C.el('option'); o.value = dd; o.textContent = wd(dd) + ' ' + short(dd); sel.appendChild(o);
+      }
+      sel.addEventListener('change', () => { if (sel.value) act(it, 'moved', null, sel.value, said, ctx); });
+      more.appendChild(sel);
+    }
+    panel.appendChild(more);
+  }
+  panel.appendChild(said);
   const src = it.source || {};
+  const out = mk('div', 'mk2-src');
+  const links = mk('div', 'mk-acts');
   if (src.chat_id) {
-    const b = mk('button', 'go ghost', 'Open the chat it came from'); b.type = 'button';
-    b.addEventListener('click', () => { out.innerHTML = ''; showSource(out, src); });
-    acts.appendChild(b);
+    const s = mk('button', 'go ghost', 'From the chat of ' + day(src.said_at)); s.type = 'button';
+    s.addEventListener('click', () => { out.innerHTML = ''; showSource(out, src); });
+    links.appendChild(s);
   }
   if (Number(it.changes)) {
     const h = mk('button', 'go ghost', 'See how it changed (' + it.changes + ')'); h.type = 'button';
     h.addEventListener('click', () => { out.innerHTML = ''; showHistory(out, it.id); });
-    acts.appendChild(h);
+    links.appendChild(h);
   }
-  li.append(acts, out);
-  return li;
+  panel.append(links, out);
 }
 
 // THE SOURCE: the chat's title and date, and the message the item came from, read through chat_open (which refuses what she may not open).
-async function showSource(host, src) {
+async function showSource(box, src) {
   const w = mk('p', 'working no-late', 'Opening the chat');
-  host.appendChild(w);
+  box.appendChild(w);
   const r = await rpc('chat_open', { p_chat: src.chat_id });
   w.remove();
-  if (!r || r.ok !== true) { host.appendChild(mk('p', 'notice flagged', 'The chat could not be opened: ' + String((r && (r.note || r.reason)) || 'no reason was given') + '.')); return; }
-  const box = mk('div', 'mk-item-known');
+  if (!r || r.ok !== true) { box.appendChild(mk('p', 'notice flagged', 'The chat could not be opened: ' + String((r && (r.note || r.reason)) || 'no reason was given') + '.')); return; }
   const head = mk('p', 'mk-item-meta');
   head.append(data_('span', null, r.title), document.createTextNode(' · '), data_('span', null, day(src.said_at || r.started_at)));
   box.appendChild(head);
   const m = (r.messages || [])[Number(src.msg_no)];
   if (m) {
     box.appendChild(mk('p', 'eyebrow', m.role === 'assistant' ? 'What the assistant wrote' : 'What was asked'));
-    const t = data_('div', 'mk-item-known', String(m.text || '').slice(0, 2400) + (String(m.text || '').length > 2400 ? ' ...' : ''));
-    t.style.whiteSpace = 'pre-wrap';
-    box.appendChild(t);
+    box.appendChild(data_('div', 'mk2-words', String(m.text || '').slice(0, 2400) + (String(m.text || '').length > 2400 ? ' ...' : '')));
   } else box.appendChild(mk('p', 'stalled', 'That message is no longer in the chat.'));
   box.appendChild(mk('p', 'state', 'The whole chat is on the Chats tab.'));
-  host.appendChild(box);
 }
 
-async function showHistory(host, id) {
+async function showHistory(box, id) {
   const w = mk('p', 'working no-late', 'Reading how this changed');
-  host.appendChild(w);
+  box.appendChild(w);
   const r = await rpc('mk_plan_item_history', { p_item: id });
   w.remove();
-  if (!r || r.ok !== true) { host.appendChild(mk('p', 'notice flagged', 'Its history could not be read: ' + String((r && r.reason) || 'no reason was given') + '.')); return; }
+  if (!r || r.ok !== true) { box.appendChild(mk('p', 'notice flagged', 'Its history could not be read: ' + String((r && r.reason) || 'no reason was given') + '.')); return; }
   const ul = mk('ul', 'mk-list');
   for (const e of (r.earlier || [])) {
     const li = mk('li', 'mk-item');
@@ -248,247 +326,9 @@ async function showHistory(host, id) {
     li.appendChild(mk('p', 'mk-item-meta', 'Earlier reading, replaced on ' + day(v.replaced_at)));
     li.appendChild(data_('p', 'mk-item-line', v.title));
     if (v.what) li.appendChild(data_('p', 'mk-item-known', v.what));
-    if (v.why) li.appendChild(mk('p', 'state', v.why));
     ul.appendChild(li);
   }
   if (!ul.children.length) ul.appendChild(mk('li', 'quiet', 'No earlier version you may see.'));
-  host.appendChild(ul);
-  if (Number(r.earlier_held_back)) host.appendChild(mk('p', 'state', r.earlier_held_back + ' earlier ' + plural(r.earlier_held_back, 'version comes', 'versions come') + ' from chats you may not open.'));
-}
-
-// FIND IN THE PLAN: words narrow every week (the same function the box asks).
-function findBox(sec) {
-  const box = mk('div', 'mk-hand');
-  const label = mk('label', 'mk-hand-label', 'Find in the plan');
-  const q = mk('input', 'mk-why'); q.type = 'text'; q.placeholder = 'For example: newsletter, carousel, ECC';
-  q.setAttribute('aria-label', 'Find in the plan');
-  label.appendChild(q);
-  const go = mk('button', 'go ghost', 'Find'); go.type = 'button';
-  const out = mk('div');
-  go.addEventListener('click', async () => {
-    const words = q.value.trim();
-    out.innerHTML = '';
-    if (words.length < 2) { out.appendChild(mk('p', 'stalled', 'Say what to look for.')); return; }
-    go.disabled = true;
-    const w = mk('p', 'working no-late', 'Looking through the plan'); out.appendChild(w);
-    const r = await rpc('mk_plan_calendar', { p_q: words });
-    go.disabled = false; w.remove();
-    if (!r || r.ok !== true) { out.appendChild(mk('p', 'notice flagged', 'Nothing could be looked up: ' + String((r && r.reason) || 'no reason was given') + '.')); return; }
-    const found = (r.items || []).length + (r.every || []).length;
-    out.appendChild(mk('p', 'state', found ? found + ' ' + plural(found, 'item matches', 'items match') + '.' : 'No item matches.'));
-    if ((r.items || []).length) out.appendChild(weeksBlock(r.items));
-    if ((r.every || []).length) { const ul = mk('ul', 'mk-list'); for (const it of r.every) ul.appendChild(chatItem(it, true)); out.appendChild(ul); }
-  });
-  q.addEventListener('keydown', (e) => { if (e.key === 'Enter') go.click(); });
-  box.append(label, go, out);
-  return box;
-}
-
-function askBox(stage) {
-  const box = mk('section', 'mk-hand');
-  const has = !!(view && view.plan);
-  const label = mk('label', 'mk-hand-label', has ? 'Change the plan' : 'What should the next weeks be about?');
-  const text = mk('textarea', 'mk-text'); text.rows = 2;
-  text.placeholder = has ? 'For example: move the email batch to Tuesday, and add a post about rates' : 'For example: plan November around AI cuts both ways';
-  text.setAttribute('aria-label', has ? 'Change the plan' : 'What should the next weeks be about?');
-  label.appendChild(text);
-  const go = mk('button', 'go', has ? 'Change the plan' : 'Make the plan'); go.type = 'button';
-  const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
-  go.addEventListener('click', async () => {
-    const ask = text.value.trim();
-    if (ask.length < 3) { said.className = 'mk-said stalled'; said.textContent = 'Say what the plan should be about.'; return; }
-    go.disabled = true; said.textContent = '';
-    const done = working(go, has ? 'Changing your plan' : 'Making your plan from your business, your lists and who is hiring',
-      'Still working: a plan for several weeks takes up to two minutes.');
-    const r = await post({ action: 'plan', ask });
-    done(); go.disabled = false;
-    if (!r || r.ok !== true) { said.className = 'mk-said stalled'; said.textContent = 'No plan was kept: ' + String((r && r.reason) || 'no reason was given') + '.'; return; }
-    await drawPlan(stage, C);
-    const top = stage.querySelector('.mk-plan-said');
-    if (top) {
-      top.textContent = 'Kept: ' + r.items + ' ' + plural(r.items, 'item', 'items') + '.' + (r.dropped ? ' ' + r.dropped + ' ' + plural(r.dropped, 'item fell', 'items fell') + ' outside the weeks of the plan or had no kind, so they were left out.' : '');
-      for (const x of (r.lists_refused || [])) top.appendChild(mk('span', null, ' A list could not be made: ' + String(x.reason || '')));
-    }
-  });
-  box.append(label, go, said);
-  return box;
-}
-
-function calendar(p) {
-  const sec = mk('section', 'mk-roles');
-  const said = mk('p', 'mk-plan-said state'); said.setAttribute('aria-live', 'polite');
-  sec.appendChild(said);
-  if (!p) { sec.appendChild(mk('p', 'quiet', 'There is no plan yet. Say above what the next weeks should be about.')); return sec; }
-  sec.appendChild(mk('h3', 'mk-sub', 'From ' + day(p.from) + ' to ' + day(p.to)));
-  if (p.summary) sec.appendChild(data_('p', 'mk-lede', p.summary));
-  sec.appendChild(mk('p', 'quiet', 'Made from what you asked on ' + day(p.made_at) + (Number(p.versions) > 1 ? '. Every earlier version is kept.' : '.')));
-  let week = '';
-  let ul = null;
-  for (const it of (p.items || [])) {
-    const d = new Date(String(it.day) + 'T12:00:00');
-    const monday = new Date(d); monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-    const wk = monday.toISOString().slice(0, 10);
-    if (wk !== week) { week = wk; sec.appendChild(mk('h3', 'mk-sub', 'Week of ' + day(wk))); ul = mk('ul', 'mk-list'); sec.appendChild(ul); }
-    ul.appendChild(itemRow(it));
-  }
-  return sec;
-}
-
-function itemRow(it) {
-  const li = mk('li', 'mk-item');
-  const top = mk('p', 'mk-item-meta', wday(it.day) + ' · ' + (KIND[it.kind] || it.kind));
-  if (it.channel) top.append(document.createTextNode(' · '), data_('span', null, it.channel));
-  li.appendChild(top);
-  li.appendChild(data_('p', 'mk-item-line', it.title));
-  if (it.what) li.appendChild(data_('p', 'mk-item-known', it.what));
-  if (it.wording_fail) li.appendChild(mk('p', 'stalled', 'This breaks one of your wording rules (' + it.wording_fail + '). Change it before you use it.'));
-  if (it.draft) {
-    const det = C.el('details');
-    const sum = mk('summary', null, it.kind === 'post' ? 'See the post' : (it.kind === 'page' ? 'See the opening' : 'See the email'));
-    sum.style.minHeight = '44px'; sum.style.display = 'flex'; sum.style.alignItems = 'center'; sum.style.cursor = 'pointer';
-    const words = data_('div', 'mk-item-known', it.draft); words.style.whiteSpace = 'pre-wrap';
-    det.append(sum, words);
-    li.appendChild(det);
-  }
-  if (it.list_id) {
-    const q = (view.lists || []).find((l) => l.id === it.list_id);
-    const b = mk('button', 'go ghost', 'Who it goes to'); b.type = 'button';
-    const out = mk('div');
-    b.addEventListener('click', () => { out.innerHTML = ''; showList(out, it.list_id, true, 0); });
-    const line = mk('p', 'quiet', 'To the list: ');
-    line.appendChild(data_('span', null, q ? q.question : ''));
-    if (q && q.counts) line.appendChild(mk('span', null, ' (' + n0(q.counts.in) + ' ' + plural(q.counts.in, 'person', 'people') + ')'));
-    li.append(line, b, out);
-  } else if (it.list_question) {
-    const line = mk('p', 'quiet', 'Its list could not be made: ');
-    line.appendChild(data_('span', null, it.list_question));
-    li.appendChild(line);
-  }
-  return li;
-}
-
-function listsPart(stage) {
-  const sec = mk('section', 'mk-people');
-  sec.appendChild(mk('h3', 'mk-sub', 'Lists'));
-  sec.appendChild(mk('p', 'quiet', 'A list is a question about who to reach. The Tool keeps it current every day and says why each person is on it, and why anyone close is left out.'));
-  const label = mk('label', 'mk-hand-label', 'Ask for a list');
-  const q = mk('input', 'mk-why'); q.type = 'text'; q.placeholder = 'For example: SAP program leads at companies hiring, not contacted in 6 months';
-  q.setAttribute('aria-label', 'Ask for a list');
-  label.appendChild(q);
-  const go = mk('button', 'go ghost', 'Make the list'); go.type = 'button';
-  const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
-  go.addEventListener('click', async () => {
-    const question = q.value.trim();
-    if (question.length < 4) { said.className = 'mk-said stalled'; said.textContent = 'Say who should be on the list.'; return; }
-    go.disabled = true; said.textContent = '';
-    const done = working(go, 'Finding the people for this list', 'Still working: going through everyone in your records.');
-    const r = await post({ action: 'list', question });
-    done(); go.disabled = false;
-    if (!r || r.ok !== true) { said.className = 'mk-said stalled'; said.textContent = 'No list was made: ' + String((r && r.reason) || 'no reason was given') + '.'; return; }
-    await drawPlan(stage, C);
-  });
-  sec.append(label, go, said);
-  const lists = view.lists || [];
-  if (!lists.length) sec.appendChild(mk('p', 'quiet', 'No lists yet.'));
-  const ul = mk('ul', 'mk-list');
-  for (const l of lists) ul.appendChild(listRow(l));
-  sec.appendChild(ul);
-  sec.appendChild(mk('p', 'state', 'People are matched by job title, company and place in your CRM, your applicant tracking and your LinkedIn connections. Emails are counted from the mailboxes the Tool reads, back to ' + day(view.contact_since) + ' so far.'));
-  return sec;
-}
-
-function listRow(l) {
-  const li = mk('li', 'mk-item');
-  const c = l.counts || {};
-  li.appendChild(data_('p', 'mk-item-line', l.question));
-  li.appendChild(mk('p', 'mk-item-known', n0(c.in) + ' ' + plural(c.in, 'person is', 'people are') + ' on it. ' + n0(c.out) + ' close ' + plural(c.out, 'match is', 'matches are') + ' left out, each with why.'));
-  // LEFT OUT, AND WHY (seat rulings-1049, decision 1049 (3)): one line counting who is left out by reason, so nobody known to
-  // the business is dropped without her seeing it; Who is left out and why lists each person with the one reason.
-  const outBits = OUT_ORDER.filter((k) => Number(c[k])).map((k) => n0(c[k]) + ' ' + OUT_COUNT[k][Number(c[k]) === 1 ? 0 : 1]);
-  if (outBits.length) li.appendChild(mk('p', 'mk-item-known', 'Left out: ' + outBits.join(', ') + '.'));
-  const bits = ['Kept current daily, last on ' + day(l.refreshed_at)];
-  if (Number(l.new)) bits.push(l.new + ' new since the day before');
-  if (Number(c.in) > Number(c.shown_cap || 500)) bits.push('the first ' + n0(c.shown_cap || 500) + ' are kept to show');
-  li.appendChild(mk('p', 'mk-item-meta', bits.join(' · ') + '.'));
-  const acts = mk('div', 'mk-acts');
-  const out = mk('div');
-  const a = mk('button', 'go ghost', 'Who is on it'); a.type = 'button';
-  a.addEventListener('click', () => { out.innerHTML = ''; showList(out, l.id, true, 0); });
-  const b = mk('button', 'go ghost', 'Who is left out and why'); b.type = 'button';
-  b.addEventListener('click', () => { out.innerHTML = ''; showList(out, l.id, false, 0); });
-  const s = mk('button', 'go ghost', 'Stop keeping this list'); s.type = 'button';
-  const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
-  s.addEventListener('click', async () => {
-    s.disabled = true;
-    const r = await rpc('mk_list_retire', { p_list: l.id });
-    if (r.ok) { li.remove(); return; }
-    s.disabled = false; said.className = 'mk-said stalled'; said.textContent = 'Not stopped: ' + (r.reason || 'no reason was given') + '.';
-  });
-  acts.append(a, b, s);
-  li.append(acts, said, out);
-  return li;
-}
-
-const OUT_ORDER = ['client', 'colleague', 'unsubscribed', 'known', 'contacted', 'not_hiring', 'hiring', 'no_email'];
-const OUT_COUNT = {
-  client: ['current client', 'current clients'], colleague: ['colleague', 'colleagues'], unsubscribed: ['unsubscribed', 'unsubscribed'],
-  known: ['known to you', 'known to you'], contacted: ['contacted recently', 'contacted recently'], not_hiring: ['not hiring', 'not hiring'],
-  hiring: ['hiring', 'hiring'], no_email: ['without an email address', 'without an email address'],
-};
-const OUT_WHY = {
-  colleague: 'Left out: a colleague at your business.',
-  unsubscribed: 'Left out: they unsubscribed, so they never get your marketing.',
-  not_hiring: 'Left out: their company is not hiring in the job alerts of the last 30 days.',
-  hiring: 'Left out: their company is hiring, and you asked for companies that are not.',
-  no_email: 'Left out: there is no email address on file for them.',
-};
-
-function reasonLines(p) {
-  const r = p.reasons || {};
-  const lines = [];
-  if (p.why_out === 'contacted') lines.push(mk('p', 'stalled', 'Left out: you last emailed with them on ' + day(r.last_contact) + ', inside the time you asked.'));
-  else if (p.why_out === 'client') lines.push(mk('p', 'stalled', 'Left out: a current client' + (r.last_invoice ? ' (last invoiced in QuickBooks on ' + day(r.last_invoice) + ', within 90 days)' : ' (an active client in your records)') + '.'));
-  else if (p.why_out === 'known') lines.push(mk('p', 'stalled', 'Left out: known to you, you have been writing with them in the last 30 days (last on ' + day(r.last_out) + ').'));
-  else if (p.why_out === 'unsubscribed' && r.unsubscribed_at) lines.push(mk('p', 'stalled', 'Left out: they unsubscribed on ' + day(r.unsubscribed_at) + ', so they never get your marketing.'));
-  else if (p.why_out) lines.push(mk('p', 'stalled', OUT_WHY[p.why_out] || 'Left out.'));
-  if (r.title || r.company) {
-    const t = mk('p', 'mk-person-from');
-    if (r.title) t.appendChild(data_('span', null, r.title));
-    if (r.title && r.company) t.appendChild(mk('span', null, ' at '));
-    if (r.company) t.appendChild(data_('span', null, r.company));
-    lines.push(t);
-  }
-  if (r.hiring_roles) lines.push(mk('p', 'state', 'Their company is hiring ' + r.hiring_roles + ' ' + plural(r.hiring_roles, 'role', 'roles') + ' (last job alert ' + day(r.hiring_at) + ').'));
-  if (p.why_out !== 'contacted') lines.push(mk('p', 'state', r.last_contact ? 'Last email with them: ' + day(r.last_contact) + '.' : 'No email with them since ' + day(r.since) + ', as far back as the Tool has read your mail.'));
-  lines.push(mk('p', 'state', 'Known from ' + fromWords(r.from) + '.' + (r.has_email ? '' : ' No email address on file.')));
-  return lines;
-}
-
-async function showList(host, id, inside, offset) {
-  const w = mk('p', 'working no-late', inside ? 'Reading who is on this list' : 'Reading who is left out and why');
-  host.appendChild(w);
-  const r = await rpc('mk_list_view', { p_list: id, p_inside: inside, p_limit: 50, p_offset: offset });
-  w.remove();
-  if (!r || r.ok !== true) { host.appendChild(mk('p', 'notice flagged', 'This list could not be read: ' + String((r && r.reason) || 'no reason was given') + '.')); return; }
-  const people = r.people || [];
-  if (!people.length && !offset) { host.appendChild(mk('p', 'quiet', inside ? 'Nobody is on this list now.' : 'Nobody close is left out.')); return; }
-  const ul = mk('ul', 'mk-person-list');
-  for (const p of people) {
-    const li = mk('li', 'mk-person');
-    const top = mk('div', 'mk-person-top');
-    top.appendChild(data_('span', 'mk-person-name', p.name));
-    if (p.new) top.appendChild(mk('span', 'mk-person-title', 'New'));
-    li.appendChild(top);
-    for (const x of reasonLines(p)) li.appendChild(x);
-    if (p.profile) { const a = mk('a', 'go ghost', 'Open profile'); a.href = p.profile; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); }
-    ul.appendChild(li);
-  }
-  host.appendChild(ul);
-  const total = Number(((r.counts || {})[inside ? 'in' : 'out']) || 0);
-  const kept = Math.min(total, Number((r.counts || {}).shown_cap || 500));
-  if (offset + people.length < kept) {
-    const more = mk('button', 'go ghost', 'Show more'); more.type = 'button';
-    more.addEventListener('click', () => { more.remove(); showList(host, id, inside, offset + 50); });
-    host.appendChild(more);
-  }
+  box.appendChild(ul);
+  if (Number(r.earlier_held_back)) box.appendChild(mk('p', 'state', r.earlier_held_back + ' earlier ' + plural(r.earlier_held_back, 'version comes', 'versions come') + ' from chats you may not open.'));
 }
