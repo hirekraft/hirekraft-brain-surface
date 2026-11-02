@@ -49,6 +49,7 @@
 import { conversation, composer, askDraft } from './answer.js?v=2026-10-29-mail-invites';
 import { fmtDate } from './dates.js?v=2026-10-22-dates';
 import { plainWords } from './plain.js?v=2026-10-27-mail-views';
+import { drawBench } from './bench.js?v=2026-11-02-bench-shortlist-1';   // Bench (staffing): Who we have on a requirement, only where the business has it
 import { screenLang, screenLangName } from './words.js?v=2026-10-29-thinkrooms-3';   // See it in <language> (seat language-and-nudge)
 
 // VIEWS IN THE LEFT COLUMN (seat mail-views, 2026-10-27; Alex 14:41 PT: "Worth your attention should be ... on the left-hand
@@ -1276,6 +1277,7 @@ function drawOrder(card, it, row, out) {
     f.append(inp, ok); out.innerHTML = ''; out.className = 'mailx-att-out'; out.appendChild(f); inp.focus();
   });
   row.appendChild(cl);
+  drawBench(card, row, it, { sb: C.sb, mk, plainWords });   // seat bench-shortlist: absent unless the business has Bench
 }
 async function orderCall(fn, args, btn, out, working, keys) {
   btn.disabled = true; out.className = 'mailx-att-out working'; out.textContent = working;
