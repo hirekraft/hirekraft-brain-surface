@@ -15,8 +15,8 @@ import { screenLang } from './words.js?v=2026-10-29-thinkrooms-3';
 
 const PARTS = [
   { key: 'plan', label: 'Plan', step: 1, file: './marketing-plan.js?v=2026-11-02-marketing-build-a' },
-  { key: 'send', label: 'Sending', step: 2, file: './marketing-send.js?v=2026-10-31-campaign-engine-2', legacy: 'drawSend' },   // marketing-build-b's line
-  { key: 'back', label: 'What came back', step: 3, file: './marketing-back.js?v=2026-11-01-elastic-history', legacy: 'drawBack' }, // marketing-build-b's line
+  { key: 'send', label: 'Sending', step: 2, file: './marketing-send.js?v=2026-11-02-marketing-build-b', legacy: 'drawSend' },   // marketing-build-b's line
+  { key: 'back', label: 'What came back', step: 3, file: './marketing-back.js?v=2026-11-02-marketing-build-b', legacy: 'drawBack' }, // marketing-build-b's line
   { key: 'signals', label: 'Signals', step: 4 },
   { key: 'lists', label: 'Lists', file: './marketing-lists.js?v=2026-11-02-marketing-build-b' },                                    // marketing-build-b's line
   { key: 'website', label: 'Website', file: './marketing-website.js?v=2026-11-02-marketing-build-a' },
