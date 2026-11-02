@@ -505,6 +505,27 @@ async function load(stage) {
   if (openKey && (data.items || []).some((x) => x.key === openKey)) drawItem(stage, openKey); else drawList(stage);
 }
 
+// THE JOB-SEARCH HELPER'S LINE (seat job-search-helper, 2026-11-02, decision 1055): what the daily web search did last, in counts
+// and reasons from the brain (job_search_last). A search that failed or was refused is said with its reason, never as "none found";
+// a run stopped at the day's spending limit says so. The openings it found are in the list above, each saying where it was seen.
+function webLine(s) {
+  if (!s) return null;
+  const p = mk('p', 'state');
+  if (s.state === 'never') { p.textContent = 'The daily web search for openings has not run yet. It runs every morning and adds what it finds here.'; return p; }
+  if (s.state === 'running') { p.textContent = 'The daily web search for openings is running now (started ' + day(s.at) + ').'; return p; }
+  if (s.state === 'failed') { p.textContent = 'The daily web search of ' + day(s.at) + ' did not finish: ' + (s.note || 'no reason was given') + '.'; return p; }
+  const bits = ['The daily web search of ' + day(s.at) + ' ran ' + n0(s.queries || 0) + ' searches and found ' + n0(s.kept || 0)
+    + (s.kept === 1 ? ' opening' : ' openings') + ' at ' + n0(s.companies || 0) + (s.companies === 1 ? ' company' : ' companies')
+    + ', for USD ' + Number(s.cost_usd || 0).toFixed(2) + ' of its USD ' + Number(s.cap_usd || 1).toFixed(2) + ' a day limit. Only those where you know someone are listed.'];
+  if (s.stopped_at_cap) bits.push('It stopped at the day’s limit' + (s.not_asked ? ', so ' + n0(s.not_asked) + ' searches were not asked' : '') + '.');
+  else if (s.not_asked) bits.push(n0(s.not_asked) + ' searches were not asked because the run’s time ran out.');
+  if (s.failed_n) bits.push(n0(s.failed_n) + (s.failed_n === 1 ? ' search' : ' searches') + ' could not run' + (s.failed && s.failed[0] && s.failed[0].reason ? ' (' + s.failed[0].reason + ')' : '') + '.');
+  if (s.dropped) bits.push(n0(s.dropped) + ' results were left out because their link was not one the search returned, or was on LinkedIn.');
+  if (s.control_found === false) bits.push('Its check search did not find the known opening it looks for every day, so this run may have missed openings.');
+  p.textContent = bits.join(' ');
+  return p;
+}
+
 function boundary(b) {
   const a = (b && b.alerts) || {};
   const read = Number(a.read || 0), waiting = Number(a.waiting || 0) + Number(a.reading || 0), failed = Number(a.failed || 0), other = Number(a.not_postings || 0);
@@ -517,6 +538,8 @@ function boundary(b) {
   if (failed) out.append(mk('p', 'state', failed + ' alerts could not be read and are left out.'));
   if (other) out.append(mk('p', 'state', other + ' emails that looked like alerts were newsletters or requests from other recruiters, so they are left out.'));
   if (b.closed_to_you) out.append(mk('p', 'state', b.closed_to_you + ' alerts are in mailboxes you cannot open, so they are left out.'));
+  const w = webLine(b.web_search);
+  if (w) out.append(w);
   if (b.follows) {
     out.append(mk('p', 'state', 'You follow ' + n0(b.follows) + ' companies on LinkedIn; ' + n0(b.followed_hiring || 0) + ' of them are hiring now'
       + (b.followed_hiring_nobody_known ? ', ' + n0(b.followed_hiring_nobody_known) + ' where you know nobody yet' : '') + '.'));
@@ -536,7 +559,7 @@ function drawList(stage) {
   const head = mk('div', 'mk-head');
   head.append(mk('h2', 'mk-title', 'Companies hiring where you know someone'));
   head.append(mk('p', 'mk-lede', data.owner
-    ? 'From the job alerts in your mail. Open one to see the roles, the people you know there and a short note to each.'
+    ? 'From the job alerts in your mail and the daily web search for openings. Open one to see the roles, the people you know there and a short note to each.'
     : data.marketing   // seat campaign-engine (decision 1050 (5)): under the Marketing folder rule, every hiring company, no hand-off
       ? 'Every company in the job alerts that is hiring where the business knows someone. You see them because you can open the Marketing folder. Open one to see the roles, the people and a short note to each.'
       : 'What the owner handed to you. Open one to see the people and the note for each.'));
@@ -589,6 +612,8 @@ function drawItem(stage, key) {
     if (r.location) li.append(document.createTextNode(' · '), data_('span', 'mk-role-where', r.location));
     // seat signals-outreach-2: the same opening on several boards is one role, with every board that listed it
     if (r.sources && r.sources.length) li.append(document.createTextNode(' · '), mk('span', 'mk-role-where', 'Seen on'), document.createTextNode(' '), data_('span', 'mk-role-where', r.sources.join(', ')));
+    // seat job-search-helper: an opening the daily web search found says which of the business's own words it searched for
+    if (r.found && r.found.length) li.append(document.createTextNode(' · '), mk('span', 'mk-role-where', 'Found by the daily web search for'), document.createTextNode(' '), data_('span', 'mk-role-where', r.found.map((f) => f.term).join(', ')));
     if (r.link) { const a = mk('a', 'mk-role-link', 'Open the job'); a.href = r.link; a.target = '_blank'; a.rel = 'noopener'; li.append(document.createTextNode(' '), a); }
     rl.appendChild(li);
   }
