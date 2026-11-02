@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="referrer" content="no-referrer"/>
+<title>Verrandi Google app</title>
+<!--
+  THE VERRANDI GOOGLE APP: ONE PASTE (seat verrandi-google-project, 2026-11-02, decision 1066).
+  Part of the Studio Surface (same sign-in, same allowlist, same studio-july function). The owner pastes the new Google
+  app's client ID and secret once. Nothing here stores them: they go in one POST to studio-july (action google_client),
+  which asks Google whether the pair is right and whether the app knows the verrandi.com return address BEFORE saving them
+  to studio_secrets. The secret is never shown back, never kept in this page, and the field is cleared after sending.
+  A studio page, not the Tool: Verrandi's Google app belongs to Verrandi (AN Software), not to a customer.
+-->
+<style>
+  :root{ --bg:#f7f6f3; --raise:#fff; --hair:#e6e2da; --ink:#191a1c; --ink-2:#52545a; --ink-3:#8c8f96;
+    --green:#3f7245; --green-bg:#e8f0e8; --amber:#bd6515; --amber-bg:#f6ead9; --red:#a83f37; --red-bg:#f6e4e1;
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --mono:ui-monospace,Menlo,monospace; }
+  *{ box-sizing:border-box }
+  body{ margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 var(--sans) }
+  main{ max-width:560px; margin:0 auto; padding:32px 16px 48px }
+  h1{ font-size:22px; margin:0 0 4px }
+  .sub{ color:var(--ink-2); margin:0 0 20px }
+  .card{ background:var(--raise); border:1px solid var(--hair); border-radius:12px; padding:18px; margin-bottom:16px }
+  label{ display:block; font-weight:600; margin:12px 0 6px }
+  input{ width:100%; min-height:44px; font:14px var(--mono); padding:10px 12px; border:1px solid var(--hair); border-radius:8px; background:#fff }
+  button{ min-height:44px; padding:0 18px; margin-top:16px; border:0; border-radius:8px; background:var(--ink); color:#fff; font:600 15px var(--sans); cursor:pointer }
+  button[disabled]{ opacity:.5; cursor:default }
+  .state{ display:flex; gap:10px; align-items:flex-start }
+  .badge{ flex:none; padding:2px 10px; border-radius:999px; font-size:13px; font-weight:600 }
+  .ok{ background:var(--green-bg); color:var(--green) } .wait{ background:var(--amber-bg); color:var(--amber) } .bad{ background:var(--red-bg); color:var(--red) }
+  .msg{ margin-top:12px; min-height:1.5em } .msg.bad{ background:none; color:var(--red) }
+  ul.checks{ margin:12px 0 0; padding-left:18px; color:var(--ink-2) }
+  .id{ font-family:var(--mono); font-size:13px; word-break:break-all }
+  .hint{ color:var(--ink-3); font-size:13px; margin-top:6px }
+  a{ color:inherit }
+</style>
+</head>
+<body>
+<main id="root"><p class="sub">Reading…</p></main>
+<script>
+const FN = "https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-july";
+const PATH = "https://yzsudnjwqplaaiwxbusi.supabase.co/functions/v1/studio-path";
+const root = document.getElementById("root");
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const tok = () => { try { return localStorage.getItem("studio_token") || ""; } catch { return ""; } };
+const setTok = t => { try { t ? localStorage.setItem("studio_token", t) : localStorage.removeItem("studio_token"); } catch {} };
+
+async function call(url, body, auth) {
+  const c = new AbortController(); const t = setTimeout(() => c.abort(), 25000);
+  try {
+    const r = await fetch(url, { method: "POST", signal: c.signal,
+      headers: Object.assign({ "content-type": "application/json" }, (auth !== false && tok()) ? { authorization: "Bearer " + tok() } : {}),
+      body: JSON.stringify(body) });
+    const txt = await r.text(); let j = {}; try { j = JSON.parse(txt); } catch { j = { error: txt.slice(0, 200) }; }
+    return { status: r.status, body: j };
+  } catch (e) {
+    return { status: 0, body: { error: (e && e.name === "AbortError") ? "No answer within 25 seconds." : "Could not reach the studio." } };
+  } finally { clearTimeout(t); }
+}
+
+function head() {
+  return '<h1>Verrandi Google app</h1><p class="sub">Where the new Google app’s ID and secret go, once. Nothing else on this page.</p>';
+}
+
+function gate(msg, bad) {
+  root.innerHTML = head() + '<div class="card"><b>Sign in to the Studio Surface</b>'
+    + '<label for="e">Email</label><input id="e" type="email" autocomplete="username"/>'
+    + '<label for="p">Password</label><input id="p" type="password" autocomplete="current-password"/>'
+    + '<button id="go">Sign in</button><div class="msg ' + (bad ? "bad" : "") + '" id="m">' + esc(msg || "") + '</div></div>';
+  const go = document.getElementById("go");
+  const submit = async () => {
+    go.disabled = true; const m = document.getElementById("m"); m.className = "msg"; m.textContent = "Checking…";
+    const r = await call(PATH, { action: "signin_password", email: document.getElementById("e").value.trim(), password: document.getElementById("p").value }, false);
+    if (r.status === 200 && r.body.ok && r.body.access_token) { setTok(r.body.access_token); return boot(); }
+    gate(r.body.message || r.body.error || ("That did not sign in (" + r.status + ")"), true);
+  };
+  go.onclick = submit;
+  document.getElementById("p").onkeydown = e => { if (e.key === "Enter") submit(); };
+}
+
+function draw(st, result) {
+  const saved = st && st.saved;
+  let h = head();
+  h += '<div class="card"><div class="state">'
+    + (saved ? '<span class="badge ok">On</span><div>The Verrandi app is saved. New Google sign-ins start on it.<div class="id">' + esc(st.client_id) + '</div>'
+               + '<div class="hint">Saved ' + esc(new Date(st.saved_at).toLocaleString()) + '. Pasting again replaces it.</div></div>'
+             : '<span class="badge wait">Not yet</span><div>No Verrandi app is saved. Google sign-ins still use the old app in HireKraft’s Google project.</div>')
+    + '</div></div>';
+  h += '<div class="card"><b>' + (saved ? "Replace the app" : "Paste from the file you downloaded") + '</b>'
+    + '<div class="hint">Open the downloaded file in Notepad. Copy the text after "client_id" and after "client_secret", without the quotes.</div>'
+    + '<label for="cid">Client ID</label><input id="cid" autocomplete="off" spellcheck="false" placeholder="….apps.googleusercontent.com"/>'
+    + '<label for="sec">Client secret</label><input id="sec" type="password" autocomplete="off" spellcheck="false"/>'
+    + '<button id="save">Check with Google and save</button><div class="msg" id="m"></div>';
+  if (result) {
+    h += '<p class="' + (result.ok ? "" : "msg bad") + '" style="margin:12px 0 0">' + esc(result.says || result.error || "") + '</p>';
+    if (result.checks && result.checks.length) h += '<ul class="checks">' + result.checks.map(c => '<li>' + (c.ok ? "✓ " : "✗ ") + esc(c.says) + '</li>').join("") + '</ul>';
+  }
+  h += '</div><p class="hint"><a href="../">Back to the Studio Surface</a></p>';
+  root.innerHTML = h;
+  const btn = document.getElementById("save");
+  btn.onclick = async () => {
+    const cid = document.getElementById("cid").value.trim();
+    const secEl = document.getElementById("sec"); const sec = secEl.value.trim();
+    secEl.value = "";
+    const m = document.getElementById("m");
+    if (!cid || !sec) { m.className = "msg bad"; m.textContent = "Both fields are needed."; return; }
+    btn.disabled = true; m.className = "msg"; m.textContent = "Asking Google whether the ID and secret belong together…";
+    const r = await call(FN, { action: "google_client", client_id: cid, client_secret: sec });
+    if (r.status === 401) { setTok(""); return gate("Your sign-in ended. Sign in again, then paste again.", true); }
+    const s = await call(FN, { action: "google_client" });
+    draw(s.status === 200 ? s.body : st, r.body && (r.body.says || r.body.error) ? r.body : { ok: false, says: "No answer (" + r.status + "). Nothing is known to be saved." });
+  };
+}
+
+async function boot() {
+  if (!tok()) return gate("");
+  root.innerHTML = head() + '<p class="sub">Reading…</p>';
+  const r = await call(FN, { action: "google_client" });
+  if (r.status === 401) { setTok(""); return gate("Sign in to continue."); }
+  if (r.status !== 200) {
+    root.innerHTML = head() + '<div class="card"><span class="badge bad">Not read</span> ' + esc(r.body.error || ("The studio answered " + r.status)) + '</div>';
+    return;
+  }
+  draw(r.body, null);
+}
+boot();
+</script>
+</body>
+</html>
