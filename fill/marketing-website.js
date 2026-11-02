@@ -10,7 +10,7 @@
 // Everything comes from the brain as the signed-in person (wp_site_health): the site is connected with the owner's password, so the
 // brain refuses anyone else, with its reason, shown here. No colour, size or font here (skin.css); no regex literals, no backslashes.
 
-import { fireButton } from './marketing-plan.js?v=2026-11-02-plan-fixes';
+import { fireButton } from './marketing-plan.js?v=2026-11-02-marketing-week-2';
 
 let C = null;
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
