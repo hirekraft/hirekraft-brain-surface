@@ -570,7 +570,7 @@ function drawAttnCard(read, it) {
   read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
   const card = mk('article', 'mailx-att-card mailx-matter-card' + (it.kind === 'thought' ? ' mailx-att-thought' : ''));
   const eyebrow = it.kind === 'thought' ? 'Left for you' : it.kind === 'money' ? 'Money' : it.following ? 'Following'
-    : it.kind === 'impostor' ? 'Pretending to be someone of your business' : it.kind === 'new_business' ? nbTag(it)[1] : mode === 'ai' ? 'For you' : 'Worth your attention';
+    : it.kind === 'impostor' ? 'Pretending to be someone of your business' : it.kind === 'new_business' ? nbTag(it)[1] : it.kind === 'work_order' ? orderTag(it) : mode === 'ai' ? 'For you' : 'Worth your attention';
   card.appendChild(mk('p', 'eyebrow', eyebrow));
   const h = mk('h2', 'mailx-subject', String(it.kind === 'email' || it.following ? (it.subject || it.title || '(no subject)') : (it.what || '')));
   card.appendChild(h);
@@ -614,7 +614,7 @@ function drawAttnCard(read, it) {
     card.appendChild(mk('p', 'mailx-att-why', String(it.why)));
   }
   const row = mk('div', 'mailx-att-acts');
-  choiceRow(it, row, out);
+  if (it.kind !== 'work_order') choiceRow(it, row, out);   // an order leaves the list by its state (done or closed), not by a choice
   // NEW BUSINESS (seat new-business-first, decisions 961 and 1045 (2)): Reply opens the email with the reply composer; Hand to a
   // colleague opens it with the forward composer, where she names who takes it. Nothing is sent until she sends it.
   if (it.kind === 'new_business' && it.open_source && it.open_id) {
@@ -624,6 +624,14 @@ function drawAttnCard(read, it) {
     hd.addEventListener('click', () => { pendingCompose = 'forward'; openEmail(it.open_source, it.open_id); });
     row.prepend(rp, hd);
   }
+  // WORK ORDERS (seat work-orders, decision 1056): a client's work, a new client's or a partner's ask opens as a work order in the
+  // business's own word with one press; an open order shows what was read into it and moves through its states to done.
+  if (it.kind === 'new_business' && it.open_source && it.open_id && ['work_order', 'lead', 'partner'].includes(it.nb_intent)) {
+    const ob = mk('button', 'go ghost', 'Open as ' + capWord(it.nb_word || 'work order')); ob.type = 'button';
+    ob.addEventListener('click', () => orderCall('work_order_open', { p_comm: String(it.key).split(':').slice(1).join(':') }, ob, out, 'Opening it.', [it.key, 'work_order:' + String(it.key).split(':').slice(1).join(':')]));
+    row.appendChild(ob);
+  }
+  if (it.kind === 'work_order') drawOrder(card, it, row, out);
   if ((it.kind === 'impostor' || it.kind === 'scam_alert') && it.open_source && it.open_id) {
     const o = mk('button', 'go ghost', 'Open the email'); o.type = 'button';
     o.addEventListener('click', () => openEmail(it.open_source, it.open_id));
@@ -1223,9 +1231,66 @@ function nbTag(it) {
   if (lab === 'selling') return ['people', 'Selling to you'];
   return it.pitch ? ['people', 'Looks like a pitch'] : ['money', 'New business'];
 }
+function capWord(w) { const x = String(w || ''); return x.charAt(0).toUpperCase() + x.slice(1); }
+function orderTag(it) { return capWord(it.word || it.tag || 'work order') + (it.state_words ? ' · ' + it.state_words : ''); }
+// An open work order on its card: what was read into it, then Draft the acknowledgement (the one drafting path, Draft a reply
+// for me, on its email), Open the email, and the next states; Close asks why. Nothing is sent until she sends it.
+function drawOrder(card, it, row, out) {
+  const facts = mk('dl', 'mailx-order-facts');
+  const fact = (k, v) => { if (!v) return; facts.appendChild(mk('dt', null, k)); const d = mk('dd', null, String(v)); d.translate = false; facts.appendChild(d); };
+  fact('For', it.for_whom); fact('Their client', it.end_client); fact('Contact', [it.contact_name, it.contact_email].filter(Boolean).join(', ')); fact('Wanted by', it.by_when);
+  if (facts.childNodes.length) card.appendChild(facts);
+  if (it.words) { card.appendChild(mk('h3', 'mailx-matter-h', 'What they wrote')); const q = mk('blockquote', 'mailx-matter-passage-full', String(it.words)); q.translate = false; card.appendChild(q); }
+  const atts = Array.isArray(it.attachments) ? it.attachments : [];
+  if (atts.length) {
+    card.appendChild(mk('h3', 'mailx-matter-h', atts.length === 1 ? 'Its attachment' : 'Its attachments'));
+    const ul = mk('ul', 'mailx-order-atts');
+    for (const a of atts) {
+      const li = mk('li', null, ''); const n = mk('span', null, String(a.file_name || 'a file')); n.translate = false; li.appendChild(n);
+      li.appendChild(mk('span', 'quiet', a.read ? ' (read into it)' : ' (not read: ' + (/^media:image/.test(String(a.why_not || '')) ? 'a picture, no text in it' : plainWords(String(a.why_not || 'no text in it'))) + ')'));
+      if (a.read && a.text) { const q = mk('p', 'mailx-att-checked', String(a.text).slice(0, 400)); q.translate = false; li.appendChild(q); }
+      ul.appendChild(li);
+    }
+    card.appendChild(ul);
+  }
+  if (it.open_source && it.open_id) {
+    const dr = mk('button', 'go', 'Draft the acknowledgement'); dr.type = 'button';
+    dr.addEventListener('click', () => { pendingCompose = 'draft'; openEmail(it.open_source, it.open_id); });
+    const oe = mk('button', 'go ghost', 'Open the email'); oe.type = 'button';
+    oe.addEventListener('click', () => openEmail(it.open_source, it.open_id));
+    row.append(dr, oe);
+  }
+  const next = { open: [['in_progress', 'In progress'], ['delivered', 'Delivered'], ['done', 'Done']], in_progress: [['delivered', 'Delivered'], ['done', 'Done']], delivered: [['done', 'Done'], ['in_progress', 'Back to in progress']] }[it.state] || [];
+  for (const [st, label] of next) {
+    const b = mk('button', 'go ghost', label); b.type = 'button';
+    b.addEventListener('click', () => orderCall('work_order_set', { p_id: it.wo_id, p_state: st }, b, out, 'Keeping it.', [it.key]));
+    row.appendChild(b);
+  }
+  const cl = mk('button', 'go ghost', 'Close'); cl.type = 'button';
+  cl.addEventListener('click', () => {
+    if (out.querySelector('.mailx-order-close')) return;
+    const f = mk('div', 'mailx-order-close');
+    const inp = mk('input', null); inp.type = 'text'; inp.placeholder = 'Why is it closed?'; inp.setAttribute('aria-label', 'Why is it closed?');
+    const ok = mk('button', 'go', 'Close it'); ok.type = 'button';
+    ok.addEventListener('click', () => orderCall('work_order_set', { p_id: it.wo_id, p_state: 'closed', p_reason: inp.value }, ok, out, 'Closing it.', [it.key]));
+    f.append(inp, ok); out.innerHTML = ''; out.className = 'mailx-att-out'; out.appendChild(f); inp.focus();
+  });
+  row.appendChild(cl);
+}
+async function orderCall(fn, args, btn, out, working, keys) {
+  btn.disabled = true; out.className = 'mailx-att-out working'; out.textContent = working;
+  let r = null;
+  try { const x = await C.sb.rpc(fn, args); r = x.error ? { ok: false, reason: x.error.message } : x.data; } catch (e) { r = { ok: false, reason: String((e && e.message) || e) }; }
+  btn.disabled = false;
+  if (!r || r.ok !== true) { out.className = 'mailx-att-out state stalled'; out.textContent = 'Not done. ' + plainWords(String((r && r.reason) || '')); return; }
+  for (const k of keys || []) saidChoice.set(k, { line: String(r.line || 'Kept.'), id: null });   // the line survives the redraw that follows
+  out.className = 'mailx-att-out find-lesson'; out.textContent = String(r.line || 'Kept.');
+  setTimeout(() => loadAttention(true), 400);
+}
 function whyTag(it) {
   const k = it.kind === 'money' ? ['money', 'Money'] : it.kind === 'thought' ? ['room', 'Left for you']
     : it.kind === 'impostor' || it.kind === 'scam_alert' ? ['scam', 'Scam']
+    : it.kind === 'work_order' ? ['money', orderTag(it)]
     : it.kind === 'new_business' ? nbTag(it)   // work-orders (decision 1056): read by relationship and intent; selling marked, never hidden
     : it.about === 'invite' ? ['people', 'Asks if this time works']
     : it.following || it.news ? ['people', it.news ? 'New in what you follow' : 'Following']
@@ -1741,7 +1806,7 @@ function drawRead() {
 
   read.appendChild(actions(t));
   if (open.compose) read.appendChild(open.compose.el);
-  if (pendingCompose) { const pc = pendingCompose; pendingCompose = null; setTimeout(() => startCompose(t, pc), 0); }
+  if (pendingCompose) { const pc = pendingCompose; pendingCompose = null; setTimeout(() => (pc === 'draft' ? draftFor(t) : startCompose(t, pc)), 0); }
 
   const conv = convos.get(aboutKey(chosen, t.thread_id)) || null;
   if (open.keptError) read.appendChild(mk('p', 'quiet', open.keptError));
