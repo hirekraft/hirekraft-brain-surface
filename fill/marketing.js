@@ -16,7 +16,7 @@
 // No colour, size or font here: the looks' tokens in skin.css under SIGNALS AND OUTREACH. No regex literals, no backslashes.
 
 import { draftHash } from './answer.js?v=2026-10-29-mail-invites';
-import { openZip } from './chats.js?v=2026-10-30-linkedin-whole';   // the one zip opener on the screen (same token as lens.js)
+import { openZip } from './chats.js?v=2026-10-30-linkedin-whole'; import { sourcePicture, badges, quickHand } from './marketing-signals.js?v=2026-11-02-marketing-build-a';   // the one zip opener on the screen (same token as lens.js); then Signals' one picture (seat marketing-build-a)
 
 let C = null;
 let data = null;
@@ -49,7 +49,7 @@ async function post(path, body) {
   } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; }
 }
 
-export function drawMarketing(body, ctx) {
+export function drawMarketing(body, ctx) { C = ctx; import('./marketing-shell.js?v=2026-11-02-marketing-build-a').then((M) => M.drawShell(body, ctx, { signals: (s) => { C = ctx; load(s); }, reads: (s) => { C = ctx; drawReads(s); } })).catch((e) => { body.innerHTML = ''; body.appendChild(mk('p', 'notice flagged', 'The Marketing and sales tab could not be loaded: ' + String((e && e.message) || e))); }); return;   // THE SHELL (seat marketing-build-a, 2026-11-02, decision 1059): the tab opens through fill/marketing-shell.js; the round-1 part row below (seat marketing-parts, with marketing-build-b's Lists button) is superseded by Alex's approval of the round 2 design and no longer runs; it goes at the next whole edit of this file.
   C = ctx;
   body.innerHTML = '';
   const wrap = mk('div', 'mk');
@@ -557,14 +557,14 @@ function drawList(stage) {
   openKey = null;
   stage.innerHTML = '';
   const head = mk('div', 'mk-head');
-  head.append(mk('h2', 'mk-title', 'Companies hiring where you know someone'));
+  head.append(mk('h2', 'mk-title', 'Who is hiring for what we do, and who do we know there?'));   // seat marketing-build-a: the part's one question
   head.append(mk('p', 'mk-lede', data.owner
     ? 'From the job alerts in your mail and the daily web search for openings. Open one to see the roles, the people you know there and a short note to each.'
     : data.marketing   // seat campaign-engine (decision 1050 (5)): under the Marketing folder rule, every hiring company, no hand-off
       ? 'Every company in the job alerts that is hiring where the business knows someone. You see them because you can open the Marketing folder. Open one to see the roles, the people and a short note to each.'
       : 'What the owner handed to you. Open one to see the people and the note for each.'));
   stage.appendChild(head);
-  const items = data.items || [];
+  const items = data.items || []; stage.appendChild(sourcePicture(C, items, data.boundary));   // seat marketing-build-a: the one picture
   if (!items.length) {
     stage.appendChild(mk('p', 'quiet', data.owner || data.marketing ? 'No company in the alerts so far is one where the business knows someone.' : 'Nothing has been handed to you yet.'));
   }
@@ -580,9 +580,9 @@ function drawList(stage) {
     if (it.handed && it.handed.length) bits.push('With ' + it.handed.map((h) => h.to).join(', '));
     if (it.done) bits.push('Done'); else if (it.handled) bits.push(it.handled + ' of ' + it.people.length + ' handled');
     meta.textContent = bits.join(' · ');
-    b.append(line, known, meta);
+    b.append(badges(C, it), line, known, meta);
     b.addEventListener('click', () => drawItem(stage, it.key));
-    li.appendChild(b);
+    li.appendChild(b); li.appendChild(quickHand(C, data, it));   // seat marketing-build-a: one press per company for the owner
     ul.appendChild(li);
   }
   stage.appendChild(ul);
