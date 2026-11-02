@@ -14,7 +14,7 @@
 // No regex literals, no backslashes.
 
 let C = null, host = null, D = null, picked = null, lists = null;
-const CSS = './marketing-week.css?v=2026-11-02-marketing-week';
+const CSS = './marketing-week.css?v=2026-11-02-marketing-week-2';
 const OPEN_AT = { linkedin: 'https://www.linkedin.com/feed/?shareActive=true', company_page: 'https://www.linkedin.com/feed/', group: 'https://www.linkedin.com/groups/' };
 const CH = { linkedin: 'LinkedIn', company_page: 'Company page', group: 'LinkedIn group', email: 'Email', profile: 'LinkedIn message' };
 const CUT = 210;   // LinkedIn shows about three lines (some 210 characters) before "see more"
@@ -86,6 +86,7 @@ function draw() {
       + ' · ' + appr + ' approved · ' + out + ' out or in Sending.'));
   }
   if (Number(D.held_back)) box.appendChild(mk('p', 'state', D.held_back + ' finished ' + plural(D.held_back, 'piece', 'pieces') + ' this week ' + plural(D.held_back, 'is', 'are') + ' not shown to you. ' + (D.held_back_why || '')));
+  const saved = mk('div', 'mkw-saved-box'); box.appendChild(saved); savedBox(saved);
   if (!ps.length && !Number(D.held_back)) { box.appendChild(mk('p', 'quiet', 'No finished posts or emails are kept for this week yet. The plan below says what is planned.')); return; }
   if (!ps.length) return;
   const strip = mk('div', 'mkw-strip');
@@ -237,6 +238,43 @@ function undo(p, said) {
   const u = mk('button', 'go ghost', 'Take back the approval'); u.type = 'button';
   u.addEventListener('click', () => press(p, 'unapproved', null, u, said, 'Taking back the approval'));
   return u;
+}
+
+// SAVED BY THE TEAM (seat marketing-week-2, 2026-11-02, decision 1062: marketing saves are company). A colleague's saved chat or
+// document that is marketing work opens to everyone with marketing access; the Tool decides from what it is about. Where it is unsure
+// the save stays private and the owner sees it here by title, with one press, This is marketing. Each person sees her own saves that
+// are now open to the team, with one press to keep any private. Someone else's personal save is never listed, not even by title.
+async function savedBox(el) {
+  const S = await rpc('mk_saved_list', {});
+  if (!S || S.ok !== true) return;
+  const un = S.unsure || [], mine = S.mine_marketing || [];
+  if (un.length) el.appendChild(savedList(un.length + ' saved ' + plural(un.length, 'item', 'items') + ' may be marketing work. '
+    + plural(un.length, 'It stays', 'They stay') + ' private until you say.', un, 'marketing', 'This is marketing'));
+  if (mine.length) el.appendChild(savedList(mine.length + ' of your saved chats ' + plural(mine.length, 'is', 'are') + ' open to the marketing team.', mine, 'personal', 'Keep private'));
+}
+
+const noDot = (t) => (t.endsWith('.') ? t.slice(0, -1) : t);
+function savedList(line, rows, kind, label) {
+  const det = mk('details', 'mkw-saved');
+  det.appendChild(mk('summary', 'mk-hand-label', line));
+  for (const x of rows) {
+    const row = mk('div', 'mkw-saved-row');
+    row.appendChild(data_('span', 'mkw-card-title', x.title));
+    const meta = [x.by && !x.mine ? 'Saved by ' + x.by : '', day(x.saved_at)].filter(Boolean).join(' · ');
+    if (meta) row.appendChild(mk('span', 'mkw-card-meta', meta));
+    const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
+    const b = mk('button', 'go ghost', label); b.type = 'button';
+    b.addEventListener('click', async () => {
+      b.disabled = true; say(said, 'working no-late', 'Saving');
+      const r = await rpc('mk_saved_mark', { p_chat: x.id, p_kind: kind });
+      if (!r || r.ok !== true) { b.disabled = false; say(said, 'stalled', 'Not done: ' + noDot(String((r && r.reason) || 'no reason was given')) + '.'); return; }
+      row.innerHTML = '';
+      row.appendChild(mk('p', 'state', kind === 'marketing' ? 'Marked as marketing. It now opens to the marketing team.' : 'Kept private. Only you see it.'));
+    });
+    row.append(b, said);
+    det.appendChild(row);
+  }
+  return det;
 }
 
 async function fillLists(sel, said, p) {
