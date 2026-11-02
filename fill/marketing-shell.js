@@ -14,10 +14,10 @@
 import { screenLang } from './words.js?v=2026-10-29-thinkrooms-3';
 
 const PARTS = [
-  { key: 'plan', label: 'Plan', step: 1, file: './marketing-plan.js?v=2026-11-02-plan-fixes' },
-  { key: 'send', label: 'Sending', step: 2, file: './marketing-send.js?v=2026-11-02-marketing-build-b', legacy: 'drawSend' },   // marketing-build-b's line
-  { key: 'back', label: 'What came back', step: 3, file: './marketing-back.js?v=2026-11-02-marketing-build-b', legacy: 'drawBack' }, // marketing-build-b's line
-  { key: 'signals', label: 'Signals', step: 4 },
+  { key: 'foundation', label: 'Foundation', step: 1, file: './marketing-foundation.js?v=2026-11-02-marketing-vault' }, /* seat marketing-vault's entry (decision 1060): the foundation comes first */ { key: 'plan', label: 'Plan', step: 2, file: './marketing-plan.js?v=2026-11-02-plan-fixes' },
+  { key: 'send', label: 'Sending', step: 3, file: './marketing-send.js?v=2026-11-02-marketing-build-b', legacy: 'drawSend' },   // marketing-build-b's line
+  { key: 'back', label: 'What came back', step: 4, file: './marketing-back.js?v=2026-11-02-marketing-build-b', legacy: 'drawBack' }, // marketing-build-b's line
+  { key: 'signals', label: 'Signals', step: 5 },
   { key: 'lists', label: 'Lists', file: './marketing-lists.js?v=2026-11-02-marketing-build-b' },                                    // marketing-build-b's line
   { key: 'website', label: 'Website', file: './marketing-website.js?v=2026-11-02-plan-fixes' },
   { key: 'reads', label: 'What this reads' },
@@ -175,7 +175,7 @@ function drawNext() {
     const acts = mk('div', 'mk-acts');
     const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
     next.append(acts, said);
-    import(PARTS[0].file).then((M) => { if (M.fireButton) acts.appendChild(M.fireButton(n.it, said, ctxFor('plan'))); }).catch(() => {});
+    import(PARTS.find((x) => x.key === 'plan').file).then((M) => { if (M.fireButton) acts.appendChild(M.fireButton(n.it, said, ctxFor('plan'))); }).catch(() => {});
   }
   if (Number(d.held_back)) next.appendChild(mk('p', 'state', d.held_back + ' ' + plural(d.held_back, 'item this week comes', 'items this week come') + ' from chats private to the person who saved them, or not shared with you, so ' + plural(d.held_back, 'it is', 'they are') + ' not shown. They appear when the chat is shared.'));
 }
