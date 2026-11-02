@@ -88,7 +88,7 @@ function draw() {
       + (ps.some((p) => (p.source || {}).origin === 'drafted') ? ' ' + ps.filter((p) => (p.source || {}).origin === 'drafted').length + ' written by the Tool.' : '')));
   }
   if (Number(D.held_back)) box.appendChild(mk('p', 'state', D.held_back + ' finished ' + plural(D.held_back, 'piece', 'pieces') + ' this week ' + plural(D.held_back, 'is', 'are') + ' not shown to you. ' + (D.held_back_why || '')));
-  const saved = mk('div', 'mkw-saved-box'); box.appendChild(saved); savedBox(saved);
+  const saved = mk('div', 'mkw-saved-box'); box.appendChild(saved); savedBox(saved); const outbox = mk('div', 'mkw-out'); box.appendChild(outbox); import('./marketing-outreach.js?v=2026-11-02-marketing-week-3').then((M) => M.mount(outbox, C, (D && D.week_of) || null)).catch((e) => outbox.appendChild(mk('p', 'notice flagged', 'The LinkedIn messages could not be shown: ' + String((e && e.message) || e) + '.')));   // seat marketing-week-3: the week's LinkedIn messages
   if (!ps.length && !Number(D.held_back)) { box.appendChild(mk('p', 'quiet', 'No finished posts or emails are kept for this week yet. The plan below says what is planned.')); return; }
   if (!ps.length) return;
   const strip = mk('div', 'mkw-strip');
@@ -103,7 +103,7 @@ function draw() {
   const panel = mk('section', 'mkw-panel'); panel.setAttribute('aria-live', 'polite');
   box.appendChild(panel);
   const pick = ps.find((p) => p.id === picked) || ps.find((p) => p.state === 'draft' || p.state === 'approved') || ps[0];
-  drawPanel(panel, pick);
+  drawPanel(panel, pick); box.appendChild(outbox);   // the week's LinkedIn messages after the pieces
 }
 
 function card(p) {
