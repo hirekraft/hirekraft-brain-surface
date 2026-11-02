@@ -1,0 +1,64 @@
+/* ── MARKETING FOUNDATION (seat marketing-vault, 2026-11-02, decision 1060). One picture: the ten parts as one strip, each with its
+   count and its approval; then each part as a fold with its lines, where each came from, Change / See the source / History / Retire,
+   Earlier lines below. Kept in its own file so the part carries its look; loaded by fill/marketing-foundation.js. Phone rules at the end. ── */
+.mkf-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: calc(var(--u) * 2); margin-block: calc(var(--u) * 3); }
+.mkf-chip { display: grid; gap: 2px; text-align: left; min-height: max(var(--tap), 44px); padding: calc(var(--u) * 2) calc(var(--u) * 3); border: 1px solid var(--line); border-left-width: 4px; border-radius: var(--radius); background: var(--paper); color: var(--ink); cursor: pointer; min-width: 0; }
+.mkf-chip:hover, .mkf-chip:focus-visible { background: var(--paper-2); }
+.mkf-chip-label { font-weight: var(--w-mid); overflow-wrap: anywhere; hyphens: auto; }
+.mkf-chip-n { font-size: var(--t-small); color: var(--ink-3); }
+.mkf-chip-state { font-size: var(--t-small); color: var(--ink-3); overflow-wrap: anywhere; }
+.mkf-chip.mkf-approved { border-left-color: var(--people); }
+.mkf-chip.mkf-changed { border-left-color: var(--warn); }
+.mkf-chip.mkf-not { border-left-color: var(--line); }
+.mkf-whole { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 3); padding: calc(var(--u) * 3); margin-block: calc(var(--u) * 3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); }
+.mkf-whole-state { flex: 1 1 16rem; font-weight: var(--w-mid); color: var(--ink); overflow-wrap: anywhere; }
+.mkf-whole .mk-said { flex-basis: 100%; }
+.mkf-part { border-top: 1px solid var(--line-2); padding-block: calc(var(--u) * 2); }
+.mkf-sum { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 2); min-height: max(var(--tap), 44px); cursor: pointer; }
+.mkf-sum-label { font-family: var(--font-head); font-size: var(--t-head); color: var(--ink); overflow-wrap: anywhere; hyphens: auto; }
+.mkf-badge { font-size: var(--t-small); padding: 2px calc(var(--u) * 2); border-radius: var(--radius); background: var(--paper-2); color: var(--ink-3); overflow-wrap: anywhere; }
+.mkf-badge.mkf-approved { background: var(--people-soft); color: var(--ink); }
+.mkf-badge.mkf-changed { background: var(--warn-soft); color: var(--ink); }
+.mkf-q { color: var(--ink-3); margin-block: var(--u) calc(var(--u) * 2); overflow-wrap: anywhere; }
+.mkf-lines { list-style: none; display: grid; gap: calc(var(--u) * 2); padding: 0; margin: 0; }
+.mkf-grp { margin-top: calc(var(--u) * 2); }
+.mkf-line { display: grid; gap: var(--u); padding: calc(var(--u) * 2) 0; border-bottom: 1px solid var(--line-2); min-width: 0; }
+.mkf-old { opacity: .85; }
+.mkf-body { color: var(--ink); max-width: var(--measure); overflow-wrap: anywhere; }
+.mkf-tap { cursor: pointer; border-radius: var(--radius); padding: 2px 0; }
+.mkf-tap:hover, .mkf-tap:focus-visible { background: var(--paper-2); outline: none; }
+.mkf-tap[aria-expanded="true"] { font-weight: var(--w-mid); }
+.mkf-line .mk-acts[hidden] { display: none; }
+.mkf-strike { text-decoration: line-through; color: var(--ink-3); }
+.mkf-src { font-size: var(--t-small); color: var(--ink-3); overflow-wrap: anywhere; }
+.mkf-disagrees { font-size: var(--t-small); color: var(--ink-2); overflow-wrap: anywhere; }
+.mkf-flag { display: inline-block; padding: 0 calc(var(--u) * 2); border-radius: var(--radius); background: var(--warn-soft); color: var(--ink); font-weight: var(--w-mid); }
+.mkf-edit { display: grid; gap: var(--u); max-width: var(--measure); }
+.mkf-edit:empty { display: none; }
+.mkf-ta, .mkf-in { width: 100%; box-sizing: border-box; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: calc(var(--u) * 2); min-height: max(var(--tap), 44px); }
+.mkf-approve { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 2); margin-top: calc(var(--u) * 2); }
+.mkf-approve-state { color: var(--ink-3); overflow-wrap: anywhere; }
+.mkf-earlier { margin-top: calc(var(--u) * 2); }
+.mkf-earlier > summary { cursor: pointer; min-height: max(var(--tap), 44px); display: flex; align-items: center; }
+.mkf-proposal { display: grid; gap: var(--u); padding: calc(var(--u) * 3); margin-bottom: calc(var(--u) * 2); border: 1px solid var(--act); border-radius: var(--radius); background: var(--act-soft); }
+.mkf-brand { display: grid; gap: calc(var(--u) * 3); margin-bottom: calc(var(--u) * 3); }
+.mkf-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); gap: calc(var(--u) * 2); }
+.mkf-swatch { display: grid; gap: 2px; }
+.mkf-swatch-chip { display: block; height: 4rem; border-radius: var(--radius); border: 1px solid var(--line); }
+.mkf-swatch-hex { font-family: ui-monospace, monospace; color: var(--ink); }
+.mkf-swatch-role { font-size: var(--t-small); color: var(--ink-3); }
+.mkf-fonts { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: calc(var(--u) * 3); }
+.mkf-font { display: grid; gap: 2px; padding: calc(var(--u) * 2); border: 1px solid var(--line-2); border-radius: var(--radius); min-width: 0; }
+.mkf-font-name { font-weight: var(--w-mid); color: var(--ink); }
+.mkf-font-sample { font-size: calc(var(--t-head) * 1.2); color: var(--ink); overflow-wrap: anywhere; }
+.mkf-logo img { display: block; max-width: 16rem; max-height: 5rem; width: auto; height: auto; }
+/* A PHONE IS A FIRST-CLASS SIZE (this part's rules) */
+@media (max-width: 600px) {
+  .mkf-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mkf-whole { flex-direction: column; align-items: stretch; }
+  .mkf-whole-state { flex: none; }
+  .mkf-tap { min-height: 44px; }
+  .mkf-whole .go, .mkf-approve .go { width: 100%; min-height: max(var(--tap), 44px); }
+  .mkf-part .mk-acts .go { min-height: max(var(--tap), 44px); }
+  .mkf-sum-label { font-size: var(--t-body); }
+}
