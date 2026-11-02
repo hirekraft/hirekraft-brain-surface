@@ -23,7 +23,7 @@ const PARTS = [
   { key: 'reads', label: 'What this reads' },
 ];
 
-let C = null, S = null;   // C: the tab's context from lens.js; S: { week, data, who, part, handoff, own, note }
+const WEEK = './marketing-week.js?v=2026-11-02-marketing-week'; let C = null, S = null;   // WEEK: this week's finished pieces above the Plan board (seat marketing-week, decision 1060). C: the tab's context from lens.js; S: { week, data, who, part, handoff, own, note }
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
 const data_ = (tag, cls, text) => { const n = mk(tag, cls, text); n.translate = false; return n; };
 const plural = (k, one, many) => (Number(k) === 1 ? one : many);
@@ -91,9 +91,9 @@ export async function drawShell(body, ctx, own) {
   const path = mk('nav', 'mk2-path'); path.setAttribute('aria-label', 'Marketing and sales');
   const next = mk('section', 'mk2-next'); next.setAttribute('aria-live', 'polite');
   const stage = mk('div', 'mk-stage');
-  wrap.append(top, path, next, stage);
+  const weekBox = mk('div', 'mk-week-host'); wrap.append(top, path, next, weekBox, stage);   // weekBox: seat marketing-week
   body.appendChild(wrap);
-  S.els = { status, sel, path, next, stage };
+  S.els = { status, sel, path, next, stage, weekBox };
   for (const p of PARTS) {
     const b = mk('button', 'mk2-step' + (p.step ? '' : ' mk2-aside')); b.type = 'button'; b.dataset.part = p.key;
     if (p.step) { const n = mk('span', 'mk2-step-n', String(p.step)); n.translate = false; b.appendChild(n); }
@@ -191,6 +191,7 @@ async function go(key, handoff, same) {
   S.part = key; S.handoff = handoff || null;
   for (const b of path.children) b.setAttribute('aria-current', b.dataset.part === key ? 'step' : 'false');
   stage.innerHTML = '';
+  S.els.weekBox.innerHTML = ''; if (key === 'plan') import(WEEK).then((M) => M.mount(S.els.weekBox, ctxFor('week'))).catch((e) => { S.els.weekBox.appendChild(mk('p', 'notice flagged', 'This week’s finished pieces could not be opened: ' + String((e && e.message) || e))); });   // seat marketing-week
   const p = PARTS.find((x) => x.key === key);
   if (key === 'signals') { S.own.signals(stage); return; }
   if (key === 'reads') { S.own.reads(stage); return; }
