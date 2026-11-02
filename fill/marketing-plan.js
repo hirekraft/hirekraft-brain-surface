@@ -173,7 +173,7 @@ function drawBoard(ctx) {
     const col = mk('section', 'mk2-day' + (dd === D.today ? ' mk2-today' : '') + (inWeek && dd < D.today ? ' mk2-past' : ''));
     col.appendChild(mk('h3', 'mk2-day-head', (dd === D.today ? 'Today, ' : '') + wd(dd) + ' ' + short(dd)));
     const list = mk('div', 'mk2-cards');
-    for (const it of dated(dd)) { list.appendChild(card(it, who, ctx)); all.push(it); }
+    for (const it of dated(dd)) { list.appendChild(it.replaced_by ? replacedFold(it, who, ctx) : card(it, who, ctx)); all.push(it); }
     col.appendChild(list);
     col.appendChild(weeklyFold(weekly(dd), who, ctx, all));
     board.appendChild(col);
@@ -192,7 +192,7 @@ function drawBoard(ctx) {
   // the picked item, under the board
   const KR = { post: 0, email: 1, page: 2, campaign: 3, follow_up: 4, other: 5 };   // the same order as the next-step card
   const first = (f) => all.filter(f).sort((a, b) => (KR[a.kind] ?? 9) - (KR[b.kind] ?? 9))[0];
-  const pick = all.find((x) => picked && x.id === picked.id) || first((x) => x.state === 'open' && x.day === D.today && whose(x, who)) || first((x) => x.state === 'open' && whose(x, who) && x.day) || null;
+  const pick = all.find((x) => picked && x.id === picked.id) || first((x) => x.state === 'open' && !x.replaced_by && x.day === D.today && whose(x, who)) || first((x) => x.state === 'open' && !x.replaced_by && whose(x, who) && x.day) || null;
   const panel = mk('section', 'mk2-panel'); panel.setAttribute('aria-live', 'polite');
   host.appendChild(panel);
   if (pick) drawPanel(panel, pick, ctx); else panel.appendChild(mk('p', 'quiet', 'Press an item to see it and its one button.'));
@@ -216,6 +216,16 @@ function card(it, who, ctx) {
   if (also) b.appendChild(mk('span', 'mk2-card-meta', 'Also said in ' + also + ' other ' + plural(also, 'chat', 'chats')));
   b.addEventListener('click', () => { picked = it; drawBoard(ctx); const p = host.querySelector('.mk2-panel'); if (p && p.scrollIntoView) p.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
   return b;
+}
+
+// APPROVED WINS (seat marketing-week-2, 2026-11-02, decision 1062): an older plan item whose day an approved post or email now fills
+// folds under one line; the approved piece is in Ready to go above. Nothing is deleted: open the fold to see the older item.
+function replacedFold(it, who, ctx) {
+  const det = mk('details', 'mk2-more');
+  det.appendChild(mk('summary', 'mk-hand-label', 'Replaced by the approved ' + (it.replaced_by.kind === 'email' ? 'email' : 'post') + ' above'));
+  det.appendChild(card(it, who, ctx));
+  if (picked && picked.id === it.id) det.open = true;
+  return det;
 }
 
 // The weekly rhythm under a day: hers shown, the others folded with their count.
