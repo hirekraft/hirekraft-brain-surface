@@ -2214,6 +2214,30 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
 .mailx-order-close { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .mailx-order-close input { flex: 1 1 200px; min-width: 0; min-height: 44px; }
 
+/* ── BENCH (seat bench-shortlist, decision 1056): Who we have on a requirement: the count, the people, why each, their state. ── */
+.bench-press { margin: 8px 0; }
+.bench-press > .go { min-height: 44px; }
+.bench-out { margin-top: 8px; overflow-wrap: anywhere; }
+.bench-out:empty { display: none; }
+.bench-count { font-weight: var(--w-mid); margin: 4px 0; }
+.bench-lines .bench-line { color: var(--ink); }
+.bench-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.bench-person { padding: calc(var(--u) * 2) calc(var(--u) * 3); border-radius: var(--radius); background: var(--paper-2); min-width: 0; }
+.bench-top { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.bench-name { font-weight: var(--w-mid); }
+.bench-tag { font-size: var(--t-micro); color: var(--ink-2); border: 1px solid var(--ink-4); border-radius: var(--radius); padding: 0 6px; }
+.bench-tag.all { border-color: var(--act); color: var(--ink); }
+.bench-state { margin-left: auto; font-size: var(--t-small); color: var(--ink-2); }
+.bench-why { margin: 4px 0; font-size: var(--t-small); }
+.bench-facts { margin: 4px 0; font-size: var(--t-small); }
+.bench-facts a { display: inline-flex; align-items: center; min-height: 44px; }
+.bench-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.bench-acts .go { margin-top: 0; }
+.bench-reason { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.bench-reason input { flex: 1 1 200px; min-width: 0; min-height: 44px; }
+.bench-said { font-size: var(--t-small); }
+.bench-said:empty { display: none; }
+
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
    for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
@@ -2430,4 +2454,8 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
   /* seat ai-tab-clear 2026-11-01: the picture's month name above its bar, so a long German month and the amount both fit */
   .ai2-pic-row { grid-template-columns: minmax(0, 1fr) 6.5em; row-gap: 4px; }
   .ai2-pic-name { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; gap: 0 8px; align-items: baseline; }
+  /* seat bench-shortlist 2026-11-02: Who we have on a phone: the presses thumb-sized and two to a row, the state under the name. */
+  .bench-acts .go { flex: 1 1 40%; justify-content: center; min-height: 44px; }
+  .bench-state { margin-left: 0; flex-basis: 100%; }
+  .bench-reason input { font-size: 16px; }
 }
