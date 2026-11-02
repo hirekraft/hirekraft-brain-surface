@@ -14,12 +14,12 @@
 import { screenLang } from './words.js?v=2026-10-29-thinkrooms-3';
 
 const PARTS = [
-  { key: 'plan', label: 'Plan', step: 1, file: './marketing-plan.js?v=2026-11-02-marketing-build-a' },
+  { key: 'plan', label: 'Plan', step: 1, file: './marketing-plan.js?v=2026-11-02-plan-fixes' },
   { key: 'send', label: 'Sending', step: 2, file: './marketing-send.js?v=2026-11-02-marketing-build-b', legacy: 'drawSend' },   // marketing-build-b's line
   { key: 'back', label: 'What came back', step: 3, file: './marketing-back.js?v=2026-11-02-marketing-build-b', legacy: 'drawBack' }, // marketing-build-b's line
   { key: 'signals', label: 'Signals', step: 4 },
   { key: 'lists', label: 'Lists', file: './marketing-lists.js?v=2026-11-02-marketing-build-b' },                                    // marketing-build-b's line
-  { key: 'website', label: 'Website', file: './marketing-website.js?v=2026-11-02-marketing-build-a' },
+  { key: 'website', label: 'Website', file: './marketing-website.js?v=2026-11-02-plan-fixes' },
   { key: 'reads', label: 'What this reads' },
 ];
 
@@ -134,11 +134,17 @@ function drawTop() {
     next.innerHTML = '';
     return;
   }
+  // THE LINE COUNTS WHAT THE BOARD SHOWS (seat plan-fixes, 2026-11-02): dated items, and each weekly item once per day it falls on
+  // (once for 'any day'), for the person viewed; the week tabs count the same way (the brain's weeks[].by).
   const mine = (d.items || []).filter((x) => isWhose(x, S.who));
-  const done = mine.filter((x) => x.state === 'done' || x.state === 'skipped').length;
-  const today = mine.filter((x) => x.day === d.today);
-  const bits = ['Week of ' + shortDay(d.week_of) + ': ' + mine.length + ' planned' + (S.who ? ' for ' + S.who : '') + ', ' + done + ' done'];
-  if (d.today >= d.week_of && d.today <= addDays(d.week_of, 6)) bits.push(today.length + ' today');
+  const weekly = (d.every || []).filter((x) => isWhose(x, S.who));
+  const occ = (x) => Math.max((x.days || []).length, 1);
+  const closed = (x) => x.state === 'done' || x.state === 'skipped';
+  const total = mine.length + weekly.reduce((n, x) => n + occ(x), 0);
+  const done = mine.filter(closed).length + weekly.filter(closed).reduce((n, x) => n + occ(x), 0);
+  const today = mine.filter((x) => x.day === d.today).length + weekly.filter((x) => (x.days || []).includes(dow(d.today))).length;
+  const bits = ['Week of ' + shortDay(d.week_of) + ': ' + total + (S.who ? ' for ' + S.who : ' planned') + ', ' + done + ' done'];
+  if (d.today >= d.week_of && d.today <= addDays(d.week_of, 6)) bits.push(today + ' today');
   if (Number(d.held_back)) bits.push(d.held_back + ' held back from you');
   status.className = 'mk2-status';
   status.textContent = bits.join(' · ') + '.';
