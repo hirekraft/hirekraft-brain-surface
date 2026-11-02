@@ -380,7 +380,9 @@ async function loadAttention(quiet) {
   try {
     const { data, error } = await C.sb.rpc('attention', { p_days: 14 });
     if (error || !data || data.ok === false) throw new Error((error && error.message) || (data && data.reason) || '');
-    attn = { data, more: false, gone: new Set(), said: new Map() };
+    // A quiet re-read keeps the list as she left it: opened 'more' stays open (seat sellers-one-press: clearing a seller re-reads,
+    // and the list snapped shut under her finger; the minute's freshen did the same).
+    attn = { data, more: !!(quiet && attn && attn.more), gone: new Set(), said: new Map() };
   } catch (e) {
     attn = { error: plainWords(String((e && e.message) || e || '')) };
   }
@@ -532,9 +534,16 @@ function drawAttnList(list) {
   const more = attnMore();
   if (!items.length) list.appendChild(mk('p', 'quiet', 'Nothing from the last ' + (j.days || 14) + ' days needs you first.'));
   const ul = mk('ul', 'mailx-msgs mailx-att-rows');
-  for (const it of items.concat(attn.more ? more : [])) {
-    ul.appendChild(matterRow(it, () => { pick = it; open = null; markSeen('attention', 'attention', [it.key]); setView('read'); drawList(); drawRead(); }, pick && pick.key === it.key));
+  const shown = items.concat(attn.more ? more : []);
+  const sellers = shown.filter(isSeller).length;
+  let sellHead = false;
+  for (const it of shown) {
+    if (isSeller(it) && !sellHead) { sellHead = true; ul.appendChild(sellerHead(sellers)); }
+    const li = matterRow(it, () => { pick = it; open = null; markSeen('attention', 'attention', [it.key]); setView('read'); drawList(); drawRead(); }, pick && pick.key === it.key);
+    if (isSeller(it)) sellerClear(li, it);
+    ul.appendChild(li);
   }
+  if (!sellHead && sellSaid && attn.more) ul.appendChild(sellerHead(0));
   list.appendChild(ul);
   if (more.length) {
     const b = mk('button', 'go ghost', attn.more ? 'Show fewer' : 'Show ' + more.length + ' more, ranked lower');
@@ -548,6 +557,64 @@ function drawAttnList(list) {
   learned.addEventListener('click', () => attnLearned(out));
   list.append(learned, out);
 }
+// SELLERS LEAVE IN ONE PRESS (seat sellers-one-press, 2026-11-02, decision 1058: 'one press to dismiss'). Every email read as
+// someone selling to you sits at the bottom of For you under one heading with its count; each row carries Not for this list
+// beside it, so clearing one is a single press on the list (it was two: open it, then Not for this list). The same choice as
+// on the card (matter_choose not_for_this_list), so the brain keeps it per person and leaves it off after a reload. The row
+// leaves at once, the count drops at once, a short line with Undo stands under the heading. CONTROL: only selling rows carry
+// it; a requirement, a new client, a partner or a work order must be opened (isSeller is the one condition).
+let sellSaid = null;        // { key, line, id, busy }: the last seller cleared here, its line and Undo survive the redraw
+function isSeller(it) { return it && it.kind === 'new_business' && it.nb_intent === 'selling'; }
+function sellerHead(n) {
+  const li = mk('li', 'mailx-sell-head');
+  const h = mk('h4', 'mailx-sell-title');
+  h.append(mk('span', null, 'Selling to you'), document.createTextNode(' '), mk('span', 'mailx-sell-n', String(n)));
+  li.appendChild(h);
+  if (sellSaid) {
+    const out = mk('p', 'mailx-att-out find-lesson mailx-sell-said'); out.setAttribute('aria-live', 'polite');
+    out.appendChild(mk('span', null, sellSaid.line));
+    if (sellSaid.id) {
+      const u = mk('button', 'go ghost', 'Undo'); u.type = 'button';
+      u.disabled = !!sellSaid.busy;
+      u.addEventListener('click', () => sellerUndo());
+      out.appendChild(u);
+    }
+    li.appendChild(out);
+  }
+  return li;
+}
+function sellerClear(li, it) {
+  li.classList.add('mailx-sell-li');
+  const x = mk('button', 'go ghost mailx-sell-clear', 'Not for this list'); x.type = 'button';
+  x.addEventListener('click', async () => {
+    x.disabled = true;
+    let r = null;
+    try {
+      const q = await C.sb.rpc('matter_choose', { p_key: it.key, p_choice: 'not_for_this_list', p_title: String(it.subject || it.what || '').slice(0, 150),
+        p_from_key: it.from_key || null, p_at: it.last_out || null });
+      r = q.error ? { ok: false, reason: q.error.message } : q.data;
+    } catch (e) { r = { ok: false, reason: String((e && e.message) || e) }; }
+    if (!r || r.ok !== true) { x.disabled = false; sellSaid = { key: it.key, line: 'Not kept. ' + plainWords(String((r && r.reason) || '')) }; drawList(); return; }
+    sellSaid = { key: it.key, line: firstSentence(String(r.line || 'Taken off your list.')), id: r.id };
+    if (attn && attn.gone) attn.gone.add(it.key);
+    if (pick && pick.key === it.key) { pick = null; setView('list'); drawRead(); }
+    drawSide(); drawList();
+    setTimeout(() => loadAttention(true), 400);
+  });
+  li.appendChild(x);
+}
+async function sellerUndo() {
+  const s = sellSaid;
+  if (!s || !s.id) return;
+  s.busy = true; drawList();
+  let z = null;
+  try { const q = await C.sb.rpc('matter_choose', { p_key: String(s.id), p_choice: 'undo' }); z = q.error ? null : q.data; } catch (_) { z = null; }
+  if (z && z.ok) { sellSaid = { key: s.key, line: firstSentence(String(z.line || 'Undone.')) }; if (attn && attn.gone) attn.gone.delete(s.key); }
+  else sellSaid = { key: s.key, line: 'Not undone. Try again.', id: s.id };
+  drawSide(); drawList();
+  loadAttention(true);
+}
+
 // FOLLOWING (decision 1031 item 3): the matters she asked to be kept posted on. Each comes back to For you only when something new
 // and unresolved arrives in it; here it is listed with where it stands, and Stop following.
 function followItems() { return attn && attn.data ? (attn.data.following || []).map((f) => Object.assign({}, f, { following: true, kind: 'email', subject: f.title })) : []; }
