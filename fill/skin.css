@@ -880,6 +880,16 @@ html body:has(#s-lens:not([hidden]) .mailx) #s-lens { flex: 1; min-height: 0; di
 .mailx-matter-source:hover { color: var(--ink); background: var(--paper-2); }
 .mailx-att-out.find-lesson { display: flex; flex-wrap: wrap; align-items: center; gap: var(--u) var(--gap); }
 .mailx-learned-link { margin: var(--gap) calc(var(--u) * 4) 0; }
+/* seat sellers-one-press 2026-11-02 (decision 1058): sellers at the bottom of For you under one heading with their count; each
+   row carries Not for this list beside it, one press. The row's line moves to the row's list item so the button sits inside it. */
+.mailx-sell-head { padding: calc(var(--u) * 4) calc(var(--u) * 4) calc(var(--u) * 1.5) calc(var(--u) * 6); border-bottom: 1px solid var(--line-2); }
+.mailx-sell-title { margin: 0; font-size: var(--t-small); font-weight: var(--w-mid); color: var(--ink-3); }
+.mailx-sell-n { color: var(--ink); }
+.mailx-sell-head .mailx-sell-said { margin: var(--u) 0 0; padding-left: 0; font-size: var(--t-small); color: var(--ink-2); }
+.mailx-sell-said .go { margin-top: 0; }
+.mailx-sell-li { display: flex; align-items: center; border-bottom: 1px solid var(--line-2); min-width: 0; }
+.mailx-sell-li > .mailx-msg { border-bottom: 0; flex: 1 1 auto; min-width: 0; }
+.mailx-sell-clear { flex: 0 0 auto; margin: 0 calc(var(--u) * 4) 0 0; padding: 6px 12px; }
 .mailx-list > .go { min-height: 44px; }
 .mailx { height: 100%; display: grid; grid-template-columns: minmax(11rem, 13rem) minmax(17rem, 22rem) minmax(0, 1fr); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--paper); }
 .mailx-side, .mailx-list, .mailx-read { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
@@ -2400,6 +2410,10 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
   /* seat mail-matters 2026-10-29: the Inbox view / AI view switch, an email of a matter, Undo after a choice and What it
      learned are thumb-sized. */
   .mailx-mode-btn, .mailx-matter-source, .mailx-att-out .go, .mailx-learned-link { min-height: 44px; }
+  /* seat sellers-one-press 2026-11-02: on a phone Not for this list sits under its row, at the right, thumb-sized. */
+  .mailx-sell-li { flex-wrap: wrap; }
+  .mailx-sell-li > .mailx-msg { flex-basis: 100%; }
+  .mailx-sell-clear { margin: 0 calc(var(--u) * 4) calc(var(--u) * 3) auto; min-height: 44px; }
   /* seat looks 2026-10-29: each tab's card runs closer to the edge on a phone; the Look switch and its menu thumb-sized,
      the menu full width under the header like the language menu. */
   section.step:not([hidden]):not(.holding) { padding: var(--gap) calc(var(--u) * 3.5); border-radius: var(--radius); }
