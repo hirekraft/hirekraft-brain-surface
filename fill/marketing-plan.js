@@ -11,6 +11,10 @@
 // Every item says which chat it came from and opens that message; "See how it changed" shows the earlier words.
 // Everything shown comes from the brain as the signed-in person (mk_plan_week); presses go to mk_plan_act, which refuses an item she
 // may not open. Nothing here decides who may see what. No colour, size or font here (skin.css); no regex literals, no backslashes.
+// SEAT plan-fixes (2026-11-02, Alex's walk at 08:55 PT): the week tabs count what the board shows for the person viewed (weekly items
+// once per day they fall on, from the brain's weeks[].by); a rhythm said in more than one chat shows once, its other chats listed under
+// 'Also said in'; the folded weekly items say whose they are. Who may see an item is unchanged (the brain's one plan door).
+// The line 'Nothing in the plan is dated for this week ... the weekly rhythm is under each day' is removed (Alex: it read as empty).
 
 let C = null, host = null, picked = null, D = null;
 const SYS = '/functions/v1/system-read';
@@ -149,7 +153,7 @@ function drawBoard(ctx) {
   for (const w of (D.weeks || [])) {
     const b = mk('button', 'mk2-week'); b.type = 'button'; b.setAttribute('role', 'tab');
     b.setAttribute('aria-selected', w.week_of === D.week_of ? 'true' : 'false');
-    b.append(mk('span', null, w.week_of === thisWeek ? 'This week' : short(w.week_of)), document.createTextNode(' '), data_('span', 'mk2-week-n', String(w.items)));
+    b.append(mk('span', null, w.week_of === thisWeek ? 'This week' : short(w.week_of)), document.createTextNode(' '), data_('span', 'mk2-week-n', String(weekCount(w, who))));
     b.addEventListener('click', async () => { picked = null; const d = await ctx.refresh(w.week_of); D = d; drawBoard({ ...ctx, week: d }); });
     tabs.appendChild(b);
   }
@@ -183,7 +187,7 @@ function drawBoard(ctx) {
   anyCol.appendChild(weeklyFold((D.every || []).filter((x) => !(x.days || []).length), who, ctx, all));
   board.appendChild(anyCol);
   host.appendChild(board);
-  if (!(D.items || []).length) host.appendChild(mk('p', 'state', 'Nothing in the plan is dated for this week' + (Number(D.held_back) ? ' that you may see' : '') + '; the weekly rhythm is under each day.'));
+  if (!(D.items || []).length && !(D.every || []).length) host.appendChild(mk('p', 'state', 'Nothing is planned for this week.'));
   if (Number(D.held_back)) host.appendChild(mk('p', 'state', D.held_back + ' ' + plural(D.held_back, 'item this week comes', 'items this week come') + ' from chats private to the person who saved them, or not shared with you. They appear here when the chat is shared.'));
   // the picked item, under the board
   const KR = { post: 0, email: 1, page: 2, campaign: 3, follow_up: 4, other: 5 };   // the same order as the next-step card
@@ -208,6 +212,8 @@ function card(it, who, ctx) {
   const st = it.state === 'done' ? (it.act && it.act.by ? 'Done by ' + it.act.by : 'Done') : it.state === 'skipped' ? 'Skipped'
     : it.state === 'fired' ? (it.act && it.act.fired === 'draft_made' ? 'Draft made' : it.act && it.act.fired === 'to_sending' ? 'In Sending' : 'Copied and opened') : '';
   if (st || it.moved) b.appendChild(mk('span', 'mk2-card-meta', [st, it.moved ? 'Moved from ' + short(it.planned_day) : ''].filter(Boolean).join(' · ')));
+  const also = (it.also || []).length;
+  if (also) b.appendChild(mk('span', 'mk2-card-meta', 'Also said in ' + also + ' other ' + plural(also, 'chat', 'chats')));
   b.addEventListener('click', () => { picked = it; drawBoard(ctx); const p = host.querySelector('.mk2-panel'); if (p && p.scrollIntoView) p.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
   return b;
 }
@@ -220,7 +226,7 @@ function weeklyFold(items, who, ctx, all) {
   for (const it of mine) { box.appendChild(card(it, who, ctx)); all.push(it); }
   if (rest.length) {
     const det = mk('details', 'mk2-more');
-    det.appendChild(mk('summary', 'mk-hand-label', (who ? rest.length + ' weekly for others' : rest.length + ' weekly')));
+    det.appendChild(mk('summary', 'mk-hand-label', who ? whoseLine(rest) : rest.length + ' weekly'));
     for (const it of rest) { det.appendChild(card(it, who, ctx)); all.push(it); }
     if (picked && rest.some((x) => x.id === picked.id)) det.open = true;
     box.appendChild(det);
@@ -286,6 +292,36 @@ function drawPanel(panel, it, ctx) {
     links.appendChild(h);
   }
   panel.append(links, out);
+  if ((it.also || []).length) {
+    const box = mk('div', 'mk2-src');
+    box.appendChild(mk('p', 'eyebrow', 'Also said in ' + it.also.length + ' other ' + plural(it.also.length, 'chat', 'chats') + '; shown once'));
+    for (const a of it.also) {
+      const row = mk('div', 'mk-acts');
+      row.appendChild(data_('span', 'mk-item-meta', [a.title, a.cadence].filter(Boolean).join(' · ')));
+      const sa = a.source || {};
+      if (sa.chat_id) {
+        const s2 = mk('button', 'go ghost', 'From the chat of ' + day(sa.said_at)); s2.type = 'button';
+        const out2 = mk('div', 'mk2-src');
+        s2.addEventListener('click', () => { out2.innerHTML = ''; showSource(out2, sa); });
+        row.appendChild(s2); box.append(row, out2);
+      } else box.appendChild(row);
+    }
+    panel.appendChild(box);
+  }
+}
+
+// THE WEEK TAB'S COUNT: what the board shows for the person viewed (the brain counts each weekly item once per day it falls on).
+function weekCount(w, who) {
+  if (!who) return Number(w.items) || 0;
+  return Number((w.by || {})[who.toLowerCase()]) || 0;
+}
+// WHOSE the folded weekly items are: '16 of Erin’s, 5 of Sparshi’s, 3 with no one named'.
+function whoseLine(rest) {
+  const by = new Map();
+  for (const x of rest) { const o = String(x.owned_by || '').trim().split(' ')[0]; by.set(o, (by.get(o) || 0) + 1); }
+  const parts = [];
+  for (const [o, n] of [...by.entries()].sort((a, b) => b[1] - a[1])) parts.push(o ? n + ' of ' + o + '’s' : n + ' with no one named');
+  return parts.join(', ');
 }
 
 // THE SOURCE: the chat's title and date, and the message the item came from, read through chat_open (which refuses what she may not open).
