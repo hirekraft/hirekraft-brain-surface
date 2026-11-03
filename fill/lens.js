@@ -83,7 +83,7 @@ import { foundCard } from "./find.js?v=2026-10-29-thinkrooms"; // find first, th
 import { closeCard } from "./close.js?v=2026-10-26-month-end-2"; // the month-end check, corrected cell by cell (seat month-end)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-27-people-and-access"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-10-27-people-and-access"; // sub-tab row and People and access (seat people-and-access)
 import { initChats, loadChats } from "./chats.js?v=2026-10-30-linkedin-whole"; // Chats tab (seat chat-import)
-import { initMoney, loadMoney } from "./money.js?v=2026-11-03-tool-build-money"; /* Money tab (seat runway) */ import { PLACES, PHONE_BAR, wireSigns } from './frame.js?v=2026-11-03-tool-build-1b'; import { screenLang } from './words.js?v=2026-10-29-thinkrooms-3';   // the screen frame: six places, two status signs (seat tool-build-1, decisions 1067, 1069)
+import { initMoney, loadMoney } from "./money.js?v=2026-11-03-tool-build-money"; /* Money tab (seat runway) */ import { PLACES, PHONE_BAR, wireSigns } from './frame.js?v=2026-11-03-tool-build-1b'; import { MORE, RETIRED, drawSettings, wireGear } from './nav.js?v=2026-11-03-tool-build-people'; import { screenLang } from './words.js?v=2026-10-29-thinkrooms-3';   // the screen frame: six places, two status signs (seat tool-build-1, decisions 1067, 1069)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
@@ -3737,7 +3737,7 @@ function routeOnState(mode) {
   if (location.hash === "#tests" && $("#s-tests")) { goto("s-tests"); return; }
   if (location.hash === "#totest" && $("#s-totest")) { goto("s-totest"); return; }   // seat test-list
   if ((location.hash === "#security" || location.hash.startsWith("#security/")) && $("#s-security")) { goto("s-security"); return; }   // #security/<part> opens a sub-tab (seat people-and-access)
-  { const [t0, s0] = location.hash.slice(1).split("?")[0].split("/"); const tt = SUB_TABS[t0] && TABS.find((x) => x.key === t0 && (!x.owner || shape?.viewer?.all_access));
+  { const [t0, s0] = location.hash.slice(1).split("?")[0].split("/"); const tt = SUB_TABS[t0] && PAGES.find((x) => x.key === t0 && (!x.owner || shape?.viewer?.all_access));
     if (s0 && tt) { goTab(t0); return; } }   // #money/<part>, #chats/<part> open a sub-tab (seat tab-split)
   // Nobody signed in: the introduction is the honest screen, and it claims nothing
   // about data because there is no identity to claim it about.
@@ -3753,7 +3753,7 @@ function routeOnState(mode) {
   let last = null;
   try { last = localStorage.getItem(TAB_KEY); } catch (_) { /* storage off: Mail */ }
   const t = TABS.find((x) => x.key === last && (!x.owner || shape?.viewer?.all_access));
-  goTab(t ? t.key : 'today');   // Today the first time (seat tool-build-1; was Mail)
+  goTab(t ? t.key : RETIRED[last] ?? 'today');   // Today the first time (seat tool-build-1; was Mail); a retired tab opens where it now lives (seat tool-build-people)
 }
 
 // THE BRAIN TAB SHOWS CONNECTING AND WHAT IS CONNECTED TOGETHER (Alex, 2026-10-02,
@@ -3788,7 +3788,7 @@ function goto(id, key) {
   if (id === "s-tests") loadTests();
   if (id === "s-totest") import("./totest.js?v=2026-10-29-ask-agent").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + String(e?.message ?? e); });   // seat test-list
   if (id === "s-security") loadSecurity();
-  if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); } if (id === 's-today') drawToday(); if (id === 's-orders') drawOrders();
+  if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); } if (id === 's-today') drawToday(); if (id === 's-orders') drawOrders(); if (id === 's-settings') drawSettings($('#settings-body'), { owner: !!shape?.viewer?.all_access, go: (k) => { userMoved = true; goTab(k); }, signins: (m) => import('./google.js?v=2026-10-22-dates').then((G) => G.drawGoogleSignin(m, { sb, el, connect: googleConnect })).catch((e) => { m.textContent = 'Your sign-ins could not be shown: ' + String(e?.message ?? e); }) });   /* SETTINGS behind the gear and under More (seat tool-build-people) */
   onMail = id === 's-lens' && lensKey === 'email';
   if (id === 's-summary') import('./first.js?v=2026-10-27-first-answer').then((F) => F.drawFirst({ sb, el, $ })).catch((e) => { const m = $('#first-answer'); if (m) m.textContent = 'The short answer could not be loaded: ' + String(e?.message ?? e); });   // seat first-answer
   workPanel(id === 's-work');
@@ -3797,7 +3797,7 @@ function goto(id, key) {
     import("./ledger.js?v=2026-10-22-dates").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
   if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); showSubtabs($('#s-chats'), 'chats', shape?.viewer?.email); }
-  const tabNow = id === 's-today' ? 'today' : id === 's-orders' ? 'orders' : id === 's-lens' ? lensKey : id === 's-drives' ? 'drives' : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : 'brain';
+  const tabNow = id === 's-today' ? 'today' : id === 's-orders' ? 'orders' : id === 's-settings' ? 'settings' : id === 's-lens' ? lensKey : id === 's-drives' ? 'drives' : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : 'brain';
   markTab(tabNow);
   document.body.dataset.tab = tabNow;
   // Remembered so the Tool opens where she was (seat conversation-panel); first-run screens are not tabs.
@@ -3815,21 +3815,26 @@ function goto(id, key) {
 // she is an owner (Security: seat security-tab, 2026-10-08; Money: seat runway, 2026-10-10).
 const GROUP_TAB = (k, label) => ({ key: k, label: label ?? GROUPS.find((g) => g.key === k).label });
 // THE THINKROOMS TAB (seat thinkrooms-a, 2026-10-29, decision 1035; first built as Thoughts by seat thoughtgram): beside Mail; drawn by fill/thoughts.js.
-/* THE SIX PLACES FIRST (seat tool-build-1, 2026-11-03, decisions 1067, 1069): Today, Mail, Orders, Money, Marketing and sales, People, from fill/frame.js PLACES (one list; Contacts is shown as People, same key; Orders has its own page in build step 5 and until then opens For you in Mail; Work, the conversations, joins Ask in step 6). The older tabs follow and sit under More, on a desktop too, until build step 6 retires them. SUPERSEDED 2026-11-03: Alex's 2026-10-12 order with Mail first (seat conversation-panel). */ const TABS = [...PLACES.map((p) => ({ key: p.key, label: p.label, owner: !!p.owner, place: true })), { key: 'work', label: 'Work' }, { key: 'thoughts', label: 'Thinkrooms' },
-  GROUP_TAB('drives', 'Drives'), GROUP_TAB('calendar'),   // Marketing and sales: seat job-alerts, 2026-10-30, decision 1039 (fill/marketing.js)
-  { key: 'brain', label: 'Brain' }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
-  GROUP_TAB('systems'), GROUP_TAB('loose'),
-  // THE AI TAB (seat ai-tab, 2026-10-23, decision 1007; working name, Alex may rename): owner only, drawn by fill/ai.js.
-  { key: 'ai', label: 'AI', owner: true }];
+/* THE SIX PLACES AND MORE, NOTHING ELSE (seat tool-build-people, 2026-11-03, decisions 1065, 1067, 1069; design build step 6):
+   the tabs are fill/frame.js PLACES (Today, Mail, Orders, Money, Marketing and sales, People) and fill/nav.js MORE (Security, Brain, Settings),
+   and only those. The older tabs are RETIRED (fill/nav.js RETIRED, enforced by the automatic frame check, rule retired): each is now a
+   page opened from where it lives (Drives, Systems, Loose files, AI: rows in Settings; Calendar: Open the calendar on Today; Chats
+   and Thinkrooms: Conversations, inside Ask), listed in PAGES so drawLens and links still find them.
+   SUPERSEDED 2026-11-03: the older tabs under More (seat tool-build-1), and Alex's 2026-10-12 order with Mail first (seat
+   conversation-panel). */ const TABS = [...PLACES.map((p) => ({ key: p.key, label: p.label, owner: !!p.owner, place: true })), ...MORE.map((m) => ({ key: m.key, label: m.label, owner: !!m.owner }))];
+const PAGES = [...TABS, { key: 'work', label: 'Conversations' }, { key: 'thoughts', label: 'Thinkrooms' }, { key: 'chats', label: 'Saved chats' },
+  { key: 'drives', label: 'Files and drives' }, { key: 'calendar', label: 'Calendar' }, { key: 'systems', label: 'Sign-ins and systems' },
+  { key: 'loose', label: 'Loose files' }, { key: 'ai', label: 'The AI and what it costs', owner: true }];
 const TAB_KEY = 'tool.tab';
 // The daily tabs: on a phone these sit in the bottom bar; the rest go under More (seat phone, 2026-10-13).
 const DAY_TABS = PHONE_BAR;   /* decision 1069: Today, Mail, Marketing and sales, Money, then More (Orders and People inside) */   // Thoughts sits under More on a phone: a seventh slot clipped its name and Calendar's (seat thoughtgram, measured at 390 px)
 function goTab(key) {
   if (key === 'today') goto('s-today'); else if (key === 'orders') goto('s-orders'); else if (key === 'brain') goto('s-summary'); else if (key === 'drives') goto('s-drives'); else if (key === 'work') goto('s-work');
-  else if (key === 'security') goto('s-security'); else if (key === 'money') goto('s-money'); else if (key === 'chats') goto('s-chats'); else if (key === 'thoughts') goto('s-thoughts'); else goto('s-lens', key);
+  else if (key === 'settings') goto('s-settings'); else if (key === 'security') goto('s-security'); else if (key === 'money') goto('s-money'); else if (key === 'chats') goto('s-chats'); else if (key === 'thoughts') goto('s-thoughts'); else goto('s-lens', key);
 }
 
-function markTab(key) {
+function markTab(page) {
+  const key = RETIRED[page] ?? page;   // a page that used to be a tab lights the place it now lives in (seat tool-build-people)
   document.querySelectorAll('#tabs .tab').forEach((b) => {
     if (b.dataset.tab === key) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
@@ -3881,7 +3886,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#tabs')
 const OWN_STATE = { email: () => mailReading(), contacts: () => {}, ai: () => {}, marketing: () => {} };   // marketing: seat job-alerts (an open item stays open)
 
 function drawLens() {
-  const t = TABS.find((x) => x.key === lensKey);
+  const t = PAGES.find((x) => x.key === lensKey);
   const body = $('#lens-body');
   if (!t || !body) return;
   // MAIL IS AN INBOX YOU CAN WORK IN (seat mail-redesign, Alex 2026-10-06): three columns
@@ -3890,11 +3895,11 @@ function drawLens() {
   if (lensKey === 'email') { drawMail(body); return; }
   $('#lens-head').textContent = t.label;
   body.innerHTML = '';
-  // THE CONTACTS TAB (seat contacts, 2026-10-13): a lookup of anyone or any company the business has dealt with, from
-  // every connected system and mail, drawn by contacts.js from the brain's contact_card. It does not wait for Google
-  // Contacts to be connected: CATS, HubSpot and mail already hold the people.
+  // THE CONTACTS TAB (seat contacts, 2026-10-13) is People since 2026-11-03 (seat tool-build-people): see below; its card is
+  // fill/contact-card.js, reached from People's Look up anyone.
   // YOUR GOOGLE SIGN-IN (seat calendar-contacts, 2026-10-13): each person's own sign-in for calendar, contacts and
-  // added files, drawn by google.js on Systems (above the systems) and on Calendar (instead of "Nothing connected").
+  // added files, drawn by google.js on the Sign-ins and systems page (above the systems), on Calendar (instead of "Nothing
+  // connected") and at the top of Settings (seat tool-build-people), where the check mark's Fix lands.
   if (lensKey === 'systems' || lensKey === 'calendar') {
     const g = el('div');
     body.appendChild(g);
@@ -3916,9 +3921,13 @@ function drawLens() {
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Marketing and sales tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
+  // PEOPLE (seat tool-build-people, 2026-11-03, build step 5): a framed place, drawn by fill/contacts.js mount; looking someone
+  // up opens the contact card (fill/contact-card.js, which the Contacts tab drew). SUPERSEDED: the Contacts tab lookup (seat contacts).
   if (lensKey === 'contacts') {
-    import('./contacts.js?v=2026-10-26-contact-card').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, askBody, renderAsk, isOwner: () => !!shape?.viewer?.all_access }))
-      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Contacts tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
+    $('#lens-head').hidden = true;
+    import('./contacts.js?v=2026-11-03-tool-build-people').then((C) => C.mount(body, { sb, who: shape?.viewer ?? null, lang: screenLang(), tz: zone(), t: (x) => x, go: (k) => { userMoved = true; goTab(k); }, ask: (q) => ask(q),
+      card: { sb, el, $, countOf, ask, askBody, renderAsk, isOwner: () => !!shape?.viewer?.all_access } }))
+      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'People could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
   const data = groupsFor().find((x) => x.key === lensKey);
@@ -4288,6 +4297,8 @@ async function loadWork() {
 
 (function wireWork() {
   $('#work-new')?.addEventListener('click', () => newChat(null));
+  $('#work-rooms')?.addEventListener('click', () => { userMoved = true; goTab('thoughts'); });   // Thinkrooms are Conversations (seat tool-build-people, decision 1067 (3))
+  $('#work-saved')?.addEventListener('click', () => { userMoved = true; goTab('chats'); });
   $('#work-project-new')?.addEventListener('click', async () => {
     const name = (window.prompt('Name the project') ?? '').trim();
     if (!name) return;
@@ -4354,7 +4365,7 @@ function drawClock() {
 // alerts read the same function, so the gauge and the alert cannot disagree. A problem nobody has picked up yet
 // still says Being fixed here: the studio's on-call reads it within the half hour (design D3, tool-health report).
 // Not signed in: hidden, the sign-in page speaks. Reading failed: says so, never shows Healthy.
-/* SUPERSEDED 2026-11-03 (seat tool-build-1, decisions 1065, 1069): the one-word health badge (Healthy, Being fixed, Needs you) became the two status signs of fill/frame.js, a check mark and a shield, in the same place. The check mark reads the same tool_health for We are on it and counts only what the signed-in person can fix herself (my_fixes); the shield is the owner's openings to decide (audit_panel). Not signed in: the readings refuse and the check mark stays grey, never green. */ wireSigns($('#clock'), { sb, go: (k) => goTab(k) }); /* TODAY (seat tool-build-1, build step 2): drawn by fill/today.js into #today-body, the first framed place. */ /* ORDERS (seat tool-build-orders, 2026-11-03, build step 5, decision 1056): drawn by fill/orders.js into #orders-body, the client's orders and the openings with who of ours fits, in one list. SUPERSEDED 2026-11-03: the one-line page that sent Orders to For you in Mail (seat tool-build-1). */ function drawOrders() { const body = $('#orders-body'); if (!body) return; import('./orders.js?v=2026-11-03-tool-build-orders-b').then((O) => O.mount(body, { sb, who: shape?.viewer ?? null, lang: screenLang(), tz: zone(), t: (x) => x, go: (k) => goTab(k), ask: (q) => ask(q) })).catch((e) => { body.textContent = 'Orders could not be loaded: ' + String(e?.message ?? e); }); } function drawToday() { const body = $('#today-body'); if (!body) return; import('./today.js?v=2026-11-03-tool-build-1b').then((T) => T.mount(body, { sb, who: shape?.viewer ?? null, lang: screenLang(), tz: zone(), t: (x) => x, go: (k) => goTab(k), ask: (q) => ask(q), openCheck: () => { const b = $('#health button'); if (b) { window.scrollTo({ top: 0 }); setTimeout(() => b.click(), 0); } }, })).catch((e) => { body.textContent = 'Today could not be loaded: ' + String(e?.message ?? e); }); }
+/* SUPERSEDED 2026-11-03 (seat tool-build-1, decisions 1065, 1069): the one-word health badge (Healthy, Being fixed, Needs you) became the two status signs of fill/frame.js, a check mark and a shield, in the same place. The check mark reads the same tool_health for We are on it and counts only what the signed-in person can fix herself (my_fixes); the shield is the owner's openings to decide (audit_panel). Not signed in: the readings refuse and the check mark stays grey, never green. */ wireSigns($('#clock'), { sb, go: (k) => goTab(k) }); wireGear($('#health'), (k) => { userMoved = true; goTab(k); });   /* the gear beside the signs opens Settings (seat tool-build-people) */ /* TODAY (seat tool-build-1, build step 2): drawn by fill/today.js into #today-body, the first framed place. */ /* ORDERS (seat tool-build-orders, 2026-11-03, build step 5, decision 1056): drawn by fill/orders.js into #orders-body, the client's orders and the openings with who of ours fits, in one list. SUPERSEDED 2026-11-03: the one-line page that sent Orders to For you in Mail (seat tool-build-1). */ function drawOrders() { const body = $('#orders-body'); if (!body) return; import('./orders.js?v=2026-11-03-tool-build-orders-b').then((O) => O.mount(body, { sb, who: shape?.viewer ?? null, lang: screenLang(), tz: zone(), t: (x) => x, go: (k) => goTab(k), ask: (q) => ask(q) })).catch((e) => { body.textContent = 'Orders could not be loaded: ' + String(e?.message ?? e); }); } function drawToday() { const body = $('#today-body'); if (!body) return; import('./today.js?v=2026-11-03-tool-build-1b').then((T) => T.mount(body, { sb, who: shape?.viewer ?? null, lang: screenLang(), tz: zone(), t: (x) => x, go: (k) => goTab(k), ask: (q) => ask(q), openCheck: () => { const b = $('#health button'); if (b) { window.scrollTo({ top: 0 }); setTimeout(() => b.click(), 0); } }, })).catch((e) => { body.textContent = 'Today could not be loaded: ' + String(e?.message ?? e); }); }
 
 // THE AI BALANCE IN THE HEADER (seat model-costs, 2026-10-22). Owner only: lens-ask answers {costs:true} for the owner
 // and refuses anyone else, and then nothing is drawn. Quiet: grey; amber when a top-up is near; red only when reading
@@ -4583,7 +4594,7 @@ if (location.hash === "#sources") { userMoved = true; goto("s-summary"); }
 // (seat people-and-access, decision 1029). The shared row (fill/subtabs.js) picks the sub-tab from the link.
 window.addEventListener("hashchange", () => {
   const [t, sub] = location.hash.slice(1).split("?")[0].split("/");
-  if (!sub || !TABS.some((x) => x.key === t)) return;
+  if (!sub || !PAGES.some((x) => x.key === t)) return;
   userMoved = true;
   if (document.body.dataset.tab !== t) goTab(t); else followHash();
 });
