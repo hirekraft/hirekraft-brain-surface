@@ -62,8 +62,8 @@ async function post(path, body) {
 // parts keep their older look until the next slices bring them into the frame (their style sheets go then).
 // A piece marked test is greyed, carries the Test pill and is never counted (rule 8). "N drafts still being written"
 // stays on the This week card (decision 1068 (2)).
-const SHELL = './marketing-shell.js?v=2026-11-03-tool-build-marketing';
-const STEPS = [['week', 'This week'], ['foundation', 'Foundation'], ['plan', 'Plan'], ['send', 'Sending'], ['lists', 'Lists'], ['back', 'What came back'], ['signals', 'Signals'], ['website', 'Website']];
+const SHELL = './marketing-shell.js?v=2026-11-03-tool-build-marketing-b';
+const STEPS = [['week', 'This week'], ['foundation', 'Foundation'], ['plan', 'Plan'], ['send', 'Sending'], ['lists', 'Lists'], ['back', 'What came back'], ['signals', 'Signals'], ['website', 'Website'], ['reads', 'What this reads']];   // What this reads: the LinkedIn download and who can see the marketing material, kept one press away
 const CHANNEL = { linkedin: 'LinkedIn post', company_page: 'Company page post', group: 'LinkedIn group post', email: 'Email', profile: 'LinkedIn message' };
 const READY_Q = ['What goes out this week?', 'Who is hiring where we know someone?'];
 let F = null;   // the face's own state: { ctx, root, face, stage, path, loc }
