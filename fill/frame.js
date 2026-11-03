@@ -21,7 +21,7 @@
 // Orders is framed since 2026-11-03 (seat tool-build-orders, fill/orders.js). SUPERSEDED: its one-line page that opened For you in Mail.
 export const PLACES = [
   { key: 'today', label: 'Today', framed: true },
-  { key: 'email', label: 'Mail', step: 5 },
+  { key: 'email', label: 'Mail', framed: true },   // framed by seat tool-build-mail (fill/email.js), 2026-11-03
   { key: 'orders', label: 'Orders', framed: true },
   { key: 'money', label: 'Money', owner: true, framed: true },
   { key: 'marketing', label: 'Marketing and sales', framed: true },   // framed by seat tool-build-marketing (build step 4)
