@@ -23,7 +23,7 @@ const PARTS = [
   { key: 'reads', label: 'What this reads' },
 ];
 
-const WEEK = './marketing-week.js?v=2026-11-03-rulings-1068'; let C = null, S = null;   // WEEK: this week's finished pieces above the Plan board (seat marketing-week, decision 1060). C: the tab's context from lens.js; S: { week, data, who, part, handoff, own, note }
+const WEEK = './marketing-week.js?v=2026-11-03-tool-build-marketing'; let C = null, S = null;   // WEEK: this week's finished pieces above the Plan board (seat marketing-week, decision 1060). C: the tab's context from lens.js; S: { week, data, who, part, handoff, own, note }
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
 const data_ = (tag, cls, text) => { const n = mk(tag, cls, text); n.translate = false; return n; };
 const plural = (k, one, many) => (Number(k) === 1 ? one : many);
@@ -76,7 +76,29 @@ export function nextStep(d, who) {
   return { it: null };
 }
 
-export async function drawShell(body, ctx, own) {
+// THE SHELL NOW ONLY OPENS A PART (seat tool-build-marketing, 2026-11-03, build step 4 of decision 1067). The framed face in
+// fill/marketing.js (mount) carries where the week stands and the path of eight steps; a press on a step opens that part here,
+// below the face, with the parts' context kept exactly as drawShell kept it (the week's plan, Viewing as = the signed-in person,
+// handoffs between parts), without drawing a second row of steps.
+export async function mountPart(host, ctx, own, key, onGo) {
+  C = ctx;
+  if (!S || S.host !== host || !host.firstChild) {
+    S = { week: null, data: null, who: null, part: key, handoff: null, own, note: null, host, onGo };
+    host.innerHTML = '';
+    const wrap = mk('div', 'mk mk2');
+    const weekBox = mk('div', 'mk-week-host'), stage = mk('div', 'mk-stage');
+    wrap.append(weekBox, stage); host.appendChild(wrap);
+    // the status line, the Viewing-as pick and the next-step card are kept off the page: the face says where the week stands
+    S.els = { status: mk('p'), sel: C.el('select'), path: mk('nav'), next: mk('section'), stage, weekBox };
+    await loadWeek(null);
+  }
+  S.own = own; S.onGo = onGo;
+  return go(key);
+}
+
+// SUPERSEDED 2026-11-03 (seat tool-build-marketing, decision 1067 step 4): drawShell's status line, step row and next-step card
+// gave way to the framed face. It is no longer exported and nothing calls it; it goes at the next whole edit of this file.
+async function drawShell_superseded(body, ctx, own) {
   C = ctx;
   S = { week: null, data: null, who: null, part: 'plan', handoff: null, own, note: null };
   body.innerHTML = '';
@@ -189,6 +211,7 @@ function ctxFor(key) {
 async function go(key, handoff, same) {
   const { path, stage } = S.els;
   S.part = key; S.handoff = handoff || null;
+  if (S.onGo) S.onGo(key);   // the face's path shows the part a press inside a part moved to
   for (const b of path.children) b.setAttribute('aria-current', b.dataset.part === key ? 'step' : 'false');
   stage.innerHTML = '';
   S.els.weekBox.innerHTML = ''; if (key === 'plan') import(WEEK).then((M) => M.mount(S.els.weekBox, ctxFor('week'))).catch((e) => { S.els.weekBox.appendChild(mk('p', 'notice flagged', 'This week’s finished pieces could not be opened: ' + String((e && e.message) || e))); });   // seat marketing-week
