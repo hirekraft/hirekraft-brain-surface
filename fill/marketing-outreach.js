@@ -8,7 +8,7 @@
 // sent or posted by the Tool. Everything comes from mk_outreach (as the signed-in person): refused with the reason, never empty.
 // No colour, size or font here (skin.css, SIGNALS AND OUTREACH classes). No regex literals, no backslashes.
 
-const SIGNALS_ROW = './marketing.js?v=2026-11-02-marketing-week-3';   // the same token lens.js loads, so it is the same module
+const SIGNALS_ROW = './marketing.js?v=2026-11-03-screen-rollback';   // the same token lens.js loads, so it is the same module
 let C = null, O = null, oDay = null;
 
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
