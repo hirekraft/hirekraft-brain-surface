@@ -23,7 +23,7 @@ const PARTS = [
   { key: 'reads', label: 'What this reads' },
 ];
 
-const WEEK = './marketing-week.js?v=2026-11-03-rulings-1068'; let C = null, S = null;   // WEEK: this week's finished pieces above the Plan board (seat marketing-week, decision 1060). C: the tab's context from lens.js; S: { week, data, who, part, handoff, own, note }
+const WEEK = './marketing-week.js?v=2026-11-03-screen-rollback'; let C = null, S = null;   // WEEK: this week's finished pieces above the Plan board (seat marketing-week, decision 1060). C: the tab's context from lens.js; S: { week, data, who, part, handoff, own, note }
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
 const data_ = (tag, cls, text) => { const n = mk(tag, cls, text); n.translate = false; return n; };
 const plural = (k, one, many) => (Number(k) === 1 ? one : many);
