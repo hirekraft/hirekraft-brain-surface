@@ -1,4 +1,6 @@
-// fill/contacts.js - THE CONTACTS TAB (seat contacts, Alex 2026-10-12: "prep me before a call or meeting" and "have we
+// fill/contact-card.js - THE CONTACT CARD (was fill/contacts.js, the Contacts tab; moved 2026-11-03 by seat tool-build-people:
+// the tab is retired into People, fill/contacts.js, which looks up through lookUp() below; the card itself is unchanged).
+// First built as THE CONTACTS TAB (seat contacts, Alex 2026-10-12: "prep me before a call or meeting" and "have we
 // dealt with this company, who do we know there"; "if I ask for a specific person and that person will be in CATS and
 // emails and phone conversations, everywhere, we put everything together and the tool knows to grab the latest one").
 //
@@ -54,6 +56,14 @@ const MANY = new Set(["email", "phone"]);   // several can be true at once; the 
 const asList = (v) => Array.isArray(v) ? v : (v ? [v] : []);   // one shape: a list of observations, newest first
 const sourceOf = (s) => String(s ?? "").startsWith("cats:tables") ? "CATS (2025 copy)" : String(s ?? "").startsWith("cats") ? "CATS"
   : String(s ?? "").startsWith("hubspot") ? "HubSpot" : String(s ?? "").startsWith("slack") ? "Slack" : String(s ?? "");
+
+// LOOK UP FROM PEOPLE (seat tool-build-people, 2026-11-03): the framed People place draws its own find box and hands the
+// lookup here, so there is one card and one finder. The card draws into m, outside the framed blocks (its own look).
+export function lookUp(m, c, q) {
+  ctx = c; mount = m;
+  return find(q);
+}
+export function lastLookUp() { try { return localStorage.getItem(KEEP); } catch (_) { return null; } }
 
 export function drawContacts(body, c) {
   ctx = c; body.innerHTML = "";
