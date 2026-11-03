@@ -25,7 +25,7 @@ export const PLACES = [
   { key: 'orders', label: 'Orders', framed: true },
   { key: 'money', label: 'Money', owner: true, framed: true },
   { key: 'marketing', label: 'Marketing and sales', framed: true },   // framed by seat tool-build-marketing (build step 4)
-  { key: 'contacts', label: 'People', step: 5 },
+  { key: 'contacts', label: 'People', framed: true },   // framed by seat tool-build-people (fill/contacts.js), 2026-11-03. More and the retired tabs: fill/nav.js
 ];
 // The phone's bottom bar (decision 1069): Today, Mail, Marketing and sales, Money, then More (Orders and People inside).
 export const PHONE_BAR = ['today', 'email', 'marketing', 'money'];
@@ -105,6 +105,7 @@ export function icon(kind, size) {
   s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor'); s.setAttribute('stroke-width', '2'); s.setAttribute('aria-hidden', 'true');
   const add = (tag, attrs) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); s.appendChild(e); };
   if (kind === 'check') { add('circle', { cx: '12', cy: '12', r: '9' }); add('path', { d: 'M8 12.5l2.6 2.6L16 9.5' }); }
+  else if (kind === 'gear') { add('circle', { cx: '12', cy: '12', r: '3' }); add('path', { d: 'M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1' }); }
   else { add('path', { d: 'M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z' }); }
   return s;
 }
@@ -140,9 +141,16 @@ export async function readSigns(sb, withShield = true) {
   const s = signs.shield;
   if (!withShield) { /* the shield keeps its last reading: audit_panel is read at open and every 30 minutes */ }
   else if (au && au.ok === true) {
-    /* places open beyond the company (anyone with the link, or someone outside) she has not decided on, or that grew critical files since she did: Security's own openings list, without the ones open only inside the company */ s.count = (au.places ?? []).filter((p) => (p.state === 'decide' || p.state === 'alert') && p.opening !== 'company').length;
+    /* THE SHIELD COUNTS PLACES WITH CRITICAL FILES OPEN BEYOND THE COMPANY, STILL TO DECIDE (seat tool-build-people, 2026-11-03).
+       Critical is Alex's own definition, kept in the brain (pay and bill rates, signed contracts, a person's ID, address, bank or
+       tax papers, the company's bank and tax papers). It is the figure Security's own top line shows ("places with critical files
+       open beyond the company"), so the sign and the page it opens agree. SUPERSEDED 2026-11-03: every place open beyond the
+       company still to decide (tool-build-1; 31 then), which keeps the shield amber for ordinary shared folders and teaches her to
+       look past it; and the design's 2 (drives with a member outside, pass 2), a measure Security does not draw. The other
+       openings stay on Security, to decide one by one. */
+    s.count = (au.places ?? []).filter((p) => (p.state === 'decide' || p.state === 'alert') && p.opening !== 'company' && Number(p.critical ?? 0) > 0).length;
     s.state = s.count ? 'amber' : 'good';
-    s.line = s.count ? plural(s.count, 'place', 'places') + ' can be opened by people outside the company. Decide each one.' : 'Nothing is open outside the company that you have not decided on.';
+    s.line = s.count ? plural(s.count, 'place with critical files', 'places with critical files') + ' can be opened by people outside the company.' : 'No critical files are open outside the company.';
   } else if (au && (au.reason === 'not_owner' || au.reason === 'unbound')) {
     s.state = 'none'; s.count = 0; s.line = au.note ?? '';
   } else {
@@ -173,7 +181,7 @@ function drawCheckPanel(panel, ctx) {
   c.el.appendChild(say(g.line, g.state === 'unknown'));
   if (g.fixes.length) {
     const l = list();
-    for (const f of g.fixes) l.appendChild(row({ title: f.say ?? '', right: button('Fix', () => ctx.go(f.go ?? 'systems')) }));
+    for (const f of g.fixes) l.appendChild(row({ title: f.say ?? '', right: button('Fix', () => ctx.go(f.go ?? 'settings')) }));
     c.el.appendChild(l);
   }
   if (g.areas.length) {
