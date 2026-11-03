@@ -83,7 +83,7 @@ import { foundCard } from "./find.js?v=2026-10-29-thinkrooms"; // find first, th
 import { closeCard } from "./close.js?v=2026-10-26-month-end-2"; // the month-end check, corrected cell by cell (seat month-end)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-27-people-and-access"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-10-27-people-and-access"; // sub-tab row and People and access (seat people-and-access)
 import { initChats, loadChats } from "./chats.js?v=2026-10-30-linkedin-whole"; // Chats tab (seat chat-import)
-import { initMoney, loadMoney } from "./money.js?v=2026-11-03-rulings-1068"; // Money tab (seat runway)
+import { initMoney, loadMoney } from "./money.js?v=2026-11-03-rulings-1068"; /* Money tab (seat runway) */ import { PLACES, PHONE_BAR, wireSigns, drawWaiting } from './frame.js?v=2026-11-03-tool-build-1'; import { screenLang } from './words.js?v=2026-10-29-thinkrooms-3';   // the screen frame: six places, two status signs (seat tool-build-1, decisions 1067, 1069)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
@@ -3753,7 +3753,7 @@ function routeOnState(mode) {
   let last = null;
   try { last = localStorage.getItem(TAB_KEY); } catch (_) { /* storage off: Mail */ }
   const t = TABS.find((x) => x.key === last && (!x.owner || shape?.viewer?.all_access));
-  goTab(t ? t.key : 'email');
+  goTab(t ? t.key : 'today');   // Today the first time (seat tool-build-1; was Mail)
 }
 
 // THE BRAIN TAB SHOWS CONNECTING AND WHAT IS CONNECTED TOGETHER (Alex, 2026-10-02,
@@ -3788,7 +3788,7 @@ function goto(id, key) {
   if (id === "s-tests") loadTests();
   if (id === "s-totest") import("./totest.js?v=2026-10-29-ask-agent").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + String(e?.message ?? e); });   // seat test-list
   if (id === "s-security") loadSecurity();
-  if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
+  if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); } if (id === 's-today') drawToday(); if (id === 's-orders') drawWaiting($('#orders-body'), 'Orders', 'Requirements and enquiries arrive in Mail, under For you. Orders gets its own page in a later step.', 'Open For you', () => goTab('email'));
   onMail = id === 's-lens' && lensKey === 'email';
   if (id === 's-summary') import('./first.js?v=2026-10-27-first-answer').then((F) => F.drawFirst({ sb, el, $ })).catch((e) => { const m = $('#first-answer'); if (m) m.textContent = 'The short answer could not be loaded: ' + String(e?.message ?? e); });   // seat first-answer
   workPanel(id === 's-work');
@@ -3797,7 +3797,7 @@ function goto(id, key) {
     import("./ledger.js?v=2026-10-22-dates").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
   if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); showSubtabs($('#s-chats'), 'chats', shape?.viewer?.email); }
-  const tabNow = id === 's-lens' ? lensKey : id === 's-drives' ? 'drives' : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : 'brain';
+  const tabNow = id === 's-today' ? 'today' : id === 's-orders' ? 'orders' : id === 's-lens' ? lensKey : id === 's-drives' ? 'drives' : id === 's-work' ? 'work' : id === 's-security' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : 'brain';
   markTab(tabNow);
   document.body.dataset.tab = tabNow;
   // Remembered so the Tool opens where she was (seat conversation-panel); first-run screens are not tabs.
@@ -3815,17 +3815,17 @@ function goto(id, key) {
 // she is an owner (Security: seat security-tab, 2026-10-08; Money: seat runway, 2026-10-10).
 const GROUP_TAB = (k, label) => ({ key: k, label: label ?? GROUPS.find((g) => g.key === k).label });
 // THE THINKROOMS TAB (seat thinkrooms-a, 2026-10-29, decision 1035; first built as Thoughts by seat thoughtgram): beside Mail; drawn by fill/thoughts.js.
-const TABS = [GROUP_TAB('email', 'Mail'), { key: 'thoughts', label: 'Thinkrooms' }, { key: 'work', label: 'Work' }, { key: 'money', label: 'Money', owner: true },
-  GROUP_TAB('drives', 'Drives'), GROUP_TAB('calendar'), GROUP_TAB('contacts'), { key: 'marketing', label: 'Marketing and sales' },   // Marketing and sales: seat job-alerts, 2026-10-30, decision 1039 (fill/marketing.js)
+/* THE SIX PLACES FIRST (seat tool-build-1, 2026-11-03, decisions 1067, 1069): Today, Mail, Orders, Money, Marketing and sales, People, from fill/frame.js PLACES (one list; Contacts is shown as People, same key; Orders has its own page in build step 5 and until then opens For you in Mail; Work, the conversations, joins Ask in step 6). The older tabs follow and sit under More, on a desktop too, until build step 6 retires them. SUPERSEDED 2026-11-03: Alex's 2026-10-12 order with Mail first (seat conversation-panel). */ const TABS = [...PLACES.map((p) => ({ key: p.key, label: p.label, owner: !!p.owner, place: true })), { key: 'work', label: 'Work' }, { key: 'thoughts', label: 'Thinkrooms' },
+  GROUP_TAB('drives', 'Drives'), GROUP_TAB('calendar'),   // Marketing and sales: seat job-alerts, 2026-10-30, decision 1039 (fill/marketing.js)
   { key: 'brain', label: 'Brain' }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
   GROUP_TAB('systems'), GROUP_TAB('loose'),
   // THE AI TAB (seat ai-tab, 2026-10-23, decision 1007; working name, Alex may rename): owner only, drawn by fill/ai.js.
   { key: 'ai', label: 'AI', owner: true }];
 const TAB_KEY = 'tool.tab';
 // The daily tabs: on a phone these sit in the bottom bar; the rest go under More (seat phone, 2026-10-13).
-const DAY_TABS = ['email', 'work', 'drives', 'calendar', 'contacts'];   // Thoughts sits under More on a phone: a seventh slot clipped its name and Calendar's (seat thoughtgram, measured at 390 px)
+const DAY_TABS = PHONE_BAR;   /* decision 1069: Today, Mail, Marketing and sales, Money, then More (Orders and People inside) */   // Thoughts sits under More on a phone: a seventh slot clipped its name and Calendar's (seat thoughtgram, measured at 390 px)
 function goTab(key) {
-  if (key === 'brain') goto('s-summary'); else if (key === 'drives') goto('s-drives'); else if (key === 'work') goto('s-work');
+  if (key === 'today') goto('s-today'); else if (key === 'orders') goto('s-orders'); else if (key === 'brain') goto('s-summary'); else if (key === 'drives') goto('s-drives'); else if (key === 'work') goto('s-work');
   else if (key === 'security') goto('s-security'); else if (key === 'money') goto('s-money'); else if (key === 'chats') goto('s-chats'); else if (key === 'thoughts') goto('s-thoughts'); else goto('s-lens', key);
 }
 
@@ -3836,7 +3836,7 @@ function markTab(key) {
   });
   // On a phone the tab she is on may sit under More: More then reads as where she is (seat phone).
   const more = $('#tabs .tab-more');
-  if (more) more.classList.toggle('here', !DAY_TABS.includes(key));
+  if (more) { more.classList.toggle('here', !DAY_TABS.includes(key)); more.classList.toggle('here-desk', !PLACES.some((p) => p.key === key)); }
   $('#tabs')?.classList.remove('more-open');
   more?.setAttribute('aria-expanded', 'false');
 }
@@ -3851,7 +3851,7 @@ function drawTabs() {
     b.dataset.tab = t.key;
     b.textContent = t.label;
     if (t.owner) b.hidden = !shape?.viewer?.all_access;
-    if (DAY_TABS.includes(t.key)) b.classList.add('tab-day');
+    if (DAY_TABS.includes(t.key)) b.classList.add('tab-day'); if (t.place) b.classList.add('tab-place');
     b.addEventListener('click', () => { userMoved = true; goTab(t.key); });
     nav.appendChild(b);
   }
@@ -4354,70 +4354,7 @@ function drawClock() {
 // alerts read the same function, so the gauge and the alert cannot disagree. A problem nobody has picked up yet
 // still says Being fixed here: the studio's on-call reads it within the half hour (design D3, tool-health report).
 // Not signed in: hidden, the sign-in page speaks. Reading failed: says so, never shows Healthy.
-(function wireHealth() {
-  const clock = $('#clock');
-  if (!clock) return;
-  const wrap = el('div', 'health'); wrap.id = 'health'; wrap.hidden = true;
-  const btn = el('button', 's-badge health-btn'); btn.type = 'button'; btn.setAttribute('aria-expanded', 'false');
-  const badge = el('span', 'badge b-grey'); badge.textContent = 'Checking';
-  btn.appendChild(badge);
-  const panel = el('div', 'health-panel'); panel.hidden = true;
-  panel.setAttribute('role', 'region'); panel.setAttribute('aria-label', 'How the Tool is doing');
-  wrap.append(btn, panel);
-  clock.after(wrap);
-  const TONE = { healthy: 'b-green', fixing: 'b-blue', needs_you: 'b-orange' };
-  const AREA_TONE = { ok: 'b-green', fixing: 'b-blue', red: 'b-blue', needs_you: 'b-orange' };
-  const AREA_WORD = { ok: 'OK', fixing: 'Being fixed', red: 'Being fixed', needs_you: 'Needs you' };
-  const close = () => { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
-  btn.addEventListener('click', () => { panel.hidden = !panel.hidden; btn.setAttribute('aria-expanded', String(!panel.hidden)); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) { close(); btn.focus(); } });
-  document.addEventListener('click', (e) => { if (!panel.hidden && !wrap.contains(e.target)) close(); });
-  const at = (ts) => fmtDate(ts, 'time');
-  async function readHealth() {
-    let data = null, error = null;
-    try { ({ data, error } = await sb.rpc('tool_health')); } catch (e) { error = e; }
-    if (!error && data && data.ok === false) { wrap.hidden = true; close(); return; }
-    wrap.hidden = false;
-    panel.innerHTML = '';
-    if (error || !data) {
-      badge.className = 'badge b-grey'; badge.textContent = 'Not checked';
-      btn.title = 'How the Tool is doing: not checked';
-      const p = el('p', 'health-head');
-      p.textContent = 'The Tool could not read its own health just now. It will try again in a few minutes.';
-      panel.appendChild(p);
-      return;
-    }
-    badge.className = 'badge ' + (TONE[data.overall] || 'b-grey');
-    badge.textContent = data.word;
-    btn.title = 'How the Tool is doing: ' + data.word;
-    const head = el('p', 'health-head');
-    head.textContent = data.overall === 'healthy' ? 'Everything is working.'
-      : data.overall === 'needs_you' ? 'One thing needs a person. The rest is being looked after.'
-      : 'Something is not right yet, and it is being fixed. Nothing for you to do.';
-    panel.appendChild(head);
-    const ul = el('ul', 'health-areas');
-    for (const a of data.areas || []) {
-      const li = el('li', 'health-area');
-      const b = el('span', 'badge ' + (AREA_TONE[a.state] || 'b-grey'));
-      b.textContent = AREA_WORD[a.state] || 'Not checked';
-      const name = el('b'); name.textContent = a.name;
-      const say = el('span', 'health-say'); say.textContent = a.say;
-      li.append(b, name, say);
-      ul.appendChild(li);
-    }
-    panel.appendChild(ul);
-    const fixed = data.repairs || [];
-    if (fixed.length) {
-      const h = el('p', 'health-sub'); h.textContent = 'Fixed on its own in the last day';
-      const ul2 = el('ul', 'health-fixed');
-      for (const r of fixed.slice(0, 5)) { const li = el('li'); li.textContent = r.what + (r.at ? ', ' + at(r.at) : ''); ul2.appendChild(li); }
-      panel.append(h, ul2);
-    }
-    if (data.checked_at) { const t = el('p', 'health-when'); t.textContent = 'Last checked ' + at(data.checked_at) + '.'; panel.appendChild(t); }
-  }
-  readHealth();
-  setInterval(readHealth, 5 * 60 * 1000);
-})();
+/* SUPERSEDED 2026-11-03 (seat tool-build-1, decisions 1065, 1069): the one-word health badge (Healthy, Being fixed, Needs you) became the two status signs of fill/frame.js, a check mark and a shield, in the same place. The check mark reads the same tool_health for We are on it and counts only what the signed-in person can fix herself (my_fixes); the shield is the owner's openings to decide (audit_panel). Not signed in: the readings refuse and the check mark stays grey, never green. */ wireSigns($('#clock'), { sb, go: (k) => goTab(k) }); /* TODAY (seat tool-build-1, build step 2): drawn by fill/today.js into #today-body, the first framed place. */ function drawToday() { const body = $('#today-body'); if (!body) return; import('./today.js?v=2026-11-03-tool-build-1').then((T) => T.mount(body, { sb, who: shape?.viewer ?? null, lang: screenLang(), tz: zone(), t: (x) => x, go: (k) => goTab(k), ask: (q) => ask(q), openCheck: () => { const b = $('#health button'); if (b) { window.scrollTo({ top: 0 }); setTimeout(() => b.click(), 0); } }, })).catch((e) => { body.textContent = 'Today could not be loaded: ' + String(e?.message ?? e); }); }
 
 // THE AI BALANCE IN THE HEADER (seat model-costs, 2026-10-22). Owner only: lens-ask answers {costs:true} for the owner
 // and refuses anyone else, and then nothing is drawn. Quiet: grey; amber when a top-up is near; red only when reading
