@@ -12,7 +12,7 @@
 //
 // THE CHECK MARK COUNTS ONLY WHAT THE SIGNED-IN PERSON CAN FIX HERSELF (decision 1069): my_fixes() in the brain. Problems
 // that are ours show inside as "We are on it" (tool_health's areas) and never turn it amber. A sign whose reading did
-// not come back is dashed and grey, never green (rule 5). The shield is the owner's: openings to decide from audit_panel,
+// not come back is dashed and grey, never green (rule 5). The shield is the owner's: places open beyond the company still to decide, from audit_panel,
 // the same reading the Security tab draws; anyone else sees no shield.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
@@ -139,9 +139,9 @@ export async function readSigns(sb, withShield = true) {
   const s = signs.shield;
   if (!withShield) { /* the shield keeps its last reading: audit_panel is read at open and every 30 minutes */ }
   else if (au && au.ok === true) {
-    s.count = Number(au.gauges?.openings_to_decide ?? 0);
+    /* places open beyond the company (anyone with the link, or someone outside) she has not decided on, or that grew critical files since she did: Security's own openings list, without the ones open only inside the company */ s.count = (au.places ?? []).filter((p) => (p.state === 'decide' || p.state === 'alert') && p.opening !== 'company').length;
     s.state = s.count ? 'amber' : 'good';
-    s.line = s.count ? plural(s.count, 'place is', 'places are') + ' open wider than the company. Decide each one.' : 'Nothing open wider than you decided.';
+    s.line = s.count ? plural(s.count, 'place', 'places') + ' can be opened by people outside the company. Decide each one.' : 'Nothing is open outside the company that you have not decided on.';
   } else if (au && (au.reason === 'not_owner' || au.reason === 'unbound')) {
     s.state = 'none'; s.count = 0; s.line = au.note ?? '';
   } else {
