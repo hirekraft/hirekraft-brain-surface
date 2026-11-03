@@ -83,7 +83,7 @@ import { foundCard } from "./find.js?v=2026-10-29-thinkrooms"; // find first, th
 import { closeCard } from "./close.js?v=2026-10-26-month-end-2"; // the month-end check, corrected cell by cell (seat month-end)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-27-people-and-access"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-10-27-people-and-access"; // sub-tab row and People and access (seat people-and-access)
 import { initChats, loadChats } from "./chats.js?v=2026-10-30-linkedin-whole"; // Chats tab (seat chat-import)
-import { initMoney, loadMoney } from "./money.js?v=2026-11-03-rulings-1068"; /* Money tab (seat runway) */ import { PLACES, PHONE_BAR, wireSigns, drawWaiting } from './frame.js?v=2026-11-03-tool-build-1b'; import { screenLang } from './words.js?v=2026-10-29-thinkrooms-3';   // the screen frame: six places, two status signs (seat tool-build-1, decisions 1067, 1069)
+import { initMoney, loadMoney } from "./money.js?v=2026-11-03-tool-build-money"; /* Money tab (seat runway) */ import { PLACES, PHONE_BAR, wireSigns, drawWaiting } from './frame.js?v=2026-11-03-tool-build-1b'; import { screenLang } from './words.js?v=2026-10-29-thinkrooms-3';   // the screen frame: six places, two status signs (seat tool-build-1, decisions 1067, 1069)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
 
 const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
@@ -3792,7 +3792,7 @@ function goto(id, key) {
   onMail = id === 's-lens' && lensKey === 'email';
   if (id === 's-summary') import('./first.js?v=2026-10-27-first-answer').then((F) => F.drawFirst({ sb, el, $ })).catch((e) => { const m = $('#first-answer'); if (m) m.textContent = 'The short answer could not be loaded: ' + String(e?.message ?? e); });   // seat first-answer
   workPanel(id === 's-work');
-  if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney(); showSubtabs($('#s-money'), 'money', shape?.viewer?.email);   // seat tab-split
+  if (id === 's-money') { /* seat tool-build-money: the framed part gets the screen language, go, and part (opens a part of the row, e.g. How long we can go) */ initMoney({ sb, el, $, countOf, zone, lang: screenLang(), go: (k) => goTab(k), part: (sub) => { const b = document.querySelector('#s-money [data-subtabs] [data-for=' + sub + ']'); if (b) { b.click(); b.scrollIntoView({ block: 'nearest' }); } } }); loadMoney(); showSubtabs($('#s-money'), 'money', shape?.viewer?.email);   // seat tab-split
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
     import("./ledger.js?v=2026-10-22-dates").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
