@@ -51,7 +51,6 @@ import { fmtDate } from './dates.js?v=2026-10-22-dates';
 import { plainWords } from './plain.js?v=2026-10-27-mail-views';
 import { drawBench } from './bench.js?v=2026-11-02-mail-clean';   // Bench (staffing): Who we have on a requirement, only where the business has it
 import { screenLang, screenLangName } from './words.js?v=2026-10-29-thinkrooms-3';   // See it in <language> (seat language-and-nudge)
-import { draw as drawFaceIn } from './email.js?v=2026-11-03-tool-build-mail';   // Mail's framed face (seat tool-build-mail): For you, notices, sellers, mailboxes
 
 // VIEWS IN THE LEFT COLUMN (seat mail-views, 2026-10-27; Alex 14:41 PT: "Worth your attention should be ... on the left-hand
 // side instead of an email, like a label ... worth your attention, and the other would be starred"). At the top of the left
@@ -271,7 +270,6 @@ async function freshInbox() {
 // The Brain tab's list and the old /mail/ address both arrive here with a mailbox in hand.
 export function chooseMailbox(key) {
   if (!key) return;
-  showFace(false);
   userChose = true; keepLastBox(key);
   const wasView = view && view.kind !== 'mailbox';
   view = { kind: 'mailbox' }; pick = null;
@@ -591,27 +589,20 @@ function sellerClear(li, it) {
   const x = mk('button', 'go ghost mailx-sell-clear', 'Not for this list'); x.type = 'button';
   x.addEventListener('click', async () => {
     x.disabled = true;
-    const r = await clearItem(it);
-    if (!r.ok) { x.disabled = false; drawList(); }
+    let r = null;
+    try {
+      const q = await C.sb.rpc('matter_choose', { p_key: it.key, p_choice: 'not_for_this_list', p_title: String(it.subject || it.what || '').slice(0, 150),
+        p_from_key: it.from_key || null, p_at: it.last_out || null });
+      r = q.error ? { ok: false, reason: q.error.message } : q.data;
+    } catch (e) { r = { ok: false, reason: String((e && e.message) || e) }; }
+    if (!r || r.ok !== true) { x.disabled = false; sellSaid = { key: it.key, line: 'Not kept. ' + plainWords(String((r && r.reason) || '')) }; drawList(); return; }
+    sellSaid = { key: it.key, line: firstSentence(String(r.line || 'Taken off your list.')), id: r.id };
+    if (attn && attn.gone) attn.gone.add(it.key);
+    if (pick && pick.key === it.key) { pick = null; setView('list'); drawRead(); }
+    drawSide(); drawList();
+    setTimeout(() => loadAttention(true), 400);
   });
   li.appendChild(x);
-}
-// Not for this list, one press, from a row here or from Mail's face (email.js): the same choice as on the card (matter_choose),
-// kept in the brain per person; the row leaves at once, the line with Undo stands under Selling to you.
-async function clearItem(it) {
-  let r = null;
-  try {
-    const q = await C.sb.rpc('matter_choose', { p_key: it.key, p_choice: 'not_for_this_list', p_title: String(it.subject || it.what || '').slice(0, 150),
-      p_from_key: it.from_key || null, p_at: it.last_out || null });
-    r = q.error ? { ok: false, reason: q.error.message } : q.data;
-  } catch (e) { r = { ok: false, reason: String((e && e.message) || e) }; }
-  if (!r || r.ok !== true) { const why = plainWords(String((r && r.reason) || '')); sellSaid = { key: it.key, line: 'Not kept. ' + why }; return { ok: false, reason: why }; }
-  sellSaid = { key: it.key, line: firstSentence(String(r.line || 'Taken off your list.')), id: r.id };
-  if (attn && attn.gone) attn.gone.add(it.key);
-  if (pick && pick.key === it.key) { pick = null; setView('list'); drawRead(); }
-  drawSide(); drawList();
-  setTimeout(() => loadAttention(true), 400);
-  return { ok: true, line: sellSaid.line, undo: async () => { await sellerUndo(); return { ok: !!(sellSaid && !sellSaid.id), line: sellSaid && sellSaid.line }; } };
 }
 async function sellerUndo() {
   const s = sellSaid;
@@ -1546,36 +1537,6 @@ async function live(action, extra) {
 }
 
 // ── the frame ────────────────────────────────────────────────────────────────
-// MAIL'S FACE (seat tool-build-mail, 2026-11-03, build step 5 of whole-tool-design-3; decisions 1056, 1061, 1067). Mail opens on
-// its framed face (fill/email.js): For you with what each item is in one word, notices behind one press with Not for this list,
-// Selling to you as one count, the mailboxes. A press opens the item here, in the workspace, where the email shows as an email
-// and an open requirement starts with Who we have (seat mail-clean); Back to Mail returns. Opening an email or a mailbox from
-// anywhere else (an answer, a thought, the box) goes straight to the workspace. The face draws from the readings this file
-// already holds (attn, the mailboxes from lens.js): no second read, and it redraws whenever the left column does.
-let face = true;
-function showFace(on) { face = !!on; applyFace(); }
-function applyFace() {
-  if (!parts) return;
-  parts.faceSlot.hidden = !face; parts.wrap.hidden = face; parts.back.hidden = face;
-  if (face) drawFace();
-}
-function drawFace() {
-  if (!parts || !face || !C) return;
-  const boxes = C.mbxError() ? { error: plainWords(String(C.mbxError())) }
-    : !C.mailboxes().size && C.readingState() === null ? { loading: true }
-    : { rows: [...C.mailboxes().values()].filter((m) => !hiddenBoxes.has(m.source_key)) };
-  const a = !attn || attn.loading ? { loading: true } : attn.error ? { error: attn.error } : { data: attn.data, gone: attn.gone };
-  const toList = (more) => { view = { kind: 'attention' }; pick = null; open = null; found = null; if (more && attn) attn.more = true; showFace(false); setView('list'); drawSide(); drawList(); drawRead(); };
-  drawFaceIn(parts.faceSlot, { attention: a, boxes }, {
-    open: (it) => { view = { kind: 'attention' }; pick = it; open = null; found = null; markSeen('attention', 'attention', [it.key]); showFace(false); setView('read'); drawSide(); drawList(); drawRead(); },
-    all: () => toList(false),
-    sellers: () => toList(true),
-    box: (key) => chooseMailbox(key),
-    clear: (it) => clearItem(it),
-    ask: (q) => { if (C.ask) C.ask(q); },
-  });
-}
-
 // Called by lens.js on every reading. The columns are built once; a later reading
 // (the doorbell, a refresh) redraws only the left column, so an open inbox and email
 // keep their place.
@@ -1591,18 +1552,13 @@ export function drawMail(body) {
     read.setAttribute('aria-label', 'The open item');
     read.setAttribute('aria-live', 'polite');
     wrap.append(side, list, read);
-    const faceSlot = mk('div', 'mailx-face');
-    const back = mk('button', 'vf-link mailx-back', 'Back to Mail'); back.type = 'button';
-    back.addEventListener('click', () => { showFace(true); window.scrollTo({ top: 0 }); });
-    body.append(faceSlot, back, wrap);
-    parts = { wrap, side, list, read, faceSlot, back };
-    if (pendingOpen) face = false;
+    body.append(wrap);
+    parts = { wrap, side, list, read };
     // On a phone the left column is the first screen, like Gmail's menu (brief item 5); elsewhere the list.
     wrap.dataset.view = window.matchMedia('(max-width: 720px)').matches && !pendingOpen ? 'side' : 'list';
   }
   if (!view) view = pendingOpen ? { kind: 'mailbox' } : { kind: 'attention' };
   parts.wrap.dataset.mode = mode;
-  applyFace();
   loadMode();
   pickDefault();
   drawSide();
@@ -1716,7 +1672,6 @@ function drawLabels(side) {
   side.appendChild(wrap);
 }
 function drawSide() {
-  drawFace();
   const side = parts.side;
   const top = side.scrollTop;
   side.innerHTML = '';
@@ -2754,7 +2709,6 @@ export function findMail(text, keys, opts) {
     askInstead: o.askInstead || null, seq, title: o.title || '', view: !!o.view };
   // A find from the box leaves any view; a view (Starred, a label) is a find with a title and no meaning search (seat mail-views).
   if (!o.view) { view = { kind: 'mailbox' }; pick = null; }
-  showFace(false);
   if (parts) { setView('list'); parts.list.scrollTop = 0; drawSide(); drawList(); }
   const mine = () => found && found.seq === seq;
   for (const k of keys) {
@@ -2786,7 +2740,6 @@ export function clearFind() { found = null; if (view && view.kind !== 'attention
 // Held until the columns exist, because lens.js draws them after the tab change.
 export function openEmail(sourceKey, id) {
   if (!sourceKey || !id) return;
-  showFace(false);
   pendingOpen = { sourceKey, id };
   flushOpen();
 }

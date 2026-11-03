@@ -26,10 +26,10 @@ try {
      paints at once in the system face and swaps when the fonts arrive; if they never arrive it stays in the system face. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Public+Sans:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
 <title>Tool — your brain</title>
 <meta name="description" content="Your business's own memory.">
-<link rel="stylesheet" href="skin.css?v=2026-11-03-tool-build-people">
+<link rel="stylesheet" href="skin.css?v=2026-11-02-mail-clean">
 <script>
 // THE FRONT DOOR, before anything is drawn (seat front-door, 2026-10-13): no stored sign-in on this
 // browser means she goes to sign in, and comes back to this tab after. lens.js makes the real check
@@ -397,8 +397,6 @@ try {
         <h2 class='work-title'>Conversations</h2>
         <button class='go work-newchat' id='work-new' type='button'>New conversation</button>
       </div>
-      <!-- THINKROOMS AND SAVED CHATS ARE CONVERSATIONS (seat tool-build-people, 2026-11-03, decision 1067 (3)): no longer tabs; opened from here. -->
-      <div class='work-more'><button class='go ghost' id='work-rooms' type='button'>Thinkrooms</button> <button class='go ghost' id='work-saved' type='button'>Saved chats</button></div>
       <div class='work-list' id='work-list'>
         <input class='work-search' id='work-search' type='search' autocomplete='off'
                placeholder='Search your conversations' aria-label='Search your conversations'>
@@ -437,13 +435,13 @@ try {
        and covers all three. Nothing was removed; the three headings became the row's words. -->
   <section class="step" id="s-money" hidden>
     <div class="tab-top">
-      <!-- seat tool-build-money (2026-11-03, build step 3, decisions 1061, 1067): the heading went; Money opens on its framed place, the other parts one press away on the row. -->
+      <h2>What you are owed, how long we can go, and what we pay for.</h2>
       <details class="whatis"><summary>What is this?</summary>
         <p class="quiet">Only you, as the owner, see this tab. Every figure opens the record it came from.</p></details>
     </div>
     <nav data-subtabs="money"></nav>
 
-    <!-- seat books-truth-2 (2026-11-02, decision 1063 part 1): Owed to you is the first part: what the books say beside what the Tool believes from the mail, and the clean-up list; each fix is checked in QuickBooks and written only on the owner's press. --> <div data-sub="owed" data-label="Owed to you"><p class="sub-what"></p><div id="money-body" aria-live="polite"></div></div> <div data-sub="runway" data-label="How long we can go" hidden>
+    <!-- seat books-truth-2 (2026-11-02, decision 1063 part 1): Owed to you is the first part: what the books say beside what the Tool believes from the mail, and the clean-up list; each fix is checked in QuickBooks and written only on the owner's press. --> <div data-sub="owed" data-label="Owed to you"><p class="sub-what">What your clients owe you: what your books say, what we believe, and what to clean up in the books.</p><div id="money-owed" aria-live="polite"></div></div> <div data-sub="runway" data-label="How long we can go" hidden>
       <p class="sub-what">Cash in the bank, what goes out each month, and how many months that lasts.</p>
       <div id="money-runway" aria-live="polite"></div>
     </div>
@@ -467,7 +465,7 @@ try {
        or Loose files. Seat tool-tabs, 2026-10-02. Very basic on purpose: what is
        connected, or one line pointing to Brain. Mail is the exception: an inbox you can
        work in, three columns drawn by mail.js (seat mail-redesign, 2026-10-07). -->
-  <!-- TODAY and ORDERS (seat tool-build-1, 2026-11-03, decisions 1067, 1069): the first place in the screen frame, drawn by today.js; Orders drawn by orders.js (seat tool-build-orders, 2026-11-03, build step 5). --> <section class='step' id='s-today' hidden><div id='today-body'></div></section> <section class='step' id='s-orders' hidden><div id='orders-body'></div></section> <!-- SETTINGS (seat tool-build-people, 2026-11-03): behind the gear and under More; drawn by nav.js drawSettings. --> <section class='step' id='s-settings' hidden><div id='settings-body'></div></section> <section class='step' id='s-lens' hidden>
+  <section class='step' id='s-lens' hidden>
     <h2 id='lens-head'></h2>
     <div id='lens-body' aria-live='polite'></div>
   </section>
@@ -489,7 +487,7 @@ try {
     <button class="panel-btn panel-list" id="panel-list" type="button" aria-label="Your conversations" title="Your conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
     <h2 class="panel-title" id="panel-title">New conversation</h2>
     <button class="panel-btn" id="panel-new" type="button" aria-label="New conversation" title="New conversation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-    <button class="panel-btn panel-to-work" id="panel-work" type="button" aria-label="All conversations" title="All conversations, full size"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14"/></svg></button>
+    <button class="panel-btn panel-to-work" id="panel-work" type="button" aria-label="Open in Work" title="Open in Work, full size"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14"/></svg></button>
     <button class="panel-btn panel-wide" id="panel-full" type="button" aria-pressed="false" aria-label="Full screen" title="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="panel-btn" id="panel-away" type="button" aria-label="Put away" title="Put away (Esc)"><svg class="panel-x" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><svg class="panel-down" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
   </div>
@@ -522,6 +520,6 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-11-03-tool-build-people"></script>
+<script type="module" src="lens.js?v=2026-11-03-sources-loop"></script>
 </body>
 </html>

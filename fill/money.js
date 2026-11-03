@@ -9,26 +9,33 @@
 // 2026-10-12: exports were never used (Alex 2026-10-11: no exports); the runway reads the bank and the books live. The
 // box answers the same questions from the same two functions (lens-ask tools runway and subscriptions).
 //
-// PARTS, top to bottom: the framed part (seat tool-build-money, build step 3: owed to you, you owe, clean up the books; mount
-// below, drawn only with fill/frame.js blocks), then behind the part row: how long we can go, what we pay for, where we stand with each contractor (#money-ledger, drawn
+// PARTS, top to bottom: owed to you (seat books-truth-2: what the books say, what we believe, clean up the books), how long we can go, what we pay for, where we stand with each contractor (#money-ledger, drawn
 // by seat contractor-ledger; this file leaves that mount alone), and what was not read.
 
 import { fmtDate } from "./dates.js?v=2026-10-22-dates";
-import { h, nameSpan, card, list, row, button, link, say, working, pair, behind, words } from './frame.js?v=2026-11-03-tool-build-1b';   // the framed part (seat tool-build-money)
 let ctx = null;   // { sb, el, $, countOf, zone }
 let last = null;  // money_commitments
 let run = null;   // money-runway
+let owed = null;  // books_truth (seat books-truth-2)
 
 const line = (cls, text) => { const p = ctx.el("p", cls); p.textContent = text; return p; };
 const note = (mount, text, flagged) => mount.appendChild(line(flagged ? "notice flagged" : "quiet", text));
 const money = (n) => n == null ? "" : Number(n).toLocaleString("en-US", { style: "currency", currency: "USD" });
+const whole = (n) => n == null ? "" : Number(n).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });   // a big figure on a tile, whole dollars
 const cur = (n, c) => n == null ? "" : Number(n).toLocaleString("en-US", { style: "currency", currency: c || "USD" });
 const day = (d) => fmtDate(d, "day");
 const when = (t) => fmtDate(t, "whenShort");
 
 export function initMoney(c) { ctx = c; }
 
-async function readRunway() { const r = await runwayOnce(ctx.sb); return r?.ok ? r : { ...(r ?? {}), ok: false, note: "How long the business can go could not be worked out: " + String(r?.note ?? r?.reason ?? "no answer came back") }; }   // one live read shared with the framed part (seat tool-build-money)
+async function readRunway() {
+  try {
+    const { data, error } = await ctx.sb.functions.invoke("money-runway", { body: {} });
+    if (!error) return data;
+    let body = null; try { body = await error.context?.json?.(); } catch (_) { body = null; }
+    return body ?? { ok: false, note: "How long the business can go could not be worked out: " + String(error.message ?? error) };
+  } catch (e) { return { ok: false, note: "How long the business can go could not be worked out: " + String(e?.message ?? e) }; }
+}
 async function readCommitments() {
   try {
     const { data, error } = await ctx.sb.rpc("money_commitments");
@@ -43,203 +50,128 @@ async function readCommitments() {
 }
 
 export async function loadMoney() {
-  // The framed part first (seat tool-build-money): owed to you, you owe, clean up the books. It reads on its own.
-  const body = ctx.$("#money-body");
-  if (body) mount(body, { sb: ctx.sb, lang: ctx.lang, tz: ctx.zone?.(), go: ctx.go, part: ctx.part });
-  for (const id of ["#money-runway", "#money-commitments"]) {
+  for (const id of ["#money-owed", "#money-runway", "#money-commitments"]) {
     const m = ctx.$(id); if (m && !m.childElementCount) m.appendChild(line("quiet working", "Reading the bank and the books."));
   }
-  const [r, c] = await Promise.all([readRunway(), readCommitments()]);
-  run = r; last = c;
-  drawRunway(); drawCommitments(); drawNotRead();
+  const [r, c, o] = await Promise.all([readRunway(), readCommitments(), readOwed()]);
+  run = r; last = c; owed = o;
+  drawOwed(); drawRunway(); drawCommitments(); drawNotRead();
 }
 
-// ── MONEY IN THE FRAME (seat tool-build-money, 2026-11-03; build step 3 of decision 1067; design whole-tool-design-3,
-// snapshot 2e2adc7e; decisions 1061, 1063, 1065, 1068) ───────────────────────────────────────────────────────────────
-// The framed part of Money, drawn only with fill/frame.js blocks, mounted by mount(el, ctx) like every framed place
-// (ctx = { sb, who, lang, tz, go, part }). The CFO's first look: what clients owe (what the books say beside what we
-// believe), what we owe, and the clean-up list. Every figure and every item is the brain's: books_truth (records match
-// over the kept QuickBooks copy and the mail, seat books-truth-2) and money-runway's books.owed_by_us (as posted in
-// QuickBooks). This file computes nothing and decides nothing.
-// THE OWNER'S PRESSES (decision 1063, 1068): Fix opens the card with what the fix changes and reads QuickBooks live at
-// once (system-read books_fix, mode check: reads only), which names the bank account the money goes into, the one this
-// client's previous payment went to. Fix in QuickBooks (mode apply) is the only press that writes; system-read logs it in
-// books_writes and reads QuickBooks back. An item to decide has no Fix. One card open at a time, so one filled button.
-// SUPERSEDED 2026-11-03 (this seat): books-truth-2's two buttons on the card face, Check in QuickBooks then Fix in
-// QuickBooks. The check now runs on the Fix press, so the account is named before the write, in two presses as the
-// design shows (Fix, then Fix in QuickBooks). Nothing else changed in what is read or written.
-// Refused is never drawn as empty: a reading that did not come back says why in its own card. No regex literals and no
-// backslashes (STANDING-CLAUSES).
-let runwayP = null, runwayAt = 0;
-function runwayOnce(sb) {   // one live read of the bank and the books per minute, shared by the framed part and How long we can go
-  if (runwayP && Date.now() - runwayAt < 60000) return runwayP;
-  runwayAt = Date.now();
-  runwayP = (async () => {
-    try {
-      if (!sb?.functions?.invoke) return { ok: false, note: "It could not be reached just now." };
-      const { data, error } = await sb.functions.invoke("money-runway", { body: {} });
-      if (!error) return data;
-      let body = null; try { body = await error.context?.json?.(); } catch (_) { body = null; }
-      return body ?? { ok: false, note: String(error.message ?? error) };
-    } catch (e) { return { ok: false, note: String(e?.message ?? e) }; }
-  })();
-  return runwayP;
-}
-async function booksFix(sb, id, mode) {
+// ── owed to you (seat books-truth-2, 2026-11-02, decision 1063 part 1) ───────
+// What the books say beside what the Tool believes, one line on the gap, why behind a press, and the clean-up list. Every
+// figure and every item is the brain's (books_truth: records match over the kept QuickBooks copy and the mail); this file
+// draws and passes the owner's press to system-read action books_fix: "Check in QuickBooks" reads only, "Fix in QuickBooks"
+// writes, then reads QuickBooks back. Nothing is written without that second press. An item to decide has no Fix.
+async function readOwed() {
   try {
-    if (!sb?.functions?.invoke) return { ok: false, reason: "It could not be reached just now." };
-    const { data, error } = await sb.functions.invoke("system-read", { body: { action: "books_fix", finding_id: id, mode } });
+    const { data, error } = await ctx.sb.rpc("books_truth");
+    if (error) throw error;
+    return data;
+  } catch (e) {
+    const msg = String(e?.message ?? e);
+    return { ok: false, note: msg.includes("Could not find the function")
+      ? "This part is not switched on yet: one change to the brain is waiting to be applied."
+      : "What you are owed could not be worked out, so nothing here is known: " + msg };
+  }
+}
+async function booksFix(id, mode) {
+  try {
+    const { data, error } = await ctx.sb.functions.invoke("system-read", { body: { action: "books_fix", finding_id: id, mode } });
     if (!error) return data;
     let body = null; try { body = await error.context?.json?.(); } catch (_) { body = null; }
     return body ?? { ok: false, reason: "QuickBooks could not be reached: " + String(error.message ?? error) };
   } catch (e) { return { ok: false, reason: "QuickBooks could not be reached: " + String(e?.message ?? e) }; }
 }
+function lines(mount, list, cls) { const ul = ctx.el("ul", "attn"); for (const t of list ?? []) { const li = ctx.el("li"); li.appendChild(line(cls ?? "a-detail", t)); ul.appendChild(li); } mount.appendChild(ul); }
 
-let openPanel = null;   // the one clean-up card open now
-export function mount(el, mctx) {
-  el.textContent = "";
-  openPanel = null;
-  const root = h("div", "vf vf-place");
-  root.dataset.place = "money";
-  el.appendChild(root);
-  const de = mctx.lang === "de";
-  const usd = (n, cents) => { const x = Number(n ?? 0); const o = { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 }; return de ? x.toLocaleString("de-DE", o) + " $" : "$" + x.toLocaleString("en-US", o); };
-  const dayOf = (d) => { try { return new Intl.DateTimeFormat(de ? "de-DE" : "en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(d)); } catch (_) { return String(d ?? "").slice(0, 10); } };
-
-  const grid = h("div", "vf-grid");
-  root.appendChild(grid);
-  const owed = card("Owed to you");
-  owed.el.appendChild(working("Reading your books and your mail."));
-  grid.appendChild(owed.el);
-  const owe = card("You owe");
-  owe.el.appendChild(working("Reading the bank and the books."));
-  grid.appendChild(owe.el);
-  const clean = card("Clean up the books", "");
-  clean.el.appendChild(working("Reading what to clean up."));
-  root.appendChild(clean.el);
-
-  const rpc = async (fn) => { try { const { data, error } = await mctx.sb.rpc(fn, {}); return error ? { ok: false, note: error.message } : data; } catch (e) { return { ok: false, note: String(e?.message ?? e) }; } };
-  rpc("books_truth").then((d) => { drawOwedCard(owed, d, usd); drawClean(clean, d, mctx, usd, dayOf); });
-  runwayOnce(mctx.sb).then((r) => drawOwe(owe, r, mctx, usd));
-  return root;
-}
-
-const clearCard = (c) => { while (c.el.childNodes.length > 1) c.el.removeChild(c.el.lastChild); };
-const why = (d, what) => { const r = String(d?.note ?? d?.reason ?? "No answer came back."); return what + ". " + r + (r.endsWith(".") ? "" : "."); };
-
-function drawOwedCard(c, d, usd) {
-  clearCard(c);
-  if (!d || d.ok !== true) { c.el.appendChild(say(why(d, "What you are owed could not be worked out"), true)); return; }
-  const open = Number(d.open_invoices ?? 0), late = Number(d.past_due ?? 0), gap = Number(d.gap ?? 0);
-  c.el.appendChild(pair(
-    { label: "Your books say", num: usd(d.books), line: open + (open === 1 ? " open invoice, " : " open invoices, ") + late + " past due" },
-    { label: "We believe", num: usd(d.believed), line: gap > 0 ? "Less money that arrived" : "The same as your books" }));
-  c.el.appendChild(say(gap > 0 ? usd(gap) + " has arrived that QuickBooks does not show yet." : "Your books and your mail agree."));
-  const b = behind("Why the two differ");
-  for (const it of (d.cleanup ?? []).filter((i) => Number(i.lowers_owed) > 0)) b.appendChild(say((it.line ?? "") + " Owed falls by " + usd(it.lowers_owed, true) + " when it is recorded."));
-  if (d.how) b.appendChild(say(d.how));
-  c.el.appendChild(b);
-}
-
-function drawOwe(c, r, mctx, usd) {
-  clearCard(c);
-  const owing = r?.ok === true ? r.books?.owed_by_us : null;
-  if (owing === null || owing === undefined) { c.el.appendChild(say(why(r?.ok === true ? { note: "QuickBooks did not give the unpaid bills." } : r, "What you owe could not be read"), true)); }
-  else {
-    const n = h("div");
-    n.append(h("div", "vf-num", usd(owing)), h("div", "vf-num-line", "Unpaid bills in QuickBooks"));
-    c.el.appendChild(n);
+function owedCard(it) {
+  const box = ctx.el("div", "notice" + (it.state === "to_decide" ? " flagged" : ""));
+  const t = ctx.el("p"); const b = ctx.el("b"); b.textContent = it.title; t.appendChild(b); box.appendChild(t);
+  box.appendChild(line("", it.line));
+  if (it.state === "to_decide") box.appendChild(line("quiet", "To decide. " + it.what_fix_does));
+  const d = ctx.el("details", "recs");
+  const s = ctx.el("summary", "recs-sum"); s.textContent = "See the detail"; d.appendChild(s);
+  d.appendChild(line("a-title", "What QuickBooks says now")); d.appendChild(line("a-detail", it.books_now));
+  if ((it.sources ?? []).length) {
+    d.appendChild(line("a-title", "What the mail shows"));
+    const ul = ctx.el("ul", "attn");
+    for (const m of it.sources) {
+      const li = ctx.el("li");
+      const p = line("a-detail", day(m.date) + ", " + (m.from ?? "") + ": " + m.why + ". ");
+      const a = ctx.el("a"); a.href = gmailLink(m); a.target = "_blank"; a.rel = "noopener"; a.textContent = "Open the email";
+      p.appendChild(a); li.appendChild(p); ul.appendChild(li);
+    }
+    d.appendChild(ul);
   }
-  if (mctx.part) c.el.appendChild(link("How long we can go", () => mctx.part("runway")));
-}
-
-function drawClean(c, d, mctx, usd, dayOf) {
-  clearCard(c);
-  if (!d || d.ok !== true) { c.side.hidden = true; c.el.appendChild(say(why(d, "What to clean up could not be read"), true)); return; }
-  const items = d.cleanup ?? [];
-  const nFix = items.filter((i) => i.state === "fix").length, nDecide = items.length - nFix;
-  c.side.hidden = !items.length;
-  c.side.textContent = [nFix ? nFix + " to fix" : "", nDecide ? nDecide + " to decide" : ""].filter(Boolean).join(" · ");
-  if (!items.length) c.el.appendChild(say("Nothing to clean up. Your books match your mail."));
-  const l = list();
-  for (const it of items) {
-    const decide = it.state !== "fix";
-    const panel = h("div"); panel.hidden = true;
-    const toggle = link(decide ? "Look" : "Fix", () => {
-      if (!panel.hidden) { panel.hidden = true; toggle.textContent = decide ? "Look" : "Fix"; openPanel = null; return; }
-      if (openPanel && openPanel.close) openPanel.close();
-      drawPanel(panel, it, mctx, usd, dayOf, decide);
-      panel.hidden = false; toggle.textContent = "Close";
-      openPanel = { close: () => { panel.hidden = true; toggle.textContent = decide ? "Look" : "Fix"; } };
-    });
-    l.appendChild(row({ title: words(it.title ?? "", 8), line: (decide ? "To decide. " : "") + words(it.line ?? "", decide ? 9 : 12), right: toggle }));
-    l.appendChild(panel);
-  }
-  if (items.length) c.el.appendChild(l);
-  const done = d.fixed_lately ?? [];
-  if (done.length) {
-    const b = behind("Fixed lately: " + done.length);
-    for (const x of done) b.appendChild(say(dayOf(x.fixed_at) + ": " + (x.line ?? "")));
-    c.el.appendChild(b);
-  }
-  c.el.appendChild(say(d.books_as_of ? "Books as kept on " + dayOf(d.books_as_of) + "." : "When the books were kept is not known."));
-}
-
-const openUrl = (u) => () => { try { window.open(u, "_blank", "noopener"); } catch (_) { /* a blocked window: nothing else to do */ } };
-
-// One clean-up card, open: what the fix changes, invoice by invoice; then the live check (reads only) naming where the
-// money goes; then the one button that writes. To decide: where it stands, no button.
-function drawPanel(panel, it, mctx, usd, dayOf, decide) {
-  panel.textContent = "";
-  const c = card(decide ? "Where it stands" : "What the fix changes");
-  panel.appendChild(c.el);
-  if (it.line) c.el.appendChild(say(it.line));   // the whole line, cut on the row to the face limit
   const inv = it.invoices ?? [];
   if (inv.length) {
-    const l = list();
-    for (const x of inv) l.appendChild(row({ title: String(x.doc ?? ""), line: "Open now " + usd(x.now, true) + ", open after " + usd(x.after ?? x.after_payment, true) }));
-    c.el.appendChild(l);
+    d.appendChild(line("a-title", it.state === "to_decide" ? "Where it stands" : "What the fix changes"));
+    d.appendChild(table(["", "Open now", it.state === "to_decide" ? "Open after the payment" : "Open after"],
+      inv.map((x) => [x.doc, money(x.now), money(x.after ?? x.after_payment)])));
   }
-  if (it.what_fix_does) c.el.appendChild(say(decide ? "To decide. " + it.what_fix_does : it.what_fix_does));
-  const more = behind("See the detail");
-  if (it.books_now) more.appendChild(say("QuickBooks now: " + it.books_now));
-  for (const m of it.sources ?? []) {
-    const p = say(dayOf(m.date) + ", ");
-    p.appendChild(nameSpan(m.from ?? ""));
-    p.appendChild(document.createTextNode(": " + (m.why ?? "") + "."));
-    more.appendChild(p);
-    more.appendChild(link("Open the email", openUrl(gmailLink(m))));
-  }
-  if (it.books_link) more.appendChild(link("Open it in QuickBooks", openUrl(it.books_link)));
-  c.el.appendChild(more);
-  if (decide) return;
-  const out = h("div", "vf"); out.setAttribute("aria-live", "polite");
-  c.el.appendChild(out);
-  out.appendChild(working("Reading QuickBooks."));
-  booksFix(mctx.sb, it.id, "check").then((r) => {
-    out.textContent = "";
-    if (!r?.ok) { out.appendChild(say(why(r, "QuickBooks could not be checked"), true)); return; }
-    if (r.into?.name) { const g = row({ title: "Goes into: " + r.into.name, line: r.into.how ? words(r.into.how, 12) : "" }); out.appendChild(g); }
-    for (const t of r.lines ?? []) out.appendChild(say(t));
-    const fix = button("Fix in QuickBooks");
-    const note = say("Nothing is written until you press it. QuickBooks is read back after.");
+  if (it.what_fix_does && it.state !== "to_decide") d.appendChild(line("a-detail", it.what_fix_does));
+  if (it.books_link) { const a = ctx.el("a"); a.href = it.books_link; a.target = "_blank"; a.rel = "noopener"; a.textContent = "Open it in QuickBooks"; const p = ctx.el("p", "quiet"); p.appendChild(a); d.appendChild(p); }
+  box.appendChild(d);
+  if (it.state !== "fix") return box;
+  // the owner's two presses: check (reads only), then fix (writes and reads back)
+  const acts = ctx.el("div", "actions");
+  const out = ctx.el("div"); out.setAttribute("aria-live", "polite");
+  const check = ctx.el("button", "go ghost"); check.type = "button"; check.textContent = "Check in QuickBooks";
+  check.addEventListener("click", async () => {
+    check.disabled = true; out.innerHTML = ""; out.appendChild(line("quiet working", "Reading QuickBooks."));
+    const r = await booksFix(it.id, "check");
+    out.innerHTML = ""; check.disabled = false;
+    if (!r?.ok) { note(out, r?.reason ?? "QuickBooks could not be checked.", true); return; }
+    out.appendChild(line("a-title", "Checked in QuickBooks just now"));
+    // decision 1068 (1), seat rulings-1068: the account the money goes into, by name, before the Fix press
+    if (r.into?.name) { const p = line("a-detail", ""); const b2 = ctx.el("b"); b2.textContent = "Goes into: " + r.into.name; p.appendChild(b2); p.appendChild(document.createTextNode(r.into.how ? ", " + r.into.how + "." : ".")); out.appendChild(p); }
+    lines(out, r.lines);
+    const fix = ctx.el("button", "go"); fix.type = "button"; fix.textContent = "Fix in QuickBooks";
+    out.appendChild(line("quiet", "Nothing is written until you press Fix."));
     fix.addEventListener("click", async () => {
-      fix.disabled = true;
-      note.textContent = "Writing to QuickBooks, then reading it back.";
-      note.className = "working";
-      const a = await booksFix(mctx.sb, it.id, "apply");
-      if (a?.ok) {
-        fix.remove();
-        note.className = "vf-say"; note.textContent = "Done. QuickBooks was changed and read back.";
-        for (const t of (a.lines ?? []).filter((x) => String(x).startsWith("Read back"))) out.appendChild(say(t));
-      } else {
-        fix.disabled = false;
-        note.className = "vf-say vf-refused"; note.dataset.refused = "";
-        note.textContent = why(a, "The fix did not go through") + " Nothing else was changed.";
-      }
+      fix.disabled = true; check.disabled = true;
+      const w = line("quiet working", "Writing to QuickBooks, then reading it back."); out.appendChild(w);
+      const a = await booksFix(it.id, "apply");
+      w.remove();
+      if (a?.ok) { out.appendChild(line("a-title", "Done. QuickBooks was changed and read back.")); lines(out, (a.lines ?? []).filter((x) => x.startsWith("Read back"))); }
+      else { note(out, (a?.reason ?? "The fix did not go through.") + " Nothing else was changed.", true); lines(out, (a?.lines ?? []).filter((x) => !x.startsWith("Invoice") && !x.startsWith("Credit"))); fix.disabled = false; check.disabled = false; }
     });
-    out.append(fix, note);
+    out.appendChild(fix);
   });
+  acts.appendChild(check); box.appendChild(acts); box.appendChild(out);
+  return box;
+}
+
+function drawOwed() {
+  const mount = ctx.$("#money-owed"); if (!mount) return;
+  mount.innerHTML = "";
+  if (!owed?.ok) { note(mount, refusedText(owed, "What you are owed could not be shown"), true); return; }
+  const gap = Number(owed.gap ?? 0);
+  const row = ctx.el("div", "sp-gauges");
+  row.appendChild(tile(whole(owed.books), "Your books say", ctx.countOf(owed.open_invoices) + " open invoices, " + ctx.countOf(owed.past_due) + " past due"));
+  row.appendChild(tile(whole(owed.believed), "We believe", gap > 0 ? "less money that arrived" : "the same as your books"));
+  mount.appendChild(row);
+  mount.appendChild(line("", gap > 0
+    ? money(gap) + " has arrived that QuickBooks does not show yet, so your books say you are owed more than you are."
+    : "Your books and your mail agree on what you are owed."));
+  const items = owed.cleanup ?? [];
+  const why = ctx.el("details", "recs");
+  const s = ctx.el("summary", "recs-sum"); s.textContent = "Why the two differ"; why.appendChild(s);
+  const less = items.filter((i) => Number(i.lowers_owed) > 0);
+  if (less.length) lines(why, less.map((i) => i.line + " Owed falls by " + money(i.lowers_owed) + " when it is recorded."));
+  why.appendChild(line("quiet", owed.how));
+  why.appendChild(line("quiet", "Books as kept " + when(owed.books_as_of) + (owed.checked_at ? "; matched with the mail " + when(owed.checked_at) : "") + "."));
+  mount.appendChild(why);
+  mount.appendChild(line("a-title", items.length ? "Clean up the books: " + items.length : "Clean up the books: nothing to do"));
+  for (const it of items) mount.appendChild(owedCard(it));
+  const done = owed.fixed_lately ?? [];
+  if (done.length) {
+    const d = ctx.el("details", "recs");
+    const s2 = ctx.el("summary", "recs-sum"); s2.textContent = "Fixed lately (" + done.length + ")"; d.appendChild(s2);
+    lines(d, done.map((x) => day(x.fixed_at) + ": " + x.line));
+    mount.appendChild(d);
+  }
 }
 
 function refusedText(x, fallback) { return x?.note ?? fallback + (x?.reason ? " (" + x.reason + ")" : "") + "."; }
