@@ -23,7 +23,7 @@ export const PLACES = [
   { key: 'today', label: 'Today', framed: true },
   { key: 'email', label: 'Mail', step: 5 },
   { key: 'orders', label: 'Orders', step: 5 },
-  { key: 'money', label: 'Money', owner: true, step: 3 },
+  { key: 'money', label: 'Money', owner: true, framed: true },
   { key: 'marketing', label: 'Marketing and sales', step: 4 },
   { key: 'contacts', label: 'People', step: 5 },
 ];
