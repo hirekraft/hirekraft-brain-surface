@@ -124,6 +124,8 @@ function owedCard(it) {
     out.innerHTML = ""; check.disabled = false;
     if (!r?.ok) { note(out, r?.reason ?? "QuickBooks could not be checked.", true); return; }
     out.appendChild(line("a-title", "Checked in QuickBooks just now"));
+    // decision 1068 (1), seat rulings-1068: the account the money goes into, by name, before the Fix press
+    if (r.into?.name) { const p = line("a-detail", ""); const b2 = ctx.el("b"); b2.textContent = "Goes into: " + r.into.name; p.appendChild(b2); p.appendChild(document.createTextNode(r.into.how ? ", " + r.into.how + "." : ".")); out.appendChild(p); }
     lines(out, r.lines);
     const fix = ctx.el("button", "go"); fix.type = "button"; fix.textContent = "Fix in QuickBooks";
     out.appendChild(line("quiet", "Nothing is written until you press Fix."));
