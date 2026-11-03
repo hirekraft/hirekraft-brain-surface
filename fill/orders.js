@@ -55,6 +55,8 @@ export function mount(el, ctx) {
       }
       S.openings = { working: true };
       draw();
+      // over about 10 seconds the working line says so (measured live 6 to 16 s, 2026-11-03)
+      setTimeout(() => { if (S.openings && S.openings.working) { S.slow = true; draw(); } }, 10000);
       rpc('orders_openings', { p_days: 30, p_limit: 40 }).then((r) => {
         if (!r || r.ok === false) { S.openings = null; S.openingsFailed = reason(r, 'The openings could not be read'); }
         else if (r.present === false) { S.openings = null; S.bench = false; }
@@ -143,7 +145,7 @@ function drawList(c, nums, lst, more, notes, S, ctx, loc) {
   if (S.ordersFailed) notes.appendChild(say(S.ordersFailed, true));
   else if (S.orders && !realOrders.length) notes.appendChild(say('No ' + S.word + ' is open right now.'));
   if (S.orders && Number(S.orders.held_back ?? 0) > 0) { const n = Number(S.orders.held_back); notes.appendChild(say(n + (n === 1 ? ' more rests' : ' more rest') + ' on mail you may not open.')); }
-  if (S.bench && S.openings && S.openings.working) notes.appendChild(working('Reading the openings other companies are hiring for.'));
+  if (S.bench && S.openings && S.openings.working) notes.appendChild(working(S.slow ? 'Still reading the openings other companies are hiring for. This can take up to 20 seconds.' : 'Reading the openings other companies are hiring for.'));
   if (S.openingsFailed) notes.appendChild(say(S.openingsFailed, true));
   else if (S.bench && S.openings && !S.openings.working && !realOpen.length) notes.appendChild(say('No openings came in over the last ' + (S.openings.days ?? 30) + ' days.'));
   if (S.orders || S.openings) {
