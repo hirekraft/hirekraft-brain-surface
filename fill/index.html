@@ -465,7 +465,7 @@ try {
        or Loose files. Seat tool-tabs, 2026-10-02. Very basic on purpose: what is
        connected, or one line pointing to Brain. Mail is the exception: an inbox you can
        work in, three columns drawn by mail.js (seat mail-redesign, 2026-10-07). -->
-  <!-- TODAY and ORDERS (seat tool-build-1, 2026-11-03, decisions 1067, 1069): the first place in the screen frame, drawn by today.js; Orders until build step 5. --> <section class='step' id='s-today' hidden><div id='today-body'></div></section> <section class='step' id='s-orders' hidden><div id='orders-body'></div></section> <section class='step' id='s-lens' hidden>
+  <!-- TODAY and ORDERS (seat tool-build-1, 2026-11-03, decisions 1067, 1069): the first place in the screen frame, drawn by today.js; Orders drawn by orders.js (seat tool-build-orders, 2026-11-03, build step 5). --> <section class='step' id='s-today' hidden><div id='today-body'></div></section> <section class='step' id='s-orders' hidden><div id='orders-body'></div></section> <section class='step' id='s-lens' hidden>
     <h2 id='lens-head'></h2>
     <div id='lens-body' aria-live='polite'></div>
   </section>
@@ -520,6 +520,6 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-11-03-tool-build-money"></script>
+<script type="module" src="lens.js?v=2026-11-03-tool-build-orders"></script>
 </body>
 </html>
