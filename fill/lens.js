@@ -16,7 +16,7 @@ import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 // ONE WAY THE SCREEN WRITES A DATE, and the one time zone (seat calendar-contacts, 2026-10-22): fill/dates.js.
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
 import { removeControl, readChooser } from "./sources.js?v=2026-10-28-brain-and-drives"; // remove a source, choose how older mail is read (seat sources-basics)
-import { readSources, drawCounts, drawSources, drawDrives, drawOrganize } from "./brainview.js?v=2026-10-28-brain-and-drives"; // Brain and Drives made legible (seat brain-and-drives, decision 1030)
+import { readSources, drawCounts, drawSources, drawDrives, drawOrganize } from "./brainview.js?v=2026-11-03-sources-loop"; // Brain and Drives made legible (seat brain-and-drives, decision 1030)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 // BRAIN AND DRIVES FROM ONE READING (seat brain-and-drives, 2026-10-28, decision 1030): sources_view, asked once per brain
 // reading (fresh) and shared by the counts, the Sources list, the count under Brain's heading and the Drives tab.
@@ -26,7 +26,42 @@ function viewDeps() {
     removeControl: (key, name) => removeControl(key, name, srcDeps()),
     readChooser: (key, name, kind) => readChooser(key, name, srcDeps(), kind),
     choose: () => stageDrivePicker(driveAccountKey()),
-    act: (r, details) => { if (String(r.action || '').startsWith('Choose')) return details(); userMoved = true; openConnect(r.group); } };
+    act: (r, details, btn) => sourceAct(r, details, btn) };
+}
+// THE NEEDS YOU PRESS DOES WHAT THE BRAIN SAYS IT DOES (seat sources-loop, 2026-11-03). sources_view now sends act with every
+// row; this used to send every label except "Choose..." to the connect page, so "Start reading it" on a Meet-notes line and
+// "Sign in again" on a line whose sign-in was borrowed went to the connect page and straight back: a loop. The brain's stored
+// test sources_needs_you_selftest checks every Needs you line has an act whose press reaches a state that is not Needs you.
+async function sourceAct(r, details, btn) {
+  const a = r.act;
+  if (a === 'resume' || a === 'use_mine') {
+    const was = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.classList.add('working', 'no-late'); btn.textContent = a === 'resume' ? 'Starting' : 'Switching to your sign-in'; }
+    try {
+      const { data, error } = await sb.rpc(a === 'resume' ? 'source_resume' : 'source_use_my_signin', { p_source_key: r.source_key });
+      if (error) throw error;
+      if (!data?.ok) { if (btn) { btn.disabled = false; btn.classList.remove('working', 'no-late'); btn.textContent = data?.note ?? was; } return; }
+      say(`${r.name}: ${data.note}`);
+      await refreshBrain();
+    } catch (e) {
+      if (btn) { btn.disabled = false; btn.classList.remove('working', 'no-late'); btn.textContent = `It did not start: ${e?.message ?? e}`; }
+    }
+    return;
+  }
+  if (a === 'sign_in') {
+    const restore = () => { if (btn) btn.textContent = r.action; };
+    if (btn) btn.textContent = 'Opening Google';
+    if (String(r.source_key).startsWith('gmail:')) {
+      const addr = String(r.source_key).slice(6);
+      return beginConnect(GMAIL, 'individual', addr, btn, restore, addr);
+    }
+    const drive = PICKERS.drives.options.find((o) => o.type === 'drive');
+    return beginConnect(drive, 'individual', null, btn, restore);
+  }
+  if (a === 'connect') { userMoved = true; return openConnect(r.group); }
+  // choose (how far back) and forget (Remove) live in the row's Details; no act at all opens Details too, never the
+  // connect page, so a line the brain cannot name a press for shows its sentence instead of looping.
+  return details(a === 'forget');
 }
 function drawBrain(fresh) {
   const d = viewDeps();
@@ -678,6 +713,7 @@ function driveLine(s) {
   badgeLine(wrap, DRIVE_WORD[s.state], driveCount(s));
   if (s.action === "sign_in") wrap.appendChild(signInAgainControl(s));
   if (s.action === "resume")  wrap.appendChild(resumeControl(s));
+  if (s.action === "use_mine") wrap.appendChild(resumeControl(s, "source_use_my_signin"));
   return wrap;
 }
 
@@ -730,7 +766,7 @@ function systemLine(m, group) {
 
 // One switch, and it says so. The drive is already chosen and already read; all
 // that lapsed is anything looking at it again.
-function resumeControl(s) {
+function resumeControl(s, fn = "source_resume") {
   const b = el("button", "a-fix");
   b.type = "button";
   b.style.marginLeft = ".7rem";
@@ -741,10 +777,10 @@ function resumeControl(s) {
     const was = b.textContent;
     b.textContent = "starting\u2026";
     try {
-      const { data, error } = await sb.rpc("source_resume", { p_source_key: s.source_key });
+      const { data, error } = await sb.rpc(fn, { p_source_key: s.source_key });
       if (error) throw error;
       if (!data?.ok) { b.disabled = false; b.textContent = data?.note ?? was; return; }
-      say(`${s.label}: back on its schedule. ${data.note}`);
+      say(`${s.label}: ${fn === "source_resume" ? "back on its schedule. " : ""}${data.note}`);
       await readDriveStates();
       for (const redraw of rowRedraws) redraw();
       await refreshBrain();
@@ -869,6 +905,21 @@ async function driveFn(body) {
   return data;
 }
 
+// WHO ELSE ALREADY READS A DRIVE (seat sources-loop, 2026-11-03, Alex: the line "Not reading . did not change: that drive is
+// already connected under a different person's sign-in" was too technical, decision 1061). drives_read_by_others() gives the
+// first name only, for drives and folders another person brought in; such a row shows a check mark and says through whom.
+let othersDrives = new Map();
+async function readOthersDrives() {
+  try {
+    const { data, error } = await sb.rpc("drives_read_by_others");
+    if (error) throw error;
+    othersDrives = new Map((data ?? []).map((r) => [r.source_key, r.through]));
+  } catch {
+    othersDrives = new Map();   // not known is not asserted: the row then reads as any other
+  }
+}
+const viaOther = (name) => `Already read through ${name}'s connection`;
+
 function pickerRow(item, accountKey) {
   const li = el("li");
   const btn = el("button", "member");
@@ -881,6 +932,22 @@ function pickerRow(item, accountKey) {
   // The tick decides whether a drive SHOULD be read; it never says what IS happening.
   const draw = (chosen, moving, trouble) => {
     const s = driveStates.get(item.source_key);
+    const through = !chosen && !moving ? othersDrives.get(item.source_key) : null;
+    if (through) {
+      btn.innerHTML =
+        `<span class="pick-box"><svg aria-hidden="true"><use href="#i-check"/></svg></span>`
+        + `<span class="m-name">${escape(item.name)}</span>`
+        + `<span class="m-win">${escape(viaOther(through))}</span>`;
+      btn.setAttribute("aria-pressed", "true");
+      btn.disabled = true;
+      btn.classList.add("via-other");
+      const st = $(".state", li) ?? el("div", "state");
+      st.className = "state tone-green";
+      st.innerHTML = `<span class="dot"></span><span class="s-head">${escape(viaOther(through))}</span>`
+        + ` &middot; ${escape("It is in the Tool already; nothing to do here.")}`;
+      if (!st.parentNode) li.appendChild(st);
+      return;
+    }
     const head = moving ?? (s ? s.headline : (chosen ? "reading" : "Not reading"));
     btn.innerHTML =
       `<span class="pick-box"><svg aria-hidden="true"><use href="#i-check"/></svg></span>`
@@ -921,11 +988,14 @@ function pickerRow(item, accountKey) {
       item.chosen = next;
       draw(item.chosen);
     } catch (e) {
-      // The refusal is quoted, not summarised. These sentences say which person a
-      // source belongs to and why it was refused, and a paraphrase loses that.
-      draw(item.chosen, null, `did not change: ${e?.message ?? e}`);
+      // A refusal other than the one below is still quoted, not summarised (seat sources-loop 2026-11-03 replaced the
+      // quoted "did not change: ... under a different person's sign-in" with the plain line it now draws).
+      const msg = String(e?.message ?? e);
+      // Someone else brought it in after this list was read: say so in words, never the refusal's own sentence.
+      if (msg.includes("different person")) { await readOthersDrives(); draw(item.chosen); return; }
+      draw(item.chosen, null, `It did not change: ${msg}`);
     } finally {
-      btn.disabled = false;
+      btn.disabled = btn.classList.contains("via-other");
     }
   });
 
@@ -1035,6 +1105,7 @@ async function stageDrivePicker(accountKey) {
     [data] = await Promise.all([
       driveFn({ action: "discover", account_source_key: accountKey }),
       readDriveStates(),
+      readOthersDrives(),
     ]);
   } catch (e) {
     stage.innerHTML = "";
