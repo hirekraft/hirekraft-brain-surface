@@ -13,9 +13,10 @@
 //
 // Everything here is drawn from what the brain returns (job_alert_items, as the signed-in person); nothing here decides who may
 // see or do what. Built so the coming parts of the tab (lists, campaigns, what came back) sit beside it as more sub-parts.
-// No colour, size or font here: the looks' tokens in skin.css under SIGNALS AND OUTREACH. No regex literals, no backslashes.
+// No colour, size or font here: the looks' tokens in skin.css under SIGNALS AND OUTREACH; the framed face uses only the SCREEN FRAME tokens. No regex literals, no backslashes.
 
 import { draftHash } from './answer.js?v=2026-10-29-mail-invites';
+import { h, nameSpan, card, list, row, pill, button, link, say, working, pair, words } from './frame.js?v=2026-11-03-tool-build-1b';   // the screen frame (seat tool-build-marketing): the face below draws only with its blocks
 import { openZip } from './chats.js?v=2026-10-30-linkedin-whole'; import { sourcePicture, badges, quickHand } from './marketing-signals.js?v=2026-11-02-marketing-build-a';   // the one zip opener on the screen (same token as lens.js); then Signals' one picture (seat marketing-build-a)
 
 let C = null;
@@ -49,7 +50,179 @@ async function post(path, body) {
   } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; }
 }
 
-export function drawMarketing(body, ctx) { C = ctx; import('./marketing-shell.js?v=2026-11-03-rulings-1068').then((M) => M.drawShell(body, ctx, { signals: (s) => { C = ctx; load(s); }, reads: (s) => { C = ctx; drawReads(s); } })).catch((e) => { body.innerHTML = ''; body.appendChild(mk('p', 'notice flagged', 'The Marketing and sales tab could not be loaded: ' + String((e && e.message) || e))); }); return;   // THE SHELL (seat marketing-build-a, 2026-11-02, decision 1059): the tab opens through fill/marketing-shell.js; the round-1 part row below (seat marketing-parts, with marketing-build-b's Lists button) is superseded by Alex's approval of the round 2 design and no longer runs; it goes at the next whole edit of this file.
+// ── THE FACE: MARKETING AND SALES IN THE SCREEN FRAME (seat tool-build-marketing, 2026-11-03; build step 4 of decision 1067;
+// decisions 1058-1062, 1064, 1061, 1065, 1069; design whole-tool-design-3, snapshot 2e2adc7e). Part of SHOW.
+// One calm page, as a chief marketing officer would set it out for a small business: what goes out this week (finished
+// pieces, to approve), where we stand (the foundation), who is hiring where we know someone and have people who fit, what
+// came back from the last month of email, what is missing before the next send, and the lists and the website in one line
+// each. Drawn only with fill/frame.js blocks; every card has its own working line and its own refusal line, and fills when
+// its reading arrives. Every figure is the brain's own door as the signed-in person (mk_week, mk_foundation,
+// job_alert_items, mk_back_view, mk_send_view, mk_cockpit, wp_site_health): nothing here decides who may see what.
+// The path of eight steps opens each part as built before (marketing-shell.js mountPart) BELOW the framed page: those
+// parts keep their older look until the next slices bring them into the frame (their style sheets go then).
+// A piece marked test is greyed, carries the Test pill and is never counted (rule 8). "N drafts still being written"
+// stays on the This week card (decision 1068 (2)).
+const SHELL = './marketing-shell.js?v=2026-11-03-tool-build-marketing';
+const STEPS = [['week', 'This week'], ['foundation', 'Foundation'], ['plan', 'Plan'], ['send', 'Sending'], ['lists', 'Lists'], ['back', 'What came back'], ['signals', 'Signals'], ['website', 'Website']];
+const CHANNEL = { linkedin: 'LinkedIn post', company_page: 'Company page post', group: 'LinkedIn group post', email: 'Email', profile: 'LinkedIn message' };
+const READY_Q = ['What goes out this week?', 'Who is hiring where we know someone?'];
+let F = null;   // the face's own state: { ctx, root, face, stage, path, loc }
+
+export function mount(el, ctx) {
+  el.textContent = '';
+  const loc = ctx.lang === 'de' ? 'de-DE' : 'en-US';
+  const root = h('div', 'vf vf-place'); root.dataset.place = 'marketing';
+  const stage = h('div', 'mk-part-host'); stage.hidden = true;
+  el.append(root, stage);
+  F = { ctx, root, stage, loc, part: 'week' };
+  const ask = h('div', 'vf-ask');
+  for (const q of READY_Q) { const b = h('button', 'vf-chip', q); b.type = 'button'; b.addEventListener('click', () => { if (ctx.ask) ctx.ask(q); }); ask.appendChild(b); }
+  const path = h('nav', 'vf-path'); path.setAttribute('aria-label', 'Marketing and sales');
+  for (const [k, label] of STEPS) { const b = h('button', 'vf-chip', label); b.type = 'button'; b.dataset.part = k; b.addEventListener('click', () => openStep(k)); path.appendChild(b); }
+  const face = h('div', 'vf');
+  root.append(ask, path, face);
+  F.path = path; F.face = face;
+  markStep('week');
+  drawFace(face, ctx, loc);
+  return root;
+}
+
+function markStep(k) { for (const b of F.path.children) b.setAttribute('aria-current', b.dataset.part === k ? 'step' : 'false'); }
+
+async function openStep(k) {
+  F.part = k; markStep(k);
+  if (k === 'week') { F.stage.hidden = true; F.stage.textContent = ''; F.face.hidden = false; return; }
+  F.face.hidden = true; F.stage.hidden = false;
+  try {
+    const M = await import(SHELL);
+    await M.mountPart(F.stage, F.ctx, { signals: (s) => { C = F.ctx; load(s); }, reads: (s) => { C = F.ctx; drawReads(s); } }, k, (key) => markStep(key));
+  } catch (e) { F.stage.textContent = ''; F.stage.appendChild(say('This part could not be opened: ' + String((e && e.message) || e) + '.', true)); }
+}
+
+const fmt = (x, loc) => Number(x || 0).toLocaleString(loc);
+const failed_ = (d, what) => { const r = String((d && (d.reason || d.note)) || 'No answer came back.'); return what + ' ' + r + (r.endsWith('.') ? '' : '.'); };
+const plural_ = (k, one, many) => (Number(k) === 1 ? one : many);
+function clear(c) { while (c.el.childNodes.length > 1) c.el.removeChild(c.el.lastChild); }
+function bigNum(label, num, line) { const d = h('div'); d.append(h('div', 'vf-num-label', label), h('div', 'vf-num', num)); if (line) d.appendChild(h('div', 'vf-num-line', line)); return d; }
+// a row whose line is her own words (a post's first words, a subject): never translated, never judged by the word check
+function pieceRow(title, line, right, test) {
+  const r = row({ title, right, test });
+  if (line) { const t = r.querySelector('.vf-row-txt'); t.appendChild(nameSpan(words(line, 12), 'vf-row-s')); }
+  return r;
+}
+
+function drawFace(face, ctx, loc) {
+  const rpc = async (fn, args) => { try { const { data, error } = await ctx.sb.rpc(fn, args || {}); return error ? { ok: false, reason: error.message } : (data || { ok: false, reason: 'No answer came back.' }); } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; } };
+  const grid = h('div', 'vf-grid');
+  const side = h('div', 'vf');
+  const week = card('This week', ''); week.el.appendChild(working('Reading this week’s finished posts and emails.'));
+  const found = card('Foundation'); found.el.appendChild(working('Reading where we stand.'));
+  const hiring = card('Who is hiring'); hiring.el.appendChild(working('Reading who is hiring.'));
+  side.append(found.el, hiring.el);
+  grid.append(week.el, side);
+  const grid2 = h('div', 'vf-grid');
+  const back = card('What came back', ''); back.el.appendChild(working('Reading what came back.'));
+  const send = card('Before the next send'); send.el.appendChild(working('Checking what sending needs.'));
+  grid2.append(back.el, send.el);
+  const also = card('Lists and website'); also.el.appendChild(working('Reading the lists and the website.'));
+  face.append(grid, grid2, also.el);
+  rpc('mk_week', { p_week: null }).then((d) => drawWeek(week, d));
+  rpc('mk_foundation').then((d) => drawFoundation(found, d, loc));
+  rpc('job_alert_items', { p_days: 30 }).then((d) => drawHiring(hiring, d, loc));
+  rpc('mk_back_view').then((d) => drawBack(back, d, loc));
+  rpc('mk_send_view').then((d) => drawSend(send, d));
+  Promise.all([rpc('mk_cockpit'), rpc('wp_site_health')]).then(([c, w]) => drawAlso(also, c, w, loc));
+}
+
+function drawWeek(c, d) {
+  clear(c);
+  if (!d || d.ok !== true) { c.side.hidden = true; c.el.appendChild(say(failed_(d, 'This week could not be read just now.'), true)); return; }
+  const ps = (d.pieces || []);
+  const real = ps.filter((p) => !p.test);
+  const draft = real.filter((p) => p.state === 'draft').length;
+  c.side.hidden = false;
+  c.side.textContent = real.length ? (draft ? draft + ' to approve' : 'All approved') : '';
+  if (!ps.length) c.el.appendChild(say('Nothing finished is kept for this week yet. The plan says what is planned.'));
+  const l = list();
+  const dayOf = (iso) => { const x = new Date(String(iso).slice(0, 10) + 'T12:00:00'); return isNaN(x) ? '' : x.toLocaleDateString(F.loc, { weekday: 'short', month: 'short', day: 'numeric' }); };
+  const order = [...ps].sort((a, b) => (a.state === 'draft' ? 0 : 1) - (b.state === 'draft' ? 0 : 1) || String(a.day).localeCompare(String(b.day)));
+  for (const p of order.slice(0, 4)) {
+    const pl = p.state === 'draft' ? pill('heed', 'To approve') : p.state === 'approved' ? pill('act', 'Approved') : p.state === 'scheduled' ? pill('act', 'In Sending') : pill('good', 'Out');
+    l.appendChild(pieceRow((CHANNEL[p.channel] || 'Piece') + ' · ' + dayOf(p.day), p.kind === 'email' ? p.subject : (p.headline || p.post_text), pl, !!p.test));
+  }
+  if (ps.length) c.el.appendChild(l);
+  if (ps.length > 4) c.el.appendChild(link('Show all ' + ps.length, () => openStep('plan')));
+  const drafted = real.filter((p) => (p.source || {}).origin === 'drafted').length;
+  if (drafted) c.el.appendChild(say(drafted + ' ' + plural_(drafted, 'was', 'were') + ' written by the Tool from your foundation.'));
+  if (Number(d.still_writing)) c.el.appendChild(say(d.still_writing + ' ' + plural_(d.still_writing, 'draft', 'drafts') + ' still being written.'));
+  if (Number(d.held_back)) c.el.appendChild(say(d.held_back + ' not shown to you. ' + String(d.held_back_why || '')));
+  c.el.appendChild(button(draft ? 'Review and approve' : 'Open the week', () => openStep('plan')));
+}
+
+function drawFoundation(c, d, loc) {
+  clear(c);
+  if (!d || d.ok !== true) { c.el.appendChild(say(failed_(d, 'Where we stand could not be read just now.'), true)); return; }
+  const k = d.counts || {};
+  const approved = d.whole && d.whole.state === 'approved';
+  c.el.appendChild(bigNum('Lines in use', fmt(k.latest, loc), approved ? 'Approved' : 'Not approved yet'));
+  const open = Number(k.disagree || 0) + Number(k.proposed || 0);
+  if (open) c.el.appendChild(say(open + ' ' + plural_(open, 'point', 'points') + ' to settle.'));
+  c.el.appendChild(link(approved ? 'Open' : 'Review and approve', () => openStep('foundation')));
+}
+
+function drawHiring(c, d, loc) {
+  clear(c);
+  if (!d || d.ok !== true) { c.el.appendChild(say(failed_(d, 'Who is hiring could not be read just now.'), true)); return; }
+  const items = d.items || [];
+  const fit = items.filter((it) => (it.roles || []).some((r) => r.fit && r.fit.state === 'ready' && Number(r.fit.count) > 0)).length;
+  c.el.appendChild(bigNum('Companies hiring where you know someone', fmt(items.length, loc), fit + ' with people of ours who fit'));
+  c.el.appendChild(link('See who', () => openStep('signals')));
+}
+
+function drawBack(c, d, loc) {
+  clear(c);
+  const hist = d && d.ok === true ? d.history : null;
+  if (!hist || !Array.isArray(hist.months)) { c.side.hidden = true; c.el.appendChild(say(failed_(hist && hist.ok === false ? hist : d, 'What came back could not be read just now.'), true)); return; }
+  const m = [...hist.months].filter((x) => Number(x.sent) > 0).sort((a, b) => String(b.month).localeCompare(String(a.month)))[0];
+  if (!m) { c.side.hidden = true; c.el.appendChild(say('No email has gone out yet.')); return; }
+  const x = new Date(String(m.month) + '-15T12:00:00');
+  c.side.hidden = false; c.side.textContent = isNaN(x) ? String(m.month) : x.toLocaleDateString(loc, { month: 'long', year: 'numeric' });
+  const pct = Number(m.sent) ? Math.round((Number(m.opened) / Number(m.sent)) * 100) : 0;
+  c.el.appendChild(pair({ label: 'Sent', num: fmt(m.sent, loc) }, { label: 'Opened', num: fmt(m.opened, loc), line: pct + ' percent' }));
+  c.el.appendChild(say(fmt(m.bounced, loc) + ' bounced, ' + fmt(m.unsubscribed, loc) + ' unsubscribed.'));
+  c.el.appendChild(link('Open', () => openStep('back')));
+}
+
+function drawSend(c, d) {
+  clear(c);
+  const checks = d && d.ok === true && d.ready ? (d.ready.checks || []) : null;
+  if (!checks) { c.el.appendChild(say(failed_(d, 'What sending needs could not be read just now.'), true)); return; }
+  const missing = checks.filter((x) => !x.ok).length;
+  c.el.appendChild(say(missing ? missing + ' ' + plural_(missing, 'thing is', 'things are') + ' missing before email can go out.' : 'Ready to send.'));
+  const l = list();
+  for (const x of checks) l.appendChild(row({ title: words(x.said || x.check || '', 8), right: x.ok ? pill('good', 'Ready') : pill('heed', 'Missing') }));
+  c.el.appendChild(l);
+  c.el.appendChild(link('Open Sending', () => openStep('send')));
+}
+
+function drawAlso(c, ck, w, loc) {
+  clear(c);
+  const l = list();
+  const dns = ck && ck.ok === true && ck.dns ? ck.dns.total : null;
+  const posts = w && w.ok === true ? w.posts_30 : null;
+  l.appendChild(row({ title: 'Never to send to', line: dns === null ? 'Not read just now.' : 'addresses on the do-not-send list', right: dns === null ? null : h('span', 'vf-row-t', fmt(dns, loc)) }));
+  l.appendChild(row({ title: 'Website posts, last 30 days', line: posts === null ? 'Not read just now.' : 'the Tool writes drafts only', right: posts === null ? null : h('span', 'vf-row-t', fmt(posts, loc)) }));
+  c.el.appendChild(l);
+  if (dns === null) c.el.appendChild(say(failed_(ck, 'The lists could not be read.'), true));
+  if (posts === null) c.el.appendChild(say(failed_(w, 'The website could not be read.'), true));
+  c.el.appendChild(link('Open Lists', () => openStep('lists')));
+}
+
+// THE TAB AS LENS.JS OPENS IT (lens.js drawLens): the framed face. Before 2026-11-03 this opened the round-2 shell
+// (marketing-shell.js drawShell, seat marketing-build-a): SUPERSEDED by build step 4 (decision 1067), seat tool-build-marketing.
+export function drawMarketing(body, ctx) { C = ctx; mount(body, ctx); }
+
+/* SUPERSEDED round-1 part row (seat marketing-parts): no longer called since round 2 (seat marketing-build-a) and not by the face above; it goes at the next whole edit of this file. */ function round1Parts_(body, ctx) { return;   // THE SHELL (seat marketing-build-a, 2026-11-02, decision 1059): the tab opens through fill/marketing-shell.js; the round-1 part row below (seat marketing-parts, with marketing-build-b's Lists button) is superseded by Alex's approval of the round 2 design and no longer runs; it goes at the next whole edit of this file.
   C = ctx;
   body.innerHTML = '';
   const wrap = mk('div', 'mk');
@@ -105,7 +278,7 @@ async function drawReads(stage) {
   box.appendChild(last);
   box.append(mk('p', 'quiet', 'To get your download: on LinkedIn, open Me, then Settings and Privacy, then Data privacy, then Get a copy of your data. Choose the larger download with everything. When LinkedIn emails you that it is ready, download the zip and drop it here.'));
   const drop = mk('label', 'notice');
-  drop.style.display = 'block'; drop.style.cursor = 'pointer'; drop.style.textAlign = 'center'; drop.style.padding = '24px';
+  drop.style.display = 'block'; drop.style.cursor = 'pointer'; drop.style.textAlign = 'center'; drop.style.padding = 'calc(var(--u) * 6)';
   drop.textContent = 'Drop your LinkedIn download here, or click to choose it';
   const input = C.el('input'); input.type = 'file'; input.accept = '.zip'; input.hidden = true;
   drop.appendChild(input);
@@ -257,7 +430,7 @@ async function drawExplain(ex) {
     li.append(top, said);
     if (x.part === 'articles' && ((x.facts || {}).list || []).length > 1) {
       const det = C.el('details');
-      const sm = mk('summary', null, 'All your articles'); sm.style.minHeight = '44px'; sm.style.display = 'flex'; sm.style.alignItems = 'center'; sm.style.cursor = 'pointer';
+      const sm = mk('summary', null, 'All your articles'); sm.style.minHeight = 'var(--tap)'; sm.style.display = 'flex'; sm.style.alignItems = 'center'; sm.style.cursor = 'pointer';
       det.appendChild(sm);
       const al = mk('ul', 'mk-role-list');
       for (const a of x.facts.list) { const ai = mk('li', 'mk-role'); ai.append(data_('span', 'mk-role-title', a.title || '')); if (a.published) ai.append(document.createTextNode(' · ' + dayOnly(a.published))); al.appendChild(ai); }
