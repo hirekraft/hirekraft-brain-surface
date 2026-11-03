@@ -90,7 +90,7 @@ function draw() {
   // decision 1068 (2), seat rulings-1068: a draft the Tool's own check objects to is written again, not shown; it is counted here
   if (Number(D.still_writing)) box.appendChild(mk('p', 'state', D.still_writing + ' ' + plural(D.still_writing, 'draft', 'drafts') + ' still being written.'));
   if (Number(D.held_back)) box.appendChild(mk('p', 'state', D.held_back + ' finished ' + plural(D.held_back, 'piece', 'pieces') + ' this week ' + plural(D.held_back, 'is', 'are') + ' not shown to you. ' + (D.held_back_why || '')));
-  const saved = mk('div', 'mkw-saved-box'); box.appendChild(saved); savedBox(saved); const outbox = mk('div', 'mkw-out'); box.appendChild(outbox); import('./marketing-outreach.js?v=2026-11-03-tool-build-marketing').then((M) => M.mount(outbox, C, (D && D.week_of) || null)).catch((e) => outbox.appendChild(mk('p', 'notice flagged', 'The LinkedIn messages could not be shown: ' + String((e && e.message) || e) + '.')));   // seat marketing-week-3: the week's LinkedIn messages
+  const saved = mk('div', 'mkw-saved-box'); box.appendChild(saved); savedBox(saved); const outbox = mk('div', 'mkw-out'); box.appendChild(outbox); import('./marketing-outreach.js?v=2026-11-03-tool-build-marketing-b').then((M) => M.mount(outbox, C, (D && D.week_of) || null)).catch((e) => outbox.appendChild(mk('p', 'notice flagged', 'The LinkedIn messages could not be shown: ' + String((e && e.message) || e) + '.')));   // seat marketing-week-3: the week's LinkedIn messages
   if (!ps.length && !Number(D.held_back)) { box.appendChild(mk('p', 'quiet', 'No finished posts or emails are kept for this week yet. The plan below says what is planned.')); return; }
   if (!ps.length) return;
   const strip = mk('div', 'mkw-strip');
