@@ -18,11 +18,11 @@
 
 // The six places (decision 1067). framed: drawn in the frame now; step: the build step that brings it in (decision 1067's
 // order). Keys are the tab keys lens.js routes (Mail is email, People is contacts), so links and remembered tabs keep working.
-// Orders has no page of its own until step 5: it says so and opens For you in Mail, where requirements and enquiries arrive.
+// Orders is framed since 2026-11-03 (seat tool-build-orders, fill/orders.js). SUPERSEDED: its one-line page that opened For you in Mail.
 export const PLACES = [
   { key: 'today', label: 'Today', framed: true },
   { key: 'email', label: 'Mail', step: 5 },
-  { key: 'orders', label: 'Orders', step: 5 },
+  { key: 'orders', label: 'Orders', framed: true },
   { key: 'money', label: 'Money', owner: true, framed: true },
   { key: 'marketing', label: 'Marketing and sales', step: 4 },
   { key: 'contacts', label: 'People', step: 5 },
@@ -79,7 +79,8 @@ export function pair(a, b) {
   }
   return g;
 }
-// A place not yet in the frame (Orders until build step 5): one card that says where its work is today, one button there.
+// A place not yet in the frame: one card that says where its work is today, one button there. No caller since 2026-11-03
+// (seat tool-build-orders framed Orders); a retirement candidate for build step 6 if no place needs it by then.
 export function drawWaiting(el, title, line, action, go) {
   el.textContent = '';
   const root = h('div', 'vf vf-place'); root.dataset.place = 'waiting';
