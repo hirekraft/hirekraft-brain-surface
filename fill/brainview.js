@@ -126,7 +126,9 @@ function row(r, d) {
     const act = el('button', 'go src-act');
     act.type = 'button';
     act.textContent = r.action;
-    act.addEventListener('click', () => (d.act ? d.act(r, () => openDetail(false)) : openDetail(false)));
+    // seat sources-loop 2026-11-03: the press gets the row (with the brain's act), a way to open Details (Remove open when
+    // asked) and itself, so it can show it is working next to where she pressed.
+    act.addEventListener('click', () => (d.act ? d.act(r, (rm) => openDetail(!!rm), act) : openDetail(false)));
     li.appendChild(act);
   }
   li.appendChild(detail);
