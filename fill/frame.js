@@ -24,7 +24,7 @@ export const PLACES = [
   { key: 'email', label: 'Mail', step: 5 },
   { key: 'orders', label: 'Orders', framed: true },
   { key: 'money', label: 'Money', owner: true, framed: true },
-  { key: 'marketing', label: 'Marketing and sales', step: 4 },
+  { key: 'marketing', label: 'Marketing and sales', framed: true },   // framed by seat tool-build-marketing (build step 4)
   { key: 'contacts', label: 'People', step: 5 },
 ];
 // The phone's bottom bar (decision 1069): Today, Mail, Marketing and sales, Money, then More (Orders and People inside).
