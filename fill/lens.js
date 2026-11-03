@@ -3912,7 +3912,7 @@ function drawLens() {
   }
   // SIGNALS AND OUTREACH (seat job-alerts, 2026-10-30): companies hiring where the business knows someone, a note per person, Hand to a colleague.
   if (lensKey === 'marketing') {
-    import('./marketing.js?v=2026-11-03-tool-build-marketing').then((M) => M.drawMarketing(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, viewer: () => shape?.viewer, who: shape?.viewer ?? null, lang: screenLang(), tz: zone(), t: (x) => x, go: (k) => goTab(k), ask: (q) => ask(q) }))   /* the framed place (seat tool-build-marketing, build step 4): mount(el, ctx) with the frame's ctx */
+    import('./marketing.js?v=2026-11-03-tool-build-marketing-b').then((M) => M.drawMarketing(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, viewer: () => shape?.viewer, who: shape?.viewer ?? null, lang: screenLang(), tz: zone(), t: (x) => x, go: (k) => goTab(k), ask: (q) => ask(q) }))   /* the framed place (seat tool-build-marketing, build step 4): mount(el, ctx) with the frame's ctx */
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Marketing and sales tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
