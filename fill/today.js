@@ -10,7 +10,7 @@
 // the reason, never an empty card or a zero (rule 7). A record marked test is greyed, carries the Test pill and is never
 // counted (rule 8; decision 1067 (4)).
 // No regex literals and no backslashes (STANDING-CLAUSES).
-import { h, nameSpan, card, list, row, pill, button, link, say, working, pair, words, icon, onSigns, signState } from './frame.js?v=2026-11-03-tool-build-1';
+import { h, nameSpan, card, list, row, pill, button, link, say, working, pair, words, icon, onSigns, signState } from './frame.js?v=2026-11-03-tool-build-1b';
 
 const READY_OWNER = ['Who owes us money?', 'What came in today?', 'Can I pay everyone this month?'];
 const READY = ['What do I still owe an answer?', 'What is on this week?', 'Who wrote to me today?'];
