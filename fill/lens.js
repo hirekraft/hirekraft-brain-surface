@@ -3729,7 +3729,10 @@ async function loadSecurity() {
 // route that declines to move now leaves the person waiting rather than on a
 // merely-wrong screen.
 let routed = false;
-function routeOnState(mode) {
+const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
+const hasSetupMark = () => { try { return !!localStorage.getItem("tool.setup.return"); } catch (_) { return false; } };   // setup.js RETURN_KEY
+const setupReturning = () => import("./setup.js?v=2026-11-05-brain-tab-setup").then((S) => S.returning()).catch(() => false);
+async function routeOnState(mode) {
   if (routed) return;                           // this chooses the OPENING screen, once
   if (userMoved) return;                        // never move someone who has chosen
   routed = true; if (location.hash === '#accessmap' && $('#s-accessmap')) { goto('s-accessmap'); return; }   // the Access Map story, linked from the Brain tab and the setup (seat access-map-page, 2026-11-05)
@@ -3746,8 +3749,16 @@ function routeOnState(mode) {
   // failure rather than a first-run screen, which would assert an empty brain on
   // the strength of a request that never came back.
   if (mode === "unknown") { goto("s-summary"); return; }
-  const connected = (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
-  if (!connected) { goto("s-intro"); return; }
+  // THE FIRST STATE OF THE BRAIN TAB (seat brain-tab-setup, 2026-11-05, decision 1084 amended): a brain with no connected
+  // source opens the setup (fill/setup.js), as does #setup, and so does coming back from a sign-in started on its Connect
+  // step. SUPERSEDED: the old s-intro as the first screen of a signed-in brain with nothing connected; s-intro stays the
+  // screen for nobody signed in (above). #how opens How the Tool works over whatever screen this lands on.
+  if (location.hash === "#how") import("./setup.js?v=2026-11-05-brain-tab-setup").then((S) => S.openStory()).catch(() => { /* the story is extra; the screen still lands */ });
+  if (location.hash === "#setup") { goto("s-setup"); return; }
+  const connected = connectedCount();
+  // The module is fetched only when this browser holds the marker, so an ordinary opening waits on nothing new.
+  const back = hasSetupMark() && await setupReturning();
+  if (!connected || back) { goto("s-setup", back ? "connect" : undefined); return; }
   // THE TAB SHE USED LAST, in this browser; Mail the first time (seat conversation-panel, Alex 2026-10-12).
   // An owner-only tab remembered by someone who is not the owner falls back to Mail.
   let last = null;
@@ -3769,6 +3780,9 @@ function goto(id, key) {
   if (id === 's-access') id = 's-security';   // who sees what moved to the Security tab (seat security-tab)
   let part = null;
   if (id === 's-connect') { id = 's-summary'; part = 'add'; }   // connecting is Brain's Add a source part (seat brain-and-drives)
+  // The Brain tab of a brain with nothing connected is the setup (seat brain-tab-setup). Only when the reading came back:
+  // a failed reading keeps the Brain tab carrying its own failure, never a first-run screen.
+  if (id === 's-summary' && !part && readingState === 'live' && shape && !connectedCount()) id = 's-setup';
   // A sub-tab link (#security/audit) is kept only while that tab is shown (seat people-and-access).
   if (/^#[a-z]+[/]/.test(location.hash) && location.hash.slice(1).split('/')[0] !== (Object.keys(SUB_TABS).find((k) => SUB_TABS[k] === id) ?? '')) { try { history.replaceState(null, '', location.pathname + location.search); } catch (_) { /* link stays */ } }
   document.querySelectorAll("section.step").forEach((s) => { s.hidden = s.id !== id; });
@@ -3785,6 +3799,7 @@ function goto(id, key) {
     showSubtabs(sec, 'drives', shape?.viewer?.email);
     drawBrain(false);
   }
+  if (id === 's-setup') import('./setup.js?v=2026-11-05-brain-tab-setup').then((S) => S.mount({ sec: $('#s-setup'), shape: () => shape, openConnect, goTab, readEstimate }, key)).catch((e) => { const m = $('#s-setup'); if (m) m.textContent = 'The setup could not be loaded: ' + String(e?.message ?? e); });   // seat brain-tab-setup
   if (id === "s-tests") loadTests();
   if (id === "s-totest") import("./totest.js?v=2026-10-29-ask-agent").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + String(e?.message ?? e); });   // seat test-list
   if (id === "s-security") loadSecurity();
@@ -3801,7 +3816,7 @@ function goto(id, key) {
   markTab(tabNow);
   document.body.dataset.tab = tabNow;
   // Remembered so the Tool opens where she was (seat conversation-panel); first-run screens are not tabs.
-  if (!['s-intro', 's-kinds'].includes(id)) { try { localStorage.setItem(TAB_KEY, tabNow); } catch (_) { /* this page only */ } }
+  if (!['s-intro', 's-kinds', 's-setup'].includes(id)) { try { localStorage.setItem(TAB_KEY, tabNow); } catch (_) { /* this page only */ } }
   drawBox();
 }
 
