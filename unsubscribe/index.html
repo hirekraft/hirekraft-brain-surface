@@ -29,8 +29,14 @@
 </main>
 <script>
   (function () {
-    var FN = 'https://uvdoompnnypmneyrvtas.supabase.co/functions/v1/mail-send';
-    var t = new URLSearchParams(location.search).get('t') || '';
+    // WHICH BRAIN SENT THIS EMAIL (seat any-brain round 2, 2026-11-05): the link names it as b=<brain ref>. Links sent before
+    // that carry no b; HireKraft's brain is the only one that has sent any, so they keep working. OWED: mail-send adds b= to
+    // the links it writes, then this fallback can only ever be reached by those older emails.
+    var qs = new URLSearchParams(location.search);
+    var ref = qs.get('b') || '';
+    if (!new RegExp('^[a-z]{20}$').test(ref)) ref = 'uvdoompnnypmneyrvtas';
+    var FN = 'https://' + ref + '.supabase.co/functions/v1/mail-send';
+    var t = qs.get('t') || '';
     var go = document.getElementById('go'), said = document.getElementById('said');
     if (!t) { go.hidden = true; said.textContent = 'This unsubscribe link is not complete. Reply to the email with the word unsubscribe and you will be taken off the list.'; return; }
     go.addEventListener('click', function () {
