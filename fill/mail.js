@@ -1301,21 +1301,26 @@ function readingKeys() { return [...C.mailboxes().values()].filter((m) => m.stat
 // (mail_marked_view): grouped by mailbox, newest first, the last 90 days, automated senders left out unless from the last 14 days;
 // Show older lists the rest; "Search all of Gmail" is the live search it was before (findMail), for stars the Tool never kept.
 // SUPERSEDES the live Gmail search as the first list (seat mail-views, 2026-10-27).
-let marked = null;          // { key, loading } | { key, data, older } | { key, error }
+// SINCE seat mail-tab-build (2026-11-05, decision 1088, brief item 2: "fix Starred and Labels so they show what Gmail shows"):
+// every starred email, or every email under the label, newest first, 100 at a time, with Gmail's own total. SUPERSEDES the
+// 90-day, people-only, five-per-sender list above (Alex's Starred read 9 of 4,719) and its Show older.
+let marked = null;          // { key, loading } | { key, data, items, more } | { key, error }
 function markedKey(v) { return v.kind === 'starred' ? 'starred' : 'label|' + v.address + '|' + v.name; }
-async function loadMarked(v, older) {
+async function loadMarked(v, more) {
   const key = markedKey(v);
-  marked = { key, loading: true, older: !!older };
-  if (parts) drawList();
+  const prev = more && marked && marked.key === key && marked.data ? marked : null;
+  if (prev) { prev.paging = true; if (parts) drawList(); } else { marked = { key, loading: true }; if (parts) drawList(); }
   try {
-    const args = v.kind === 'starred' ? { p_older: !!older } : { p_source: 'gmail:' + v.address, p_label: v.name, p_older: !!older };
+    const args = v.kind === 'starred' ? {} : { p_source: 'gmail:' + v.address, p_label: v.name };
+    if (prev && prev.data.next_before) args.p_before = prev.data.next_before;
     const { data, error } = await C.sb.rpc('mail_marked_view', args);
     if (error || !data || data.ok === false) throw new Error((error && error.message) || (data && data.reason) || '');
     if (!marked || marked.key !== key) return;
-    marked = { key, data, older: !!older };
+    marked = { key, data, items: (prev ? prev.items : []).concat(data.items || []) };
   } catch (e) {
     if (!marked || marked.key !== key) return;
-    marked = { key, error: plainWords(String((e && e.message) || e || '')) };
+    if (prev) { prev.paging = false; prev.pageError = plainWords(String((e && e.message) || e || '')); }
+    else marked = { key, error: plainWords(String((e && e.message) || e || '')) };
   }
   if (parts) drawList();
 }
@@ -1325,17 +1330,21 @@ function drawMarkedList(list) {
   head.appendChild(navButton('All views', 'side'));
   const h3 = mk('h3', null, v.kind === 'starred' ? 'Starred' : v.name); if (v.kind !== 'starred') h3.translate = false;
   head.appendChild(h3);
-  head.appendChild(mk('p', 'mailx-list-sub', v.kind === 'starred' ? 'Your stars from real people, newest first.' : 'Newest first.'));
+  const d0 = marked && marked.key === markedKey(v) && marked.data ? marked.data : null;
+  const total = d0 ? Number(d0.count || 0) : null;
+  head.appendChild(mk('p', 'mailx-list-sub', total === null ? 'As in Gmail, newest first.'
+    : (total === 1 ? '1 email' : total.toLocaleString('en-US') + ' emails') + (v.kind === 'starred' ? ' starred in Gmail' : ' under this label in Gmail') + ', newest first.'));
   list.appendChild(head);
   if (!marked || marked.key !== markedKey(v) || marked.loading) { list.appendChild(mk('p', 'quiet working', 'Reading what you ' + (v.kind === 'starred' ? 'starred' : 'filed under this label') + '. Nothing in Gmail is changed.')); return; }
   if (marked.error) { list.appendChild(mk('p', 'state stalled', (v.kind === 'starred' ? 'Your starred emails' : 'This label') + ' could not be read just now. ' + marked.error + ' This is not a claim that there are none.')); return; }
   const d = marked.data;
-  const items = d.items || [];
-  if (!items.length) list.appendChild(mk('p', 'quiet', marked.older ? 'Nothing kept in the Tool carries this.' : 'Nothing from the last 90 days.'));
+  const items = marked.items || [];
+  if (!items.length) list.appendChild(mk('p', 'quiet', v.kind === 'starred' ? 'Nothing is starred in Gmail.' : 'Gmail files no email under this label.'));
   const by = new Map();
   for (const it of items) { const k = String(it.mailbox || ''); if (!by.has(k)) by.set(k, []); by.get(k).push(it); }
+  const per = d.per_mailbox || {};
   for (const [addr, rows] of by) {
-    if (v.kind === 'starred') list.appendChild(mk('h4', 'mailx-domain', addr + ' (' + rows.length + ')'));
+    if (v.kind === 'starred') list.appendChild(mk('h4', 'mailx-domain', addr + (per[addr] ? ' (' + Number(per[addr]).toLocaleString('en-US') + ')' : '')));
     const ul = mk('ul', 'mailx-msgs');
     for (const r of rows) {
       const li = mk('li');
@@ -1354,13 +1363,16 @@ function drawMarkedList(list) {
     }
     list.appendChild(ul);
   }
-  const left = [];
-  if (Number(d.left_out_automated)) left.push(d.left_out_automated + (v.kind === 'starred' ? ' from apps and automated senders' : ' from automated senders older than 14 days'));
-  if (Number(d.older)) left.push(d.older + ' older than 90 days');
-  if (left.length) list.appendChild(mk('p', 'mailx-att-quiet', 'Left out: ' + left.join(', and ') + '.'));
   const row = mk('div', 'mailx-att-acts');
-  if (!marked.older && left.length) { const o = mk('button', 'go ghost', 'Show older'); o.type = 'button'; o.addEventListener('click', () => loadMarked(v, true)); row.appendChild(o); }
-  if (Number(d.not_kept)) list.appendChild(mk('p', 'mailx-att-quiet', d.not_kept + ' more ' + (d.not_kept === 1 ? 'is' : 'are') + ' in Gmail but not kept in the Tool (for example set aside as junk), so they are not listed here.'));
+  if (d.more) {
+    const o = mk('button', 'go ghost', marked.paging ? 'Reading the next 100.' : 'Show 100 more'); o.type = 'button';
+    o.disabled = !!marked.paging;
+    o.addEventListener('click', () => loadMarked(v, true));
+    row.appendChild(o);
+    row.appendChild(mk('span', 'mailx-small', 'Showing ' + items.length.toLocaleString('en-US') + ' of ' + Number(d.kept || 0).toLocaleString('en-US') + '.'));
+  }
+  if (marked.pageError) list.appendChild(mk('p', 'state stalled', 'The next ones could not be read just now. ' + marked.pageError));
+  if (Number(d.not_kept)) list.appendChild(mk('p', 'mailx-att-quiet', d.not_kept + ' more ' + (d.not_kept === 1 ? 'is' : 'are') + ' in Gmail but not kept in the Tool (for example set aside as junk), so ' + (d.not_kept === 1 ? 'it is' : 'they are') + ' not listed here. Search all of Gmail finds ' + (d.not_kept === 1 ? 'it' : 'them') + '.'));
   const g = mk('button', 'go ghost', 'Search all of Gmail'); g.type = 'button';
   g.addEventListener('click', () => {
     if (v.kind === 'starred') findMail('is:starred', readingKeys(), { title: 'Starred, everything in Gmail', view: true });
@@ -1638,18 +1650,14 @@ function caughtCount() {
   if (scam && scam.data) return scamItems().filter(scamUnseen).length;
   return iv && iv.data && iv.data.caught ? Number(iv.data.caught.unseen) : null;
 }
+// EVERY LABEL, AS GMAIL LISTS THEM (seat mail-tab-build, 2026-11-05): each mailbox's labels by name, the number beside one is its
+// emails not yet seen by you; hover says how many Gmail files under it. SUPERSEDES the 90-day list and its All labels toggle.
 function drawLabels(side) {
-  const recent = (iv && iv.data && iv.data.labels) || [];
+  const rows = (iv && iv.data && iv.data.labels) || [];
   const wrap = mk('div', 'mailx-labels');
-  const all = labelsOpen === 'all';
-  if (!all) {
-    if (!iv || iv.loading) wrap.appendChild(mk('p', 'quiet working', 'Reading your labels.'));
-    else if (iv.error) wrap.appendChild(mk('p', 'state stalled', 'Your labels could not be read just now. ' + iv.error));
-    else if (!recent.length) wrap.appendChild(mk('p', 'quiet', 'No label holds mail from the last 90 days.'));
-  }
-  const rows = all ? ((marks && marks.labels) || []).map((l) => ({ mailbox: l.mailbox, name: l.name, n: l.gmail_total, title: 'In Gmail under this label' }))
-    : recent.map((l) => ({ mailbox: l.mailbox, name: l.name, n: l.unseen, title: NOT_SEEN }));
-  if (all && marks && marks.error) wrap.appendChild(mk('p', 'state stalled', 'Your labels could not be read just now. ' + marks.error));
+  if (!iv || iv.loading) wrap.appendChild(mk('p', 'quiet working', 'Reading your labels.'));
+  else if (iv.error) wrap.appendChild(mk('p', 'state stalled', 'Your labels could not be read just now. ' + iv.error));
+  else if (!rows.length) wrap.appendChild(mk('p', 'quiet', 'Your mailboxes have no labels of their own in Gmail.'));
   const by = new Map();
   for (const l of rows) { const k = String(l.mailbox || ''); if (!by.has(k)) by.set(k, []); by.get(k).push(l); }
   for (const [addr, list] of [...by.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
@@ -1658,16 +1666,12 @@ function drawLabels(side) {
     for (const l of list.slice().sort((a, b) => String(a.name).localeCompare(String(b.name)))) {
       const on = view && view.kind === 'label' && view.name === l.name && view.address === addr;
       const x = mk('li');
-      x.appendChild(viewButton(String(l.name), l.n === null || l.n === undefined ? '' : l.n, on, () => chooseView({ kind: 'label', name: String(l.name), address: addr }), l.title));
+      const g = Number(l.gmail || 0);
+      x.appendChild(viewButton(String(l.name), l.unseen, on, () => chooseView({ kind: 'label', name: String(l.name), address: addr }),
+        NOT_SEEN + '. In Gmail under this label: ' + g.toLocaleString('en-US') + '.'));
       lu.appendChild(x);
     }
     wrap.appendChild(lu);
-  }
-  const total = iv && iv.data ? Number(iv.data.labels_all || 0) : 0;
-  if (total > recent.length || all) {
-    const t = mk('button', 'go ghost mailx-all-labels', all ? 'Only labels with mail from the last 90 days' : 'All labels (' + total + ')'); t.type = 'button';
-    t.addEventListener('click', () => { labelsOpen = all ? true : 'all'; drawSide(); });
-    wrap.appendChild(t);
   }
   side.appendChild(wrap);
 }
@@ -1687,8 +1691,8 @@ function drawSide() {
   const cb = viewButton('Caught', sc ? sc : '', view && view.kind === 'suspicious', () => chooseView({ kind: 'suspicious' }), 'Suspected scams not yet seen by you, across the mailboxes you can open');
   if (sc) cb.classList.add('mailx-view-warn');
   viewList(side, [cb]).classList.add('mailx-caught');
-  // YOUR GMAIL STARTS FOLDED (round two, Alex's walk item 4): one press opens Starred (real people only) and Labels (only the ones
-  // a person made; apps' labels are left out by the brain, mail_label.app). Open while Starred or a label is the view.
+  // YOUR GMAIL STARTS FOLDED (round two, Alex's walk item 4): one press opens Starred and Labels, as Gmail shows them (seat
+  // mail-tab-build: every star and every label, apps' labels included). Open while Starred or a label is the view.
   const gOpen = gmailOpen || (view && (view.kind === 'starred' || view.kind === 'label'));
   const g = mk('button', 'mailx-group-btn', 'Your Gmail'); g.type = 'button';
   g.setAttribute('aria-expanded', gOpen ? 'true' : 'false');
@@ -1700,8 +1704,6 @@ function drawSide() {
     lb.setAttribute('aria-expanded', labelsOpen ? 'true' : 'false');
     viewList(side, [viewButton('Starred', st === null ? '' : st, view && view.kind === 'starred', () => chooseView({ kind: 'starred' }), NOT_SEEN), lb]);
     if (labelsOpen) drawLabels(side);
-    const napp = iv && iv.data ? Number(iv.data.labels_app || 0) : 0;
-    if (labelsOpen && napp) side.appendChild(mk('p', 'mailx-small mailx-side-note', 'Only labels you made. ' + napp + (napp === 1 ? ' label made by an app is' : ' labels made by apps are') + ' left out.'));
   }
   if (iv && iv.error) side.appendChild(mk('p', 'state stalled', 'What you have not seen yet could not be counted just now. ' + iv.error + ' The numbers are left off rather than shown wrong.'));
   side.scrollTop = top;
