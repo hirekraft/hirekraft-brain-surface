@@ -29,7 +29,7 @@ try {
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
 <title>Tool — your brain</title>
 <meta name="description" content="Your business's own memory.">
-<link rel="stylesheet" href="skin.css?v=2026-11-05-access-map">
+<link rel="stylesheet" href="skin.css?v=2026-11-05-brain-tab-room">
 <link rel="stylesheet" href="setup.css?v=2026-11-05-brain-tab-setup">
 <script>
 // THE FRONT DOOR, before anything is drawn (seat front-door, 2026-10-13): no stored sign-in on this
@@ -236,6 +236,13 @@ try {
        above it on the Brain tab (Alex, 2026-10-02). The tabs are the navigation spine
        now; this section was it until then. -->
   <section class="step" id="s-summary" hidden>
+    <!-- THE BRAIN ENGINE ROOM (seat brain-tab-room, 2026-11-05, decision 1086): the Brain tab's running view, drawn by
+         fill/brainroom.js. SUPERSEDES on screen the three parts below (What it knows, Sources, Add a source; seat
+         brain-and-drives, decision 1030): they stay in the page, out of sight, because the Systems, Calendar and Loose files
+         doors still copy from them and the Add a source part is moved onto the room's Add a source page when it opens.
+         Every number in the room comes from the same readings those parts used. -->
+    <div id="brain-room" aria-live="polite"></div>
+    <div id="brain-old" hidden>
     <!-- THE BRAIN TAB IN THREE PARTS (seat brain-and-drives, 2026-10-28, decision 1030 with 1029): What it knows (the first
          answer and the three counts), Sources (one clean row each, grouped), Add a source (what was the connect section,
          moved here whole, so goto("s-connect") opens this part). Every number comes from the brain's sources_view, which is
@@ -284,6 +291,7 @@ try {
       choose.</p>
 
     <div id="connect-stage"></div>
+    </div>
     </div>
   </section>
 
@@ -525,6 +533,6 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-11-05-brain-tab-setup-2"></script>
+<script type="module" src="lens.js?v=2026-11-05-brain-tab-room"></script>
 </body>
 </html>
