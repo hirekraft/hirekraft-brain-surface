@@ -313,7 +313,7 @@ function costBlock(cost, el) {
 // mail and files until the limit is raised or the month turns, while finding, the privacy check and a few dollars of
 // questions continue. Nothing here enforces anything: this block only shows the state and sets the number. Setting it
 // goes through the one existing door for AI settings (lens-ask ai_choose, owner only), as step 'monthly AI limit'.
-function limitBlock(L, ctx, reload) {
+export function limitBlock(L, ctx, reload) {   // exported for the Brain engine room's This month page (seat brain-tab-room)
   const { el, askBody } = ctx;
   const sec = el('section', 'ai2-block ai2-limit');
   const lab = el('p', 'ai2-label'); lab.textContent = 'Your monthly AI limit';
@@ -386,7 +386,7 @@ function limitBlock(L, ctx, reload) {
 }
 
 // 2. Am I in control: one bar, left of what was put in.
-function balance(b, p, el) {
+export function balance(b, p, el) {   // exported for the Brain engine room's AI balance page (seat brain-tab-room)
   const sec = el('section', 'ai2-block ai2-bal');
   const lab = el('p', 'ai2-label'); lab.textContent = 'Your prepaid balance';
   sec.appendChild(lab);
@@ -583,8 +583,8 @@ function monthCard(m, M, p, el) {
 // What it bought: three lines that add up, visibly, to the month's total.
 // The three names are the screen's own words (written here so they are in the English source and every language gets
 // them); the brain's title is used only for a line this screen does not know.
-const LINE_TITLE = { finds: 'Finds', understands: 'Understands', thinks: 'Thinks' };
-function boughtLines(lines, total, el, withOneTime) {
+const LINE_TITLE = { finds: 'Find', understands: 'Understand', thinks: 'Reason' };   // decision 1080's three layers, the same words as the Brain tab (seat brain-tab-room; were Finds, Understands, Thinks)
+export function boughtLines(lines, total, el, withOneTime) {   // exported for the Brain engine room (seat brain-tab-room)
   const list = el('div', 'ai2-lines');
   for (const l of (Array.isArray(lines) ? lines : [])) {
     const row = el('div', 'ai2-row');
