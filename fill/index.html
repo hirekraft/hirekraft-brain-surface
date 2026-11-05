@@ -29,14 +29,20 @@ try {
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
 <title>Tool — your brain</title>
 <meta name="description" content="Your business's own memory.">
-<link rel="stylesheet" href="skin.css?v=2026-11-05-mail-tab-build-r2">
+<link rel="stylesheet" href="skin.css?v=2026-11-05-any-brain">
 <link rel="stylesheet" href="setup.css?v=2026-11-05-brain-tab-setup">
 <script>
 // THE FRONT DOOR, before anything is drawn (seat front-door, 2026-10-13): no stored sign-in on this
 // browser means she goes to sign in, and comes back to this tab after. lens.js makes the real check
 // (a stored sign-in that can no longer be renewed is sent the same way).
+// ANY BRAIN (seat any-brain round 2, 2026-11-05, decision 1097): the sign-in looked for is the one of the brain this browser
+// remembers (fill/brain.js keeps it under verrandi.brain), else any brain's own stored sign-in (sb-<ref>-auth-token). It
+// named HireKraft's brain until now. fill/brain.js makes the real choice.
 try {
-  if (!localStorage.getItem("sb-uvdoompnnypmneyrvtas-auth-token"))
+  var vb = null; try { vb = JSON.parse(localStorage.getItem("verrandi.brain") || "null"); } catch (e2) { vb = null; }
+  var held = new RegExp("^sb-[a-z]{20}-auth-token$"), any = false;
+  for (var i = 0; i < localStorage.length; i++) if (held.test(localStorage.key(i) || "")) any = true;
+  if (vb && vb.ref ? !localStorage.getItem("sb-" + vb.ref + "-auth-token") : !any)
     location.replace("../login/?next=" + encodeURIComponent("fill/" + location.search + location.hash));
 } catch (e) { /* storage blocked: lens.js decides */ }
 </script>
@@ -71,7 +77,7 @@ try {
     <!-- The wordmark is the way back. No colour value is introduced here, so the
          re-skinnable-by-construction property holds. -->
     <a class="wordmark" href="../login/" title="Back to the front door"
-       style="text-decoration:none;color:inherit">Tool<span>hirekraft</span></a>
+       style="text-decoration:none;color:inherit">Tool<span translate="no"></span></a>
     <!-- Filled from the token, never from anything this page asserts.
          Space is reserved so it cannot shift when the reading lands. -->
     <!-- TODAY, on every tab (seat chat-layout, Alex 2026-10-06): from this computer, or the zone
@@ -533,6 +539,6 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-11-05-mail-tab-build-r2"></script>
+<script type="module" src="lens.js?v=2026-11-05-any-brain"></script>
 </body>
 </html>
