@@ -85,6 +85,8 @@ let C = null, cur = 0, story = null;
 function h(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
 function btn(text, cls, on) { const b = h('button', cls); b.type = 'button'; b.textContent = text; if (on) b.addEventListener('click', on); return b; }
 function para(text, cls) { const p = h('p', cls); p.textContent = text; return p; }
+// Words and bold words in one line, each its own text node, so the screen's language reaches every piece (no markup in strings).
+function rich(parts, cls) { const p = h('p', cls); for (const [t, b] of parts) { const n = b ? h('b') : document.createTextNode(t); if (b) n.textContent = t; p.append(n); } return p; }
 function strong(lead, rest, cls) { const p = h('p', cls); const b = h('b'); b.textContent = lead; p.append(b, document.createTextNode(rest ? ' ' + rest : '')); return p; }
 
 // The bubble: one question, a short answer, Tell me more for the rest.
@@ -207,8 +209,9 @@ const STEPS = [
   { key: 'ai', name: 'Your AI', next: 'Continue with Claude', draw: () => [
     h('div', '', LIBRARY),
     h('h1', '', 'The AI that runs your Tool.'),
-    h('p', '', '<b>Find</b> is already set up on a model we have tested. For <b>Understand</b> and <b>Reason</b> we recommend <b>Claude, by Anthropic</b>. We pick the right Claude model for each job: the most careful one for labelling your data, a fast one for everyday answers, the strongest only for hard questions.'),
-    box([h('span', '', '<b>Claude</b> <span class="su-small su-soft">recommended</span>')], para('best score on our test', 'su-small su-soft')),
+    rich([['Find', 1], [' is already set up on a model we have tested. For '], ['Understand', 1], [' and '], ['Reason', 1], [' we recommend '], ['Claude, by Anthropic', 1],
+      ['. We pick the right Claude model for each job: the most careful one for labelling your data, a fast one for everyday answers, the strongest only for hard questions.']]),
+    box([rich([['Claude', 1]]), para('Recommended', 'su-small su-soft')], para('best score on our test', 'su-small su-soft')),
     strong('Prefer another AI, or have your own account?', 'Tell us. We test any AI on the same real business questions first and show you its score before anything switches.', 'su-small'),
     bubble('What does the score mean?', 'We run every setup through the same test: real business questions with known right answers. The score is how many it gets right.',
       ['Understand matters most. It decides every label, every count and who may see what, so it has a minimum: setups below it are not offered.',
@@ -233,12 +236,12 @@ const STEPS = [
   } },
   { key: 'bills', name: 'Two bills', next: 'Finish', draw: () => {
     const two = h('div', 'su-box su-col');
-    const t = h('div'); t.innerHTML = '<b>2. From us: one card, one monthly statement</b>';
+    const t = rich([['2. From us: one card, one monthly statement', 1]]);
     const line = (a, b) => { const d = h('div', 'su-line'); const x = h('span'); x.textContent = a; const y = h('b'); y.textContent = b; d.append(x, y); return d; };
     two.append(t, line('The Tool, you plus 4 colleagues', '$50 founding ' + String.fromCharCode(183) + ' $100'),
       line('Each extra person', '$10 founding ' + String.fromCharCode(183) + ' $15'),
       line("AI used, at the AI makers' exact price", 'at cost'), line("Card fee, at the card company's price", 'at cost'));
-    const one = box([h('div', '', '<b>1. From Supabase: your database</b>'), para('On your own account. We are never in the middle.', 'su-small su-soft')], h('b', '', 'about $25 / mo'));
+    const one = box([rich([['1. From Supabase: your database', 1]]), para('On your own account. We are never in the middle.', 'su-small su-soft')], h('b', '', 'about $25 / mo'));
     return [
       h('div', '', ART.bills),
       h('h1', '', 'You get two bills. Nothing else, nothing hidden.'),
