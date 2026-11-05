@@ -63,7 +63,7 @@
 </head>
 <body>
 <div class="card">
-  <div class="mark">Tool<small>hirekraft</small></div>
+  <div class="mark">Tool<small translate="no"></small></div>
 
   <p class="lede" id="lede">
     Sign in to your brain. We&rsquo;ll email you a link &mdash; no password to remember,
@@ -72,7 +72,7 @@
 
   <div id="signin">
     <label for="email">Work email</label>
-    <input id="email" type="email" autocomplete="email" placeholder="you@hirekraft.ai" spellcheck="false">
+    <input id="email" type="email" autocomplete="email" placeholder="you@yourbusiness.com" spellcheck="false">
     <button id="send">Email me a sign-in code</button>
     <p class="note">
       The code signs in only the address it was sent to. What you can see afterwards is
@@ -109,59 +109,59 @@
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveBrain, remember, remembered, forget, askDoor } from "../fill/brain.js?v=2026-11-05-any-brain";
 
-// THE LOGIN FRONT DOOR (Act 1, 2026-07-23).
+// THE LOGIN FRONT DOOR (Act 1, 2026-07-23; ONE DOOR FOR EVERY BUSINESS, seat any-brain round 2, 2026-11-05, decision 1097).
 //
-// Why this page exists: until now NOTHING in the system ever sent a real user JWT. Every
-// surface authenticated with the service-role or publishable key and then ASSERTED who was
-// asking by putting identity_id in the request body. Even workspace-chat, the one function
-// running at verify_jwt:true, read identity from the body — the platform only proved that
-// *some* valid key was presented, never *who* was calling.
+// Why this page exists: it is the caller that sends a real user JWT, minted by the brain after she proves her address,
+// so every brain resolves who is asking from the signed token and never from anything a page asserts.
 //
-// So the JWT->identity contract could not be migrated onto anything, because no caller
-// existed that could satisfy it. This page is that caller.
+// ONE PAGE, ANY BUSINESS. This page no longer names a brain. She types her work email and Verrandi's address book
+// (studio-core brain-door, kept in step by each brain itself) finds her business's brain; that brain emails its own
+// code; the door passes the code to that brain, which checks it and signs her in, and hands back which brain it was.
+// The answer to "send me a code" is the same words for an address in the book and one that is not, so this page tells
+// a stranger nothing about who our customers' people are. The door never lets anyone in: the brain does, or does not.
+// A browser already signed in (before or after the one door) is recognised from fill/brain.js without asking anything.
 //
-// Magic link (OTP) rather than password: the operator's auth.users row carries no password
-// (provider=email, empty providers). More importantly, a password is a credential someone has
-// to set, transmit and store — for the second user that is a thing to leak. A link sent to the
-// address itself proves control of the address and leaves nothing to hand around.
-//
-// The publishable key below is PUBLIC by design — it identifies the project, it does not grant
-// anything. All authority comes from the signed JWT minted after sign-in. (The legacy anon JWT
-// key is disabled on this project; this is the sb_publishable_ form.)
-
-const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
-const PUBLISHABLE_KEY = "sb_publishable_joP87JJiePfN3k1uPoxxVA_DLGT1zv5";
-
-const sb = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
-  auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true, flowType: "pkce" },
-});
+// Magic link (OTP) rather than password: a link or code sent to the address proves control of it and leaves nothing to
+// hand around. The publishable key comes with the brain from the door: PUBLIC by design, it names a project and grants
+// nothing. All authority comes from the signed JWT.
 
 const $ = (id) => document.getElementById(id);
 const msg = $("msg"), who = $("who"), signin = $("signin"), out = $("out"), lede = $("lede");
 const nav = $("nav");
+const qs = new URLSearchParams(location.search);
+if (qs.get("again")) forget();   // "Sign in again" from a screen whose brain no longer opens
 
-function say(kind, html) {
+let sb = null;   // the brain's own client, made once the brain is known
+const clientFor = (b) => createClient(b.url, b.key, {
+  auth: { detectSessionInUrl: false, persistSession: true, autoRefreshToken: true, flowType: "pkce" },
+});
+function brainKnown(b) {
+  sb = clientFor(b);
+  const m = document.querySelector(".mark small");
+  if (m) m.textContent = b.name;
+  sb.auth.onAuthStateChange(() => { render(); });
+}
+
+function say(kind, text) {
   msg.className = "msg on " + kind;
-  msg.innerHTML = html;
+  msg.textContent = text;
 }
 
 function row(k, v, cls) {
-  return `<div class="row"><span class="k">${k}</span><span class="v ${cls || ""}">${v}</span></div>`;
+  const d = document.createElement("div"); d.className = "row";
+  const a = document.createElement("span"); a.className = "k"; a.textContent = k;
+  const b = document.createElement("span"); b.className = "v " + (cls || ""); b.textContent = v;
+  d.append(a, b); return d;
 }
 
-// THE PROOF. One call, no parameter. my_profile() reads auth.uid() from the JWT the gateway
-// already verified, resolves the identity itself, and RAISES 28000 when the token is bound to
-// nothing. There is nothing here for the browser to claim: the page cannot ask "who is
-// 99599452?", only "who am I?", and the database answers from the token.
-//
-// Stage D cutover (2026-07-31): this previously resolved the id and then called
-// identity_profile(p_identity_id) — an asserted-parameter read. No identity_id is in flight
-// now, and the unbound refusal is the database's rather than a null check in this page.
+// THE PROOF. One call, no parameter. my_profile() reads auth.uid() from the JWT the gateway already verified,
+// resolves the identity itself, and RAISES 28000 when the token is bound to nothing.
 async function resolveIdentity() {
+  if (!sb) return null;
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return null;
-
   const { data: profile, error } = await sb.rpc("my_profile");
   if (error) {
     const denied = error.code === "28000" || /denied/i.test(error.message || "");
@@ -172,7 +172,6 @@ async function resolveIdentity() {
 
 async function render() {
   const r = await resolveIdentity();
-
   if (!r) {
     if ($("codebox").style.display === "none") signin.style.display = "";
     who.className = "who";
@@ -180,36 +179,25 @@ async function render() {
     out.style.display = "none";
     return;
   }
-
   signin.style.display = "none";
   $("codebox").style.display = "none";
   out.style.display = "";
-  lede.textContent = "You're signed in. Here is where to go — and under it, who the brain resolves you to.";
-
+  lede.textContent = "You're signed in. Here is where to go, and under it, who the brain resolves you to.";
   const bound = !!r.profile;
-  // An unbound login reaches nothing, so offering it doors would be a lie in link form.
   nav.className = bound ? "nav on" : "nav";
-  // RETURN TO WHERE SHE CAME FROM (seat chat-connector, 2026-10-10): the consent page for a person's
-  // own chatbot sends her here with ?next=connect/... when she is not signed in. Only a path inside
-  // this site is followed (no scheme, no leading slash, no parent step), so this cannot be used to
-  // send anyone elsewhere.
-  const next = new URLSearchParams(location.search).get("next") || "";
+  // RETURN TO WHERE SHE CAME FROM (seat chat-connector, 2026-10-10): only a path inside this site is followed.
+  const next = qs.get("next") || "";
   if (bound && next && !next.includes(":") && !next.startsWith("/") && !next.includes("..")) { location.href = "../" + next; return; }
-  let html = "";
-  html += row("Signed in as", r.session.user.email);
-  html += row("Auth user (JWT sub)", r.session.user.id);
-  html += row("Resolves to identity", bound ? r.profile.id : "no bound identity", bound ? "good" : "bad");
-  if (r.profile) {
-    html += row("Name", r.profile.name);
-    html += row("Role", r.profile.role ?? "—");
-    html += row("All access", r.profile.is_all_access ? "yes" : "no");
-  }
-  who.innerHTML = html +
-    `<p class="sub">${bound
-      ? "Identity here is <strong>proven</strong>, not asserted: resolved from the signed token by identity_for_jwt(), which takes no parameter and so cannot be asked about anyone else."
-      : "This login has no brain identity bound to it. That is a refusal, not an error — an unbound login resolves to nothing and can read nothing."}</p>`;
+  who.innerHTML = "";
+  who.append(row("Signed in as", r.session.user.email), row("Auth user (JWT sub)", r.session.user.id),
+    row("Resolves to identity", bound ? r.profile.id : "no bound identity", bound ? "good" : "bad"));
+  if (r.profile) who.append(row("Name", r.profile.name), row("Role", r.profile.role ?? "-"), row("All access", r.profile.is_all_access ? "yes" : "no"));
+  const sub = document.createElement("p"); sub.className = "sub";
+  sub.textContent = bound
+    ? "Identity here is proven, not asserted: resolved from the signed token by identity_for_jwt(), which takes no parameter and so cannot be asked about anyone else."
+    : "This login has no brain identity bound to it. That is a refusal, not an error: an unbound login resolves to nothing and can read nothing.";
+  who.appendChild(sub);
   who.className = "who on";
-
   if (r.error) say("err", "Identity lookup failed: " + r.error);
   else if (!bound) say("err", "Signed in, but this account is not bound to a brain identity. Nothing is readable.");
   else say("ok", "Signed in and bound. The token now proves who you are.");
@@ -221,31 +209,30 @@ $("send").addEventListener("click", async () => {
   const email = $("email").value.trim();
   if (!email) { say("err", "Enter your work email."); return; }
   $("send").disabled = true;
-  say("info", "Sending&hellip;");
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.href.split("#")[0] },
-  });
+  say("info", "Sending.");
+  // The page's own address, without the part after #, is where a link in the email may bring her back.
+  const r = await askDoor({ action: "send", email, back: location.href.split("#")[0] });
   $("send").disabled = false;
-  if (error) { say("err", error.message); return; }
+  if (!r.ok) { say("err", r.words || "That did not go through. Try again in a minute."); return; }
   pendingEmail = email;
   signin.style.display = "none";
   $("codebox").style.display = "";
   $("code").focus();
-  say("ok", "Sent to <strong>" + email + "</strong>. Enter the six-digit code, or click the link in the email.");
+  say("ok", r.words);
 });
 
-// Verifying the OTP directly is the path that does not depend on redirect configuration at
-// all: the code is exchanged for a session in this tab. Same proof either way — the session
-// carries a signed JWT and identity_for_jwt() reads auth.uid() from it.
+// The code goes to the door, which passes it to her brain. The brain checks it; only then is the brain named here.
 $("verify").addEventListener("click", async () => {
   const token = $("code").value.trim();
   if (!token) { say("err", "Enter the six-digit code."); return; }
   $("verify").disabled = true;
-  say("info", "Verifying&hellip;");
-  const { error } = await sb.auth.verifyOtp({ email: pendingEmail, token, type: "email" });
+  say("info", "Checking.");
+  const r = await askDoor({ action: "verify", email: pendingEmail, code: token });
+  if (!r.ok || !r.brain || !r.session || !remember(r.brain)) { $("verify").disabled = false; say("err", r.words || "That code did not work."); return; }
+  brainKnown(remembered());
+  const { error } = await sb.auth.setSession({ access_token: r.session.access_token, refresh_token: r.session.refresh_token });
   $("verify").disabled = false;
-  if (error) { say("err", error.message); return; }
+  if (error) { say("err", "Signed in, but this browser could not keep the sign-in: " + error.message); return; }
   $("codebox").style.display = "none";
   render();
 });
@@ -260,12 +247,32 @@ $("email").addEventListener("keydown", (e) => { if (e.key === "Enter") $("send")
 $("code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("verify").click(); });
 
 out.addEventListener("click", async () => {
-  await sb.auth.signOut();
-  location.reload();
+  if (sb) await sb.auth.signOut();
+  forget();   // the next person on this browser finds her own business from her own email
+  location.replace(location.pathname);
 });
 
-sb.auth.onAuthStateChange(() => { render(); });
-render();
+// THE LINK IN THE EMAIL, instead of the code: it brings her back here with ?b=<the brain> and the sign-in after #.
+// The brain is looked up by its ref (the link names it, and only her mailbox has the link), then the sign-in is kept.
+async function fromLink() {
+  const ref = qs.get("b");
+  const h = new URLSearchParams(location.hash.replace("#", ""));
+  if (!ref || !h.get("access_token") || !h.get("refresh_token")) return false;
+  const r = await askDoor({ action: "brain", ref });
+  history.replaceState(null, "", location.pathname + location.search);   // the tokens leave the address bar at once
+  if (!r.ok || !remember(r.brain)) { say("err", r.words || "This sign-in link does not point to an open Tool."); return true; }
+  brainKnown(remembered());
+  const { error } = await sb.auth.setSession({ access_token: h.get("access_token"), refresh_token: h.get("refresh_token") });
+  if (error) say("err", "This sign-in link did not work: " + error.message + ". Ask for a new code.");
+  return true;
+}
+
+(async () => {
+  if (await fromLink()) { render(); return; }
+  const r = await resolveBrain();
+  if (r.ok) brainKnown(r.brain);
+  render();
+})();
 </script>
 </body>
 </html>
