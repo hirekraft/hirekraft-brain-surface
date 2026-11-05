@@ -84,13 +84,26 @@ import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
 import { foundCard } from "./find.js?v=2026-10-29-thinkrooms"; // find first, then work on what was found (seat find-first)
 import { closeCard } from "./close.js?v=2026-10-26-month-end-2"; // the month-end check, corrected cell by cell (seat month-end)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-27-people-and-access"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-10-27-people-and-access"; // sub-tab row and People and access (seat people-and-access)
-import { initChats, loadChats } from "./chats.js?v=2026-10-30-linkedin-whole"; // Chats tab (seat chat-import)
+import { initChats, loadChats } from "./chats.js?v=2026-11-05-any-brain"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-11-03-screen-rollback"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
 
-const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
-// Public by design: it names the project, it grants nothing. All authority is in the JWT.
-const PUBLISHABLE_KEY = "sb_publishable_joP87JJiePfN3k1uPoxxVA_DLGT1zv5";
+// WHICH BRAIN (seat any-brain round 2, 2026-11-05, decision 1097 shape A): the address and the public key come from
+// fill/brain.js, the one place the screen learns its brain (the business she signed in to through the one door). They
+// were written out here for HireKraft until now. The key is public by design: it names the project, it grants nothing.
+// All authority is in the JWT. Nothing remembered and no stored sign-in: she goes to sign in. A brain that no longer
+// opens: its reason, drawn before any tab.
+import { resolveBrain, drawNoBrain } from "./brain.js?v=2026-11-05-any-brain";
+const BRAIN = await (async () => {
+  const r = await resolveBrain();
+  if (r.ok) return r.brain;
+  const back = "../login/?next=" + encodeURIComponent("fill/" + location.search + location.hash);
+  if (r.reason === "none") location.replace(back); else drawNoBrain(r.words, back + "&again=1");
+  return new Promise(() => {});   // nothing below runs
+})();
+const SUPABASE_URL = BRAIN.url;
+const PUBLISHABLE_KEY = BRAIN.key;
+{ const span = document.querySelector(".wordmark span"); if (span && !span.textContent.trim()) span.textContent = BRAIN.name; }   // business_name() below has the last word, as before
 
 // THE FRONT DOOR (seat front-door, 2026-10-13; Alex on a phone never signed in saw the tabs drawn and
 // "permission denied for function brain_shape"). (1) With no session she is sent to sign in, and back to
@@ -3815,7 +3828,7 @@ function goto(id, key) {
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
     import("./ledger.js?v=2026-10-22-dates").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
-  if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY }); loadChats(); showSubtabs($('#s-chats'), 'chats', shape?.viewer?.email); }
+  if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY, name: BRAIN.name }); loadChats(); showSubtabs($('#s-chats'), 'chats', shape?.viewer?.email); }
   const tabNow = id === 's-lens' ? lensKey : id === 's-drives' ? 'drives' : id === 's-work' ? 'work' : id === 's-security' || id === 's-accessmap' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : 'brain';
   const isDoor = !!TABS.find((x) => x.key === tabNow)?.door;
   markTab(isDoor ? 'brain' : tabNow);   // a door is part of Brain (seat brain-tab-room)
