@@ -218,6 +218,23 @@ export async function drawSources(box, d) {
   closeMenusOnClick();
 }
 
+// ONE GROUP, FOR A DOOR OF THE BRAIN ENGINE ROOM (seat brain-tab-room, 2026-11-05, decision 1086): the same rows as Sources,
+// drawn by the same row(), so a square's page and the Sources list cannot differ. keep(r) picks the rows (a group, or the
+// Downloads among the systems). Returns the rows drawn, so the page can say when there are none.
+export async function drawGroup(box, d, keep) {
+  const { sb, el } = d;
+  if (!box) return [];
+  let v;
+  try { v = await readSources(sb); } catch (e) { failed(box, el, 'These sources', e); return []; }
+  if (!v?.ok) { const p = el('p', 'quiet'); p.textContent = v?.note ?? 'These sources could not be read.'; box.replaceChildren(p); return []; }
+  const mine = (v.rows ?? []).filter(keep);
+  const ul = el('ul', 'src-list');
+  for (const r of mine) ul.appendChild(row(r, d));
+  box.replaceChildren(ul);
+  closeMenusOnClick();
+  return mine;
+}
+
 // A press anywhere else closes an open row menu. Registered once.
 let closer = false;
 function closeMenusOnClick() {
