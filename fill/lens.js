@@ -74,14 +74,14 @@ function drawBrain(fresh) {
 }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-05-mail-tab-build-r2";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-05-work-tab";
 import { initWords } from "./words.js?v=2026-10-29-thinkrooms-3"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initLooks } from "./looks.js?v=2026-10-29-looks"; // the Look switch beside the language switch (seat looks, decision 1036)
 import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-29-thinkrooms-b";
 import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-10-30-rulings-small"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
-import { initWorkTab, drawOpenWork, countOpenWork, findOrder, orderTop, orderAnchor, hello as workHello, draftCard } from "./work.js?v=2026-11-05-work-tab"; // Work's own pages: Open work, an order's details, the greeting (seat work-tab)
+import { initWorkTab, drawOpenWork, countOpenWork, findOrder, orderTop, orderAnchor, hello as workHello, draftCard } from "./work.js?v=2026-11-05-work-tab-2"; // Work's own pages: Open work, an order's details, the greeting (seat work-tab)
 import { foundCard } from "./find.js?v=2026-10-29-thinkrooms"; // find first, then work on what was found (seat find-first)
 import { closeCard } from "./close.js?v=2026-10-26-month-end-2"; // the month-end check, corrected cell by cell (seat month-end)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-27-people-and-access"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-10-27-people-and-access"; // sub-tab row and People and access (seat people-and-access)
@@ -4446,7 +4446,7 @@ async function loadWork() {
 }
 
 (function wireWork() {
-  initWorkTab({ sb, el, $, fmtDate, openEmail: openFromAnswer, openOrder, ask: (q) => ask(q) });
+  initWorkTab({ sb, el, $, fmtDate, plainWords, openEmail: openFromAnswer, openOrder, ask: (q) => ask(q) });
   // The order's details and the greeting live in the one panel, above the conversation; shown only on Work (skin.css).
   const ans = $('#s-answer');
   if (ans && !$('#work-order-top')) {
@@ -4676,6 +4676,7 @@ initMail({
   scopeChanged: () => drawBox(),
   thought: (email) => thoughtOnEmail(email),   // Add a thought on an open email (seat thoughtgram)
   startThought: (o) => openComposer(o),   // Reply in the Thinkroom, from a thought left for her in Worth your attention (seat thinkrooms-a)
+  openOrder: (o) => { userMoved = true; goTab('work'); openOrder(o); },   // Open in Work, on an email opened as an order (seat work-tab)
 });
 // THINKROOMS (seat thinkrooms-a, 2026-10-29; first seat thoughtgram, 2026-10-25): what fill/thoughts.js needs from this page.
 initThoughts({ sb, el, $, openPanel, askBody, startThought, foundCard, findCtx, url: SUPABASE_URL, key: PUBLISHABLE_KEY,
