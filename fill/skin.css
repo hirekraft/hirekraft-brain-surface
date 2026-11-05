@@ -2607,3 +2607,9 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
   .br-big { font-size: 26px; }
   .br-table { font-size: var(--t-micro); }
 }
+/* ── NO TOOL TO OPEN (seat any-brain round 2, 2026-11-05, decision 1097): fill/brain.js draws this in place of the whole screen,
+   before any tab, when the brain this browser points to no longer opens. One sentence, one way on. Tokens only. ── */
+.no-brain { max-width: 520px; margin: 12vh auto 0; padding: 0 16px; display: grid; gap: var(--gap); color: var(--ink); }
+.no-brain h1 { font-family: var(--font-head); font-size: var(--t-head); font-weight: var(--w-mid); overflow-wrap: anywhere; }
+.no-brain p { color: var(--ink-2); font-size: var(--t-read); overflow-wrap: anywhere; }
+.no-brain .go { justify-self: start; min-height: var(--tap); display: inline-flex; align-items: center; text-decoration: none; }
