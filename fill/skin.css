@@ -2337,6 +2337,37 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
 .br-mini { margin-top: 0; min-height: 40px; padding: 6px 12px; }
 .br-soft { color: var(--ink-3); }
 
+/* ── MAIL: THE SIX QUESTIONS, CLEAN-UP, TEACH THE TOOL, MOVE WITH UNDO (seat mail-tab-build round 2, 2026-11-05; the approved
+   mock-up "Mail Tab"): one section per question with its color, count and what it covers; one row per sender in Clean-up; the
+   one-time permission box. Tokens only. Phone rules in A PHONE IS A FIRST-CLASS SIZE. ── */
+.mailx-q { border-bottom: 1px solid var(--line); padding-bottom: calc(var(--u) * 2); min-width: 0; }
+.mailx-q-head { display: flex; align-items: center; gap: calc(var(--u) * 2.5); margin: 0; padding: calc(var(--u) * 3) calc(var(--u) * 4) calc(var(--u) * 1); font-size: var(--t-body); font-weight: var(--w-strong); color: var(--ink); overflow-wrap: anywhere; }
+.mailx-q-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; background: var(--ink-4); }
+.mailx-q-money .mailx-q-dot { background: var(--money); }
+.mailx-q-warn .mailx-q-dot { background: var(--warn); }
+.mailx-q-room .mailx-q-dot { background: var(--room); }
+.mailx-q-scam .mailx-q-dot { background: var(--scam); }
+.mailx-q-people .mailx-q-dot { background: var(--people); }
+.mailx-q-text { flex: 1 1 auto; min-width: 0; }
+.mailx-q-n { color: var(--ink-3); font-weight: var(--w-mid); font-variant-numeric: tabular-nums; }
+.mailx-q-covers { margin: 0; padding: 0 calc(var(--u) * 4) calc(var(--u) * 2); color: var(--ink-3); font-size: var(--t-small); overflow-wrap: anywhere; }
+.mailx-q > .quiet, .mailx-q > .go, .mailx-q > .find-lesson { margin-left: calc(var(--u) * 4); margin-right: calc(var(--u) * 4); }
+.mailx-q-chips { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px; margin: 0 calc(var(--u) * 4) var(--gap); border-radius: var(--radius-lg); background: var(--paper-2); }
+.mailx-q-chips .mailx-mode-btn { white-space: normal; text-align: left; }
+.mailx-clean-rows { list-style: none; margin: 0; padding: 0; }
+.mailx-clean-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--u) * 2) calc(var(--u) * 3); padding: calc(var(--u) * 3) calc(var(--u) * 4); border-bottom: 1px solid var(--line-2); min-width: 0; }
+.mailx-clean-who { display: grid; gap: 2px; flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+.mailx-clean-who > span { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.mailx-clean-row .mailx-att-acts { flex: 0 1 auto; display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; }
+.mailx-clean-row .go { margin-top: 0; min-height: var(--tap); }
+.mailx-clean-row .find-lesson { flex-basis: 100%; margin: 0; }
+.mailx-clean-row a.go { display: inline-flex; align-items: center; text-decoration: none; }
+.mailx-perm { display: grid; gap: calc(var(--u) * 2); padding: calc(var(--u) * 4); margin: calc(var(--u) * 2) 0; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper-2); overflow-wrap: anywhere; }
+.mailx-perm p { margin: 0; }
+.mailx-perm-head { font-weight: var(--w-strong); color: var(--ink); }
+.mailx-move { display: grid; gap: calc(var(--u) * 2); margin-top: calc(var(--u) * 2); }
+.mailx-move-out { min-width: 0; overflow-wrap: anywhere; }
+
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
    for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
@@ -2345,6 +2376,11 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
    Everything she taps is at least 44px. At desktop width More and Ask do not exist. ── */
 .tab-more, .tab-ask { display: none; }
 @media (max-width: 720px) {
+  /* seat mail-tab-build round 2: the questions, Clean-up and Teach the Tool on a phone */
+  .mailx-clean-row .mailx-att-acts { flex-basis: 100%; }
+  .mailx-clean-row .go { flex: 1 1 auto; }
+  .mailx-q-chips .mailx-mode-btn { flex: 1 1 100%; min-height: 44px; }
+
   body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
   /* Chats by subject (seat chats-subjects): one column; the subjects a row of chips; the open chat a page of its own with Back. */
   .cs-grid { grid-template-columns: minmax(0, 1fr); }
