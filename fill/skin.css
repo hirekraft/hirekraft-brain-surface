@@ -2368,6 +2368,75 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
 .mailx-move { display: grid; gap: calc(var(--u) * 2); margin-top: calc(var(--u) * 2); }
 .mailx-move-out { min-width: 0; overflow-wrap: anywhere; }
 
+/* ── THE AGENTS TAB (seat agents-tab, 2026-11-05, decisions 1092-1102; approved picture T4R7NokV8WeFqUPRwrd6mm): the team on the left, the
+   making of an agent or one expert on the right. Tokens only, plus the brand saffron for agent marks (DESIGN-LANGUAGE 4), mixed with the
+   look's paper so it holds in every look. Phone rules in A PHONE IS A FIRST-CLASS SIZE. ── */
+.ag { --agent: #E3A33B; --agent-ink: #3A2414; --agent-soft: color-mix(in srgb, #E3A33B 18%, var(--paper)); display: flex; flex-direction: column; gap: calc(var(--u) * 4); max-width: 1280px; min-width: 0; }
+.ag p { margin: 0; }
+.ag-head { display: grid; gap: calc(var(--u) * 1); }
+.ag-h1 { font-family: var(--font-head); font-size: var(--t-hero); line-height: 1.1; margin: 0; overflow-wrap: anywhere; text-wrap: balance; }
+.ag-lead { color: var(--ink-3); max-width: 72ch; overflow-wrap: anywhere; }
+.ag-status { color: var(--ink); font-size: var(--t-read); overflow-wrap: anywhere; }
+.ag-how { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(var(--u) * 2.5); }
+.ag-how-step { background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: calc(var(--u) * 3.5) calc(var(--u) * 4); display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.ag-how-step b { font-family: var(--font-head); font-size: var(--t-read); }
+.ag-how-step span:last-child { color: var(--ink-3); font-size: var(--t-small); }
+.ag-num { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--agent); color: var(--agent-ink); font-weight: var(--w-strong); font-size: var(--t-micro); margin-bottom: 6px; }
+.ag-grid { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: calc(var(--u) * 3); align-items: start; }
+.ag-team { background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: calc(var(--u) * 2.5); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ag-team-h, .ag-lab { font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: var(--w-strong); margin: 0; }
+.ag-team-h { padding: 8px 8px 2px; }
+.ag-make { border: 0; background: var(--ink); color: var(--paper); border-radius: 999px; padding: 12px 16px; font: inherit; font-weight: var(--w-strong); cursor: pointer; text-align: left; min-height: 44px; }
+.ag-make.on { outline: 3px solid var(--agent); outline-offset: 1px; }
+.ag-ex { border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 20px; padding: 10px 12px; font: inherit; text-align: left; cursor: pointer; display: flex; gap: 10px; align-items: flex-start; width: 100%; min-height: 44px; min-width: 0; }
+.ag-ex:hover { border-color: var(--ink-3); }
+.ag-ex.on { border-color: var(--agent); background: var(--agent-soft); }
+.ag-av { width: 34px; height: 34px; border-radius: 10px; background: var(--paper-2); display: grid; place-items: center; font-family: var(--font-head); font-weight: var(--w-strong); flex: none; }
+.ag-ex.on .ag-av { background: var(--agent); color: var(--agent-ink); }
+.ag-ex-t { display: grid; min-width: 0; overflow-wrap: anywhere; }
+.ag-ex-t small { color: var(--ink-3); font-size: var(--t-small); }
+.ag-cnt { margin-left: auto; font-size: var(--t-micro); color: var(--ink-3); text-align: right; flex: none; max-width: 40%; overflow-wrap: anywhere; }
+.ag-main { background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: calc(var(--u) * 5); display: flex; flex-direction: column; gap: calc(var(--u) * 3.5); min-width: 0; }
+.ag-h2 { font-family: var(--font-head); font-size: var(--t-head); margin: 0; overflow-wrap: anywhere; text-wrap: balance; }
+.ag-meta { color: var(--ink-3); overflow-wrap: anywhere; }
+.ag-badge { align-self: flex-start; font-size: var(--t-micro); font-weight: var(--w-strong); border-radius: 999px; padding: 3px 10px; background: var(--agent-soft); color: var(--ink); }
+.ag-blk { border-top: 1px solid var(--line); padding-top: calc(var(--u) * 3); display: flex; flex-direction: column; gap: calc(var(--u) * 2); min-width: 0; }
+.ag-watch { display: flex; flex-direction: column; gap: calc(var(--u) * 2); }
+.ag-line { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.ag-n { font-family: var(--font-head); font-weight: var(--w-strong); font-size: var(--t-head); min-width: 72px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ag-line-t { display: grid; min-width: 0; overflow-wrap: anywhere; }
+.ag-src { font-size: var(--t-micro); color: var(--ink-3); overflow-wrap: anywhere; }
+.ag-job { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2.5); align-items: center; border: 1px solid var(--line); border-radius: 20px; padding: 10px 14px; min-width: 0; }
+.ag-job-t { display: grid; flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.ag-job > p { flex-basis: 100%; }
+.ag-pill { font-size: var(--t-micro); font-weight: var(--w-strong); border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+.ag-run { background: var(--money-soft); color: var(--ok-ink); }
+.ag-off { background: var(--paper-2); color: var(--ink-3); }
+.ag-acts { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; }
+.ag-acts .go { margin-top: 0; }
+.go.ag-go { background: var(--agent); color: var(--agent-ink); border-color: var(--agent); }
+.ag-box { display: flex; gap: 10px; align-items: flex-end; min-width: 0; }
+.ag-box textarea { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 20px; padding: 10px 14px; font: inherit; resize: vertical; min-height: 44px; background: var(--paper); color: var(--ink); }
+.ag-box .go { margin-top: 0; }
+.ag-box-big textarea { min-height: 120px; }
+.ag-who { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ag-who .ag-lab { margin-right: 6px; }
+.ag-chip { border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: var(--t-small); cursor: pointer; min-height: 36px; }
+.ag-chip.on { border-color: var(--agent); background: var(--agent-soft); font-weight: var(--w-mid); }
+.ag-chip:disabled { opacity: .45; cursor: default; }
+.ag-chat { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ag-say { align-self: flex-end; background: var(--ink); color: var(--paper); border-radius: 14px 14px 4px 14px; padding: 9px 13px; max-width: min(60ch, 92%); overflow-wrap: anywhere; white-space: pre-wrap; }
+.ag-tool { align-self: flex-start; background: var(--paper-2); border-radius: 14px 14px 14px 4px; padding: 10px 13px; max-width: min(68ch, 96%); display: grid; gap: 6px; overflow-wrap: anywhere; }
+.ag-plan { white-space: pre-wrap; }
+.ag-res, .ag-answer { border: 1px solid var(--line); border-radius: 20px; padding: calc(var(--u) * 3); overflow-x: auto; min-width: 0; }
+.ag-card { border: 1px solid var(--line); border-radius: 20px; padding: 12px 14px; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 4px 12px; font-size: var(--t-small); margin: 0; }
+.ag-card dt { color: var(--ink-3); font-weight: var(--w-mid); }
+.ag-card dd { margin: 0; overflow-wrap: anywhere; }
+.ag-workcard { border: 1px solid var(--line); border-radius: 20px; padding: 12px 14px; display: grid; gap: 10px; min-width: 0; }
+.ag-agree { border: 1px solid var(--agent); border-radius: 20px; padding: calc(var(--u) * 4); display: grid; gap: 10px; background: var(--agent-soft); overflow-wrap: anywhere; }
+.ag-note { font-size: var(--t-micro); color: var(--ink-3); text-align: center; overflow-wrap: anywhere; }
+@media (max-width: 1000px) { .ag-grid { grid-template-columns: minmax(0, 1fr); } .ag-how { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 /* ── A PHONE IS A FIRST-CLASS SIZE (seat phone, Alex 2026-10-13, decision 1004: "a version for the phone that is
    visually going to be easier for me to test and work on the phone"). NOT a second version: the same page, laid out
    for 390px. The header is one compact line (the date folds away; every question still carries today); the tabs
@@ -2376,6 +2445,17 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
    Everything she taps is at least 44px. At desktop width More and Ask do not exist. ── */
 .tab-more, .tab-ask { display: none; }
 @media (max-width: 720px) {
+  /* seat agents-tab: the team as two columns of buttons, the steps one under another, the card stacked */
+  .ag-how { grid-template-columns: minmax(0, 1fr); }
+  .ag-team { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ag-make, .ag-team-h { grid-column: 1 / -1; }
+  .ag-ex { flex-wrap: wrap; }
+  .ag-ex .ag-cnt { margin-left: 44px; text-align: left; max-width: none; }
+  .ag-ex-t small { display: none; }
+  .ag-main { padding: calc(var(--u) * 4); }
+  .ag-card { grid-template-columns: minmax(0, 1fr); }
+  .ag-box { flex-direction: column; align-items: stretch; }
+  .ag-chip { min-height: 44px; }
   /* seat mail-tab-build round 2: the questions, Clean-up and Teach the Tool on a phone */
   .mailx-clean-row .mailx-att-acts { flex-basis: 100%; }
   .mailx-clean-row .go { flex: 1 1 auto; }
