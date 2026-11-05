@@ -51,6 +51,7 @@ import { fmtDate } from './dates.js?v=2026-10-22-dates';
 import { plainWords } from './plain.js?v=2026-10-27-mail-views';
 import { drawBench } from './bench.js?v=2026-11-02-mail-clean';   // Bench (staffing): Who we have on a requirement, only where the business has it
 import { screenLang, screenLangName } from './words.js?v=2026-10-29-thinkrooms-3';   // See it in <language> (seat language-and-nudge)
+import { initAi, drawQuestions, drawCleanup, drawTeach, questionCounts, cleanupCount, loadCleanup } from './mailai.js?v=2026-11-05-mail-tab-build-r2';   // the AI view's six questions, Clean-up, Teach the Tool (seat mail-tab-build round 2)
 
 // VIEWS IN THE LEFT COLUMN (seat mail-views, 2026-10-27; Alex 14:41 PT: "Worth your attention should be ... on the left-hand
 // side instead of an email, like a label ... worth your attention, and the other would be starred"). At the top of the left
@@ -102,6 +103,10 @@ const LIVE = '/functions/v1/worklens-live';
 // emails). The view she used last opens, kept per person in the brain (mail_view, mail_view_set) and in this browser so it opens
 // at once; a person with no history starts in the Inbox view.
 const MODE = 'tool.mail.mode';
+// THE AI VIEW IS THE SIX QUESTIONS (seat mail-tab-build round 2, the approved mock-up): Six questions, Following, Clean-up and Teach
+// the Tool; Caught opens from the scam question. SUPERSEDES For you and Caught as the AI view's own views (seat mail-matters); For you
+// stays the Inbox view's Worth your attention, the same items.
+const AI_KINDS = ['questions', 'following', 'cleanup', 'teach', 'suspicious', 'attention'];
 let mode = (() => { try { return localStorage.getItem(MODE) === 'ai' ? 'ai' : 'inbox'; } catch (_) { return 'inbox'; } })();
 let modeAsked = false;
 async function loadMode() {
@@ -118,8 +123,8 @@ function setMode(m, keep) {
   mode = m === 'ai' ? 'ai' : 'inbox';
   try { localStorage.setItem(MODE, mode); } catch (_) { /* this browser keeps nothing */ }
   if (keep) C.sb.rpc('mail_view_set', { p_view: mode }).then(() => {}, () => {});
-  if (mode === 'ai' && (!view || !['attention', 'following', 'suspicious'].includes(view.kind))) { view = { kind: 'attention' }; pick = null; open = null; found = null; }
-  if (mode === 'inbox' && view && view.kind === 'following') { view = { kind: 'attention' }; pick = null; }
+  if (mode === 'ai' && (!view || !AI_KINDS.includes(view.kind))) { view = { kind: 'questions' }; pick = null; open = null; found = null; }
+  if (mode === 'inbox' && view && ['following', 'questions', 'cleanup', 'teach'].includes(view.kind)) { view = { kind: 'attention' }; pick = null; }
   if (parts) { parts.wrap.dataset.mode = mode; drawSide(); drawList(); drawRead(); }
 }
 function drawModeSwitch(side) {
@@ -226,6 +231,13 @@ function navButton(label, view, extra) {
 
 export function initMail(ctx) {
   C = ctx;
+  initAi({ mk, navButton, when, plainWords, mailSend, sb: () => C.sb, attn: () => attn,
+    attnAll: () => attnItems().concat(attnMore()), scamItems, scamWho,
+    matterRow: (it) => matterRow(it, () => { pick = it; open = null; markSeen('attention', 'attention', [it.key]); setView('read'); drawList(); drawRead(); }, pick && pick.key === it.key),
+    chooseView, openScam: (it) => { view = { kind: 'suspicious' }; scamPick = it; open = null; markSeen('scam', it.source, [it.id]); if (parts) { setView('read'); drawSide(); drawList(); drawRead(); } },
+    openEmail: (src, id) => openEmail(src, id), reloadAttention: () => loadAttention(true),
+    redraw: () => { if (parts && view && ['questions', 'cleanup', 'teach'].includes(view.kind)) { const top = parts.list.scrollTop; drawList(); parts.list.scrollTop = top; drawSide(); } } });
+  readChangeReturn();
   setInterval(() => freshen(), FRESH_BEAT);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') freshen(); });
 }
@@ -1569,7 +1581,7 @@ export function drawMail(body) {
     // On a phone the left column is the first screen, like Gmail's menu (brief item 5); elsewhere the list.
     wrap.dataset.view = window.matchMedia('(max-width: 720px)').matches && !pendingOpen ? 'side' : 'list';
   }
-  if (!view) view = pendingOpen ? { kind: 'mailbox' } : { kind: 'attention' };
+  if (!view) view = pendingOpen ? { kind: 'mailbox' } : { kind: mode === 'ai' ? 'questions' : 'attention' };
   parts.wrap.dataset.mode = mode;
   loadMode();
   pickDefault();
@@ -1616,7 +1628,7 @@ function viewButton(label, count, on, fn, title) {
   b.addEventListener('click', fn);
   return b;
 }
-const VIEW_WORDS = ['Worth your attention', 'Caught', 'Starred', 'Labels', 'All labels', 'For you', 'Following'];
+const VIEW_WORDS = ['Worth your attention', 'Caught', 'Starred', 'Labels', 'All labels', 'For you', 'Following', 'Six questions', 'Clean-up', 'Teach the Tool'];
 const NOT_SEEN = 'Not yet seen by you in the Tool';
 // THE INBOX VIEW'S LEFT COLUMN (seat mail-inbox, decision 1033 item 1): Worth your attention as it was; Mark all as seen; Mailboxes;
 // Caught (the Suspicious view renamed); Starred and Labels under "Your Gmail". Every number is not yet seen by you.
@@ -1712,18 +1724,24 @@ function drawSide() {
 // left for you, news in what you follow), Following, Caught (the same suspected scams as the Inbox view). Every number is not yet
 // seen by you; Following counts the matters with something new.
 function drawAiSide(side, n) {
+  // SINCE seat mail-tab-build round 2: Six questions (the count is everything the six hold), Following, Clean-up (senders), Teach
+  // the Tool. Caught is the scam question's own list and opens from it. SUPERSEDES For you / Following / Caught here.
+  const qc = attn && attn.data ? questionCounts() : null;
+  const total = qc ? [...qc.entries()].filter(([k]) => k !== 'clean').reduce((a, [, v]) => a + v, 0) : null;
   const fresh = followItems().filter((f) => f.news).length;
-  const sc = caughtCount();
-  const cb = viewButton('Caught', sc ? sc : '', view && view.kind === 'suspicious', () => chooseView({ kind: 'suspicious' }), 'Suspected scams not yet seen by you, across the mailboxes you can open');
-  if (sc) cb.classList.add('mailx-view-warn');
-  const you = viewButton('For you', n === null ? '' : n, view && view.kind === 'attention', () => chooseView({ kind: 'attention' }), NOT_SEEN);
-  you.classList.add('mailx-view-you');
+  const cc = cleanupCount();
+  if (cc === null) loadCleanupOnce();
+  const q = viewButton('Six questions', total || '', view && view.kind === 'questions', () => chooseView({ kind: 'questions' }), 'Everything the six questions hold now');
+  q.classList.add('mailx-view-you');
   viewList(side, [
-    you,
+    q,
     viewButton('Following', fresh || '', view && view.kind === 'following', () => chooseView({ kind: 'following' }), 'Matters you follow with something new'),
-    cb]);
-  side.appendChild(mk('p', 'mailx-att-checked mailx-ai-note', 'Matters, not single emails, across every mailbox you can open. Where each stands is written by AI from its own emails only. Your mail is not changed.'));
+    viewButton('Clean-up', cc || '', view && view.kind === 'cleanup', () => chooseView({ kind: 'cleanup' }), 'Newsletters and sellers across your mailboxes'),
+    viewButton('Teach the Tool', '', view && view.kind === 'teach', () => chooseView({ kind: 'teach' }), 'Mark what belongs in each question')]);
+  side.appendChild(mk('p', 'mailx-att-checked mailx-ai-note', 'Across every mailbox you can open. A thread of several emails is one line. Your mail is not changed unless you press.'));
 }
+let cleanupAsked = false;
+function loadCleanupOnce() { if (!cleanupAsked) { cleanupAsked = true; loadCleanup(); } }
 function drawBoxes(side) {
   // The heading and the signed-in line are the Tool's own words, so they follow her language (round two: they sat in zones the
   // screen's language never touches, .mailx-domain and .mailx-who, and stayed English on a German screen).
@@ -1830,6 +1848,9 @@ function drawList() {
   if (view && (view.kind === 'starred' || view.kind === 'label')) { drawMarkedList(list); return; }
   if (view && view.kind === 'attention') { drawAttnList(list); return; }
   if (view && view.kind === 'following') { drawFollowList(list); return; }
+  if (view && view.kind === 'questions') { drawQuestions(list); return; }
+  if (view && view.kind === 'cleanup') { drawCleanup(list); return; }
+  if (view && view.kind === 'teach') { drawTeach(list); return; }
   if (view && view.kind === 'suspicious') { drawScamList(list); return; }
   const m = boxRow();
   if (!m) { list.appendChild(mk('p', 'quiet', 'Choose a mailbox on the left.')); return; }
@@ -1969,7 +1990,9 @@ function drawRead() {
   const read = parts.read;
   read.innerHTML = '';
   setBar();
-  if (!open && pick && view && (view.kind === 'attention' || view.kind === 'following')) { drawAttnCard(read, pick); return; }
+  if (changeSaid) drawChangeSaid(read);
+  if (!open && pick && view && (view.kind === 'attention' || view.kind === 'following' || view.kind === 'questions')) { drawAttnCard(read, pick); return; }
+  if (!open && view && ['questions', 'cleanup', 'teach'].includes(view.kind)) { read.appendChild(mk('p', 'quiet mailx-none', view.kind === 'questions' ? 'Choose one to see the email and what you can do.' : view.kind === 'cleanup' ? 'Unsubscribe or keep, one sender at a time. Nothing is changed until you press.' : 'Open an email to see it here before you mark it.')); return; }
   if (!open && view && view.kind === 'suspicious') {
     if (scamPick) drawScamCard(read, scamPick); else read.appendChild(mk('p', 'quiet mailx-none', 'Choose one to see who really sent it and what you can do.'));
     return;
@@ -1979,7 +2002,7 @@ function drawRead() {
     return;
   }
   read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
-  if (pick && view && (view.kind === 'attention' || view.kind === 'following')) {
+  if (pick && view && (view.kind === 'attention' || view.kind === 'following' || view.kind === 'questions')) {
     const back = mk('button', 'mailx-toggle', 'Back to where it stands');
     back.type = 'button';
     back.addEventListener('click', () => { open = null; drawRead(); });
@@ -2022,6 +2045,7 @@ function drawRead() {
   else if (latest.notice === 'calendar invitation' && invitesErr.has(chosen)) read.appendChild(mk('p', 'quiet mailx-invite-none', 'This email carries a calendar invitation; its details could not be read just now.'));
 
   read.appendChild(actions(t));
+  if (CHANGE_OFFERED) read.appendChild(moveRow(t));
   if (open.compose) read.appendChild(open.compose.el);
   if (pendingCompose) { const pc = pendingCompose; pendingCompose = null; setTimeout(() => (pc === 'draft' ? draftFor(t) : startCompose(t, pc)), 0); }
 
@@ -2376,6 +2400,147 @@ function fitFrame(frame) {
 // from the emails and the books; Tell me more about this opens the background. SUPERSEDES Answer, Forward into the conversation,
 // Add a thought and Ask about this (seat email-workspace 2026-10-07, seat thoughtgram 2026-10-25): the one box still asks about
 // the open email, and the answer lands under it.
+// MOVE TO SPAM, DELETE, ARCHIVE, ON HER PRESS, WITH UNDO (seat mail-tab-build round 2, brief item 4, decision 1087). One row under
+// the open email. The first press in a mailbox the Tool may not change yet explains in one box and opens Google's own page for
+// that mailbox's one-time permission (gmail.modify on the Verrandi app, kept apart from reading: source_begin gmail_change, then
+// oauth-start, the same two steps as every connect in lens.js beginConnect; here the way back is the Mail tab). Back from Google,
+// the box says it is done and asks once, per mailbox, "Mark suspected scams for you?" (scam_label_choice, decision 1087 item 2).
+// Every move says what happened, with Undo (mail-send move / move_undo; Gmail keeps Spam and Trash for 30 days).
+// HIDDEN WHILE CHANGE_OFFERED IS false: the Verrandi Google app does not yet list gmail.modify (Alex's console step, report of
+// 2026-11-05), so Google would refuse the consent; everything on screen works or is left out (decision 1075). HQ sets it true once
+// the console step is confirmed. Proven offline with it forced on (scripts/screen-harness/mail-tab-build, round 2).
+const CHANGE_OFFERED = false;
+const changeReady = new Map();   // source key -> true | 'consent' | false
+const moveSaid = new Map();      // thread id -> { line, ids }
+let changeSaid = null;           // { source, step: 'done' | 'asked' | 'refused', line }
+function readChangeReturn() {
+  try {
+    const u = new URL(location.href);
+    const ok = u.searchParams.get('change_allowed');
+    const no = u.searchParams.get('change_refused');
+    if (!ok && !no) return;
+    changeSaid = ok ? { source: ok, step: 'done' } : { source: no, step: 'refused', line: 'Google did not give the permission, so nothing can be moved in that mailbox yet. Nothing was changed.' };
+    u.searchParams.delete('change_allowed'); u.searchParams.delete('change_refused');
+    history.replaceState(null, '', u.pathname + (u.search ? u.search : '') + u.hash);
+    if (ok) changeReady.set(ok, true);
+  } catch (_) { /* no address bar to read */ }
+}
+function drawChangeSaid(read) {
+  const box = mk('div', 'mailx-perm');
+  box.setAttribute('aria-live', 'polite');
+  if (changeSaid.step === 'refused' || changeSaid.step === 'answered') { box.appendChild(mk('p', null, changeSaid.line)); read.appendChild(box); return; }
+  box.appendChild(mk('p', 'mailx-perm-head', 'Done. The Tool can now move mail in this mailbox when you press.'));
+  box.appendChild(mk('p', 'mailx-perm-head', 'Mark suspected scams for you?'));
+  box.appendChild(mk('p', null, 'When a dangerous email arrives, the Tool puts a red "Suspected scam" label on it in Gmail, so everyone who opens this mailbox sees the warning. It changes nothing else.'));
+  const row = mk('div', 'mailx-att-acts');
+  const ans = async (yes, b) => {
+    b.disabled = true;
+    let d = null;
+    try { const x = await C.sb.rpc('scam_label_choice', { p_source: changeSaid.source, p_yes: yes }); d = x.error ? null : x.data; } catch (_) { d = null; }
+    changeSaid = { source: changeSaid.source, step: 'answered', line: d && d.ok ? (yes ? 'Suspected scams will be marked in Gmail. You can change this on the Brain tab.' : 'Scams will be shown here in the Tool only. You can change this on the Brain tab.') : 'Your answer was not kept. Try again.' };
+    if (!(d && d.ok)) changeSaid.step = 'done';
+    drawRead();
+  };
+  const y = mk('button', 'go', 'Yes, mark them'); y.type = 'button'; y.addEventListener('click', () => ans(true, y));
+  const n = mk('button', 'go ghost', 'No, just show me in the Tool'); n.type = 'button'; n.addEventListener('click', () => ans(false, n));
+  row.append(y, n);
+  box.appendChild(row);
+  read.appendChild(box);
+}
+async function askChange(key) {
+  if (changeReady.has(key)) return changeReady.get(key);
+  changeReady.set(key, null);
+  let j = null;
+  try { j = await mailSend({ action: 'change_ready', source_keys: [key] }); } catch (_) { j = null; }
+  const v = j && j.ready && j.ready[key] ? true : j && j.consent && j.consent[key] ? 'consent' : false;
+  changeReady.set(key, v);
+  return v;
+}
+function moveRow(t) {
+  const wrap = mk('div', 'mailx-move');
+  const row = mk('div', 'mailx-acts');
+  const out = mk('div', 'mailx-move-out'); out.setAttribute('aria-live', 'polite');
+  const said = moveSaid.get(t.thread_id);
+  const key = chosen;
+  const ids = (t.messages || []).map((m) => m.id).filter(Boolean).slice(0, 50);
+  for (const [to, label] of [['spam', 'Move to Spam'], ['trash', 'Delete'], ['archive', 'Archive']]) {
+    const b = mk('button', 'go ghost' + (to === 'spam' ? ' mailx-danger' : ''), label); b.type = 'button';
+    b.addEventListener('click', () => pressMove(key, ids, to, t, b, out));
+    row.appendChild(b);
+  }
+  wrap.append(row, out);
+  if (said) showMoveSaid(out, said, t);
+  return wrap;
+}
+async function pressMove(key, ids, to, t, b, out) {
+  b.disabled = true;
+  out.className = 'mailx-move-out working'; out.textContent = 'Checking that the Tool may change this mailbox.';
+  const ready = await askChange(key);
+  b.disabled = false;
+  if (ready === 'consent') { consentBox(out, key); return; }
+  if (ready !== true) { out.className = 'mailx-move-out state stalled'; out.textContent = 'Whether the Tool may change this mailbox could not be checked just now. Nothing was moved.'; changeReady.delete(key); return; }
+  b.disabled = true;
+  out.textContent = to === 'trash' ? 'Moving it to Trash in Gmail.' : to === 'archive' ? 'Archiving it in Gmail.' : 'Moving it to Spam in Gmail.';
+  let j = null;
+  try { j = await mailSend({ action: 'move', source_key: key, message_ids: ids, to }); } catch (e) { j = { ok: false, reason: String((e && e.message) || e) }; }
+  b.disabled = false;
+  if (j && j.needs_consent) { changeReady.set(key, 'consent'); consentBox(out, key); return; }
+  const n = Number((j && j.moved) || 0);
+  const said = { line: n ? (to === 'trash' ? 'Moved to Trash in Gmail. Gmail empties Trash after 30 days.' : to === 'archive' ? 'Archived: out of the Inbox, still in All Mail.' : 'Moved to Spam in Gmail.') + (j.failed ? ' ' + j.failed + ' could not be moved.' : '')
+    : 'Nothing was moved. ' + plainWords(String((j && j.reason) || '')), ids: (j && j.action_ids) || [] };
+  moveSaid.set(t.thread_id, said);
+  showMoveSaid(out, said, t);
+}
+function showMoveSaid(out, said, t) {
+  out.innerHTML = ''; out.className = 'mailx-move-out find-lesson';
+  out.appendChild(mk('span', null, said.line));
+  if (said.ids && said.ids.length) {
+    const u = mk('button', 'go ghost', 'Undo'); u.type = 'button';
+    u.addEventListener('click', async () => {
+      u.disabled = true;
+      let j = null;
+      try { j = await mailSend({ action: 'move_undo', action_ids: said.ids }); } catch (_) { j = null; }
+      const ok = j && Number(j.restored || 0) === said.ids.length;
+      const back = { line: ok ? 'Put back where it was in Gmail.' : 'Not all of it was put back. ' + plainWords(String((j && j.reason) || '')), ids: ok ? [] : said.ids };
+      moveSaid.set(t.thread_id, back);
+      showMoveSaid(out, back, t);
+    });
+    out.appendChild(u);
+  }
+}
+function consentBox(out, key) {
+  out.innerHTML = ''; out.className = 'mailx-move-out';
+  const box = mk('div', 'mailx-perm');
+  box.appendChild(mk('p', 'mailx-perm-head', 'To do this, the Tool needs permission to change this mailbox.'));
+  box.appendChild(mk('p', null, 'You approve it once, on Google’s own page. After that, Move to Spam, Delete and Archive just work. Nothing moves unless you press. Google may first say the app is not verified yet: choose Advanced, then Go to Verrandi.'));
+  const row = mk('div', 'mailx-att-acts');
+  const go = mk('button', 'go', 'Continue to Google'); go.type = 'button';
+  const no = mk('button', 'go ghost', 'Not now'); no.type = 'button';
+  const said = mk('p', 'quiet'); said.setAttribute('aria-live', 'polite');
+  go.addEventListener('click', () => startChange(key, go, said));
+  no.addEventListener('click', () => { out.innerHTML = ''; });
+  row.append(go, no);
+  box.append(row, said);
+  out.appendChild(box);
+}
+async function startChange(key, btn, said) {
+  btn.disabled = true;
+  said.className = 'quiet working'; said.textContent = 'Opening Google.';
+  const address = key.split(':').slice(1).join(':');
+  try {
+    const { data, error } = await C.sb.rpc('source_begin', { p_source_type: 'gmail_change', p_scope: 'individual', p_mailbox: address, p_return_to: location.origin + location.pathname });
+    if (error) throw error;
+    if (!data || !data.ok) {
+      btn.disabled = false; said.className = 'state stalled';
+      said.textContent = data && data.reason === 'not_your_mailbox' ? 'This is not a mailbox you can open, so you cannot give this permission for it.' : 'Google’s page could not be opened just now. Nothing was changed.';
+      return;
+    }
+    location.href = C.url + '/functions/v1/oauth-start?source_id=' + encodeURIComponent(data.source_id) + '&login_hint=' + encodeURIComponent(address);
+  } catch (e) {
+    btn.disabled = false; said.className = 'state stalled';
+    said.textContent = 'Google’s page could not be opened just now. ' + plainWords(String((e && e.message) || e || ''));
+  }
+}
 function actions(t) {
   const row = mk('div', 'mailx-acts');
   const btn = (label, cls, fn) => { const b = mk('button', cls, label); b.type = 'button'; b.addEventListener('click', fn); row.appendChild(b); return b; };
