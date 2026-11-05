@@ -16,6 +16,7 @@
 // made in her browser and not kept anywhere (fill/outputs.js), so there is nothing true to list yet; agents have no engine
 // in the brain yet (seat agents-tab is building it). Each comes back when its back end exists.
 // No regex literals and no backslashes in this file (STANDING-CLAUSES).
+import { drawBench } from './bench.js?v=2026-11-02-mail-clean';   // Bench (staffing): Who we have, on top of an order, only where the business has it
 
 let C = null;            // { sb, el, $, fmtDate, openEmail, openOrder, ask }
 let shownClosed = false; // Show closed pressed
@@ -111,7 +112,17 @@ export async function findOrder(id) {
 
 // THE FOLDED ORDER DETAILS LINE on top of an order's conversation (the picture's o2): the summary says the state and for
 // whom; open, what they asked, the contract terms where read, the email with Open in Mail, and the status with its change.
+// Under it, for a business with Bench, Who we have (bench.js, the same part Mail's order card used; seat work-tab moved it
+// here with the orders, so the shortlist is where the order is).
 export function orderTop(o, onChanged) {
+  const wrap = mk('div', 'work-order-wrap');
+  wrap.appendChild(orderDetails(o, onChanged));
+  const bench = mk('div', 'work-order-bench');
+  wrap.appendChild(bench);
+  drawBench(bench, mk('div', null), o, { sb: C.sb, mk, plainWords: C.plainWords || plain });
+  return wrap;
+}
+function orderDetails(o, onChanged) {
   const word = (lastList && lastList.word) || o.word || 'order';
   const d = mk('details', 'work-order');
   const s = mk('summary', null, '');
