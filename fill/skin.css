@@ -2760,3 +2760,7 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
 .work-draft-text { white-space: pre-wrap; margin: 0; overflow-wrap: anywhere; }
 .work-nav .work-search[hidden] { display: none; }
 .work-side .work-list .work-open { padding-left: 12px; border-radius: 999px; }
+.mailx-in-work { margin: calc(var(--u) * 1.5) 0 0; font-size: var(--t-small); color: var(--ink-3); overflow-wrap: anywhere; }
+.mailx-in-work[hidden] { display: none; }
+.mailx-in-work .mailx-toggle { margin-top: 0; }
+.work-order-bench:not(:empty) { margin-top: var(--gap); }
