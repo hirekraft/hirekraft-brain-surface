@@ -1516,6 +1516,30 @@ function drawOrderBelow(card, it) {
   row.appendChild(cl);
   card.append(row, out);
 }
+// OPENED IN WORK (seat work-tab, 2026-11-05, decision 1099): once an email is opened as an order, the order lives in Work's Open
+// work (brain file work-tab-2 took it out of For you), and the email keeps one line saying so, with one press to the order.
+// Read from the brain's one order list (work_orders, through the same door), once per page and again after Open as.
+let ordersRead = null;   // Promise of Map 'source key|message id' -> order
+function ordersByEmail() {
+  if (!ordersRead) ordersRead = C.sb.rpc('work_orders', { p_company: null, p_all: true }).then((x) => {
+    const m = new Map();
+    if (!x.error && x.data && x.data.ok) for (const o of x.data.orders || []) m.set(o.open_source + '|' + o.open_id, o);
+    else ordersRead = null;   // not read: asked again next time, and nothing is said on the email
+    return m;
+  }, () => { ordersRead = null; return new Map(); });
+  return ordersRead;
+}
+function inWorkLine(slot, o) {
+  slot.innerHTML = ''; slot.hidden = false;
+  slot.appendChild(mk('span', null, 'Opened in Work as a ' + (o.word || 'work order') + (o.state_words ? ' · ' + o.state_words : '') + ' '));
+  if (C.openOrder) { const b = mk('button', 'mailx-toggle', 'Open in Work'); b.type = 'button'; b.addEventListener('click', () => C.openOrder(o)); slot.appendChild(b); }
+}
+function openedInWork(read, t) {
+  const slot = mk('p', 'mailx-in-work'); slot.hidden = true; read.appendChild(slot);
+  const ids = (t.messages || []).map((m) => m.id).concat([t.thread_id]);
+  const src = chosen;
+  ordersByEmail().then((m) => { const o = ids.map((id) => m.get(src + '|' + id)).find(Boolean); if (o) inWorkLine(slot, o); });
+}
 async function orderCall(fn, args, btn, out, working, keys) {
   btn.disabled = true; out.className = 'mailx-att-out working'; out.textContent = working;
   let r = null;
@@ -1524,6 +1548,7 @@ async function orderCall(fn, args, btn, out, working, keys) {
   if (!r || r.ok !== true) { out.className = 'mailx-att-out state stalled'; out.textContent = 'Not done. ' + plainWords(String((r && r.reason) || '')); return; }
   for (const k of keys || []) saidChoice.set(k, { line: String(r.line || 'Kept.'), id: null });   // the line survives the redraw that follows
   out.className = 'mailx-att-out find-lesson'; out.textContent = String(r.line || 'Kept.');
+  if (fn === 'work_order_open') { ordersRead = null; if (r.item && C.openOrder) { const b = mk('button', 'go ghost', 'Open in Work'); b.type = 'button'; b.addEventListener('click', () => C.openOrder(r.item)); out.append(' ', b); } }
   setTimeout(() => loadAttention(true), 400);
 }
 function whyTag(it) {
@@ -2034,6 +2059,7 @@ function drawRead() {
   read.appendChild(who);
   const subj = mk('h2', 'mailx-subject', t.subject || '(no subject)'); subj.translate = false;
   read.appendChild(subj);
+  openedInWork(read, t);
   const tIds = msgs.map((m) => m.id).concat([t.thread_id]);
   askWarnings(tIds.map((id) => [chosen, id]));
   const tw = warnFor(chosen, tIds);
