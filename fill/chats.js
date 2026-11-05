@@ -10,7 +10,7 @@
 // which apply the one door. Nothing here decides who may see what.
 
 import { fmtDate } from "./dates.js?v=2026-10-22-dates";
-let ctx = null;            // { sb, el, $, zone, url, key }
+let ctx = null;            // { sb, el, $, zone, url, key, name }
 let parsed = [];           // chats read from her export, in memory only
 const NL = String.fromCharCode(10);
 const CAME = { claude_export: "from a Claude export", chatgpt_export: "from a ChatGPT export", paste: "pasted",
@@ -18,7 +18,10 @@ const CAME = { claude_export: "from a Claude export", chatgpt_export: "from a Ch
 
 export function initChats(c) { ctx = c; }
 
-function el(tag, cls, text) { const e = ctx.el(tag, cls); if (text != null) e.textContent = text; return e; }
+// THE BUSINESS'S OWN NAME (seat any-brain round 2, 2026-11-05): the words below say {business} where they named HireKraft,
+// and every one of them is drawn through el(), which puts in the name of the business this screen opened (fill/brain.js).
+const business = () => (ctx && ctx.name) || "your Tool";
+function el(tag, cls, text) { const e = ctx.el(tag, cls); if (text != null) e.textContent = String(text).split("{business}").join(business()); return e; }
 function day(iso) {
   if (!iso) return "";
   return fmtDate(iso, "day");
@@ -210,17 +213,19 @@ function build(root) {
 // connector_status(), which answers only about the caller: chatbots she approved (the sign-in system's own
 // record) and her last save from one. Whether chatbot sign-in is switched on at all is read from the sign-in
 // system's public discovery document, so the panel never claims a step that cannot work yet.
-const CONNECTOR_URL = "https://uvdoompnnypmneyrvtas.supabase.co/functions/v1/connector-mcp";
+// The address is this brain's own connector (ctx.url from fill/brain.js; it named HireKraft's brain until seat any-brain).
+const connectorUrl = () => ctx.url + "/functions/v1/connector-mcp";
 async function drawConnector(host) {
+  const CONNECTOR_URL = connectorUrl();
   host.innerHTML = "";
-  host.appendChild(el("p", null, "Add HireKraft to your own Claude and it works from your business: it finds your emails, files, records, contacts and meetings and thinks over them itself, so HireKraft pays only for finding. It sees only what you can see here."));
+  host.appendChild(el("p", null, "Add {business} to your own Claude and it works from your business: it finds your emails, files, records, contacts and meetings and thinks over them itself, so {business} pays only for finding. It sees only what you can see here."));
   // seat two-doors (2026-10-26, decision 1021): what the connector does now, in her words. Nothing here sends, books or deletes.
   const can = el(`ul`);
-  for (const s of [`“Using HireKraft, find everything about Acme payments since June and tell me if anything looks wrong.”`,
+  for (const s of [`“Using {business}, find everything about Acme payments since June and tell me if anything looks wrong.”`,
     `“Who is Dana at Acme?” or “What meetings do I have next week?”`,
-    `“How do Thinkrooms work in HireKraft?” It answers from HireKraft's own guide and your setup.`,
-    `“Save this to HireKraft”, “save this document to HireKraft”, or “add a thought in HireKraft: ...”. A chat or document lands here, private to you; a thought lands in a Thinkroom, seen only by the people in it.`,
-    `“Ask HireKraft for its own answer” when you want HireKraft's AI to do the thinking; that one is paid by the business.`]) can.appendChild(el(`li`, null, s));
+    `“How do Thinkrooms work in {business}?” It answers from {business}'s own guide and your setup.`,
+    `“Save this to {business}”, “save this document to {business}”, or “add a thought in {business}: ...”. A chat or document lands here, private to you; a thought lands in a Thinkroom, seen only by the people in it.`,
+    `“Ask {business} for its own answer” when you want {business}'s AI to do the thinking; that one is paid by the business.`]) can.appendChild(el(`li`, null, s));
   host.appendChild(can);
   const addr = el("div"); addr.style.display = "flex"; addr.style.gap = "8px"; addr.style.alignItems = "center";
   const code = el("code", null, CONNECTOR_URL); code.style.wordBreak = "break-all";
@@ -229,17 +234,17 @@ async function drawConnector(host) {
   addr.append(code, copy); host.appendChild(addr);
   const ol = el("ol");
   for (const s of ["In your Claude: Settings, Connectors, Add custom connector. Paste the address above.",
-    "Claude opens a HireKraft page. Sign in with your usual emailed code and press Allow.",
-    "In any chat, ask about your business or say “save this to HireKraft”. Saved chats and documents appear below, marked “from your Claude”."]) ol.appendChild(el("li", null, s));
+    "Claude opens a {business} page. Sign in with your usual emailed code and press Allow.",
+    "In any chat, ask about your business or say “save this to {business}”. Saved chats and documents appear below, marked “from your Claude”."]) ol.appendChild(el("li", null, s));
   host.appendChild(ol);
-  host.appendChild(el("p", "quiet", "On a Claude Team or Enterprise seat, only the workspace owner can add it; you then press Connect. Saves from a chatbot are marked condensed, because the chatbot chooses what to pass. What HireKraft hands your Claude is then kept under your own Claude account. Items found by meaning only, not yet read for sensitivity, go only to the owner and to whoever owns their source. ChatGPT can ask on a Pro plan; saving from ChatGPT needs a Business or Enterprise workspace with developer mode on."));
+  host.appendChild(el("p", "quiet", "On a Claude Team or Enterprise seat, only the workspace owner can add it; you then press Connect. Saves from a chatbot are marked condensed, because the chatbot chooses what to pass. What {business} hands your Claude is then kept under your own Claude account. Items found by meaning only, not yet read for sensitivity, go only to the owner and to whoever owns their source. ChatGPT can ask on a Pro plan; saving from ChatGPT needs a Business or Enterprise workspace with developer mode on."));
   const st = el("p", "quiet", "Checking your connection."); host.appendChild(st);
   let on = null;
   // The sign-in system's OpenID document lists a registration endpoint only once chatbot sign-in is on.
   // Read this one, not the oauth-authorization-server path: on 2026-10-10 the latter failed to fetch from
   // outside after switch-on while this one answered (seat chat-connector). A failed fetch is unknown, never off.
   try {
-    const d = await fetch("https://uvdoompnnypmneyrvtas.supabase.co/auth/v1/.well-known/openid-configuration");
+    const d = await fetch(ctx.url + "/auth/v1/.well-known/openid-configuration");
     if (d.ok) { const j = await d.json(); on = !!(j && j.registration_endpoint); } else if (d.status === 404) on = false;
   } catch (e) { on = null; }
   if (on === false) { said(st, "Not switched on yet: the sign-in step for chatbots is waiting to be turned on. Adding the address now will not connect.", true); return; }
@@ -374,11 +379,11 @@ function buildMine(host) {
   const top = el("div", "cs-top");
   const words = el("div", "cs-top-words");
   words.append(el("h3", "cs-h", "Your work with Claude, kept whole"),
-    el("p", "quiet", "Every chat you or your team saved, sorted by what it is about. In Claude, just say “save this to HireKraft”. The whole chat and every file it made come here, word for word."));
+    el("p", "quiet", "Every chat you or your team saved, sorted by what it is about. In Claude, just say “save this to {business}”. The whole chat and every file it made come here, word for word."));
   const howB = btn("go ghost cs-how-b", "How it works");
   top.append(words, howB);
   const how = el("div", "cs-how"); how.hidden = true;
-  for (const [h, p] of [["Save it", "Say “save this”, “keep this” or “put this in HireKraft”. Any of these works, in any language."],
+  for (const [h, p] of [["Save it", "Say “save this”, “keep this” or “put this in {business}”. Any of these works, in any language."],
     ["Save it again later", "Kept working in the same chat? Save again. It updates the same entry here and keeps the earlier version."],
     ["Pick it back up", "Open any chat here and press Continue in Claude. Claude starts where you left off, with everything that came out of it."]]) {
     const c = el("div", "cs-how-card"); c.append(el("b", null, h), el("p", "quiet", p)); how.appendChild(c);
@@ -449,7 +454,7 @@ function drawSubjects() {
     head.appendChild(s.id === NOT_SORTED ? el("h3", "cs-h", "Not sorted yet") : txt("h3", "cs-h", s.name, true));
     if (s.id === NOT_SORTED) head.appendChild(el("p", "quiet", "The Tool has not put these in a subject yet."));
     else if (s.line) head.appendChild(txt("p", "quiet", s.line, true));
-  } else head.appendChild(el("p", "quiet", "You have not saved any chats yet. In Claude, say “save this to HireKraft”."));
+  } else head.appendChild(el("p", "quiet", "You have not saved any chats yet. In Claude, say “save this to {business}”."));
   cs.list.appendChild(head);
   const mine = cs.items.filter((x) => (x.subject_id || NOT_SORTED) === cs.sel);
   const ul = el("ul", "cs-chats");
@@ -569,7 +574,7 @@ async function openItem(c) {
     const w = el("div", "cs-warn");
     w.append(el("b", null, "Only a summary was saved"),
       el("p", null, "Claude sent a short version, not the whole chat. To keep everything, open that chat in Claude and say:"),
-      el("p", "cs-say", "Save the whole chat to HireKraft."),
+      el("p", "cs-say", "Save the whole chat to {business}."),
       el("p", null, "It will replace this entry and keep this one as an earlier version."));
     v.appendChild(w);
   }
@@ -634,7 +639,7 @@ function actions(v, r, c) {
     slot.innerHTML = "";
     const box = el("div", "cs-cont");
     const line = el("p", "cs-say");
-    line.append(el("span", null, "Pick up my HireKraft chat"), document.createTextNode(" “"), txt("span", null, r.title, true), document.createTextNode("” "), el("span", null, "where we left off."));
+    line.append(el("span", null, "Pick up my {business} chat"), document.createTextNode(" “"), txt("span", null, r.title, true), document.createTextNode("” "), el("span", null, "where we left off."));
     box.append(el("b", null, "Paste this into a new Claude chat:"), line);
     slot.appendChild(box);
     let ok = false;
