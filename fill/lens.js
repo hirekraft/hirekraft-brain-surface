@@ -3907,6 +3907,8 @@ const GROUP_TAB = (k, label) => ({ key: k, label: label ?? GROUPS.find((g) => g.
 // Money reads Accounting on the row (decision 1077); its key stays money, so #money/<part> links still work.
 const TABS = [GROUP_TAB('email', 'Mail'), { key: 'thoughts', label: 'Thinkrooms' }, { key: 'work', label: 'Work' }, { key: 'money', label: 'Accounting', owner: true },
   { ...GROUP_TAB('drives', 'Drives'), door: true }, GROUP_TAB('calendar'), GROUP_TAB('contacts'), { key: 'marketing', label: 'Marketing and sales' },   // Marketing and sales: seat job-alerts, 2026-10-30, decision 1039 (fill/marketing.js)
+  // THE AGENTS TAB (seat agents-tab, 2026-11-05, decisions 1092-1102): her team of seven experts, between Marketing and sales and Brain; drawn by fill/agents.js.
+  { key: 'agents', label: 'Agents' },
   { key: 'brain', label: 'Brain' }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
   { ...GROUP_TAB('systems'), door: true }, { ...GROUP_TAB('loose'), door: true },
   // THE AI TAB (seat ai-tab, 2026-10-23, decision 1007; working name, Alex may rename): owner only, drawn by fill/ai.js.
@@ -3969,7 +3971,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#tabs')
 //   contacts keeps its own state (the card she looked up): a reading draws nothing. Until now every reading cleared
 //            the card and looked the person up again, so a slow lookup never stayed on screen.
 //   drives, calendar, systems, loose: drawn from the reading itself; redrawn, with keepOpen putting back what she opened.
-const OWN_STATE = { email: () => mailReading(), contacts: () => {}, ai: () => {}, marketing: () => {} };   // marketing: seat job-alerts (an open item stays open)
+const OWN_STATE = { email: () => mailReading(), contacts: () => {}, ai: () => {}, marketing: () => {}, agents: () => {} };   // agents: seat agents-tab (a making in progress stays)   // marketing: seat job-alerts (an open item stays open)
 
 function drawLens() {
   const t = TABS.find((x) => x.key === lensKey);
@@ -3977,7 +3979,7 @@ function drawLens() {
   if (!t || !body) return;
   // MAIL IS AN INBOX YOU CAN WORK IN (seat mail-redesign, Alex 2026-10-06): three columns
   // across the window, drawn by mail.js. The tab itself names it, so no heading.
-  $('#lens-head').hidden = lensKey === 'email';
+  $('#lens-head').hidden = lensKey === 'email' || lensKey === 'agents';   // agents: the tab draws its own title (seat agents-tab)
   if (lensKey === 'email') { drawMail(body); return; }
   $('#lens-head').textContent = t.label;
   body.innerHTML = '';
@@ -4005,6 +4007,12 @@ function drawLens() {
   if (lensKey === 'marketing') {
     import('./marketing.js?v=2026-11-03-screen-rollback').then((M) => M.drawMarketing(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, viewer: () => shape?.viewer }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Marketing and sales tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
+    return;
+  }
+  // THE AGENTS TAB (seat agents-tab, 2026-11-05): the team, making an agent, each expert's page. Keeps its own state (OWN_STATE).
+  if (lensKey === 'agents') {
+    import('./agents.js?v=2026-11-05-agents-tab').then((G) => G.drawAgents(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, followSteps, renderAsk, ask, isOwner: () => !!shape?.viewer?.all_access, goTab }))
+      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Agents tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
   if (lensKey === 'contacts') {
