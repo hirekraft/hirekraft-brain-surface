@@ -3731,7 +3731,7 @@ async function loadSecurity() {
 let routed = false;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
 const hasSetupMark = () => { try { return !!localStorage.getItem("tool.setup.return"); } catch (_) { return false; } };   // setup.js RETURN_KEY
-const setupReturning = () => import("./setup.js?v=2026-11-05-brain-tab-setup").then((S) => S.returning()).catch(() => false);
+const setupReturning = () => import("./setup.js?v=2026-11-05-brain-tab-setup-2").then((S) => S.returning()).catch(() => false);
 async function routeOnState(mode) {
   if (routed) return;                           // this chooses the OPENING screen, once
   if (userMoved) return;                        // never move someone who has chosen
@@ -3753,7 +3753,7 @@ async function routeOnState(mode) {
   // source opens the setup (fill/setup.js), as does #setup, and so does coming back from a sign-in started on its Connect
   // step. SUPERSEDED: the old s-intro as the first screen of a signed-in brain with nothing connected; s-intro stays the
   // screen for nobody signed in (above). #how opens How the Tool works over whatever screen this lands on.
-  if (location.hash === "#how") import("./setup.js?v=2026-11-05-brain-tab-setup").then((S) => S.openStory()).catch(() => { /* the story is extra; the screen still lands */ });
+  if (location.hash === "#how") import("./setup.js?v=2026-11-05-brain-tab-setup-2").then((S) => S.openStory()).catch(() => { /* the story is extra; the screen still lands */ });
   if (location.hash === "#setup") { goto("s-setup"); return; }
   const connected = connectedCount();
   // The module is fetched only when this browser holds the marker, so an ordinary opening waits on nothing new.
@@ -3799,7 +3799,7 @@ function goto(id, key) {
     showSubtabs(sec, 'drives', shape?.viewer?.email);
     drawBrain(false);
   }
-  if (id === 's-setup') import('./setup.js?v=2026-11-05-brain-tab-setup').then((S) => S.mount({ sec: $('#s-setup'), shape: () => shape, openConnect, goTab, readEstimate }, key)).catch((e) => { const m = $('#s-setup'); if (m) m.textContent = 'The setup could not be loaded: ' + String(e?.message ?? e); });   // seat brain-tab-setup
+  if (id === 's-setup') import('./setup.js?v=2026-11-05-brain-tab-setup-2').then((S) => S.mount({ sec: $('#s-setup'), shape: () => shape, openConnect, goTab, readEstimate }, key)).catch((e) => { const m = $('#s-setup'); if (m) m.textContent = 'The setup could not be loaded: ' + String(e?.message ?? e); });   // seat brain-tab-setup
   if (id === "s-tests") loadTests();
   if (id === "s-totest") import("./totest.js?v=2026-10-29-ask-agent").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + String(e?.message ?? e); });   // seat test-list
   if (id === "s-security") loadSecurity();
