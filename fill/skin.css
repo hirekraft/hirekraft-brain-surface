@@ -2606,6 +2606,12 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
   .br-ttl { gap: calc(var(--u) * 2); }
   .br-big { font-size: 26px; }
   .br-table { font-size: var(--t-micro); }
+  /* Work as the picture (seat work-tab, 2026-11-05): a page of Work's own takes the whole width on a phone; the sidebar's
+     presses and every Open work row are at least 44 px. */
+  #s-work.paging .work-main { display: flex; }
+  #s-work .work-nav-b, #s-work .work-row, #s-work .work-link, #s-work .work-chips .chip, #s-work .work-open, #s-work .work-more { min-height: 44px; }
+  #s-work .work-more { min-width: 44px; }
+  #s-work .work-order .work-order-facts { grid-template-columns: 1fr; }
 }
 /* ── NO TOOL TO OPEN (seat any-brain round 2, 2026-11-05, decision 1097): fill/brain.js draws this in place of the whole screen,
    before any tab, when the brain this browser points to no longer opens. One sentence, one way on. Tokens only. ── */
@@ -2613,3 +2619,63 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
 .no-brain h1 { font-family: var(--font-head); font-size: var(--t-head); font-weight: var(--w-mid); overflow-wrap: anywhere; }
 .no-brain p { color: var(--ink-2); font-size: var(--t-read); overflow-wrap: anywhere; }
 .no-brain .go { justify-self: start; min-height: var(--tap); display: inline-flex; align-items: center; text-decoration: none; }
+
+/* ── THE WORK TAB AS THE APPROVED PICTURE (seat work-tab, 2026-11-05, decision 1103; artifact 1X16psoZYzM1MfVWX5ifwr): a
+   quiet sidebar (+ New conversation, Search, Projects, Open work with its count, Pinned, Recents), states as words, one
+   accent only for where she is; Open work and Projects as pages in the middle; an order's folded details line on top of
+   its conversation; the greeting with three questions. Phone rules in A PHONE IS A FIRST-CLASS SIZE. Tokens only. ── */
+.work-nav { display: flex; flex-direction: column; gap: 2px; }
+.work-nav-b { display: flex; justify-content: space-between; align-items: center; gap: var(--u); width: 100%; min-height: 38px; text-align: left; background: none; border: 0; border-radius: 999px; padding: 6px 12px; font: inherit; color: var(--ink); cursor: pointer; overflow-wrap: anywhere; }
+.work-nav-b:hover { background: var(--line); }
+.work-nav-b[aria-current='page'], .work-nav-b[aria-expanded='true'] { background: var(--act-soft); font-weight: var(--w-mid); }
+.work-nav-new { font-weight: var(--w-mid); }
+.work-nav-c { color: var(--ink-3); font-size: var(--t-small); font-variant-numeric: tabular-nums; }
+.work-nav .work-search { margin: 2px 0 6px; }
+.work-side .work-list h3 { margin: 1.2em 0 .3em; padding-left: 12px; color: var(--ink-3); }
+.work.paging .work-slot { display: none; }
+.work-slot { min-width: 0; min-height: 0; flex: 1; display: flex; flex-direction: column; }
+.work-page { flex: 1; min-height: 0; overflow-y: auto; }
+.work-page > div { max-width: var(--convo); margin: 0 auto; padding: var(--gap); display: flex; flex-direction: column; gap: calc(var(--u) * 3); min-width: 0; }
+.work-page > div[hidden] { display: none; }
+.work-h1 { font-family: var(--font-head); font-size: var(--t-head); line-height: var(--lead-tight); margin: 0; overflow-wrap: anywhere; }
+.work-h2 { font-size: var(--t-body); font-weight: var(--w-strong); margin: calc(var(--u) * 2) 0 0; color: var(--ink-2); }
+.work-sub { margin: calc(var(--u) * -2) 0 0; color: var(--ink-3); font-size: var(--t-small); }
+.work-rows { display: flex; flex-direction: column; }
+.work-row { display: flex; justify-content: space-between; gap: calc(var(--u) * 3); width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: calc(var(--u) * 3) var(--u); font: inherit; color: inherit; cursor: pointer; min-width: 0; }
+.work-row:hover { background: var(--line-2); }
+.work-row-main { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.work-row-main small { color: var(--ink-3); font-size: var(--t-small); }
+.work-row-state { color: var(--ink-3); font-size: var(--t-small); white-space: nowrap; flex: none; }
+.work-acts { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); }
+.work-acts .go { margin-top: 0; }
+.work-none, .work-said { font-size: var(--t-small); }
+.work-link { background: none; border: 0; padding: 0 0 0 calc(var(--u) * 2); font: inherit; color: var(--act); text-decoration: underline; cursor: pointer; }
+.panel:not(.in-work) .work-order-top, .panel:not(.in-work) .work-hello-host { display: none; }
+.panel.in-work .panel-body:has(#work-hello:not([hidden])) .panel-empty, .panel.in-work .panel-body:has(#work-order-top:not([hidden])) .panel-empty { display: none; }
+.work-order-top[hidden], .work-hello-host[hidden] { display: none; }
+.work-order-top { margin-bottom: var(--gap); }
+.work-order { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper); }
+.work-order > summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--u) calc(var(--u) * 3); padding: calc(var(--u) * 2.5) calc(var(--u) * 3.5); font-weight: var(--w-mid); min-height: 44px; align-items: center; }
+.work-order > summary::-webkit-details-marker { display: none; }
+.work-order[open] > summary { border-bottom: 1px solid var(--line); }
+.work-order-s { color: var(--ink-3); font-weight: normal; font-size: var(--t-small); overflow-wrap: anywhere; }
+.work-order-facts { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: var(--u) calc(var(--u) * 3); margin: 0; padding: calc(var(--u) * 3) calc(var(--u) * 3.5); font-size: var(--t-small); }
+.work-order-facts dt { color: var(--ink-3); font-weight: var(--w-mid); overflow-wrap: anywhere; }
+.work-order-facts dd { margin: 0; overflow-wrap: anywhere; min-width: 0; }
+.work-order-states { display: flex; flex-wrap: wrap; gap: var(--u); margin-top: var(--u); }
+.work-order-states .go { margin-top: 0; }
+.work-order-states input { flex: 1 1 12em; min-width: 0; font: inherit; padding: .3em .5em; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); color: var(--ink); }
+.work-order-out { margin: 0 calc(var(--u) * 3.5) calc(var(--u) * 2.5); font-size: var(--t-small); }
+.work-order-out:empty { display: none; }
+.work-hello { margin-top: 10vh; text-align: center; display: grid; gap: calc(var(--u) * 2); }
+.work-hello h2 { font-family: var(--font-head); font-size: var(--t-head); margin: 0; overflow-wrap: anywhere; }
+.work-hello p { margin: 0; }
+.work-chips { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); }
+.work-hello .work-chips { justify-content: center; }
+.work-chips .chip { border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 6px 14px; min-height: 36px; font: inherit; font-size: var(--t-small); cursor: pointer; overflow-wrap: anywhere; text-align: left; }
+.work-chips .chip:hover { border-color: var(--act); }
+.work-chips .chip-p { background: var(--ink); color: var(--paper); border-color: var(--ink); font-weight: var(--w-mid); }
+.work-draft { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper); padding: calc(var(--u) * 3); margin: var(--u) 0; }
+.work-draft-text { white-space: pre-wrap; margin: 0; overflow-wrap: anywhere; }
+.work-nav .work-search[hidden] { display: none; }
+.work-side .work-list .work-open { padding-left: 12px; border-radius: 999px; }
