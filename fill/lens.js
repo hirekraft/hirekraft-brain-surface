@@ -81,6 +81,7 @@ import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-
 import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-10-30-rulings-small"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
+import { initWorkTab, drawOpenWork, countOpenWork, findOrder, orderTop, orderAnchor, hello as workHello, draftCard } from "./work.js?v=2026-11-05-work-tab"; // Work's own pages: Open work, an order's details, the greeting (seat work-tab)
 import { foundCard } from "./find.js?v=2026-10-29-thinkrooms"; // find first, then work on what was found (seat find-first)
 import { closeCard } from "./close.js?v=2026-10-26-month-end-2"; // the month-end check, corrected cell by cell (seat month-end)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-27-people-and-access"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-10-27-people-and-access"; // sub-tab row and People and access (seat people-and-access)
@@ -2667,6 +2668,8 @@ const OUT_CTX = { askUrl: ASK_URL, key: PUBLISHABLE_KEY, session: () => sb.auth.
 // Save as test here, for the owner. opts.q is her question when the caller has it; otherwise it is read from the
 // turn's own question line. A turn without a question line (Mail's automatic briefing) gets no actions.
 function renderAsk(slot, body, opts) {
+  // A draft written inside an order (lens-ask state 'draft', asked with the order's email as its anchor; seat work-tab).
+  if (body && body.state === "draft" && body.draft) { draftCard(slot, body, workOrder); return; }
   drawAsk.opts = opts || null;
   drawAsk(slot, body);
   dropEchoHeading(slot);
@@ -3093,7 +3096,8 @@ async function ask(question, files) {
 
   const sec = $("#s-answer");
   const mount = $("#answer-in");
-  if (!mount.children.length && !workChat) panelTitle(q);
+  if (!mount.children.length && !workChat && !workOrder) panelTitle(q);
+  workHelloShow(false);
   sec.hidden = false;
   openPanel();
 
@@ -3133,7 +3137,11 @@ async function ask(question, files) {
       // today, never against the dates in the records (seat chat-layout, 2026-10-06).
       // plan_first (seat plan-first): this box can show a plan, so lens-ask may answer bigger work with one first.
       // request_id (seat box-agent): when the box answers through the agent, it notes each step under this id; followSteps says it.
-      body: JSON.stringify(Object.assign({ question: q, tz: zone(), plan_first: true }, requestId ? { request_id: requestId } : {}, lastAsked ? { follows: lastAsked } : {}, added.length ? { files: added } : {})),
+      // Inside an order (seat work-tab): the question is anchored to the order's email, as answer.js anchors one on Mail;
+      // lens-ask checks she may open that mailbox, and the conversation's last turns travel with it.
+      body: JSON.stringify(workOrder
+        ? Object.assign({ question: q, tz: zone(), anchor: orderAnchor(workOrder), turns: workOrderTurns.slice(-6) }, requestId ? { request_id: requestId } : {})
+        : Object.assign({ question: q, tz: zone(), plan_first: true }, requestId ? { request_id: requestId } : {}, lastAsked ? { follows: lastAsked } : {}, added.length ? { files: added } : {})),
     });
     const body = await r.json().catch(() => null);
     stopSteps();
@@ -3146,6 +3154,7 @@ async function ask(question, files) {
     drawBox();   // the top box now says it continues this conversation
     speakAnswer(slot);   // read aloud when she switched it on (box.js); never for a reopened, kept answer
     lastAsked = q;
+    if (workOrder) workOrderTurns.push({ q, a: String(body.answer || body.state_reason || (body.draft && body.draft.text) || '').slice(0, 1500) });
     // A plan is kept with its answer after Go (runPlan), not on its own.
     if (body.state !== "plan") await keepTurn(slot, q, body);
   } catch (e) {
@@ -3828,7 +3837,7 @@ function goto(id, key) {
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
     import("./ledger.js?v=2026-10-22-dates").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
-  if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') loadWork(); if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY, name: BRAIN.name }); loadChats(); showSubtabs($('#s-chats'), 'chats', shape?.viewer?.email); }
+  if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') { loadWork(); countOpenWork(); if (!workOrder && !$('#answer-in').children.length) workHelloShow(true); } if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY, name: BRAIN.name }); loadChats(); showSubtabs($('#s-chats'), 'chats', shape?.viewer?.email); }
   const tabNow = id === 's-lens' ? lensKey : id === 's-drives' ? 'drives' : id === 's-work' ? 'work' : id === 's-security' || id === 's-accessmap' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : 'brain';
   const isDoor = !!TABS.find((x) => x.key === tabNow)?.door;
   markTab(isDoor ? 'brain' : tabNow);   // a door is part of Brain (seat brain-tab-room)
@@ -4060,6 +4069,53 @@ let workInto = null;      // a project a NEW chat goes into once its first turn 
 let workView = null;      // the project shown in the middle, or null for the conversation
 let workRead = null;      // the last work_list() reply
 let workQ = '';           // what the sidebar search is looking for, or ''
+let workOrder = null;     // the order whose conversation is open (seat work-tab), or null
+let workOrderTurns = [];  // that conversation's turns, sent with the next question as lens-ask's anchor turns
+
+// WORK'S OWN PAGES (seat work-tab, 2026-11-05, decision 1103): Open work and Projects take the middle in place of the
+// conversation; choosing a conversation, a new one or an order gives the middle back to it. Drawn by fill/work.js.
+function workPage(v) {
+  const page = $('#work-page'), w = $('#s-work');
+  if (!page || !w) return;
+  page.hidden = !v;
+  $('#work-page-open').hidden = v !== 'open';
+  $('#work-page-projects').hidden = v !== 'projects';
+  w.classList.toggle('paging', !!v);
+  if (v) w.classList.remove('list-open');
+  document.querySelectorAll('#s-work [data-wpage]').forEach((b) => { if (b.dataset.wpage === v) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  if (v === 'open') drawOpenWork($('#work-page-open'));
+}
+// The greeting with three questions, on a new conversation on Work (the picture's "new"). Hidden once she asks.
+function workHelloShow(on) {
+  const h = $('#work-hello');
+  if (!h) return;
+  h.hidden = !on;
+  if (on) {
+    let hour = 12; try { hour = Number(new Date().toLocaleString('en-US', { timeZone: zone(), hour: 'numeric', hour12: false })) % 24; } catch (_) { /* noon */ }
+    h.innerHTML = ''; h.appendChild(workHello(shape?.viewer?.name ?? shape?.viewer?.display_name ?? '', hour));
+  }
+}
+function workOrderShow(o) {
+  const top = $('#work-order-top');
+  workOrder = o || null;
+  if (!top) return;
+  top.innerHTML = '';
+  top.hidden = !o;
+  if (o) top.appendChild(orderTop(o, (item) => { const keep = workOrder?.keep; workOrderShow(Object.assign(item, { keep })); }));
+}
+// AN ORDER OPENS AS ITS CONVERSATION (1098, 1099): the folded Order details line on top, then what was asked about it
+// before (kept as this person's chat about work_order:<id>, work_about), and the box asks within the order.
+async function openOrder(o) {
+  workPage(null);
+  const about = 'work_order:' + o.wo_id;
+  const { data } = await sb.rpc('work_about', { p_about: about });
+  const keep = { chat: data?.chat_id ?? null, about, title: o.what };
+  if (keep.chat) { await openChat(keep.chat, Object.assign({}, o, { keep })); return; }
+  newChat(null);
+  workOrderShow(Object.assign({}, o, { keep })); workOrderTurns = [];
+  workHelloShow(false);
+  panelTitle(o.what);
+}
 
 function workSaid(text) { const s = $('#work-said'); if (s) s.textContent = text || ''; }
 
@@ -4133,6 +4189,7 @@ let onMail = false;
 // answer.js) instead of the Work chat that happens to be open; work_keep finds or makes this person's
 // chat about that email and into.chat remembers it. Without into, as before.
 async function keepTurn(slot, q, body, into) {
+  if (!into && workOrder) into = workOrder.keep;   // an order's conversation is its own chat (about work_order:<id>; seat work-tab)
   try {
     if (into) {
       const { data, error } = await sb.rpc('work_keep', Object.assign({ p_chat: into.chat ?? null, p_question: q, p_answer: body },
@@ -4140,6 +4197,7 @@ async function keepTurn(slot, q, body, into) {
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.note ?? data?.reason ?? 'no reason was given');
       into.chat = data.chat_id;
+      if (workOrder && into === workOrder.keep) workChat = data.chat_id;
       if (!$('#s-work').hidden) loadWork();
       return;
     }
@@ -4162,6 +4220,7 @@ async function keepTurn(slot, q, body, into) {
 
 function newChat(projectId) {
   workChat = null; lastAsked = ''; workInto = projectId ?? null;
+  workOrderShow(null); workOrderTurns = []; workPage(null);
   const mount = $('#answer-in'); if (mount) mount.innerHTML = '';
   $('#dock-turns').innerHTML = '';
   $('#s-answer').hidden = true;
@@ -4169,16 +4228,26 @@ function newChat(projectId) {
   const p = workInto && workRead?.projects.find((x) => x.id === workInto);
   panelTitle(p ? `New conversation in ${p.name}` : '');
   openPanel(); markOpen(); closeWide(); $('#s-work')?.classList.remove('list-open');
+  workHelloShow(!$('#s-work').hidden && !workInto);
   drawBox();
   $('#panel-input')?.focus();
 }
 
-async function openChat(id) {
+async function openChat(id, order) {
+  workPage(null);
   workSaid('Opening.'); $('#work-said').classList.add('working');
   const { data, error } = await sb.rpc('work_open', { p_chat: id });
   $('#work-said').classList.remove('working');
   if (error || !data?.ok) { workSaid(error?.message ?? data?.note ?? 'That chat could not be opened.'); return; }
   workSaid('');
+  // A chat about an order opens as that order (seat work-tab): its details on top, its questions anchored to its email.
+  const ab = String(data.chat.about || '');
+  if (!order && ab.startsWith('work_order:')) {
+    const o = await findOrder(ab.slice('work_order:'.length));
+    if (o) order = Object.assign({}, o, { keep: { chat: data.chat.id, about: ab, title: o.what } });
+  }
+  workOrderShow(order || null); workHelloShow(false);
+  workOrderTurns = (data.turns || []).map((t) => ({ q: t.question, a: String((t.answer && (t.answer.answer || t.answer.state_reason || (t.answer.draft && t.answer.draft.text))) || '').slice(0, 1500) }));
   const mount = $('#answer-in'); mount.innerHTML = '';
   $('#dock-turns').innerHTML = '';
   $('#s-answer').hidden = false;
@@ -4369,6 +4438,20 @@ async function loadWork() {
 }
 
 (function wireWork() {
+  initWorkTab({ sb, el, $, fmtDate, openEmail: openFromAnswer, openOrder, ask: (q) => ask(q) });
+  // The order's details and the greeting live in the one panel, above the conversation; shown only on Work (skin.css).
+  const ans = $('#s-answer');
+  if (ans && !$('#work-order-top')) {
+    const top = el('div', 'work-order-top'); top.id = 'work-order-top'; top.hidden = true;
+    const hi = el('div', 'work-hello-host'); hi.id = 'work-hello'; hi.hidden = true;
+    ans.before(hi, top);
+  }
+  document.querySelectorAll('#s-work [data-wpage]').forEach((b) => b.addEventListener('click', () => workPage(b.dataset.wpage)));
+  $('#work-nav-search')?.addEventListener('click', () => {
+    const f = $('#work-search'), b = $('#work-nav-search');
+    f.hidden = !f.hidden; b.setAttribute('aria-expanded', String(!f.hidden));
+    if (!f.hidden) f.focus(); else if (workQ) { f.value = ''; workQ = ''; loadWork(); }
+  });
   $('#work-new')?.addEventListener('click', () => newChat(null));
   $('#work-project-new')?.addEventListener('click', async () => {
     const name = (window.prompt('Name the project') ?? '').trim();
