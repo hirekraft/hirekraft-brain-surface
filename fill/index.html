@@ -29,7 +29,7 @@ try {
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
 <title>Tool — your brain</title>
 <meta name="description" content="Your business's own memory.">
-<link rel="stylesheet" href="skin.css?v=2026-11-05-any-brain">
+<link rel="stylesheet" href="skin.css?v=2026-11-05-work-tab">
 <link rel="stylesheet" href="setup.css?v=2026-11-05-brain-tab-setup">
 <script>
 // THE FRONT DOOR, before anything is drawn (seat front-door, 2026-10-13): no stored sign-in on this
@@ -411,28 +411,41 @@ try {
        SUPERSEDES the 2026-10-08 Work layout (seat work-chat) in which the conversation and the one box were
        moved into this tab's middle column (workDock): retired, so there is one place a conversation is shown. -->
   <section class='step work' id='s-work' hidden>
-    <aside class='work-side' aria-label='Your conversations'>
-      <div class='work-top'>
-        <h2 class='work-title'>Conversations</h2>
-        <button class='go work-newchat' id='work-new' type='button'>New conversation</button>
-      </div>
-      <div class='work-list' id='work-list'>
-        <input class='work-search' id='work-search' type='search' autocomplete='off'
+    <!-- THE SIDEBAR AS THE APPROVED PICTURE (seat work-tab, 2026-11-05, decision 1103; artifact 1X16psoZYzM1MfVWX5ifwr):
+         + New conversation, Search, Projects, Open work with its count, then Pinned and Recents. Outputs and Scheduled are
+         in the picture and left out until each has a back end (fill/work.js says why). SUPERSEDES the 2026-10-12 sidebar
+         headed Conversations with the search field and the projects list always open. -->
+    <aside class='work-side' aria-label='Work'>
+      <nav class='work-nav' aria-label='Work'>
+        <button class='work-nav-b work-nav-new' id='work-new' type='button'>+ New conversation</button>
+        <button class='work-nav-b' id='work-nav-search' type='button' aria-expanded='false'>Search</button>
+        <input class='work-search' id='work-search' type='search' autocomplete='off' hidden
                placeholder='Search your conversations' aria-label='Search your conversations'>
-        <div class='work-head'><h3>Projects</h3>
-          <button class='work-add' id='work-project-new' type='button' aria-label='New project'>New project</button></div>
-        <ul class='work-chats' id='work-projects'></ul>
-        <div id='work-project-view' hidden></div>
+        <button class='work-nav-b' id='work-nav-projects' type='button' data-wpage='projects'>Projects</button>
+        <button class='work-nav-b' id='work-nav-open' type='button' data-wpage='open'><span>Open work</span><span class='work-nav-c' id='work-open-count'></span></button>
+      </nav>
+      <div class='work-list' id='work-list'>
         <div id='work-pinned'></div>
         <div id='work-recents'></div>
         <p class='quiet' id='work-said' aria-live='polite'></p>
       </div>
     </aside>
-    <!-- THE CONVERSATION, FULL SIZE (seat conversation-panel, item 15; Alex 2026-10-12 17:51 PT: "in the work tab, it
-         should actually be the main panel... like we're doing and working right now here in Claude"). On Work the one
-         conversation panel moves here (lens.js workPanel), so there is still one renderer; the top box is hidden on
-         this tab and the panel's own box is where she types. -->
-    <div class='work-main' id='work-convo-slot'></div>
+    <!-- THE MIDDLE: a page of Work's own (Open work, Projects) or the conversation, full size (seat conversation-panel,
+         item 15; Alex 2026-10-12 17:51 PT: "in the work tab, it should actually be the main panel... like we're doing and
+         working right now here in Claude"). On Work the one conversation panel moves into #work-convo-slot (lens.js
+         workPanel), so there is still one renderer; the top box is hidden on this tab and the panel's own box is where she types. -->
+    <div class='work-main'>
+      <section class='work-page' id='work-page' hidden aria-live='polite'>
+        <div id='work-page-open' hidden></div>
+        <div id='work-page-projects' hidden>
+          <h1 class='work-h1'>Projects</h1>
+          <ul class='work-chats work-projects' id='work-projects'></ul>
+          <div class='work-acts'><button class='go ghost' id='work-project-new' type='button'>New project</button></div>
+          <div id='work-project-view' hidden></div>
+        </div>
+      </section>
+      <div class='work-slot' id='work-convo-slot'></div>
+    </div>
     <!-- What an answer produced, wide beside the conversation: a table, a chart, a PDF. Opened only when there is
          something to look at; closed, the conversation takes the width. -->
     <aside class='work-view' id='work-view' hidden aria-label='What the answer produced'>
@@ -539,6 +552,6 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-11-05-any-brain"></script>
+<script type="module" src="lens.js?v=2026-11-05-work-tab"></script>
 </body>
 </html>
