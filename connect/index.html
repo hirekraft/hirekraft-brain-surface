@@ -38,10 +38,10 @@
 </head>
 <body>
 <div class="card">
-  <div class="mark">Tool<small>hirekraft</small></div>
+  <div class="mark">Tool<small id="biz" translate="no"></small></div>
   <div id="ask" hidden>
     <h1 id="title">Connect your chatbot</h1>
-    <p>It will work as you in HireKraft. It can:</p>
+    <p>It will work as you in <span class="bizname" translate="no"></span>. It can:</p>
     <ul>
       <li>save a chat you choose, private to you until you share it from the Chats tab;</li>
       <li>ask the company a question and get the answer from what you are allowed to see, nothing more.</li>
@@ -67,15 +67,21 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // which then returns her to the chatbot. Someone signed in but not one of the company's people is
 // refused here with the reason, and the chatbot is told no.
 
-const SUPABASE_URL = "https://uvdoompnnypmneyrvtas.supabase.co";
-const PUBLISHABLE_KEY = "sb_publishable_joP87JJiePfN3k1uPoxxVA_DLGT1zv5";
-const sb = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
+// WHICH BRAIN (seat any-brain round 2, 2026-11-05, decision 1097): the brain this browser signed in to through the one
+// door (fill/brain.js). It named HireKraft's brain until now. Not signed in anywhere: she signs in first and comes back.
+import { resolveBrain } from "../fill/brain.js?v=2026-11-05-any-brain";
+const id = new URLSearchParams(location.search).get("authorization_id");
+const found = await resolveBrain();
+if (!found.ok) { location.href = "../login/?next=" + encodeURIComponent("connect/?authorization_id=" + (id || "")); await new Promise(() => {}); }
+const BRAIN = found.brain;
+const sb = createClient(BRAIN.url, BRAIN.key, {
   auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true, flowType: "pkce" },
 });
 
 const $ = (id) => document.getElementById(id);
+$("biz").textContent = BRAIN.name;
+document.querySelectorAll(".bizname").forEach((n) => { n.textContent = BRAIN.name; });
 const say = (kind, t) => { const m = $("msg"); m.className = "msg on " + kind; m.textContent = t; };
-const id = new URLSearchParams(location.search).get("authorization_id");
 
 async function go(decide) {
   $("allow").disabled = true; $("deny").disabled = true;
@@ -89,7 +95,7 @@ async function go(decide) {
 }
 
 async function start() {
-  if (!id) { say("err", "This page is opened by your chatbot when it connects to HireKraft. Start from your chatbot's connector settings."); return; }
+  if (!id) { say("err", "This page is opened by your chatbot when it connects to " + BRAIN.name + ". Start from your chatbot's connector settings."); return; }
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
     location.href = "../login/?next=" + encodeURIComponent("connect/?authorization_id=" + id);
@@ -97,7 +103,7 @@ async function start() {
   }
   const prof = await sb.rpc("my_profile");
   if (prof.error || !prof.data) {
-    say("err", "You are signed in as " + session.user.email + ", but that sign-in is not one of the company's people in HireKraft, so nothing can be connected.");
+    say("err", "You are signed in as " + session.user.email + ", but that sign-in is not one of the company's people in " + BRAIN.name + ", so nothing can be connected.");
     const d = await sb.auth.oauth.denyAuthorization(id);
     if (d.data && d.data.redirect_url) setTimeout(() => { location.href = d.data.redirect_url; }, 4000);
     return;
@@ -106,7 +112,7 @@ async function start() {
   if (det.error || !det.data) { say("err", "This connection request could not be read: " + ((det.error && det.error.message) || "unknown") + ". Start again from your chatbot."); return; }
   if (!det.data.authorization_id && det.data.redirect_url) { location.href = det.data.redirect_url; return; }
   const name = (det.data.client && det.data.client.name) || "Your chatbot";
-  $("title").textContent = name + " wants to connect to HireKraft";
+  $("title").textContent = name + " wants to connect to " + BRAIN.name;
   $("as").textContent = "Signed in as " + session.user.email + ".";
   $("ask").hidden = false;
   $("allow").addEventListener("click", () => go(true));
