@@ -18,6 +18,8 @@
 // photos square until seat scans-photos ships fill/scans.js (the square appears by itself when that file exists).
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
+import { understandBlock, filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-06-brain-status-2';   // the two presses (seat brain-status-2)
+
 let C = null;   // { sb, el, $, askBody, isOwner, viewDeps, readSources, drawGroup, aiBlocks, door, goto, openAdd, closeAdd, connectSystem, me }
 let reading = null;   // the latest set of readings, so a page opens on what the room shows
 let scans = null;     // fill/scans.js, if seat scans-photos has shipped it
@@ -74,14 +76,16 @@ function txt(tag, cls, text) { const e = C.el(tag, cls); e.textContent = text; r
 const ONCE = 'Brought in once';
 const SQUARES = [
   { key: 'mail', title: 'Mail', icon: 'mail', keep: (r) => r.group === 'email', one: 'mailbox', many: 'mailboxes' },
-  { key: 'drives', title: 'Drives', icon: 'folder', keep: (r) => r.group === 'drives', one: 'drive or folder', many: 'drives and folders', door: 'drives' },
+  { key: 'drives', title: 'Drives', icon: 'folder', keep: (r) => r.group === 'drives', one: 'drive or folder', many: 'drives and folders' },
   { key: 'calendar', title: 'Calendar', icon: 'cal', keep: (r) => r.group === 'calendar', one: 'calendar', many: 'calendars' },
   { key: 'contacts', title: 'Contacts', icon: 'person', keep: (r) => r.group === 'contacts', one: 'address book', many: 'address books' },
-  { key: 'systems', title: 'Systems', icon: 'plug', keep: (r) => r.group === 'systems' && r.what !== ONCE, one: 'system', many: 'systems', names: true },
-  { key: 'chats', title: 'Chats', icon: 'chat', door: 'chats' },
+  // QuickBooks is its own square (picture; seat brain-status-2): the books arrive as records
+  { key: 'books', title: 'QuickBooks', icon: 'coin', keep: (r) => r.group === 'systems' && String(r.source_key).startsWith('qbo:'), one: 'company file', many: 'company files' },
+  { key: 'systems', title: 'Systems', icon: 'plug', keep: (r) => r.group === 'systems' && r.what !== ONCE && !String(r.source_key).startsWith('qbo:'), one: 'system', many: 'systems', names: true },
+  { key: 'chats', title: 'Chats', icon: 'chat' },
   { key: 'downloads', title: 'Downloads', icon: 'box', keep: (r) => r.group === 'systems' && r.what === ONCE, one: 'brought in', many: 'brought in' },
   { key: 'scans', title: 'Scans and photos', icon: 'photo' },
-  { key: 'loose', title: 'Loose files', icon: 'file', keep: (r) => r.group === 'loose', one: 'file set', many: 'file sets', door: 'loose' },
+  { key: 'loose', title: 'Loose files', icon: 'file', keep: (r) => r.group === 'loose', one: 'file set', many: 'file sets' },
   { key: 'add', title: 'Add a source', icon: 'plus' },
 ];
 
@@ -117,13 +121,20 @@ export async function drawRoom(fresh) {
     C.sb.rpc('connector_status').then(({ data, error }) => { if (error) R.connErr = error; else R.conn = data; }, (e) => { R.connErr = e; }),
     // THE ROAD (seat brain-status-build, decisions 1106/1108/1114): findable and understood as counts, the what-it-knows test
     C.sb.rpc('brain_road').then(({ data, error }) => { if (error || !data || data.ok !== true) R.roadErr = error?.message ?? data?.error ?? 'no reason was given'; else R.road = data; }, (e) => { R.roadErr = e?.message ?? e; }),
+    // per mailbox and drive: in line, waiting for your yes, minutes left (seat findable-all's source_read_progress)
+    C.sb.rpc('source_read_progress').then(({ data, error }) => { if (!error) R.prog = data ?? []; }, () => { /* the panels say the per-mailbox lines could not be read */ }),
   ];
   if (owner) jobs.push(C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) R.ai = r.ai; else R.aiErr = r?.error ?? r?.ai?.error ?? 'no reason was given'; }, (e) => { R.aiErr = e?.message ?? e; }));
   // each part is painted as its reading lands, so the slow AI reading never holds the sources back
   reading = R;
   jobs.forEach((j) => j.then(() => { if (reading === R) paint(); }));
   await Promise.all(jobs);
+  // WHILE SOMETHING IS BEING READ the room reads itself again every minute, so the road moves while she watches (seat
+  // brain-status-2). Stops when nothing is in line; a page open in the side panel is left as it is.
+  clearTimeout(poll);
+  if (busy(R)) poll = setTimeout(() => { if (!pageOpen()) drawRoom(true); }, 60000);
 }
+let poll = null;
 
 // THE PAGE AS THE APPROVED PICTURE (seat brain-status-build, 2026-11-06; picture VFFCoxg6cAHGmBVyMo4EPs, decisions 1106-1115).
 // Two tabs: Your brain (the road, Needs you, your sources, assistants, Health) and AI and costs (owner only: every cent,
@@ -162,7 +173,10 @@ function build(host) {
   const hl = C.el('button', 'br-card br-healthline'); hl.type = 'button'; hl.id = 'br-healthline';
   hl.addEventListener('click', () => openPage('health'));
   const who = txt('p', 'br-small br-note', 'A colleague sees the road, what needs her, the sources she may open and Health. Money and AI show only to the owner.');
-  mine.append(road, needH, need, conn, asst, hl, who);
+  // A mailbox the Tool could read but that is not yet allowed here: the offer to adopt it, as a Needs you item (inventory
+  // row 34; lens.js fillAdoptable draws into it on every reading). Moved here from the retired #brain-old (seat brain-status-2).
+  const adopt = C.el('div', 'br-adopt'); adopt.id = 'adopt'; adopt.setAttribute('aria-live', 'polite');
+  mine.append(road, needH, need, adopt, conn, asst, hl, who);
   // ---- AI AND COSTS (owner)
   const ai = C.el('div', 'br-pane'); ai.id = 'br-p-ai'; ai.hidden = true;
   ai.appendChild(txt('p', 'br-cent', 'Every cent you spend on AI goes to the AI makers. We add nothing. AI work costs money, like electricity for a machine. Our only fee is the flat monthly price of the Tool.'));
@@ -189,6 +203,7 @@ function build(host) {
   const body = C.el('div', 'br-page-body'); body.id = 'br-page-body';
   page.append(back, body);
   host.append(room, scrim, page);
+  if (C.adopt) { try { C.adopt(); } catch (_) { /* drawn at the next reading */ } }
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !C.$('#br-page')?.hidden && C.$('#s-summary') && !C.$('#s-summary').hidden) closePage(); });
 }
 
@@ -222,11 +237,18 @@ function steps(R) {
   const F = d.findable, M = d.mail, Fi = d.files, U = d.understood;
   const fDone = Number(F.left) === 0;
   out.push({ k: 'f', name: 'Findable', state: fDone ? 'done' : 'now', big: fDone ? 'Done' : num(F.pct) + '%', pct: Number(F.pct),
-    sub: fDone ? 'everything can be found and quoted' : num(F.left) + ' left: ' + [Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) ? num(Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held)) + ' mail attachments' : '', Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes) ? num(Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes)) + ' drive files' : ''].filter(Boolean).join(', ') });
+    sub: fDone ? 'everything can be found and quoted' : (Number(F.reading) > 0 ? num(F.reading) + ' files being read now. ' : '') + num(F.left) + ' left: ' + [Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0) ? num(Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0)) + ' mail attachments' : '', Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes) ? num(Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes)) + ' drive files' : ''].filter(Boolean).join(', ') });
   const files = Number(Fi.read) + Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes);
   const uDone = Number(U.mail) >= Number(M.emails) && Number(U.files) >= files;
-  out.push({ k: 'u', name: 'Understood', state: uDone ? 'done' : 'zero',
-    big: num(U.mail) + ' emails ' + DOT + ' ' + num(U.files) + ' files', sub: 'of ' + num(M.emails) + ' emails and ' + num(files) + ' files. The rest waits for you.' });
+  // seat brain-status-2: while the reader works the step is yellow (learning) with its progress; until anything is pressed it
+  // is red and says the rest waits for her.
+  const W = d.understanding || {};
+  const uNow = Number(W.waiting) > 0;
+  out.push({ k: 'u', name: 'Understood', state: uDone ? 'done' : uNow ? 'now' : 'zero',
+    big: num(U.mail) + ' emails ' + DOT + ' ' + num(U.files) + ' files',
+    sub: uNow ? 'understanding: ' + num(W.done) + ' of ' + num(W.pressed) + ' read' + (Number(W.minutes_left) > 0 ? ', about ' + (Number(W.minutes_left) < 90 ? num(W.minutes_left) + ' minutes' : Math.round(Number(W.minutes_left) / 60) + ' hours') + ' left' : '')
+      : 'of ' + num(M.emails) + ' emails and ' + num(files) + ' files. The rest waits for you.',
+    pct: uNow && Number(W.pressed) > 0 ? Number(W.done) * 100 / Number(W.pressed) : undefined });
   const ready = fDone && uDone && out[0].state === 'done';
   out.push({ k: 'r', name: 'Ready', state: ready ? 'done' : 'next', big: ready ? 'You are ready' : 'Not yet', sub: ready ? 'keeps up every day' : 'when 2 and 3 are done' });
   return out;
@@ -254,7 +276,7 @@ function paintRoad(R) {
   for (const [i, s] of st.entries()) {
     const b = C.el('button', 'br-stn br-stn-' + s.state); b.type = 'button';
     b.append(txt('span', 'br-stn-k', (i + 1) + ' ' + DOT + ' ' + s.name), txt('b', 'br-stn-b', s.big), txt('span', 'br-stn-s', s.sub));
-    if (s.pct !== undefined) { const pb = C.el('span', 'br-pb'); const f = C.el('i', 'br-kf'); f.style.width = Math.max(0, Math.min(100, s.pct)) + '%'; pb.appendChild(f); b.appendChild(pb); }
+    if (s.pct !== undefined) { const pb = C.el('span', 'br-pb'); const f = C.el('i', s.k === 'u' ? 'br-ku' : 'br-kf'); f.style.width = Math.max(0, Math.min(100, s.pct)) + '%'; pb.appendChild(f); b.appendChild(pb); }
     b.setAttribute('aria-label', 'Step ' + (i + 1) + ' of 4, ' + s.name + ': ' + s.big + '. ' + s.sub);
     b.addEventListener('click', () => openPage('step', s.k));
     wrap.appendChild(b);
@@ -324,8 +346,11 @@ function paintHealth(R) {
 }
 
 // GETTING STARTED, one time (1112): making findable and understanding the past, priced and approved by her press, not
-// counted against the monthly limit. The understanding price is the what-it-knows sizing until seat understand-reader
-// measures it live; no Go button until that reader is wired (1115: every Go works for real, its price shown first).
+// counted against the monthly limit. seat brain-status-2: the two presses are real now (fill/brainpress.js): Read them for
+// the files attached to older mail, Go for understanding per source and how far back, each with its price and a preview
+// first (1115: only she presses; nothing here presses for her). The chooser is drawn once and kept, so a reading that lands
+// while she is choosing or confirming does not throw her choice away.
+let pickHost = null, filesHost = null;
 function paintStart(R) {
   const box = C.$('#br-start');
   const tb = document.querySelector('#br-tabs [data-btab=ai]');
@@ -336,21 +361,25 @@ function paintStart(R) {
   const out = [txt('h2', 'br-ph', 'Getting started ' + DOT + ' one time'),
     txt('p', 'br-small', 'Reading and understanding your past once, so the Tool knows your business. You approve its price before it starts; it does not count against your monthly limit.')];
   if (!d) { out.push(txt('p', 'br-small', R.roadErr ? 'Could not be read just now: ' + String(R.roadErr) + '.' : 'Reading')); box.replaceChildren(...out); return; }
+  if (!R.owner) { box.replaceChildren(...out); return; }   // the presses and their prices are the owner's (picture's colleague line)
   const F = d.findable, M = d.mail, U = d.understood;
-  // per email $0.012 to $0.020: seat what-it-knows' sizing from measured lengths and the reading model's price (report section 3)
-  const lo = (n) => usd0(Math.round(Number(n) * 0.012 / 10) * 10), hi = (n) => usd0(Math.round(Number(n) * 0.020 / 10) * 10);
-  const l1 = C.el('div', 'br-line');
+  const l1 = C.el('div', 'br-line br-line-col');
   const a = C.el('span', 'br-line-l'); a.append(txt('b', null, 'Make findable'), C.el('br'),
-    txt('span', 'br-small', Number(F.left) === 0 ? 'Done: everything since ' + String(M.from).slice(0, 4) + ' can be found.' : 'Everything since ' + String(M.from).slice(0, 4) + ' ' + DOT + ' ' + num(F.pct) + '% ' + DOT + ' ' + num(F.left) + ' left, mostly mail attachments. The Tool does this by itself, at a few dollars in all.'));
+    txt('span', 'br-small', Number(F.left) === 0 ? 'Done: everything since ' + String(M.from).slice(0, 4) + ' can be found.' : 'Everything since ' + String(M.from).slice(0, 4) + ' ' + DOT + ' ' + num(F.pct) + '% ' + DOT + ' ' + num(F.left) + ' left, mostly mail attachments.'));
   const pb = C.el('span', 'br-pb'); const fi = C.el('i', 'br-kf'); fi.style.width = Math.max(0, Math.min(100, Number(F.pct))) + '%'; pb.appendChild(fi); a.appendChild(pb);
   l1.appendChild(a);
-  const l2 = C.el('div', 'br-line'); l2.id = 'br-und';
+  if (!filesHost) { filesHost = C.el('div', 'br-press'); filesHost.id = 'br-files'; }
+  if (!filesHost.dataset.hold) filesBlock(C, filesHost, R, () => drawRoom(true));
+  l1.appendChild(filesHost);
+  const l2 = C.el('div', 'br-line br-line-col'); l2.id = 'br-und';
   const b = C.el('span', 'br-line-l');
-  b.append(txt('b', null, 'Understand'), C.el('br'),
-    txt('span', 'br-small', 'So far ' + num(U.mail) + ' emails and ' + num(U.files) + ' files are understood (facts with the sentence they came from), and ' + num(U.records) + ' people from your records. Suggested: the last 2 years of email, ' + num(M.emails_2y) + ' emails, about ' + lo(M.emails_2y) + ' to ' + hi(M.emails_2y) + ' (all ' + num(M.emails) + ': about ' + lo(M.emails) + ' to ' + hi(M.emails) + '; about half with overnight pricing).'),
-    C.el('br'),
-    txt('span', 'br-small', 'These prices are an estimate from measured sizes. The exact price and time come when the reader is measured on your own mail, and are shown before anything starts. The Go button appears then; nothing is understood until you press it.'));
+  b.append(txt('b', null, 'Make it understood'), C.el('br'),
+    txt('span', 'br-small', 'So far ' + num(U.mail) + ' emails and ' + num(U.files) + ' files are understood (facts with the sentence they came from), and ' + num(U.records) + ' people from your records. Choose per source how far back; you see the price and the time before anything starts, and new ones are understood as they arrive.'));
   l2.appendChild(b);
+  const pr = understandProgress(C, R);
+  if (pr) l2.appendChild(pr);
+  if (!pickHost) { pickHost = C.el('div', 'br-press'); pickHost.id = 'br-und-pick'; understandBlock(C, pickHost, R, () => drawRoom(true)); }
+  l2.appendChild(pickHost);
   out.push(l1, l2, txt('p', 'br-small br-note', 'When this is done, it says Getting started: done and folds away.'));
   box.replaceChildren(...out);
 }
@@ -438,7 +467,7 @@ function levelOf(s, R) {
   const d = R.road;
   const pc = (a, b) => (b > 0 ? Math.max(0, Math.min(100, a * 100 / b)) : 0);
   if (s.key === 'mail' && d) {
-    const M = d.mail, of = Number(M.emails) + Number(M.attach_read) + Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held);
+    const M = d.mail, of = Number(M.emails) + Number(M.attach_read) + Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0);
     const left = of - Number(M.emails) - Number(M.attach_read);
     const u = pc(Number(d.understood.mail), of);
     return { u, f: pc(Number(M.emails) + Number(M.attach_read), of) - u, pill: left > 0 ? ['y', 'Findable ' + DOT + ' ' + num(left) + ' attachments not read yet'] : ['y', 'Findable'] };
@@ -551,7 +580,6 @@ let addMoved = null;   // the Add a source part while it sits on the page
 export function openPage(key, arg) {
   const s = SQUARES.find((x) => x.key === key);
   if (s?.door) { C.door(s.door); return; }
-  if (key === 'assistadd') { C.door('chats/connect'); return; }
   const view = C.$('#br-view'), page = C.$('#br-page'), body = C.$('#br-page-body');
   if (!view || !page || !body) return;
   putAddBack();
@@ -626,6 +654,9 @@ const PAGES = {
       line(q, 'Mail attachments', num(M.attach_read) + ' read ' + DOT + ' ' + num(M.attach_waiting) + ' waiting to be read ' + DOT + ' ' + num(M.attach_cannot) + ' could not be read ' + DOT + ' ' + num(M.attach_held) + ' held by a privacy rule', null);
       line(q, 'Drive files', num(F.read) + ' read ' + DOT + ' ' + num(F.not_read) + ' not read yet ' + DOT + ' ' + num(F.waiting) + ' waiting ' + DOT + ' ' + num(F.waiting_yes) + ' waiting for your yes', null);
       note(body, 'Left out by design and not counted: ' + num(M.attach_by_design) + ' mail attachments (pictures, automatic mail, copies) and ' + num(F.by_design) + ' drive files (pictures, videos, folders you left out, deleted).');
+      const ch = C.el('div', 'br-chips');
+      for (const [k, w] of [['mail', 'See Mail'], ['drives', 'See Drives']]) { const b = C.el('button', 'go ghost'); b.type = 'button'; b.textContent = w; b.addEventListener('click', () => openPage(k)); ch.appendChild(b); }
+      body.appendChild(ch);
     }
     if (d && k === 'u') {
       const q = panel(body), U = d.understood;
@@ -633,6 +664,9 @@ const PAGES = {
       line(q, 'Files understood', 'contracts read so far, and files about people', num(U.files));
       line(q, 'People understood from your records', 'title and employer facts with the line they came from', num(U.records));
       note(body, 'Everything else is findable or sorted (what kind it is, who may see it), not understood. Understanding the rest is your choice, priced first, on AI and costs.');
+      const pr = understandProgress(C, reading);
+      if (pr) body.appendChild(pr);
+      if (reading?.owner) { const b = C.el('button', 'go'); b.type = 'button'; b.textContent = 'Choose and see the price'; b.addEventListener('click', () => { closePage(); showTab('ai'); C.$('#br-und')?.scrollIntoView({ block: 'start' }); }); body.appendChild(b); }
     }
     if (k === 'c') { const b = C.el('button', 'go ghost'); b.type = 'button'; b.textContent = 'Add a source'; b.addEventListener('click', () => openPage('add')); body.appendChild(b); }
   },
@@ -679,7 +713,63 @@ const PAGES = {
     body.appendChild(C.aiBlocks.balance(p.balance || {}, p, C.el));
     note(body, 'Adding to the balance from a card is not built yet; the studio adds to it for you.');
   },
-  mail(body) { return groupPage(body, SQUARES[0], 'Each mailbox, how far back it goes, and its state. Open Details on a mailbox to see what reading older mail would cost and to choose how far back.'); },
+  // MAIL (picture; seat brain-status-2): its level, the files attached to older mail with Read them and their progress, then
+  // each mailbox with Details (Read further, with the understanding prices), Open in Mail and Remove.
+  async mail(body) {
+    const R = reading || {};
+    const s = SQUARES[0];
+    const mine = rowsOf(R).filter(s.keep);
+    const lv = mine.length ? level(s, mine, R) : null;
+    const d = R.road;
+    title(body, 'Mail', mine.length ? stateOf(mine) : 'none');
+    if (d) body.appendChild(txt('p', 'br-lede', num(mine.length) + (mine.length === 1 ? ' mailbox' : ' mailboxes') + ', ' + String(d.mail.from).slice(0, 4) + ' to today. ' + num(d.mail.emails) + ' emails, all findable; ' + num(d.understood.mail) + ' understood. ' + num(d.mail.attach_read) + ' attached files read.'));
+    if (lv) { const bar = C.el('span', 'br-lvl'); bar.setAttribute('aria-hidden', 'true'); const u = C.el('i', 'br-ku'); u.style.width = lv.u.toFixed(1) + '%'; const f = C.el('i', 'br-kf'); f.style.width = Math.max(0, lv.f).toFixed(1) + '%'; bar.append(u, f); body.appendChild(bar); }
+    const files = C.el('div', 'br-press'); body.appendChild(files);
+    if (R.prog) filesBlock(C, files, R, () => drawRoom(true).then(() => { if (pageOpen()) openPage('mail'); }));
+    else files.appendChild(txt('p', 'br-small', 'How many files wait in each mailbox could not be read just now.'));
+    const box = C.el('div', 'br-rows'); body.appendChild(box);
+    const drawn = await C.drawGroup(box, C.viewDeps(), s.keep);
+    if (!drawn.length) box.replaceChildren(txt('p', 'quiet', 'Nothing connected here yet.'));
+    note(body, 'On each mailbox: Details (how far back, and what understanding it would cost), Open in Mail, Remove. Understanding all of your mail at once is on AI and costs, Getting started.');
+  },
+  // DRIVES (picture): how well the Tool knows them, in two tabs; the Drive tab is where she browses and organizes them.
+  drives(body) {
+    title(body, 'Drives', rowsOf(reading).some((r) => r.group === 'drives') ? stateOf(rowsOf(reading).filter((r) => r.group === 'drives')) : 'none');
+    const top = C.el('div', 'br-chips');
+    const open = C.el('button', 'go ghost'); open.type = 'button'; open.textContent = 'Open the Drive tab'; open.addEventListener('click', () => { closePage(); C.door('drives'); });
+    top.appendChild(open);
+    body.append(txt('p', 'br-lede', 'Here: how well the Tool knows your drives. The Drive tab is where you browse them.'), top);
+    const tabs = C.el('div', 'br-ptabs'); tabs.setAttribute('role', 'tablist');
+    const v1 = C.el('div', 'br-rows'), v2 = C.el('div', 'br-rows'); v2.hidden = true;
+    const show = (k) => { for (const b of tabs.children) { const on = b.dataset.pt === k; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); } v1.hidden = k !== 'd1'; v2.hidden = k !== 'd2'; if (k === 'd2' && !v2.dataset.drawn) { v2.dataset.drawn = '1'; C.drawOrganize(v2, { sb: C.sb, el: C.el }); } };
+    for (const [k, w] of [['d1', 'Drives and folders'], ['d2', 'Organize']]) { const b = C.el('button', 'br-tab'); b.type = 'button'; b.dataset.pt = k; b.textContent = w; b.setAttribute('role', 'tab'); b.addEventListener('click', () => show(k)); tabs.appendChild(b); }
+    body.append(tabs, v1, v2);
+    show('d1');
+    C.drawDrives(v1, C.viewDeps());
+  },
+  // QUICKBOOKS (picture): the books arrive as records (amounts, dates and customers are fields), as of the last check.
+  async books(body) {
+    await groupPage(body, SQUARES.find((x) => x.key === 'books'), 'Invoices, payments and bills arrive as records from QuickBooks, as they are kept there. QuickBooks stays the record; nothing is written back.');
+  },
+  chats(body) {
+    const c = reading?.conn;
+    title(body, 'Chats');
+    body.appendChild(txt('p', 'br-lede', c?.ok ? (c.saves ? num(c.saves) + ' conversations and documents saved from your own AI, findable. ' : 'Nothing saved from your own AI yet. ') + 'You can also bring in an export of your chats.' : 'Saved AI chats and imports.'));
+    const b = C.el('button', 'go ghost'); b.type = 'button'; b.textContent = 'Open Chats'; b.addEventListener('click', () => { closePage(); C.door('chats'); });
+    body.appendChild(b);
+  },
+  loose(body) {
+    const rows = rowsOf(reading).filter((r) => r.group === 'loose');
+    title(body, 'Loose files', rows.length ? stateOf(rows) : 'empty', rows.length ? null : 'Empty');
+    body.appendChild(txt('p', 'br-lede', 'Files that live nowhere else. Pick them to see what reading them would cost; nothing is sent or read to count them.'));
+    const st = C.el('div'); body.appendChild(st);
+    if (C.stageLoose) C.stageLoose(st);
+  },
+  assistadd(body) {
+    title(body, 'Connect an assistant');
+    const h = C.el('div', 'br-rows'); body.appendChild(h);
+    if (C.connectAssistant) C.connectAssistant(h); else h.appendChild(txt('p', 'quiet', 'This part could not be loaded.'));
+  },
   calendar(body) { return groupPage(body, SQUARES[2]); },
   contacts(body) { return groupPage(body, SQUARES[3], 'Business contacts are kept. Only you see your own address book.'); },
   async systems(body) {
@@ -695,8 +785,12 @@ const PAGES = {
       if (coming) d.appendChild(txt('span', 'br-small', 'Coming: ' + coming));
       q.appendChild(d);
     }
-    const all = C.el('button', 'go ghost'); all.type = 'button'; all.textContent = 'Systems in full, with your Google sign-in';
-    all.addEventListener('click', () => C.door('systems'));
+    // Your Google sign-in, folded (picture): what Google allowed for mail, drive, calendar, contacts, and sign in again.
+    const g = C.el('details', 'br-fold'); const gs = C.el('summary'); gs.textContent = 'Your Google sign-in'; g.appendChild(gs);
+    const gb = C.el('div'); g.appendChild(gb); body.appendChild(g);
+    g.addEventListener('toggle', () => { if (g.open && !gb.dataset.drawn && C.googleSignin) { gb.dataset.drawn = '1'; C.googleSignin(gb); } });
+    const all = C.el('button', 'go ghost'); all.type = 'button'; all.textContent = 'Systems in full';
+    all.addEventListener('click', () => { closePage(); C.door('systems'); });
     body.appendChild(all);
   },
   downloads(body) { return groupPage(body, SQUARES[6], 'A whole download from a system, read once: the Tool recognizes what it is and files everything in the right place.'); },
