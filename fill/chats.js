@@ -215,6 +215,7 @@ function build(root) {
 // system's public discovery document, so the panel never claims a step that cannot work yet.
 // The address is this brain's own connector (ctx.url from fill/brain.js; it named HireKraft's brain until seat any-brain).
 const connectorUrl = () => ctx.url + "/functions/v1/connector-mcp";
+export function connectPart(host) { return drawConnector(host); }   // seat brain-status-2: the Brain's Connect an assistant panel draws this same part
 async function drawConnector(host) {
   const CONNECTOR_URL = connectorUrl();
   host.innerHTML = "";
