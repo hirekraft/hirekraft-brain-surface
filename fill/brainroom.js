@@ -115,6 +115,8 @@ export async function drawRoom(fresh) {
     C.readSources(C.sb, fresh).then((v) => { R.src = v; }, (e) => { R.srcErr = e; }),
     C.sb.rpc('tool_health').then(({ data, error }) => { if (error) R.healthErr = error; else R.health = data; }, (e) => { R.healthErr = e; }),
     C.sb.rpc('connector_status').then(({ data, error }) => { if (error) R.connErr = error; else R.conn = data; }, (e) => { R.connErr = e; }),
+    // THE ROAD (seat brain-status-build, decisions 1106/1108/1114): findable and understood as counts, the what-it-knows test
+    C.sb.rpc('brain_road').then(({ data, error }) => { if (error || !data || data.ok !== true) R.roadErr = error?.message ?? data?.error ?? 'no reason was given'; else R.road = data; }, (e) => { R.roadErr = e?.message ?? e; }),
   ];
   if (owner) jobs.push(C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) R.ai = r.ai; else R.aiErr = r?.error ?? r?.ai?.error ?? 'no reason was given'; }, (e) => { R.aiErr = e?.message ?? e; }));
   // each part is painted as its reading lands, so the slow AI reading never holds the sources back
@@ -123,42 +125,234 @@ export async function drawRoom(fresh) {
   await Promise.all(jobs);
 }
 
+// THE PAGE AS THE APPROVED PICTURE (seat brain-status-build, 2026-11-06; picture VFFCoxg6cAHGmBVyMo4EPs, decisions 1106-1115).
+// Two tabs: Your brain (the road, Needs you, your sources, assistants, Health) and AI and costs (owner only: every cent,
+// Getting started, Every month). Colors are traffic lights (1110 amended): green understood / ready, yellow findable /
+// learning, red not read / needs you; always with a word. The tiles, layers and pages of seat brain-tab-room are kept and
+// moved, not copied. SUPERSEDES (2026-11-06, Alex's yes 1114) the one status sentence and the three tiles at the top.
 function build(host) {
   host.dataset.built = '1';
   host.innerHTML = '';
   const room = C.el('div', 'br-room');
   room.id = 'br-view';
-  const status = C.el('header', 'br-status'); status.id = 'br-status';
-  status.append(txt('p', 'br-lab', 'Your brain'), txt('h2', 'br-head', 'Reading your brain'));
-  const tiles = C.el('section', 'br-tiles'); tiles.id = 'br-tiles'; tiles.setAttribute('aria-label', 'At a glance');
+  const tabs = C.el('div', 'br-tabs'); tabs.id = 'br-tabs'; tabs.setAttribute('role', 'tablist');
+  for (const [k, w] of [['brain', 'Your brain'], ['ai', 'AI and costs']]) {
+    const b = C.el('button', 'br-tab' + (k === 'brain' ? ' on' : '')); b.type = 'button'; b.dataset.btab = k; b.textContent = w;
+    b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', k === 'brain' ? 'true' : 'false');
+    if (k === 'ai') b.hidden = true;   // money and AI show only to the owner (picture's colleague line)
+    b.addEventListener('click', () => showTab(k));
+    tabs.appendChild(b);
+  }
+  // ---- YOUR BRAIN
+  const mine = C.el('div', 'br-pane'); mine.id = 'br-p-brain';
+  const road = C.el('section', 'br-card br-road'); road.id = 'br-road';
+  road.appendChild(txt('p', 'br-small', 'Reading your brain'));
+  const needH = txt('h3', 'br-h', 'Needs you'); needH.id = 'br-need-h';
+  const need = C.el('div', 'br-needs'); need.id = 'br-needs';
   const conn = C.el('section', 'br-sec');
-  conn.append(txt('h3', 'br-h', 'What is connected'));
+  const ch = C.el('h3', 'br-h'); ch.append(document.createTextNode('Your sources'));
+  const leg = C.el('span', 'br-legend');
+  for (const [k, w] of [['u', 'Understood'], ['f', 'Findable'], ['n', 'Not read']]) { const i = C.el('span'); i.append(C.el('i', 'br-k' + k), document.createTextNode(w)); leg.appendChild(i); }
+  ch.appendChild(leg);
+  conn.appendChild(ch);
   const grid = C.el('div', 'br-grid'); grid.id = 'br-squares'; conn.appendChild(grid);
   const asst = C.el('section', 'br-sec'); asst.id = 'br-assist-sec';
   asst.append(txt('h3', 'br-h', 'AI assistants connected to your brain'));
   const ag = C.el('div', 'br-grid'); ag.id = 'br-assist'; asst.appendChild(ag);
-  const ai = C.el('section', 'br-sec'); ai.id = 'br-ai-sec'; ai.hidden = true;
-  ai.append(txt('h3', 'br-h', 'Your AI, this month'));
-  const layers = C.el('div', 'br-layers'); layers.id = 'br-layers'; ai.appendChild(layers);
-  const db = C.el('section', 'br-sec');
-  db.append(txt('h3', 'br-h', 'Your database'));
-  const dbb = C.el('button', 'br-card br-db'); dbb.type = 'button'; dbb.id = 'br-db';
-  dbb.addEventListener('click', () => openPage('db'));
-  db.appendChild(dbb);
-  const how = C.el('button', 'br-card br-how'); how.type = 'button';
-  const hl = C.el('span');
-  hl.append(txt('b', null, 'See how your brain works'), C.el('br'), txt('span', 'br-small', 'The picture and the story, any time'));
-  how.append(hl, txt('span', 'br-go', ARROW_GO));
-  how.setAttribute('aria-label', 'See how your brain works');
-  how.addEventListener('click', () => C.openStory());   // How the Tool works, the story of seat brain-tab-setup (decision 1084)
-  room.append(status, tiles, conn, asst, ai, db, how);
+  const hl = C.el('button', 'br-card br-healthline'); hl.type = 'button'; hl.id = 'br-healthline';
+  hl.addEventListener('click', () => openPage('health'));
+  const who = txt('p', 'br-small br-note', 'A colleague sees the road, what needs her, the sources she may open and Health. Money and AI show only to the owner.');
+  mine.append(road, needH, need, conn, asst, hl, who);
+  // ---- AI AND COSTS (owner)
+  const ai = C.el('div', 'br-pane'); ai.id = 'br-p-ai'; ai.hidden = true;
+  ai.appendChild(txt('p', 'br-cent', 'Every cent you spend on AI goes to the AI makers. We add nothing. AI work costs money, like electricity for a machine. Our only fee is the flat monthly price of the Tool.'));
+  const start = C.el('section', 'br-card br-start'); start.id = 'br-start';
+  const month = C.el('section', 'br-card br-month');
+  month.append(txt('h2', 'br-ph', 'Every month ' + DOT + ' ongoing'), txt('p', 'br-small', 'Keeping up with new mail and files, and answering your questions. This is what your monthly limit is for.'));
+  const tiles = C.el('div', 'br-tiles'); tiles.id = 'br-tiles'; tiles.setAttribute('aria-label', 'At a glance');
+  const lim = C.el('div', 'br-limit'); lim.id = 'br-limit';
+  month.append(tiles, lim);
+  const lay = C.el('section', 'br-sec'); lay.id = 'br-ai-sec';
+  lay.append(txt('h3', 'br-h', 'Your AI, this month, by step'));
+  const layers = C.el('div', 'br-layers'); layers.id = 'br-layers'; lay.appendChild(layers);
+  const more = C.el('button', 'go ghost'); more.type = 'button';
+  more.textContent = 'Month by month, day by day, next month, and which AI does each step';
+  more.addEventListener('click', () => C.door('ai'));
+  ai.append(start, month, lay, more);
+  room.append(tabs, mine, ai);
+  // the pages open as a side panel over the Brain (picture), with a way back
+  const scrim = C.el('div', 'br-scrim'); scrim.id = 'br-scrim'; scrim.hidden = true; scrim.addEventListener('click', closePage);
   const page = C.el('div', 'br-page'); page.id = 'br-page'; page.hidden = true;
-  const back = C.el('button', 'go ghost br-back'); back.type = 'button'; back.textContent = ARROW_BACK + ' Brain';
+  page.setAttribute('role', 'dialog'); page.setAttribute('aria-modal', 'true');
+  const back = C.el('button', 'go ghost br-back'); back.type = 'button'; back.textContent = 'Close';
   back.addEventListener('click', closePage);
   const body = C.el('div', 'br-page-body'); body.id = 'br-page-body';
   page.append(back, body);
-  host.append(room, page);
+  host.append(room, scrim, page);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !C.$('#br-page')?.hidden && C.$('#s-summary') && !C.$('#s-summary').hidden) closePage(); });
+}
+
+let tabNow = 'brain';
+export function showTab(k) {
+  if (k === 'ai' && !reading?.owner) k = 'brain';
+  tabNow = k;
+  for (const b of document.querySelectorAll('#br-tabs .br-tab')) { const on = b.dataset.btab === k; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); }
+  const a = C.$('#br-p-brain'), z = C.$('#br-p-ai');
+  if (a) a.hidden = k !== 'brain';
+  if (z) z.hidden = k !== 'ai';
+}
+
+// The four steps (1108, 1111). Connected from sources_view; Findable and Understood from brain_road (counts, never a
+// percentage understood: STANDING-CLAUSES, read and understood are different states); Ready only when 2 and 3 are done.
+function steps(R) {
+  const rows = rowsOf(R), d = R.road;
+  const n = (g) => rows.filter((r) => r.group === g).length;
+  const out = [];
+  const nc = rows.length;
+  out.push({ k: 'c', name: 'Connected', state: R.src ? (nc ? 'done' : 'zero') : 'wait',
+    big: R.src ? (nc ? 'Done' : 'Nothing yet') : String.fromCharCode(8230),
+    sub: R.src ? [n('email') ? num(n('email')) + (n('email') === 1 ? ' mailbox' : ' mailboxes') : '', n('drives') ? num(n('drives')) + ' drives' : '', n('systems') ? num(n('systems')) + ' systems' : ''].filter(Boolean).join(', ') || 'Add a source to begin' : 'Reading' });
+  if (!d) {
+    const w = R.roadErr ? 'Could not be read just now' : 'Reading';
+    out.push({ k: 'f', name: 'Findable', state: 'wait', big: String.fromCharCode(8230), sub: w });
+    out.push({ k: 'u', name: 'Understood', state: 'wait', big: String.fromCharCode(8230), sub: w });
+    out.push({ k: 'r', name: 'Ready', state: 'next', big: 'Not yet', sub: 'when 2 and 3 are done' });
+    return out;
+  }
+  const F = d.findable, M = d.mail, Fi = d.files, U = d.understood;
+  const fDone = Number(F.left) === 0;
+  out.push({ k: 'f', name: 'Findable', state: fDone ? 'done' : 'now', big: fDone ? 'Done' : num(F.pct) + '%', pct: Number(F.pct),
+    sub: fDone ? 'everything can be found and quoted' : num(F.left) + ' left: ' + [Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) ? num(Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held)) + ' mail attachments' : '', Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes) ? num(Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes)) + ' drive files' : ''].filter(Boolean).join(', ') });
+  const files = Number(Fi.read) + Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes);
+  const uDone = Number(U.mail) >= Number(M.emails) && Number(U.files) >= files;
+  out.push({ k: 'u', name: 'Understood', state: uDone ? 'done' : 'zero',
+    big: num(U.mail) + ' emails ' + DOT + ' ' + num(U.files) + ' files', sub: 'of ' + num(M.emails) + ' emails and ' + num(files) + ' files. The rest waits for you.' });
+  const ready = fDone && uDone && out[0].state === 'done';
+  out.push({ k: 'r', name: 'Ready', state: ready ? 'done' : 'next', big: ready ? 'You are ready' : 'Not yet', sub: ready ? 'keeps up every day' : 'when 2 and 3 are done' });
+  return out;
+}
+
+// What the masthead button says (1110): Ready, Learning step N of 4, Needs you (n), Stopped.
+export function brainState(R) {
+  R = R || reading;
+  if (!R) return null;
+  const st = steps(R);
+  const needN = needList(R).length;
+  const step = st.findIndex((s) => s.state !== 'done');
+  const H = R.health;
+  if (H && H.overall === 'stopped') return { kind: 'stopped', word: 'Stopped: answers are not reliable', step: step < 0 ? 4 : step + 1, need: needN };
+  if (needN) return { kind: 'needs', word: 'Needs you (' + needN + ')', step: step < 0 ? 4 : step + 1, need: needN };
+  if (step < 0) return { kind: 'ready', word: 'Ready', step: 4, need: 0 };
+  return { kind: 'learning', word: 'Learning, step ' + (step + 1) + ' of 4', step: step + 1, need: 0 };
+}
+
+function paintRoad(R) {
+  const box = C.$('#br-road');
+  if (!box) return;
+  const st = steps(R);
+  const wrap = C.el('div', 'br-stations');
+  for (const [i, s] of st.entries()) {
+    const b = C.el('button', 'br-stn br-stn-' + s.state); b.type = 'button';
+    b.append(txt('span', 'br-stn-k', (i + 1) + ' ' + DOT + ' ' + s.name), txt('b', 'br-stn-b', s.big), txt('span', 'br-stn-s', s.sub));
+    if (s.pct !== undefined) { const pb = C.el('span', 'br-pb'); const f = C.el('i', 'br-kf'); f.style.width = Math.max(0, Math.min(100, s.pct)) + '%'; pb.appendChild(f); b.appendChild(pb); }
+    b.setAttribute('aria-label', 'Step ' + (i + 1) + ' of 4, ' + s.name + ': ' + s.big + '. ' + s.sub);
+    b.addEventListener('click', () => openPage('step', s.k));
+    wrap.appendChild(b);
+  }
+  const ready = st[3].state === 'done';
+  const stat = C.el('p', 'br-stat');
+  if (ready) stat.append(txt('b', null, 'You are ready to use the Tool now.'), document.createTextNode(' It keeps up every day; if anything slips, the step drops back and says why.'));
+  else if (st[2].state !== 'done') stat.append(txt('b', null, 'Findable, not understood yet.'), document.createTextNode(' Search works; counting, totaling and comparing need step 3.'));
+  else stat.append(txt('b', null, 'Still learning.'), document.createTextNode(' Answers may be incomplete until it is ready.'));
+  const horse = C.el('div', 'br-horse');
+  for (const [ic, n, w] of [['find', 'Find', 'reads everything once, so you can search all of it by meaning.'], ['tag', 'Understand', 'turns each email and file into facts: who, what, how much, when.'], ['chat', 'Reason', 'answers you from those facts, with the proof.']]) {
+    const d = C.el('div', 'br-hz'); const t = C.el('span'); t.append(txt('b', null, n), document.createTextNode(' ' + w)); d.append(sym(ic), t); horse.appendChild(d);
+  }
+  const chips = C.el('div', 'br-chips');
+  if (R.owner && st[2].state !== 'done') { const u = C.el('button', 'go'); u.type = 'button'; u.textContent = 'Make it understood'; u.addEventListener('click', () => { showTab('ai'); C.$('#br-start')?.scrollIntoView({ block: 'start' }); }); chips.appendChild(u); }
+  const how = C.el('button', 'go ghost'); how.type = 'button'; how.textContent = 'How your brain works'; how.addEventListener('click', () => C.openStory());
+  const bel = C.el('button', 'go ghost'); bel.type = 'button'; bel.textContent = 'What your Tool believes about your business'; bel.addEventListener('click', () => C.goto('s-recognition'));
+  chips.append(how, bel);
+  const asof = R.road?.as_of ? txt('p', 'br-small br-note', 'Counted ' + when(R.road.as_of) + '.') : txt('p', 'br-small br-note', R.roadErr ? 'The counts could not be read just now: ' + String(R.roadErr) + '. It tries again on its own.' : ' ');
+  box.replaceChildren(wrap, stat, horse, chips, asof);
+}
+
+function needList(R) {
+  const rows = rowsOf(R).filter((r) => r.state === 'needs_you');
+  return rows;
+}
+function paintNeeds(R) {
+  const box = C.$('#br-needs'), h = C.$('#br-need-h');
+  if (!box || !h) return;
+  if (R.srcErr || (R.src && !R.src.ok)) { h.textContent = 'Needs you'; box.replaceChildren(txt('p', 'br-small', 'Your sources could not be read just now. This is the reading failing, not your brain being empty. It tries again on its own.')); return; }
+  if (!R.src) { h.textContent = 'Needs you'; box.replaceChildren(txt('p', 'br-small', 'Reading')); return; }
+  const need = needList(R);
+  h.textContent = need.length ? (need.length === 1 ? '1 thing needs you' : need.length + ' things need you') : 'Nothing needs you';
+  const out = [];
+  for (const r of need) {
+    const d = C.el('div', 'br-nd');
+    const w = C.el('span', 'br-nd-w'); w.appendChild(C.el('span', 'br-dot br-bad'));
+    const t = C.el('span'); t.appendChild(document.createTextNode((r.name ? r.name + ': ' : '') + (r.line || 'needs you.')));
+    w.appendChild(t); d.appendChild(w);
+    if (r.action) {
+      const b = C.el('button', 'go'); b.type = 'button'; b.textContent = r.action;
+      b.addEventListener('click', () => C.viewDeps().act(r, () => openPage(squareOf(r)?.key ?? 'mail'), b));
+      d.appendChild(b);
+    }
+    out.push(d);
+  }
+  if (!out.length) out.push(txt('p', 'br-small', 'Nothing is waiting on you. When something does, it shows here with the one press that fixes it.'));
+  box.replaceChildren(...out);
+}
+
+function paintHealth(R) {
+  const b = C.$('#br-healthline');
+  if (!b) return;
+  const H = R.health;
+  const dot = C.el('span', 'br-dot');
+  let say;
+  if (R.healthErr || (H && H.ok === false && !H.word)) { dot.classList.add('br-off'); say = 'Health: not checked. It could not be read just now.'; }
+  else if (!H) { dot.classList.add('br-off'); say = 'Health: checking.'; }
+  else {
+    dot.classList.add(H.overall === 'healthy' ? 'br-ok' : H.overall === 'needs_you' || H.overall === 'stopped' ? 'br-bad' : 'br-yel');
+    const fixed = (H.repairs ?? []).length;
+    say = 'Health: ' + String(H.word || 'checked').toLowerCase() + '.' + (fixed ? ' ' + num(fixed) + (fixed === 1 ? ' thing' : ' things') + ' fixed by the Tool in the last day.' : '') + (H.checked_at ? ' Checked ' + when(H.checked_at) + '.' : '');
+  }
+  const t = txt('span', 'br-hl-t', say);
+  b.replaceChildren(dot, t, txt('span', 'br-small br-right', 'Open'));
+  b.setAttribute('aria-label', say + ' Open Health.');
+}
+
+// GETTING STARTED, one time (1112): making findable and understanding the past, priced and approved by her press, not
+// counted against the monthly limit. The understanding price is the what-it-knows sizing until seat understand-reader
+// measures it live; no Go button until that reader is wired (1115: every Go works for real, its price shown first).
+function paintStart(R) {
+  const box = C.$('#br-start');
+  const tb = document.querySelector('#br-tabs [data-btab=ai]');
+  if (tb) tb.hidden = !R.owner;
+  if (!R.owner && tabNow === 'ai') showTab('brain');
+  if (!box) return;
+  const d = R.road;
+  const out = [txt('h2', 'br-ph', 'Getting started ' + DOT + ' one time'),
+    txt('p', 'br-small', 'Reading and understanding your past once, so the Tool knows your business. You approve its price before it starts; it does not count against your monthly limit.')];
+  if (!d) { out.push(txt('p', 'br-small', R.roadErr ? 'Could not be read just now: ' + String(R.roadErr) + '.' : 'Reading')); box.replaceChildren(...out); return; }
+  const F = d.findable, M = d.mail, U = d.understood;
+  // per email $0.012 to $0.020: seat what-it-knows' sizing from measured lengths and the reading model's price (report section 3)
+  const lo = (n) => usd0(Math.round(Number(n) * 0.012 / 10) * 10), hi = (n) => usd0(Math.round(Number(n) * 0.020 / 10) * 10);
+  const l1 = C.el('div', 'br-line');
+  const a = C.el('span', 'br-line-l'); a.append(txt('b', null, 'Make findable'), C.el('br'),
+    txt('span', 'br-small', Number(F.left) === 0 ? 'Done: everything since ' + String(M.from).slice(0, 4) + ' can be found.' : 'Everything since ' + String(M.from).slice(0, 4) + ' ' + DOT + ' ' + num(F.pct) + '% ' + DOT + ' ' + num(F.left) + ' left, mostly mail attachments. The Tool does this by itself, at a few dollars in all.'));
+  const pb = C.el('span', 'br-pb'); const fi = C.el('i', 'br-kf'); fi.style.width = Math.max(0, Math.min(100, Number(F.pct))) + '%'; pb.appendChild(fi); a.appendChild(pb);
+  l1.appendChild(a);
+  const l2 = C.el('div', 'br-line'); l2.id = 'br-und';
+  const b = C.el('span', 'br-line-l');
+  b.append(txt('b', null, 'Understand'), C.el('br'),
+    txt('span', 'br-small', 'So far ' + num(U.mail) + ' emails and ' + num(U.files) + ' files are understood (facts with the sentence they came from), and ' + num(U.records) + ' people from your records. Suggested: the last 2 years of email, ' + num(M.emails_2y) + ' emails, about ' + lo(M.emails_2y) + ' to ' + hi(M.emails_2y) + ' (all ' + num(M.emails) + ': about ' + lo(M.emails) + ' to ' + hi(M.emails) + '; about half with overnight pricing).'),
+    C.el('br'),
+    txt('span', 'br-small', 'These prices are an estimate from measured sizes. The exact price and time come when the reader is measured on your own mail, and are shown before anything starts. The Go button appears then; nothing is understood until you press it.'));
+  l2.appendChild(b);
+  out.push(l1, l2, txt('p', 'br-small br-note', 'When this is done, it says Getting started: done and folds away.'));
+  box.replaceChildren(...out);
 }
 
 function paint() {
