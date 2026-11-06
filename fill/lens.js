@@ -17,7 +17,7 @@ import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
 import { removeControl, readChooser } from "./sources.js?v=2026-10-28-brain-and-drives"; // remove a source, choose how older mail is read (seat sources-basics)
 import { readSources, drawCounts, drawSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-05-brain-tab-room"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
-import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-05-brain-tab-room"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
+import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-06-brain-status"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 // BRAIN AND DRIVES FROM ONE READING (seat brain-and-drives, 2026-10-28, decision 1030): sources_view, asked once per brain
 // reading (fresh) and shared by the counts, the Sources list, the count under Brain's heading and the Drives tab.
@@ -70,7 +70,10 @@ function drawBrain(fresh) {
   drawCounts($('#brain-counts'), d);
   drawSources($('#src-list'), d);
   if ($('#s-drives') && !$('#s-drives').hidden) drawDrives($('#drives-places'), d);
-  if ($('#s-summary') && !$('#s-summary').hidden && !roomPageOpen()) { room(); drawRoom(fresh); }   // seat brain-tab-room: the room follows each reading
+  // seat brain-status-build (decision 1110): the room reads on every reading, not only when Brain is open, because the
+  // masthead Brain button and the line under the tabs show its state on every screen. A page open in the side panel is
+  // left as it is.
+  if (!roomPageOpen()) { room(); drawRoom(fresh); }
 }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
@@ -3755,7 +3758,7 @@ async function loadSecurity() {
 let routed = false;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
 const hasSetupMark = () => { try { return !!localStorage.getItem("tool.setup.return"); } catch (_) { return false; } };   // setup.js RETURN_KEY
-const setupReturning = () => import("./setup.js?v=2026-11-05-brain-tab-setup-2").then((S) => S.returning()).catch(() => false);
+const setupReturning = () => import("./setup.js?v=2026-11-06-brain-status").then((S) => S.returning()).catch(() => false);
 async function routeOnState(mode) {
   if (routed) return;                           // this chooses the OPENING screen, once
   if (userMoved) return;                        // never move someone who has chosen
@@ -3777,7 +3780,7 @@ async function routeOnState(mode) {
   // source opens the setup (fill/setup.js), as does #setup, and so does coming back from a sign-in started on its Connect
   // step. SUPERSEDED: the old s-intro as the first screen of a signed-in brain with nothing connected; s-intro stays the
   // screen for nobody signed in (above). #how opens How the Tool works over whatever screen this lands on.
-  if (location.hash === "#how") import("./setup.js?v=2026-11-05-brain-tab-setup-2").then((S) => S.openStory()).catch(() => { /* the story is extra; the screen still lands */ });
+  if (location.hash === "#how") import("./setup.js?v=2026-11-06-brain-status").then((S) => S.openStory()).catch(() => { /* the story is extra; the screen still lands */ });
   if (location.hash === "#setup") { goto("s-setup"); return; }
   const connected = connectedCount();
   // The module is fetched only when this browser holds the marker, so an ordinary opening waits on nothing new.
@@ -3825,7 +3828,7 @@ function goto(id, key) {
     showSubtabs(sec, 'drives', shape?.viewer?.email);
     drawBrain(false);
   }
-  if (id === 's-setup') import('./setup.js?v=2026-11-05-brain-tab-setup-2').then((S) => S.mount({ sec: $('#s-setup'), shape: () => shape, openConnect, goTab, readEstimate }, key)).catch((e) => { const m = $('#s-setup'); if (m) m.textContent = 'The setup could not be loaded: ' + String(e?.message ?? e); });   // seat brain-tab-setup
+  if (id === 's-setup') import('./setup.js?v=2026-11-06-brain-status').then((S) => S.mount({ sec: $('#s-setup'), shape: () => shape, openConnect, goTab, readEstimate }, key)).catch((e) => { const m = $('#s-setup'); if (m) m.textContent = 'The setup could not be loaded: ' + String(e?.message ?? e); });   // seat brain-tab-setup
   if (id === "s-tests") loadTests();
   if (id === "s-totest") import("./totest.js?v=2026-10-29-ask-agent").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + String(e?.message ?? e); });   // seat test-list
   if (id === "s-security") loadSecurity();
@@ -3860,13 +3863,54 @@ function room() {
     aiBlocks: roomBlocks,
     door: (key) => { userMoved = true; const [t, sub] = String(key).split('/'); if (sub) { location.hash = '#' + t + '/' + sub; if (document.body.dataset.tab !== t) goTab(t); } else goTab(t); },
     connectSystem: (name) => connectSystem(name),
-    openStory: () => import('./setup.js?v=2026-11-05-brain-tab-setup-2').then((S) => S.openStory()).catch(() => goto('s-intro')),   // How the Tool works (seat brain-tab-setup)
+    openStory: () => import('./setup.js?v=2026-11-06-brain-status').then((S) => S.openStory()).catch(() => goto('s-intro')),   // How the Tool works (seat brain-tab-setup)
     // Add a source: the part that was Brain's third sub-tab moves onto the room's page, and back when the page closes.
     openAdd: (host) => { const part = $('#s-summary [data-sub="add"]'); if (!part) return null; const home = part.parentElement, next = part.nextSibling; host.appendChild(part); part.hidden = false; if (!$('#connect-stage').children.length) stageTypes(); return { part, home, next }; },
-    closeAdd: (m) => { if (m?.home) m.home.insertBefore(m.part, m.next); } });
+    closeAdd: (m) => { if (m?.home) m.home.insertBefore(m.part, m.next); },
+    onState: drawEngine });
   // the AI tab's own blocks (the three lines, the limit, the balance), so the room's money pages are the AI tab's
   import('./ai.js?v=2026-11-05-brain-tab-room').then((A) => { Object.assign(roomBlocks, { boughtLines: A.boughtLines, limitBlock: A.limitBlock, balance: A.balance }); }).catch(() => { /* the pages say so */ });
 }
+// THE BRAIN BUTTON IN THE MASTHEAD AND THE LINE UNDER THE TABS (seat brain-status-build, decision 1110). The engine light:
+// on every screen and the phone, its state in words and a ring that fills (Ready green; Learning, step N of 4 yellow; Needs
+// you (n) red; Stopped red). Pressing it opens the Brain. While not Ready, one line under the tabs says so in words. The
+// state is brainroom.js's own (brainState), from the same readings the Brain page shows, so the two cannot disagree.
+function drawEngine(st) {
+  if (!st) return;
+  const head = $('.masthead');
+  if (!head) return;
+  let b = $('#brain-engine');
+  if (!b) {
+    b = el('button', 'engine'); b.type = 'button'; b.id = 'brain-engine';
+    b.addEventListener('click', () => { userMoved = true; goTab('brain'); });
+    const mark = head.querySelector('.wordmark');
+    if (mark && mark.nextSibling) head.insertBefore(b, mark.nextSibling); else head.appendChild(b);
+  }
+  const tone = st.kind === 'ready' ? 'ok' : st.kind === 'learning' ? 'yel' : 'bad';
+  b.className = 'engine engine-' + tone;
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '0 0 36 36'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('class', 'engine-ring');
+  const done = st.kind === 'ready' ? 4 : Math.max(0, st.step - 1) + 0.5;
+  const ring = (cls, dash) => { const c = document.createElementNS(NS, 'circle'); for (const [k, v] of [['cx', '18'], ['cy', '18'], ['r', '15'], ['fill', 'none'], ['class', cls], ['stroke-width', '4']]) c.setAttribute(k, v); if (dash) { c.setAttribute('stroke-linecap', 'round'); c.setAttribute('transform', 'rotate(-90 18 18)'); c.setAttribute('stroke-dasharray', dash); } return c; };
+  svg.append(ring('engine-bg'), ring('engine-fg', (94.2 * done / 4).toFixed(1) + ' 95'));
+  const t = el('span', 'engine-t');
+  const w = el('b'); w.textContent = 'Brain ' + String.fromCharCode(183) + ' ' + st.word;
+  const sm = el('small'); sm.textContent = st.kind === 'ready' ? 'Everything you chose is understood' : st.kind === 'stopped' ? 'Answers are not reliable until it is fixed' : 'Step ' + st.step + ' of 4 ' + String.fromCharCode(183) + ' answers may be incomplete';
+  t.append(w, sm);
+  b.replaceChildren(svg, t);
+  b.setAttribute('aria-label', 'Your brain: ' + st.word + '. ' + sm.textContent + '. Open your Brain');
+  let line = $('#brain-banner');
+  if (!line) { line = el('p', 'brain-banner'); line.id = 'brain-banner'; line.setAttribute('role', 'status'); $('#tabs')?.insertAdjacentElement('afterend', line); }
+  line.hidden = st.kind === 'ready';
+  if (st.kind !== 'ready') {
+    const lead = el('b');
+    lead.textContent = st.kind === 'stopped' ? 'Your Tool has stopped, so answers are not reliable.' : 'Your Tool is still learning, so it is only half running.';
+    const go = el('button', 'brain-banner-go'); go.type = 'button'; go.textContent = 'See what is left';
+    go.addEventListener('click', () => { userMoved = true; goTab('brain'); });
+    line.replaceChildren(lead, document.createTextNode(' Search works. Answers that count, total or compare will be incomplete until it is ready. '), go);
+  }
+}
+
 // A system pressed on the room's grouped Add a system list: the same steps as pressing it on the connect stage.
 function connectSystem(name) {
   const p = PICKERS.systems;
@@ -3905,17 +3949,20 @@ const GROUP_TAB = (k, label) => ({ key: k, label: label ?? GROUPS.find((g) => g.
 // opens in one press from a square or layer of the Brain tab, as the same page it was, with a way back to Brain. They stay in
 // TABS (door: true) so goTab, #links and the remembered tab still reach them; drawTabs leaves them out of the row.
 // Money reads Accounting on the row (decision 1077); its key stays money, so #money/<part> links still work.
-const TABS = [GROUP_TAB('email', 'Mail'), { key: 'thoughts', label: 'Thinkrooms' }, { key: 'work', label: 'Work' }, { key: 'money', label: 'Accounting', owner: true },
-  { ...GROUP_TAB('drives', 'Drives'), door: true }, GROUP_TAB('calendar'), GROUP_TAB('contacts'), { key: 'marketing', label: 'Marketing and sales' },   // Marketing and sales: seat job-alerts, 2026-10-30, decision 1039 (fill/marketing.js)
+// seat brain-status-build (2026-11-06): the picture's order. BRAIN LEAVES THE ROW (decision 1110): it is the button in the
+// masthead now; goTab('brain'), #brain links and the remembered tab still reach it. THE DRIVE TAB RETURNS (decision 1112,
+// reverses the tab part of 1079): for now it is the s-drives page as it is; its own picture comes later.
+const TABS = [GROUP_TAB('email', 'Mail'), GROUP_TAB('drives', 'Drive'), GROUP_TAB('calendar'), GROUP_TAB('contacts'), { key: 'thoughts', label: 'Thinkrooms' }, { key: 'work', label: 'Work' }, { key: 'money', label: 'Accounting', owner: true },
+  { key: 'marketing', label: 'Marketing and sales' },   // Marketing and sales: seat job-alerts, 2026-10-30, decision 1039 (fill/marketing.js)
   // THE AGENTS TAB (seat agents-tab, 2026-11-05, decisions 1092-1102): her team of seven experts, between Marketing and sales and Brain; drawn by fill/agents.js.
   { key: 'agents', label: 'Agents' },
-  { key: 'brain', label: 'Brain' }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
+  { key: 'brain', label: 'Brain', door: true }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
   { ...GROUP_TAB('systems'), door: true }, { ...GROUP_TAB('loose'), door: true },
   // THE AI TAB (seat ai-tab, 2026-10-23, decision 1007; working name, Alex may rename): owner only, drawn by fill/ai.js.
   { key: 'ai', label: 'AI', owner: true, door: true }];
 const TAB_KEY = 'tool.tab';
 // The daily tabs: on a phone these sit in the bottom bar; the rest go under More (seat phone, 2026-10-13).
-const DAY_TABS = ['email', 'work', 'calendar', 'contacts'];   // Drives left for a door inside Brain (seat brain-tab-room)   // Thoughts sits under More on a phone: a seventh slot clipped its name and Calendar's (seat thoughtgram, measured at 390 px)
+const DAY_TABS = ['email', 'drives', 'calendar', 'contacts'];   // Drives left for a door inside Brain (seat brain-tab-room)   // Thoughts sits under More on a phone: a seventh slot clipped its name and Calendar's (seat thoughtgram, measured at 390 px)
 function goTab(key) {
   if (key === 'brain') goto('s-summary'); else if (key === 'drives') goto('s-drives'); else if (key === 'work') goto('s-work');
   else if (key === 'security') goto('s-security'); else if (key === 'money') goto('s-money'); else if (key === 'chats') goto('s-chats'); else if (key === 'thoughts') goto('s-thoughts'); else goto('s-lens', key);
