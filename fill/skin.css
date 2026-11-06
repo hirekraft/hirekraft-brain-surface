@@ -2615,6 +2615,10 @@ body.br-panel-open { overflow: hidden; }
     font-size: var(--t-small); font-weight: var(--w-mid); box-shadow: 0 6px 18px var(--shadow-c);
   }
   .tabs.more-open .tab-ask, body[data-tab='work'] .tabs .tab-ask, body[data-panel] .tabs .tab-ask { display: none; }
+  /* seat vera-on-brain-2: Vera takes the round Ask button's place above the bar, 64px, thumb-sized; the panel is the whole screen. */
+  body .vera-btn { right: 16px; bottom: calc(56px + 14px + env(safe-area-inset-bottom)); width: 64px; height: 64px; padding: 0; justify-content: center; position: fixed; }
+  body .vera-btn .vera-dot { position: absolute; top: 10px; right: 12px; }
+  .vera-acts .go { flex: 1 1 100%; }
   /* The conversation and its "put away" tab sit over the bar, never under it. */
   .panel-tab { top: auto; bottom: calc(64px + 96px + env(safe-area-inset-bottom)); transform: none; }
 
@@ -2873,3 +2877,33 @@ body.br-panel-open { overflow: hidden; }
 .mailx-in-work[hidden] { display: none; }
 .mailx-in-work .mailx-toggle { margin-top: 0; }
 .work-order-bench:not(:empty) { margin-top: var(--gap); }
+
+/* ── VERA, THE GUIDE (seat vera-on-brain-2, 2026-11-06, decisions 1113, 1115, 1116; fill/vera.js). One button bottom right on
+   every screen, a dot while the Brain is not Ready; it opens THE conversation panel (no second panel), whose top line says
+   what she is looking at; her greeting and the Tool's own buttons sit in the conversation. REPLACES the round phone Ask
+   button (.tab-ask, hidden here; lens.js still draws it and vera.js presses it to open the panel, one way in). Phone rules
+   in A PHONE IS A FIRST-CLASS SIZE. Tokens only. ── */
+.vera-btn {
+  position: fixed; right: 24px; bottom: 24px; z-index: 46; display: inline-flex; align-items: center; gap: calc(var(--u) * 2);
+  min-height: 48px; min-width: 48px; padding: 0 calc(var(--u) * 5); border: 0; border-radius: 999px; background: var(--act); color: var(--on-act);
+  font: inherit; font-size: var(--t-small); font-weight: var(--w-mid); box-shadow: 0 6px 18px var(--shadow-c); cursor: pointer;
+}
+.vera-btn:hover, .vera-btn:focus-visible { filter: brightness(1.08); }
+.vera-dot { display: none; width: 9px; height: 9px; border-radius: 50%; background: var(--paper); box-shadow: 0 0 0 2px var(--act); }
+.vera-btn.has .vera-dot { display: inline-block; }
+body[data-panel] .vera-btn { display: none; }
+/* With a Brain side panel open she can still be asked about it: her button sits over it, her panel over it on a phone and
+   beside it on a wide screen (the side panel moves left of the conversation). */
+body.br-panel-open .vera-btn { z-index: 62; }
+body.br-panel-open .panel { z-index: 63; }
+@media (min-width: 1101px) { body.br-panel-open[data-panel] #br-page.br-page { right: var(--panel-w); } }
+.tabs .tab-ask { display: none !important; }
+.vera-look { margin: 0 0 var(--gap); font-size: var(--t-small); color: var(--ink-3); overflow-wrap: anywhere; }
+.vera-look b { color: var(--act); font-weight: var(--w-strong); }
+.vera-turn { display: grid; gap: calc(var(--u) * 2); margin: 0 0 var(--gap); padding: calc(var(--u) * 3.5) calc(var(--u) * 4); border-radius: var(--radius-lg); background: var(--act-soft); min-width: 0; overflow-wrap: anywhere; }
+.vera-turn p { margin: 0; }
+.vera-who { font-weight: var(--w-strong); color: var(--act); font-size: var(--t-small); }
+.vera-small { font-size: var(--t-small); color: var(--ink-3); }
+.vera-acts { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); }
+.vera-acts .go { margin: 0; min-height: var(--tap); white-space: normal; text-align: left; }
+.vera-here { outline: 3px solid var(--act); outline-offset: 3px; }
