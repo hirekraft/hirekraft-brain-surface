@@ -225,12 +225,12 @@ const STEPS = [
     return [
       h('div', '', ART.understand),
       h('h1', '', 'Choose how far back the Tool should really understand.'),
-      para('New mail is always understood. For the past, you choose, and each choice shows its price.'),
+      para('New mail is always read and sorted (what kind it is, who may see it). For the past, you choose, and each choice shows its price.'),
       strong('Your own prices', 'for your mail, counted in your mailboxes:', 'su-small'),
       per,
-      para('One time. After that, only new items are understood, a much smaller amount each month. You choose this for each mailbox on the Brain tab, under Sources, where every choice shows its price first.', 'su-small su-soft'),
+      para('One time. After that, only new items are read, a much smaller amount each month. You choose this for each mailbox on the Brain tab, under Sources, where every choice shows its price first.', 'su-small su-soft'),
       bubble('Why not everything?', 'Most questions are about the last two years, and older items stay findable.',
-        ['When you ask about something older, the Tool reads it on the spot and keeps it understood from then on, so you only pay for what you actually use.',
+        ['When you ask about something older, the Tool reads it on the spot and keeps it findable from then on, so you only pay for what you actually use.',
           'You can understand more at any time from the Brain tab.']),
     ];
   } },
