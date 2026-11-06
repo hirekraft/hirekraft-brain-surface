@@ -15,9 +15,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 // ONE WAY THE SCREEN WRITES A DATE, and the one time zone (seat calendar-contacts, 2026-10-22): fill/dates.js.
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
-import { removeControl, readChooser } from "./sources.js?v=2026-10-28-brain-and-drives"; // remove a source, choose how older mail is read (seat sources-basics)
-import { readSources, drawCounts, drawSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-05-brain-tab-room"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
-import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-06-brain-status"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
+import { removeControl, readChooser } from "./sources.js?v=2026-11-06-brain-status-2"; // remove a source, choose how older mail is read (seat sources-basics)
+import { readSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-05-brain-tab-room"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
+import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-06-brain-status-2"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 // BRAIN AND DRIVES FROM ONE READING (seat brain-and-drives, 2026-10-28, decision 1030): sources_view, asked once per brain
 // reading (fresh) and shared by the counts, the Sources list, the count under Brain's heading and the Drives tab.
@@ -66,9 +66,8 @@ async function sourceAct(r, details, btn) {
 }
 function drawBrain(fresh) {
   const d = viewDeps();
-  readSources(sb, fresh).then((v) => { const c = $('#sum-count'); if (c && v?.ok) c.textContent = `${Number(v.counts?.total ?? 0).toLocaleString('en-US')} ${v.counts?.total === 1 ? 'source' : 'sources'} connected`; }).catch(() => {});
-  drawCounts($('#brain-counts'), d);
-  drawSources($('#src-list'), d);
+  // seat brain-status-2 (2026-11-06): the counts and the Sources list of the retired #brain-old are no longer drawn; the room
+  // (fill/brainroom.js) shows the same sources_view rows in its squares and side panels.
   if ($('#s-drives') && !$('#s-drives').hidden) drawDrives($('#drives-places'), d);
   // seat brain-status-build (decision 1110): the room reads on every reading, not only when Brain is open, because the
   // masthead Brain button and the line under the tabs show its state on every screen. A page open in the side panel is
@@ -88,7 +87,7 @@ import { initWorkTab, drawOpenWork, countOpenWork, findOrder, orderTop, orderAnc
 import { foundCard } from "./find.js?v=2026-10-29-thinkrooms"; // find first, then work on what was found (seat find-first)
 import { closeCard } from "./close.js?v=2026-10-26-month-end-2"; // the month-end check, corrected cell by cell (seat month-end)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-27-people-and-access"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-10-27-people-and-access"; // sub-tab row and People and access (seat people-and-access)
-import { initChats, loadChats } from "./chats.js?v=2026-11-05-any-brain"; // Chats tab (seat chat-import)
+import { initChats, loadChats, connectPart } from "./chats.js?v=2026-11-06-brain-status-2"; // Chats tab (seat chat-import)
 import { initMoney, loadMoney } from "./money.js?v=2026-11-03-screen-rollback"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
 
@@ -312,7 +311,7 @@ async function readBrain(opts = {}) {
     lastPrint = null;
     return true;
   } finally {
-    tree.setAttribute("aria-busy", "false");
+    if (tree) tree.setAttribute("aria-busy", "false");
   }
 }
 
@@ -338,7 +337,7 @@ function renderState(state, detail) {
   readingState = state;
   const box = $("#live-state");
   const who = $("#whoami");
-  box.innerHTML = "";
+  if (box) box.innerHTML = "";
   const b = el("div", "banner");
 
   if (state === "live") {
@@ -367,7 +366,7 @@ function renderState(state, detail) {
       + `${detail ? ` &mdash; ${escape(detail)}` : ""}</span>`;
     blankSkeletons("could not reach");
   }
-  box.appendChild(b);
+  if (box) box.appendChild(b);
   // Every reading ends here, so an open source tab is redrawn from it (seat tool-tabs), EXCEPT a tab whose screen
   // keeps its own state (seat conversation-panel, round 4; Alex 2026-10-13: the Contacts card "is somehow always
   // reloading"). Those draw on tab entry only; a reading may refresh what beside them comes from the reading.
@@ -393,9 +392,7 @@ function renderWho() {
   $("#whoami").innerHTML = `<b translate="no">${escape(v.name)}</b><br><span translate="no">${escape(v.role ?? "")}</span>`;
   initWords({ sb, url: SUPABASE_URL, key: PUBLISHABLE_KEY });   // the language switch beside her name (seat language-and-nudge)
   initLooks({ sb });   // the Look switch beside it, her look from the brain (seat looks)
-  $("#sum-head").textContent = v.all_access
-    ? "What is in it."
-    : "What is in it, as far as you reach.";
+  // seat brain-status-2: the heading "What is in it." left with the retired #brain-old.
   // The one-line count under the heading: what the reading itself lists, never recounted here.
   // seat brain-and-drives 2026-10-28: the count line is written by drawBrain from sources_view (one count everywhere, decision 1030).
   // The Tests and To test buttons left the customer's screen (seat brain-and-drives, decision 1030); #tests and #totest still open them.
@@ -415,7 +412,7 @@ function renderWho() {
 // ── the tree: structure first, then the reading lands into it ────────────────
 
 function drawTreeFrame(sel = "#tree", pfx = "") {
-  const tree = $(sel);
+  const tree = typeof sel === "string" ? $(sel) : sel;
   if (!tree) return;
   tree.innerHTML = "";
   for (const g of GROUPS) {
@@ -447,7 +444,7 @@ function drawTreeFrame(sel = "#tree", pfx = "") {
 function groupsFor() { return shape?.groups ?? []; }
 
 function fillTree(sel = "#tree", pfx = "") {
-  const root = $(sel);
+  const root = typeof sel === "string" ? $(sel) : sel;
   if (!root) return;
   for (const g of GROUPS) {
     const data = groupsFor(pfx).find((x) => x.key === g.key);
@@ -3834,7 +3831,7 @@ function goto(id, key) {
   if (id === "s-security") loadSecurity();
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
   onMail = id === 's-lens' && lensKey === 'email';
-  if (id === 's-summary') import('./first.js?v=2026-10-27-first-answer').then((F) => F.drawFirst({ sb, el, $ })).catch((e) => { const m = $('#first-answer'); if (m) m.textContent = 'The short answer could not be loaded: ' + String(e?.message ?? e); });   // seat first-answer
+  // seat brain-status-2: the first answer (first.js) left with #brain-old; the road replaces it (inventory row 34).
   workPanel(id === 's-work');
   if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney(); showSubtabs($('#s-money'), 'money', shape?.viewer?.email);   // seat tab-split
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
@@ -3866,7 +3863,14 @@ function room() {
     openStory: () => import('./setup.js?v=2026-11-06-brain-status').then((S) => S.openStory()).catch(() => goto('s-intro')),   // How the Tool works (seat brain-tab-setup)
     // Add a source: the part that was Brain's third sub-tab moves onto the room's page, and back when the page closes.
     openAdd: (host) => { const part = $('#s-summary [data-sub="add"]'); if (!part) return null; const home = part.parentElement, next = part.nextSibling; host.appendChild(part); part.hidden = false; if (!$('#connect-stage').children.length) stageTypes(); return { part, home, next }; },
-    closeAdd: (m) => { if (m?.home) m.home.insertBefore(m.part, m.next); },
+    closeAdd: (m) => { if (m?.home) { m.home.insertBefore(m.part, m.next); m.part.hidden = true; } },
+    // the side panels (seat brain-status-2): the Drives tabs, Loose files counting, Connect an assistant, the Google
+    // sign-in and the adopt-a-mailbox offer, each drawn by the part that already draws it, into the panel
+    drawDrives: (box, d) => drawDrives(box, { ...d, choose: () => stageDrivePicker(driveAccountKey()) }), drawOrganize,
+    stageLoose: (host) => stageLoose(host),
+    connectAssistant: (host) => { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY, name: BRAIN.name }); return connectPart(host); },
+    googleSignin: (host) => import('./google.js?v=2026-10-22-dates').then((G) => G.drawGoogleSignin(host, { sb, el, connect: googleConnect })).catch((e) => { host.textContent = 'Your Google sign-in could not be shown: ' + String(e?.message ?? e); }),
+    adopt: () => fillAdoptable(),
     onState: drawEngine });
   // the AI tab's own blocks (the three lines, the limit, the balance), so the room's money pages are the AI tab's
   import('./ai.js?v=2026-11-05-brain-tab-room').then((A) => { Object.assign(roomBlocks, { boughtLines: A.boughtLines, limitBlock: A.limitBlock, balance: A.balance }); }).catch(() => { /* the pages say so */ });
@@ -4086,8 +4090,10 @@ function drawLens() {
     body.append(line, b);
     return;
   }
-  // The same one-line overview the Brain tab's list shows, copied rather than recounted.
-  const cell = $(`#tree [data-group='${lensKey}'] [data-shape]`);
+  // The group's one-line overview, from the same reading. seat brain-status-2: the old tree it was copied from left with
+  // #brain-old, so the same two functions draw it into a tree that is never in the page.
+  const off = el("div"); drawTreeFrame(off); if (shape) fillTree(off);
+  const cell = off.querySelector(`[data-group='${lensKey}'] [data-shape]`);
   line.innerHTML = cell ? cell.innerHTML : '';
   const list = el('div');
   body.append(line, list);
