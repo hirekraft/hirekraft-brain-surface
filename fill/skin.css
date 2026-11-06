@@ -2387,6 +2387,7 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
 .br-healthline .br-dot { margin-top: 0; }
 .br-hl-t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .br-healthline .br-right { flex: none; white-space: nowrap; }
+.br-sq .br-t, .br-sq .br-l { overflow-wrap: anywhere; }
 .br-cent { margin: 0; background: var(--money-soft); color: var(--ink); border-radius: var(--radius-lg); padding: calc(var(--u) * 3) calc(var(--u) * 3.5); overflow-wrap: anywhere; }
 .br-start, .br-month { cursor: default; }
 .br-start:hover, .br-month:hover { border-color: var(--line); }
