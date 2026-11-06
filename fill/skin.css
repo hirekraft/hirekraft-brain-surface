@@ -2395,6 +2395,30 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
 #br-page.br-page { position: fixed; top: 0; right: 0; height: 100%; width: min(560px, 100%); max-width: none; background: var(--paper); border-left: 1px solid var(--line); z-index: 61; overflow: auto; padding: calc(var(--u) * 4.5) calc(var(--u) * 5.5) calc(var(--u) * 10); box-shadow: -8px 0 30px var(--shadow-c); }
 #br-page .br-back { position: sticky; top: 0; align-self: flex-end; z-index: 2; }
 body.br-panel-open { overflow: hidden; }
+/* The two presses and the source panels (seat brain-status-2, 2026-11-06; picture): choose per source how far back, the
+   total with its price and Go, the preview with Yes, progress lines, the Drives panel's two tabs, folds. */
+.br-line-col { flex-direction: column; align-items: stretch; }
+.br-line-col > .br-line-l, .br-line-col > .br-press { flex: none; }
+.br-press { display: flex; flex-direction: column; gap: calc(var(--u) * 2.5); min-width: 0; }
+.br-press:empty { display: none; }
+.br-srcch { display: flex; flex-direction: column; gap: calc(var(--u) * 1.5); min-width: 0; }
+.br-srcch-n { font-size: var(--t-small); }
+.br-seg { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: calc(var(--u) * 1.5); min-width: 0; }
+.br-segb { border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: var(--radius); padding: 8px 12px; font: inherit; text-align: left; display: flex; flex-direction: column; gap: 2px; min-height: 44px; cursor: pointer; min-width: 0; overflow-wrap: anywhere; }
+.br-segb small { font-size: var(--t-micro); color: var(--ink-3); }
+.br-segb.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); font-weight: var(--w-strong); }
+.br-segb:disabled { opacity: .55; cursor: default; }
+.br-total { display: flex; justify-content: space-between; align-items: center; gap: calc(var(--u) * 3); flex-wrap: wrap; background: var(--paper-2); border-radius: var(--radius-lg); padding: calc(var(--u) * 3) calc(var(--u) * 3.5); min-width: 0; }
+.br-total-t { flex: 1 1 260px; min-width: 0; overflow-wrap: anywhere; }
+.br-total .go { margin-top: 0; }
+.br-confirm { display: flex; flex-direction: column; gap: calc(var(--u) * 2); border: 1px solid var(--warn); background: var(--warn-soft); border-radius: var(--radius-lg); padding: calc(var(--u) * 3); min-width: 0; overflow-wrap: anywhere; }
+.br-confirm p { margin: 0; }
+.br-prog { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.br-said { overflow-wrap: anywhere; }
+.br-ptabs { display: flex; gap: calc(var(--u) * 1.5); flex-wrap: wrap; }
+.br-fold > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.br-live { font-size: var(--t-small); color: var(--ink-3); margin-top: calc(var(--u) * 3); overflow-wrap: anywhere; }
+.br-adopt:empty { display: none; }
 /* The Brain button in the masthead and the line under the tabs (decision 1110). */
 .engine { display: inline-flex; align-items: center; gap: calc(var(--u) * 2.5); border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 4px 16px 4px 6px; font: inherit; text-align: left; cursor: pointer; min-height: 44px; min-width: 0; max-width: 100%; }
 .engine-t { display: flex; flex-direction: column; min-width: 0; }
@@ -2773,6 +2797,8 @@ body.br-panel-open { overflow: hidden; }
   .br-legend { margin-left: 0; display: flex; }
   #br-page.br-page { padding: calc(var(--u) * 3.5) calc(var(--u) * 4) calc(var(--u) * 10); }
   .br-nd .go { width: 100%; }
+  .br-total .go, .br-confirm .go { width: 100%; }   /* seat brain-status-2: Go, Read them and Yes take the whole width */
+  .br-seg { grid-template-columns: minmax(0, 1fr); }
   .engine { padding-right: 12px; }
   .engine-t small { display: none; }
   .brain-banner-go { min-height: 44px; }
