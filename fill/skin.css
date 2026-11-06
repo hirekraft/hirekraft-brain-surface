@@ -2337,6 +2337,78 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
 .br-mini { margin-top: 0; min-height: 40px; padding: 6px 12px; }
 .br-soft { color: var(--ink-3); }
 
+/* ── THE BRAIN AS THE APPROVED PICTURE (seat brain-status-build, 2026-11-06; picture VFFCoxg6cAHGmBVyMo4EPs, decisions
+   1106-1115). Two tabs, the road of four steps, Needs you, sources with a level bar and a pill, the Health line, Getting
+   started; pages open as a side panel over the Brain. Traffic lights (1110 amended), always with a word: green (money)
+   understood / ready / done, yellow (warn) findable / learning, red (scam) not read / needs you. Tokens only. Phone rules in
+   A PHONE IS A FIRST-CLASS SIZE. ── */
+.br-tabs { display: flex; gap: calc(var(--u) * 1.5); flex-wrap: wrap; }
+.br-tab { border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 8px 20px; font: inherit; font-weight: var(--w-strong); min-height: 44px; cursor: pointer; }
+.br-tab.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.br-tab[hidden], .br-pane[hidden], .br-scrim[hidden] { display: none; }
+.br-pane { display: flex; flex-direction: column; gap: calc(var(--u) * 5.5); min-width: 0; }
+.br-road { cursor: default; gap: calc(var(--u) * 3.5); }
+.br-road:hover { border-color: var(--line); }
+.br-stations { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(var(--u) * 2.5); }
+.br-stn { border: 0; border-radius: var(--radius-lg); padding: calc(var(--u) * 3); background: var(--paper-2); color: var(--ink); font: inherit; text-align: left; display: flex; flex-direction: column; gap: 4px; cursor: pointer; min-width: 0; min-height: 44px; }
+.br-stn-k { font-size: var(--t-micro); font-weight: var(--w-strong); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); overflow-wrap: anywhere; }
+.br-stn-b { font-family: var(--font-head); font-size: 21px; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.br-stn-s { font-size: var(--t-small); color: var(--ink-3); overflow-wrap: anywhere; }
+.br-stn-done { background: var(--money-soft); } .br-stn-done .br-stn-k { color: var(--money); }
+.br-stn-now { background: var(--warn-soft); box-shadow: inset 0 0 0 2px var(--warn); } .br-stn-now .br-stn-k { color: var(--warn); }
+.br-stn-zero { background: var(--scam-soft); } .br-stn-zero .br-stn-k { color: var(--scam); }
+.br-pb { display: block; height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; margin-top: 4px; }
+.br-pb i { display: block; height: 100%; }
+.br-ku { background: var(--money); } .br-kf { background: var(--warn); } .br-kn { background: var(--scam); }
+.br-stat { margin: 0; font-size: 17px; overflow-wrap: anywhere; }
+.br-stat b { color: var(--warn); }
+.br-horse { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(var(--u) * 2.5); }
+.br-hz { display: flex; gap: calc(var(--u) * 2.5); align-items: flex-start; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: calc(var(--u) * 3); font-size: var(--t-small); min-width: 0; overflow-wrap: anywhere; }
+.br-hz .br-ic { width: 24px; height: 24px; flex: none; }
+.br-chips { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; }
+.br-chips .go { margin-top: 0; }
+.br-needs { display: flex; flex-direction: column; gap: calc(var(--u) * 2); }
+.br-nd { display: flex; justify-content: space-between; align-items: center; gap: calc(var(--u) * 3); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: calc(var(--u) * 3) calc(var(--u) * 3.5); flex-wrap: wrap; min-width: 0; }
+.br-nd-w { display: flex; gap: calc(var(--u) * 2.5); align-items: flex-start; flex: 1 1 260px; min-width: 0; overflow-wrap: anywhere; }
+.br-nd .go { margin-top: 0; }
+.br-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; margin-top: 7px; display: inline-block; }
+.br-dot.br-bad { background: var(--scam); } .br-dot.br-ok { background: var(--money); } .br-dot.br-yel { background: var(--warn); } .br-dot.br-off { background: var(--ink-4); }
+.br-legend { display: inline-flex; flex-wrap: wrap; gap: calc(var(--u) * 3.5); margin-left: calc(var(--u) * 3); font-family: var(--font); font-weight: var(--w-mid, 500); font-size: var(--t-small); color: var(--ink-3); vertical-align: middle; }
+.br-legend i { display: inline-block; width: 11px; height: 11px; border-radius: 4px; margin-right: 5px; vertical-align: -1px; }
+.br-lvl { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--scam); }
+.br-lvl i { display: block; height: 100%; }
+.br-pill { align-self: flex-start; display: inline-flex; gap: 6px; align-items: center; border-radius: 999px; padding: 3px 10px; font-size: var(--t-micro); font-weight: var(--w-strong); max-width: 100%; overflow-wrap: anywhere; }
+.br-pill i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.br-pill-g { background: var(--money-soft); color: var(--ok-ink); } .br-pill-g i { background: var(--money); }
+.br-pill-y { background: var(--warn-soft); color: var(--warn); } .br-pill-y i { background: var(--warn); }
+.br-pill-r { background: var(--scam-soft); color: var(--scam); } .br-pill-r i { background: var(--scam); }
+.br-pill-o { background: var(--paper-2); color: var(--ink-4); } .br-pill-o i { background: var(--ink-4); }
+.br-healthline { flex-direction: row; align-items: center; gap: calc(var(--u) * 2.5); }
+.br-healthline .br-dot { margin-top: 0; }
+.br-hl-t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.br-healthline .br-right { flex: none; white-space: nowrap; }
+.br-cent { margin: 0; background: var(--money-soft); color: var(--ink); border-radius: var(--radius-lg); padding: calc(var(--u) * 3) calc(var(--u) * 3.5); overflow-wrap: anywhere; }
+.br-start, .br-month { cursor: default; }
+.br-start:hover, .br-month:hover { border-color: var(--line); }
+.br-scrim { position: fixed; inset: 0; background: var(--shadow-c); z-index: 60; }
+#br-page.br-page { position: fixed; top: 0; right: 0; height: 100%; width: min(560px, 100%); max-width: none; background: var(--paper); border-left: 1px solid var(--line); z-index: 61; overflow: auto; padding: calc(var(--u) * 4.5) calc(var(--u) * 5.5) calc(var(--u) * 10); box-shadow: -8px 0 30px var(--shadow-c); }
+#br-page .br-back { position: sticky; top: 0; align-self: flex-end; z-index: 2; }
+body.br-panel-open { overflow: hidden; }
+/* The Brain button in the masthead and the line under the tabs (decision 1110). */
+.engine { display: inline-flex; align-items: center; gap: calc(var(--u) * 2.5); border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 4px 16px 4px 6px; font: inherit; text-align: left; cursor: pointer; min-height: 44px; min-width: 0; max-width: 100%; }
+.engine-t { display: flex; flex-direction: column; min-width: 0; }
+.engine-t b { font-size: var(--t-small); line-height: 1.2; overflow-wrap: anywhere; }
+.engine-t small { font-size: var(--t-micro); color: var(--ink-3); line-height: 1.2; overflow-wrap: anywhere; }
+.engine-ring { width: 32px; height: 32px; flex: none; display: block; }
+.engine-bg { stroke: var(--line); }
+.engine-ok { border-color: var(--money); background: var(--money-soft); } .engine-ok .engine-fg { stroke: var(--money); }
+.engine-yel { border-color: var(--warn); background: var(--warn-soft); } .engine-yel .engine-fg { stroke: var(--warn); }
+.engine-bad { border-color: var(--scam); background: var(--scam-soft); } .engine-bad .engine-fg { stroke: var(--scam); }
+.brain-banner { margin: 0; background: var(--warn-soft); color: var(--ink); font-size: var(--t-small); padding: 8px 16px; text-align: center; overflow-wrap: anywhere; }
+.brain-banner[hidden] { display: none; }
+.brain-banner b { color: var(--warn); }
+.brain-banner-go { border: 0; background: none; color: inherit; text-decoration: underline; font: inherit; cursor: pointer; padding: 0; min-height: 0; }
+
 /* ── MAIL: THE SIX QUESTIONS, CLEAN-UP, TEACH THE TOOL, MOVE WITH UNDO (seat mail-tab-build round 2, 2026-11-05; the approved
    mock-up "Mail Tab"): one section per question with its color, count and what it covers; one row per sender in Clean-up; the
    one-time permission box. Tokens only. Phone rules in A PHONE IS A FIRST-CLASS SIZE. ── */
@@ -2693,6 +2765,16 @@ button, .go, .tab, .subtab, [role="tab"], label, h1, h2, h3, h4, dt, dd, p, li, 
   #s-work .work-nav-b, #s-work .work-row, #s-work .work-link, #s-work .work-chips .chip, #s-work .work-open, #s-work .work-more { min-height: 44px; }
   #s-work .work-more { min-width: 44px; }
   #s-work .work-order .work-order-facts { grid-template-columns: 1fr; }
+  /* The Brain as the picture (seat brain-status-build): the road's four steps two by two, the workhorse one under the
+     other, the side panel takes the whole width. */
+  .br-stations { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .br-horse { grid-template-columns: minmax(0, 1fr); }
+  .br-legend { margin-left: 0; display: flex; }
+  #br-page.br-page { padding: calc(var(--u) * 3.5) calc(var(--u) * 4) calc(var(--u) * 10); }
+  .br-nd .go { width: 100%; }
+  .engine { padding-right: 12px; }
+  .engine-t small { display: none; }
+  .brain-banner-go { min-height: 44px; }
 }
 /* ── NO TOOL TO OPEN (seat any-brain round 2, 2026-11-05, decision 1097): fill/brain.js draws this in place of the whole screen,
    before any tab, when the brain this browser points to no longer opens. One sentence, one way on. Tokens only. ── */
