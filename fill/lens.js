@@ -17,7 +17,7 @@ import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
 import { removeControl, readChooser } from "./sources.js?v=2026-11-06-brain-status-2"; // remove a source, choose how older mail is read (seat sources-basics)
 import { readSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-05-brain-tab-room"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
-import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-06-brain-status-2"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
+import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-07-getting-ready-1"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 // BRAIN AND DRIVES FROM ONE READING (seat brain-and-drives, 2026-10-28, decision 1030): sources_view, asked once per brain
 // reading (fresh) and shared by the counts, the Sources list, the count under Brain's heading and the Drives tab.
@@ -3756,6 +3756,10 @@ let routed = false;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
 const hasSetupMark = () => { try { return !!localStorage.getItem("tool.setup.return"); } catch (_) { return false; } };   // setup.js RETURN_KEY
 const setupReturning = () => import("./setup.js?v=2026-11-06-brain-status").then((S) => S.returning()).catch(() => false);
+const READY_JS = './ready.js?v=2026-11-07-getting-ready-1';   // seat getting-ready-screen
+let readyMod = null;
+const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () => !!shape?.viewer?.all_access, readSources, goto, goTab, roomPage: (k, a) => { room(); roomPage(k, a); } });
+const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
 async function routeOnState(mode) {
   if (routed) return;                           // this chooses the OPENING screen, once
   if (userMoved) return;                        // never move someone who has chosen
@@ -3783,6 +3787,9 @@ async function routeOnState(mode) {
   // The module is fetched only when this browser holds the marker, so an ordinary opening waits on nothing new.
   const back = hasSetupMark() && await setupReturning();
   if (!connected || back) { goto("s-setup", back ? "connect" : undefined); return; }
+  // GETTING READY (seat getting-ready-screen, 2026-11-07, decision 1124): until the brain is Ready the Tool opens on the
+  // Getting ready screen (fill/ready.js), not on a tab. A reading that fails opens the Tool as before.
+  if (await readyGate()) { goto('s-ready'); return; }
   // THE TAB SHE USED LAST, in this browser; Mail the first time (seat conversation-panel, Alex 2026-10-12).
   // An owner-only tab remembered by someone who is not the owner falls back to Mail.
   let last = null;
@@ -3826,6 +3833,8 @@ function goto(id, key) {
     drawBrain(false);
   }
   if (id === 's-setup') import('./setup.js?v=2026-11-06-brain-status').then((S) => S.mount({ sec: $('#s-setup'), shape: () => shape, openConnect, goTab, readEstimate }, key)).catch((e) => { const m = $('#s-setup'); if (m) m.textContent = 'The setup could not be loaded: ' + String(e?.message ?? e); });   // seat brain-tab-setup
+  if (id === 's-ready') import(READY_JS).then((G) => { readyMod = G; G.mount(readyCtx()); }).catch((e) => { const m = $('#gr-left'); if (m) m.textContent = 'Getting ready could not be loaded: ' + String(e?.message ?? e); });   // seat getting-ready-screen
+  else if (readyMod) readyMod.unmount();
   if (id === "s-tests") loadTests();
   if (id === "s-totest") import("./totest.js?v=2026-10-29-ask-agent").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + String(e?.message ?? e); });   // seat test-list
   if (id === "s-security") loadSecurity();
@@ -3838,13 +3847,13 @@ function goto(id, key) {
     import("./ledger.js?v=2026-10-22-dates").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
   if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') { loadWork(); countOpenWork(); if (!workOrder && !$('#answer-in').children.length) workHelloShow(true); } if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY, name: BRAIN.name }); loadChats(); showSubtabs($('#s-chats'), 'chats', shape?.viewer?.email); }
-  const tabNow = id === 's-lens' ? lensKey : id === 's-drives' ? 'drives' : id === 's-work' ? 'work' : id === 's-security' || id === 's-accessmap' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : 'brain';
+  const tabNow = id === 's-lens' ? lensKey : id === 's-drives' ? 'drives' : id === 's-work' ? 'work' : id === 's-security' || id === 's-accessmap' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : id === 's-ready' ? 'ready' : 'brain';
   const isDoor = !!TABS.find((x) => x.key === tabNow)?.door;
   markTab(isDoor ? 'brain' : tabNow);   // a door is part of Brain (seat brain-tab-room)
   doorBack(id, isDoor);
   document.body.dataset.tab = tabNow;
   // Remembered so the Tool opens where she was (seat conversation-panel); first-run screens are not tabs.
-  if (!['s-intro', 's-kinds', 's-setup'].includes(id)) { try { localStorage.setItem(TAB_KEY, tabNow); } catch (_) { /* this page only */ } }
+  if (!['s-intro', 's-kinds', 's-setup', 's-ready'].includes(id)) { try { localStorage.setItem(TAB_KEY, tabNow); } catch (_) { /* this page only */ } }
   drawBox();
 }
 
