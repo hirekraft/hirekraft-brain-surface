@@ -18,7 +18,7 @@
 // photos square until seat scans-photos ships fill/scans.js (the square appears by itself when that file exists).
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
-import { understandBlock, filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-06-brain-status-2';   // the two presses (seat brain-status-2)
+import { understandBlock, filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-07-getting-ready-1';   // the two presses (seat brain-status-2)
 
 let C = null;   // { sb, el, $, askBody, isOwner, viewDeps, readSources, drawGroup, aiBlocks, door, goto, openAdd, closeAdd, connectSystem, me }
 let reading = null;   // the latest set of readings, so a page opens on what the room shows
@@ -219,6 +219,9 @@ export function showTab(k) {
 
 // The four steps (1108, 1111). Connected from sources_view; Findable and Understood from brain_road (counts, never a
 // percentage understood: STANDING-CLAUSES, read and understood are different states); Ready only when 2 and 3 are done.
+// seat getting-ready-screen (2026-11-07): the Getting ready screen (fill/ready.js) reads the road's four steps from here, so the
+// screen and the Brain cannot disagree on connected, findable, understood and ready.
+export function roadSteps(R) { return steps(R); }
 function steps(R) {
   const rows = rowsOf(R), d = R.road;
   const n = (g) => rows.filter((r) => r.group === g).length;
