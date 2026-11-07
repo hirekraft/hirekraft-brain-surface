@@ -2921,11 +2921,13 @@ body.br-panel-open .panel { z-index: 63; }
 /* VERA IN THE RIGHT COLUMN OF GETTING READY (seat vera-guide, 2026-11-07, decision 1124): the one panel element moved into
    the column the screen gives her ([data-vera-column]), static and always open there; Put away and Full screen do not apply.
    Her suggested questions sit above the box; her business conversation's summary is her words, section by section. */
-.panel.in-vera { position: static; width: auto; max-width: none; height: 100%; min-height: 540px; max-height: calc(100vh - 110px);
+.panel.in-vera { position: static; width: auto; max-width: none; height: 100%; min-height: 480px; max-height: calc(100vh - 190px);
   border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: none; z-index: auto; }
 .panel.in-vera .panel-handle, .panel.in-vera #panel-away, .panel.in-vera #panel-full { display: none; }
 body[data-vera-col] .vera-btn { display: none; }
 #gr-vera:has(> .panel.in-vera) > :not(.panel):not(.gr-vh) { display: none; }   /* fill/ready.js's note and button, while she is there */
+#gr-vera:has(> .panel.in-vera) { grid-template-columns: minmax(0, 1fr); padding: calc(var(--u) * 2); }
+.panel.in-vera { min-width: 0; }   /* a grid item: its box and links must not widen the column (measured 1565 px at 1440 without it) */
 .vera-sug { flex: none; display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1.5); padding: calc(var(--u) * 2) calc(var(--u) * 4.5) 0; min-width: 0; }
 .vera-sug:empty { display: none; }
 .vera-chip { min-height: var(--tap); padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink);
