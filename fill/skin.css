@@ -2544,7 +2544,7 @@ body.br-panel-open { overflow: hidden; }
 @media (max-width: 720px) {
   /* seat getting-ready-screen: one column; Vera's column under the step; pairs stacked; the spend line on its own row.
      Each rule carries body so it outweighs the GETTING READY block, which sits later in this file. */
-  body .gr-grid, body .gr-row2, body .gr-layers, body .gr-promise, body .gr-conn, body .gr-bills { grid-template-columns: minmax(0, 1fr); }
+  body .gr-grid, body .gr-row2, body .gr-row3, body .gr-layers, body .gr-promise, body .gr-conn, body .gr-bills { grid-template-columns: minmax(0, 1fr); }
   body .gr-vera { position: static; }
   body .gr-card { padding: calc(var(--u) * 4.5); }
   body .gr-meter { margin-left: 0; order: 9; flex-basis: 100%; justify-content: center; min-height: 44px; }
@@ -2979,6 +2979,12 @@ body.gr-on #brain-banner { display: none; }
 .gr-row2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(var(--u) * 3); }
 .gr-field { display: flex; flex-direction: column; gap: 6px; font-weight: var(--w-mid); min-width: 0; }
 .gr-field select, .gr-field input { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; background: var(--paper-2); color: var(--ink); font: inherit; font-weight: 400; min-height: var(--tap); min-width: 0; }
+/* CARD PAYMENTS in the Top up sheet (seat stripe-payments, 2026-11-07): the fee line, the test-mode line, automatic top-up. */
+.gr-row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(var(--u) * 3); }
+.gr-auto { display: grid; gap: calc(var(--u) * 2); margin-top: calc(var(--u) * 4); padding-top: calc(var(--u) * 3); border-top: 1px solid var(--line); min-width: 0; }
+.gr-auto .go { justify-self: start; margin-top: 0; }
+.gr-fee { color: var(--ink-2); }
+.gr-test { color: var(--ink-2); background: var(--paper-2); border-radius: var(--radius); padding: 8px 12px; }
 .gr-layers, .gr-promise { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(var(--u) * 2.5); }
 .gr-ly { border-radius: var(--radius-lg); padding: calc(var(--u) * 4); background: var(--paper-2); display: grid; gap: 4px; align-content: start; min-width: 0; overflow-wrap: anywhere; }
 .gr-ly b { font-size: var(--t-read); }
