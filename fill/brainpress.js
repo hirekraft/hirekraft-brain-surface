@@ -22,6 +22,12 @@ function txt(C, tag, cls, text) { const e = C.el(tag, cls); e.textContent = text
 function btn(C, cls, text) { const b = C.el('button', cls); b.type = 'button'; b.textContent = text; return b; }
 function working(C, p, text) { p.className = 'working no-late br-small'; p.textContent = text; }
 function said(C, p, text) { p.className = 'br-small br-said'; p.textContent = text; }
+// WHERE THE PREVIEW SHOWS (seat getting-ready-screen, 2026-11-07, decision 1124). On the Brain it opens under the button, as
+// before. The Getting ready screen (fill/ready.js) hands in C.sheet and C.toast: the same preview and the same Yes then open
+// as a sheet over the page, and the result is said as a toast. One press, two places to show it; never a second press.
+function place(C, res, box, title) { res.replaceChildren(); if (C.sheet) { C.sheet.open(title, box); return; } res.className = 'br-small'; res.appendChild(box); }
+function shut(C) { if (C.sheet) C.sheet.close(); }
+function landed(C, p) { if (!C.toast) return; C.toast(p.textContent); setTimeout(() => shut(C), 2500); }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // THE ESTIMATES: three readings of read_estimate (6 months, 2 years, all), kept for 5 minutes, owner only.
@@ -138,8 +144,8 @@ async function confirmStep(C, total, res, tot, mode, after) {
   const yes = btn(C, 'go', mode === 'understand' ? 'Yes, go ahead ' + DOT + ' about ' + usd(tot.usd) : 'Yes, go ahead');
   const no = btn(C, 'go ghost', 'Not now');
   const acts = C.el('div', 'br-chips'); acts.append(yes, no); box.appendChild(acts);
-  res.replaceChildren(); res.className = 'br-small'; res.appendChild(box);
-  no.addEventListener('click', () => { res.replaceChildren(); total.querySelectorAll('button').forEach((b) => { b.disabled = false; }); });
+  place(C, res, box, mode === 'understand' ? 'Understand what you chose?' : 'Make it findable?');
+  no.addEventListener('click', () => { shut(C); res.replaceChildren(); total.querySelectorAll('button').forEach((b) => { b.disabled = false; }); });
   yes.addEventListener('click', async () => {
     yes.disabled = true; no.disabled = true;
     const p = C.el('p'); box.appendChild(p);
@@ -154,6 +160,7 @@ async function confirmStep(C, total, res, tot, mode, after) {
     }
     said(C, p, (ok ? 'Started: ' + ok + (ok === 1 ? ' source is' : ' sources are') + ' being ' + (mode === 'understand' ? 'understood' : 'made findable') + '. You can leave this page; it goes on by itself and the road shows how far it is.' : 'Nothing started.')
       + (bad.length ? ' Not started: ' + bad.length + ' (' + bad[0] + ').' : ''));
+    landed(C, p);
     if (after) after();
   });
 }
@@ -215,8 +222,8 @@ async function filesConfirm(C, total, res, rows, after) {
   const yes = btn(C, 'go', 'Yes, go ahead ' + DOT + ' about ' + usd(n * rate));
   const no = btn(C, 'go ghost', 'Not now');
   const acts = C.el('div', 'br-chips'); acts.append(yes, no); box.appendChild(acts);
-  res.replaceChildren(); res.className = 'br-small'; res.appendChild(box);
-  no.addEventListener('click', () => { free(); res.replaceChildren(); total.querySelectorAll('button').forEach((b) => { b.disabled = false; }); });
+  place(C, res, box, 'Read ' + num(n) + ' files?');
+  no.addEventListener('click', () => { free(); shut(C); res.replaceChildren(); total.querySelectorAll('button').forEach((b) => { b.disabled = false; }); });
   yes.addEventListener('click', async () => {
     yes.disabled = true; no.disabled = true;
     const p = C.el('p'); box.appendChild(p);
@@ -231,6 +238,7 @@ async function filesConfirm(C, total, res, rows, after) {
     }
     setTimeout(free, 30000);
     said(C, p, (q ? 'Started: ' + num(q) + ' files are being made findable. You can leave this page; the road shows how far it is.' : 'Nothing started.') + (bad.length ? ' Not started: ' + bad.length + ' (' + bad[0] + ').' : ''));
+    landed(C, p);
     if (after) after();
   });
 }
