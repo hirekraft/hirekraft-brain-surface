@@ -25,6 +25,15 @@
 // HER STANDING RULE (1122): what she has not been told or read she never presents as known. Every sentence of hers below is
 // either fixed words or the screen's own words and numbers.
 // SHE NEVER PRESSES (1115). The buttons she offers are the Tool's own; only the person's Yes starts anything.
+// SEAT getting-ready-fix-1 (Alex's walk, 2026-11-06 16:35-16:43 PT): (1) she greets ONCE per conversation on Getting ready
+// (she greeted twice: once while the card still said "Reading", once when the step row came; the step now goes only in her
+// "looking at" line). (2) WHILE SHE IS IN THE COLUMN NOTHING OF HERS CHANGES TAB: the panel's Open in Work, Your
+// conversations and an answer's Open wide are refused in place (Alex pressed one and landed on Work); opening her when she
+// is not yet in the column moves her in, never presses the tabs' Ask. (3) Step 3 is answered IN PLACE on the card
+// (fill/ready.js draws it); this file keeps the one business conversation (window.veraBusiness) and says each turn in her
+// column too; her column is then for questions about the step, not for answering. (4) Her box grows with what she types
+// (Shift+Enter for a new line) and is empty after sending and when the step changes. (5) Her name is the one chosen
+// ("Call me something else" on the Start step; there is no Settings place for it yet), from body data-guide.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
 const $ = (s, r) => (r || document).querySelector(s);
@@ -32,10 +41,13 @@ const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
 const DOT = String.fromCharCode(183);
 const AP = String.fromCharCode(39);
 let greeted = '';
+let grGreeted = false;    // she greeted on Getting ready in this conversation
 let btn = null;
 let home = null;          // where the panel lives when it is not in her column
 let fromPanel = 0;        // when a question last left her conversation (ms)
 let talk = null;          // the business conversation while it runs
+let lastKey = null;       // the Getting ready step her box was last on (her box empties when it changes)
+const NAME = () => String(document.body.dataset.guide || '').trim() || 'Vera';
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -136,7 +148,7 @@ function drawLook() {
   const t = ' ' + DOT + ' looking at: ' + looking();
   if (p.dataset.t === t) return;   // unchanged: drawing it again would wake the watcher below for nothing
   p.dataset.t = t;
-  p.replaceChildren(el('b', null, 'Vera'), document.createTextNode(t));
+  p.replaceChildren(el('b', null, NAME()), document.createTextNode(t));
 }
 
 function paintDot() {
@@ -214,12 +226,16 @@ function drawSug() {
   let box = $('#vera-sug');
   if (!box) { box = el('div', 'vera-sug'); box.id = 'vera-sug'; foot.before(box); }
   const { key, list } = suggestions();
-  const sig = talk ? 'talk|' + talk.stage + '|' + talk.i : key + '|' + list.join('|') + '|' + (readyNow() ? 1 : 0);
+  const sig = talk && !talk.inPlace ? 'talk|' + talk.stage + '|' + talk.i : key + '|' + list.join('|') + '|' + (readyNow() ? 1 : 0);
   if (box.dataset.sig === sig) return;   // unchanged: see drawLook
   box.dataset.sig = sig;
   box.replaceChildren();
-  if (talk) { drawTalkActs(box); return; }
-  if (key === 'business' || (readyNow() === null && brainNow() && !brainNow().ready)) {
+  if (talk && !talk.inPlace) { drawTalkActs(box); return; }
+  if (key === 'start' && readyNow()) {
+    const n = el('button', 'vera-chip', 'Call me something else'); n.type = 'button'; n.addEventListener('click', rename); box.appendChild(n);
+  }
+  // On Getting ready step 3 is answered on the card itself (fill/ready.js); her column keeps only questions about the step.
+  if ((key === 'business' && !readyNow()) || (readyNow() === null && brainNow() && !brainNow().ready)) {
     const t = el('button', 'vera-chip vera-chip-main', key === 'business' ? 'Start: tell me about your business' : 'Your business: tell me in your words');
     t.type = 'button'; t.addEventListener('click', startTalk); box.appendChild(t);
   }
@@ -238,20 +254,19 @@ function askIt(q) {
 function greet() {
   const r = readyNow();
   const tab = document.body.dataset.tab;
+  if (r && !r.step) return;   // the step row is not drawn yet
   if (!r && tab !== 'brain' && tab !== 'ai') return;
   const b = brainNow();
   if (!r && (!b || b.ready)) return;
   const turns = $('#dock-turns');
   if (!turns) return;
-  if (!$('.vera-turn', turns)) greeted = '';   // a new conversation: she greets again
-  const at = r ? 'gr|' + r.step : (b.word + '|' + b.step);
-  if (greeted === at) return;
-  greeted = at;
+  if (!$('.vera-turn', turns)) { greeted = ''; grGreeted = false; }   // a new conversation: she greets again
+  // ONCE on Getting ready (seat getting-ready-fix-1): not again for each step, nor when the step row is first drawn.
+  if (r) { if (grGreeted) return; grGreeted = true; }
+  else { const at = b.word + '|' + b.step; if (greeted === at) return; greeted = at; }
   const d = turn();
   if (r) {
-    d.appendChild(el('p', null, 'I walk you through getting your Tool ready. Interrupt me any time; ask about anything you see.'));
-    d.appendChild(el('p', null, 'Where you are: ' + (r.step || 'Getting ready') + (r.card ? ', ' + r.card : '')));
-    if (r.key === 'business') d.appendChild(el('p', null, 'This step is a conversation: say whatever comes to mind, in your own words. Press Start below when you are ready.'));
+    d.appendChild(el('p', null, 'I walk you through getting your Tool ready. Interrupt me any time; ask about anything you see. What I am looking at is written just above.'));
   } else {
     d.appendChild(el('p', null, 'You are not done with setup, so answers may be incomplete until the Brain says Ready.'));
     d.appendChild(el('p', null, b.step ? 'Where you are: ' + b.step : 'Where you are: ' + (b.word || 'the Brain is still being read')));
@@ -267,7 +282,7 @@ function greet() {
 }
 function turn() {
   const d = el('div', 'vera-turn');
-  d.appendChild(el('p', 'vera-who', 'Vera'));
+  d.appendChild(el('p', 'vera-who', NAME()));
   $('#dock-turns').appendChild(d);
   d.scrollIntoView?.({ block: 'nearest' });
   return d;
@@ -318,21 +333,24 @@ function brainCall(fn, args) {
     .catch((e) => ({ ok: false, note: 'The brain could not be reached (' + String(e?.message || e) + '). Nothing was kept.' }));
 }
 
-async function startTalk() {
-  if (talk) return;
+// inPlace: Getting ready's card asks and collects (fill/ready.js, through window.veraBusiness); she says each turn in her
+// column too, but what is typed in her column is then a question to her, not an answer.
+async function startTalk(inPlace) {
+  if (talk) return true;
   openPanel();
   const prof = await brainCall('business_profile_list', {});
-  if (!prof || prof.ok !== true) { said(prof?.note || 'This part is for the owner of the business.'); return; }
+  if (!prof || prof.ok !== true) { said(prof?.note || 'This part is for the owner of the business.'); return false; }
   const before = {};
   for (const s of prof.statements || []) {
     const a = String(s.area || '');
     const pre = 'how your business works, in your words: ';
     if (a.startsWith(pre) && s.status !== 'rejected') before[a.slice(pre.length)] = s.statement;
   }
-  talk = { i: 0, said: SECTIONS.map(() => []), extra: [], before, stage: 'ask' };
+  talk = { i: 0, said: SECTIONS.map(() => []), skipped: SECTIONS.map(() => false), extra: [], before, stage: 'ask', inPlace: !!inPlace };
   said('Say whatever comes to mind, in your own words and the jargon of your trade. There are no wrong answers. Six short questions; skip any.');
   if (Object.keys(before).length) said('You told me some of this before. I keep what you said unless you say it again now.');
-  ask();
+  if (!inPlace) ask(); else drawSug();
+  return true;
 }
 function ask() {
   talk.stage = 'ask';
@@ -379,7 +397,7 @@ async function keep() {
   const rows = [];
   SECTIONS.forEach((s, i) => { const w = talk.said[i].join(' ').trim(); if (w) rows.push([s[0], w]); });
   if (talk.extra.length) rows.push(['anything else you said', talk.extra.join(' ').trim()]);
-  if (!rows.length) { said('Nothing new was said, so nothing changed.'); talk = null; drawSug(); return; }
+  if (!rows.length) { said('Nothing new was said, so nothing changed.'); talk = null; drawSug(); return { ok: true, kept: 0, of: 0, note: 'Nothing new was said, so nothing changed.' }; }
   const wait = said('Keeping it.');
   wait.classList.add('working');
   const bad = [];
@@ -388,10 +406,12 @@ async function keep() {
     if (!r || r.ok !== true) bad.push((r && r.note) || 'not kept');
   }
   wait.classList.remove('working');
-  if (bad.length) said('Not all of it was kept: ' + bad[0] + ' Kept ' + (rows.length - bad.length) + ' of ' + rows.length + '.');
-  else said('Kept as How your business works, in your words (' + rows.length + ' of ' + rows.length + '). Change it any time: tell me again here, or open What your Tool believes.');
+  const res = bad.length ? { ok: false, kept: rows.length - bad.length, of: rows.length, note: 'Not all of it was kept: ' + bad[0] + ' Kept ' + (rows.length - bad.length) + ' of ' + rows.length + '.' }
+    : { ok: true, kept: rows.length, of: rows.length, note: 'Kept as How your business works, in your words (' + rows.length + ' of ' + rows.length + '). Change it any time: tell me again here, or open What your Tool believes.' };
+  said(res.note);
   talk = null;
   drawSug();
+  return res;
 }
 function redo() {
   talk.i = 0; talk.said = SECTIONS.map(() => []); talk.extra = [];
@@ -410,18 +430,86 @@ function drawTalkActs(box) {
   mk('Stop for now', () => { said('Stopped. Nothing was kept from this conversation; start again any time.'); talk = null; drawSug(); });
 }
 
-// While the business conversation runs, what she types or says goes to it, not to lens-ask (her words are kept as she said
-// them; nothing is sent to a model). Capture phase, so box.js's own Go never sees it.
+// THE BUSINESS CONVERSATION, ANSWERED IN PLACE (seat getting-ready-fix-1). fill/ready.js draws each question on the card and
+// calls these; one conversation, kept here, so the words, the thank-you and the summary are the same ones her column shows.
+window.veraBusiness = {
+  keys: SECTIONS.map((s) => s[0]),
+  questions: SECTIONS.map((s) => s[1]),
+  labels: LABEL,
+  thanks: THANKS,
+  running: () => !!talk,
+  state: () => (talk ? { said: talk.said.map((a) => a.join(' ')), skipped: talk.skipped ? talk.skipped.slice() : SECTIONS.map(() => false), extra: talk.extra.join(' '), before: Object.assign({}, talk.before), stage: talk.stage } : null),
+  begin: () => startTalk(true),
+  ask: (i) => { if (!talk) return; talk.i = i; talk.stage = 'ask'; said(SECTIONS[i][1]); },
+  answer: (i, text) => { if (!talk) return ''; const w = String(text || '').trim(); if (!w) return ''; said(w, true); talk.said[i].push(w); if (talk.skipped) talk.skipped[i] = false; talk.stage = 'more'; said(THANKS); return THANKS; },
+  skip: (i) => { if (!talk) return; if (talk.skipped) talk.skipped[i] = true; said('Skipped.', true); },
+  more: (text) => { if (!talk) return ''; const w = String(text || '').trim(); if (!w) return ''; said(w, true); talk.extra.push(w); said(THANKS); return THANKS; },
+  summary: () => { if (talk) summary(); },
+  keep: () => (talk ? keep() : Promise.resolve({ ok: true, kept: 0, of: 0, note: 'Nothing new was said, so nothing changed.' })),
+  stop: () => { if (!talk) return; said('Stopped. Nothing was kept from this conversation; start again any time.'); talk = null; drawSug(); },
+};
+
+// "CALL ME SOMETHING ELSE" (seat getting-ready-fix-1; decision 1127 puts the guide's name in Settings, which has no place for
+// it yet, so it is here). Kept per person by getting_ready_mark (the screen's recorded choices), read back by the screen.
+function rename() {
+  const d = turn();
+  d.appendChild(el('p', null, 'What would you like to call me?'));
+  const row = el('div', 'vera-acts');
+  const i = el('input', 'vera-name-in'); i.maxLength = 30; i.value = NAME(); i.setAttribute('aria-label', 'Your guide' + AP + 's name'); i.setAttribute('autocomplete', 'off');
+  const ok = el('button', 'go', 'Save'); ok.type = 'button';
+  row.append(i, ok); d.appendChild(row);
+  i.focus({ preventScroll: true });
+  ok.addEventListener('click', async () => {
+    const n = i.value.trim() || 'Vera';
+    ok.disabled = true;
+    const r = await brainCall('getting_ready_mark', { p_key: 'guide_name', p_value: { name: n }, p_wording: null });
+    row.remove();
+    if (!r || r.ok !== true) { said('Not changed: ' + String(r?.note || r?.reason || 'no reason was given') + '.'); return; }
+    document.body.dataset.guide = n;
+    said('From now on I am ' + n + '. Change it here any time.');
+    window.dispatchEvent(new Event('gr-refresh'));
+  });
+}
+
+// WHILE SHE IS IN THE COLUMN, NOTHING OF HERS CHANGES TAB (seat getting-ready-fix-1, Alex 16:42 PT). These three move to
+// Work (lens.js): Open in Work, Your conversations, and an answer's Open wide. In her column they are hidden (skin.css) and,
+// if pressed anyway, refused here in the capture phase so lens.js never hears them.
+function stay(e) {
+  if (!inColumn() || !e.target.closest) return;
+  const t = e.target.closest('#panel-work, #panel-list, .wide-open');
+  if (!t || !$('#panel').contains(t)) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+}
+
+// HER BOX (seat getting-ready-fix-1): it grows with what she types, so she sees all of it; Shift+Enter is a new line (box.js
+// sends on Enter, so the new line is kept from it here); it is empty after sending.
+function grow() {
+  const i = $('#panel-input');
+  if (!i || i.tagName !== 'TEXTAREA') return;
+  i.style.height = 'auto';
+  i.style.height = Math.min(i.scrollHeight, 220) + 'px';
+}
+function emptyAfter() {
+  const i = $('#panel-input');
+  if (!i) return;
+  const sent = i.value;
+  setTimeout(() => { if (i.value === sent) i.value = ''; grow(); }, 0);
+  setTimeout(() => { if (i.value === sent) i.value = ''; grow(); }, 400);
+}
+
+// While the business conversation runs in her column (not in place), what she types or says goes to it, not to lens-ask
+// (her words are kept as she said them; nothing is sent to a model). Capture phase, so box.js's own Go never sees it.
 function intercept(e) {
+  if (e.type === 'keydown' && e.key === 'Enter' && e.shiftKey && e.target && e.target.id === 'panel-input') { e.stopImmediatePropagation(); setTimeout(grow, 0); return; }
   const isGo = e.type === 'click' && e.target.closest && e.target.closest('#panel-send');
   const isEnter = e.type === 'keydown' && e.key === 'Enter' && e.target && e.target.id === 'panel-input';
   if (!isGo && !isEnter) return;
-  if (!talk) { fromPanel = Date.now(); return; }
+  if (!talk || talk.inPlace) { fromPanel = Date.now(); emptyAfter(); return; }
   const i = $('#panel-input');
   const v = (i?.value || '').trim();
   e.preventDefault(); e.stopImmediatePropagation();
   if (!v) return;
-  i.value = '';
+  i.value = ''; grow();
   heard(v);
 }
 
@@ -443,7 +531,8 @@ function placeColumn() {
     p.hidden = false; const tabBtn = $('#panel-tab'); if (tabBtn) tabBtn.hidden = true;
     delete document.body.dataset.panel;
     document.body.dataset.veraCol = 'on';
-    drawLook(); greet(); drawSug();
+    drawLook(); drawSug();
+    if (r.step) greet();   // not before the step row is drawn (she greeted twice: once on "Reading", once on the step)
   } else if (!r && inColumn() && home) {
     home.after(p);
     p.classList.remove('in-vera');
@@ -452,7 +541,8 @@ function placeColumn() {
   }
 }
 function openPanel() {
-  if (!inColumn()) {
+  if (!inColumn() && readyNow()) placeColumn();   // on Getting ready she opens IN PLACE, in her column; nothing navigates
+  if (!inColumn() && !readyNow()) {
     const ask = $('#tabs .tab-ask');
     if (ask) ask.click(); else { const p = $('#panel'); if (p) { p.hidden = false; document.body.dataset.panel = 'open'; } }
   }
@@ -462,7 +552,8 @@ function open() {
   drawLook();
   greet();
   drawSug();
-  if (!talk && readyNow()?.key === 'business') startTalk();   // Getting ready's 'Start with Vera' on step 3
+  // SUPERSEDED (seat getting-ready-fix-1): Getting ready's 'Start with Vera' on step 3 no longer starts the conversation in
+  // her column; step 3 is answered on the card (fill/ready.js, window.veraBusiness).
   $('#panel-input')?.focus({ preventScroll: true });
 }
 
@@ -493,16 +584,21 @@ function start() {
   btn.addEventListener('click', open);
   document.body.appendChild(btn);
   wrapFetch();
+  document.addEventListener('click', stay, true);
   document.addEventListener('click', intercept, true);
   document.addEventListener('keydown', intercept, true);
+  document.addEventListener('input', (e) => { if (e.target && e.target.id === 'panel-input') grow(); }, true);
   let due = 0;
   const later = () => {
     if (due) return;
     due = requestAnimationFrame(() => {
       due = 0; paintDot(); placeColumn();
+      // her box is empty when the step changes
+      const k = readyNow()?.key ?? null;
+      if (k !== lastKey) { if (lastKey !== null && k !== null) { const i = $('#panel-input'); if (i) { i.value = ''; grow(); } } lastKey = k; }
       if ($('#vera-look')) drawLook();
       const p = $('#panel');
-      if (p && !p.hidden) { greet(); if (!talk) drawSug(); }
+      if (p && !p.hidden) { greet(); if (!talk || talk.inPlace) drawSug(); }
     });
   };
   new MutationObserver(later).observe(document.body, { attributes: true, attributeFilter: ['data-tab', 'data-panel', 'class'] });
