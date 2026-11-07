@@ -278,14 +278,16 @@ function autoBlock(S) {
     btn('go ghost', 'Turn on', () => send(true, Number(below.value), Number(amount.value), Number(cap.value))), out);
   return box;
 }
-// Back from Stripe (?paid=<id>): say what happened, from the payment's own record, once; then clean the address.
+// Back from Stripe (?paid=<id>), or from a refusal on the way there (?pay_note=<reason>): say what happened, from the payment's own record, once; then clean the address.
 function paidReturn(S) {
   const q = new URLSearchParams(location.search);
-  if (!q.has('paid')) return;
-  q.delete('paid'); const done = q.get('done'); q.delete('done');
+  if (!q.has('paid') && !q.has('pay_note')) return;
+  const note = q.get('pay_note');
+  q.delete('paid'); q.delete('pay_note'); const done = q.get('done'); q.delete('done');
   history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q.toString() : '') + location.hash);
   const last = cardOf(S)?.payments?.[0];
-  if (done === '0') toast('Payment not finished: nothing was charged.');
+  if (note) toast(String(note));
+  else if (done === '0') toast('Payment not finished: nothing was charged.');
   else if (last && last.status !== 'open') toast(String(last.line));
   else toast('Payment received by Stripe; the Tool records it in a moment. Press Top up to see it.');
 }
