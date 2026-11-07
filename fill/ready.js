@@ -7,9 +7,18 @@
 // What this file adds: the screen, the spend line, the Start step's choices and the recorded yes (getting_ready_mark),
 // and the top-up request (topup_request) until card payments exist (topup_start, seat stripe-payments).
 // Never presses on her behalf (decision 1115). No regex literals and no backslashes (STANDING-CLAUSES).
+// SEAT getting-ready-fix-1 (Alex's walk 2026-11-06 16:35-16:43 PT): Welcome in Alex's approved words with the story one press
+// away; language and guide name off Welcome (1127: language from the sign-in, switched beside her name in the masthead; the
+// guide's name through Vera's "Call me something else", Settings has no place yet); the spend line is setup spending with
+// cents, never the balance (it read "$15" from $14.52 of one-time reading, rounded, beside a $15.03 balance); the top Ask box
+// hidden here (skin.css), Vera's column the one place to ask; step 3 answered IN PLACE under each question (the one business
+// conversation is vera.js's window.veraBusiness; its done-state reads the profile store business_profile_list, so setup_mark
+// 'business', never written by anyone, is no longer read); THE WAY BACK: while not Ready, the masthead Brain button, the
+// Brain line under the tabs and every dimmed tab lead back here at the step she left, and any other page shows one line
+// "Back to getting ready".
+import { micFor } from './box.js?v=2026-10-29-thinkrooms-b';
 import { roadSteps } from './brainroom.js?v=2026-11-07-getting-ready-1';
 import { filesBlock, estimates } from './brainpress.js?v=2026-11-07-getting-ready-1';
-import { LANGS, screenLang, setLang } from './words.js?v=2026-10-29-thinkrooms-3';
 
 const DOT = String.fromCharCode(183);
 const ARROW = String.fromCharCode(8594);
@@ -19,7 +28,9 @@ const TERMS_V = 'getting-ready-terms-1';
 const TERMS = 'The Tool helps; you decide. What it shows you is help, not legal, tax or financial advice, and every decision is yours: we are not responsible for what you decide or sign based on what you see here. Your data stays yours: cancel any time and keep your database. Nothing that costs money starts without your yes, and every price is shown before it starts.';
 const LOCAL = 'tool.ready.marks';
 
-let C = null, R = null, at = null, host = null, poll = null;
+let C = null, R = null, at = null, host = null, poll = null, pending = false;
+let bz = { open: null, draft: '', more: false, done: false };   // step 3 on the card: which question is open, what is typed
+const usd2 = (n) => { const x = Number(n); return Number.isFinite(x) ? '$' + x.toFixed(2) : null; };
 
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 function btn(cls, text, fn) { const b = el('button', cls, text); b.type = 'button'; if (fn) b.addEventListener('click', fn); return b; }
@@ -48,10 +59,14 @@ async function read(fresh) {
     C.sb.rpc('getting_ready_marks').then(({ data, error }) => { if (!error && data && data.ok === true) S.marks = data; else S.marksErr = error?.message ?? data?.reason ?? 'no reason was given'; }, (e) => { S.marksErr = e?.message ?? String(e); }),
   ];
   if (S.owner) jobs.push(C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) S.ai = r.ai; else S.aiErr = r?.error ?? 'no reason was given'; }, (e) => { S.aiErr = e?.message ?? String(e); }));
+  if (S.owner) jobs.push(C.sb.rpc('business_profile_list').then(({ data, error }) => { if (!error && data && data.ok === true) S.prof = data.statements ?? []; else S.profErr = error?.message ?? data?.note ?? 'no reason was given'; }, (e) => { S.profErr = e?.message ?? String(e); }));
   await Promise.all(jobs);
   if (S.owner && S.marks?.groups) await C.sb.rpc('understand_groups').then(({ data, error }) => { if (!error && data && data.ok !== false) S.groups = data; else S.groupsErr = error?.message ?? data?.reason; }, (e) => { S.groupsErr = e?.message ?? String(e); });
   return S;
 }
+// What she already told Vera about her business, in the one profile store (business_profile_owner_say keeps it there).
+const PRE = 'how your business works, in your words: ';
+function keptWords(S) { const o = {}; for (const s of S.prof ?? []) { const a = String(s.area || ''); if (a.startsWith(PRE) && s.status !== 'rejected') o[a.slice(PRE.length)] = String(s.statement || ''); } return o; }
 function mark(S, key) { const m = S.marks?.mine?.[key]; if (m) return m; if (S.marksErr) return localMarks()[key] ?? null; return null; }
 
 // The seven steps from real state. state: done, now (the current one), todo, wait (not read).
@@ -62,7 +77,7 @@ function stepsOf(S) {
     { k: 'start', n: 'Start', name: 'Welcome', done: !!mark(S, 'agreed') },
     { k: 'db', n: '1', name: 'Your database', done: live, wait: !live },
     { k: 'connect', n: '2', name: 'Connect', done: road[0].state === 'done', wait: road[0].state === 'wait' },
-    { k: 'business', n: '3', name: 'Your business', done: !!mark(S, 'business') },
+    { k: 'business', n: '3', name: 'Your business', done: Object.keys(keptWords(S)).length > 0 },
     { k: 'find', n: '4', name: 'Make findable', done: road[1].state === 'done', wait: road[1].state === 'wait', pct: road[1].pct },
     { k: 'understand', n: '5', name: 'Understand', done: road[2].state === 'done', wait: road[2].state === 'wait' },
     { k: 'ready', n: '6', name: 'Ready', done: road[3].state === 'done' },
@@ -95,15 +110,52 @@ export async function mount(c) {
   host = C.$('#gr');
   if (!host) return;
   document.body.classList.add('gr-on');
+  C.$('#gr-way')?.remove();
+  wayBack();
   if (!host.dataset.built) build();
-  C.$('#gr-left').replaceChildren(p('working no-late', 'Reading where your Tool stands'));
+  if (!R) C.$('#gr-left').replaceChildren(p('working no-late', 'Reading where your Tool stands'));
   R = await read(true);
-  draw();
+  pending = !isReady(R);
+  document.body.classList.toggle('gr-pending', pending);
+  document.body.dataset.guide = guideName();
+  if (!typing()) draw();
   paidReturn(R);
   clearTimeout(poll);
   if ((Number(R.road?.findable?.reading) || 0) > 0 || (Number(R.road?.understanding?.waiting) || 0) > 0) poll = setTimeout(() => { if (!C.$('#s-ready')?.hidden && !C.$('#gr-sheet')) mount(C); }, 60000);
 }
-export function unmount() { document.body.classList.remove('gr-on'); C?.$('#gr-meter')?.remove(); clearTimeout(poll); }
+// Leaving Getting ready while the brain is not Ready: one line at the top of the page she goes to, back to the step she left.
+export function unmount() {
+  document.body.classList.remove('gr-on'); C?.$('#gr-meter')?.remove(); clearTimeout(poll);
+  if (pending && C && !C.$('#gr-way')) {
+    const w = el('div', 'gr-way'); w.id = 'gr-way'; w.setAttribute('role', 'status');
+    w.append(el('span', null, 'Your brain is not ready yet.'), btn('gr-link', String.fromCharCode(8592) + ' Back to getting ready', () => C.goto('s-ready')));
+    const tabs = C.$('#tabs'); if (tabs) tabs.after(w); else document.body.prepend(w);
+  }
+}
+// She is typing an answer on the card: a reading that comes back must not redraw it away.
+function typing() { const t = C?.$('#gr-q-in'); return !!t && (document.activeElement === t || t.value.trim().length > 0); }
+// THE WAY BACK (Alex 16:43 PT: he left setup and did not know how to return). While not Ready, the masthead Brain button,
+// the Brain line under the tabs and every tab lead back to Getting ready, at the step she left (at is kept). Capture phase,
+// so the press never reaches the tab it was on. The Brain itself stays one press away under See everything in your brain.
+let wired = false;
+function wayBack() {
+  if (wired) return;
+  wired = true;
+  window.addEventListener('gr-refresh', () => { if (C && !C.$('#s-ready')?.hidden) mount(C); });
+  document.addEventListener('click', (e) => {
+    if (!pending || !document.body.classList.contains('gr-pending') || !e.target.closest) return;
+    const t = e.target.closest('#brain-engine, #brain-banner button, #tabs .tab');
+    if (!t || t.classList.contains('tab-more')) return;
+    const here = !C.$('#s-ready')?.hidden;
+    if (t.classList.contains('tab-ask')) {   // on Getting ready the one place to ask is Vera's column
+      if (!here) return;
+      e.preventDefault(); e.stopImmediatePropagation(); C.$('#panel-input')?.focus(); return;
+    }
+    e.preventDefault(); e.stopImmediatePropagation();
+    C.$('#tabs')?.classList.remove('more-open');
+    if (here) toast('The rest of the Tool opens when your brain is ready.'); else C.goto('s-ready');
+  }, true);
+}
 
 function build() {
   host.dataset.built = '1';
@@ -112,8 +164,8 @@ function build() {
   const left = el('div', 'gr-card'); left.id = 'gr-left';
   const main = el('div', 'gr-main'); main.append(steps, left);
   // THE RIGHT COLUMN IS VERA'S (seat vera-guide fills it). Until she lives here, it says how to reach her, and nothing else.
-  const vera = el('aside', 'gr-vera'); vera.id = 'gr-vera'; vera.setAttribute('aria-label', 'Vera, your AI guide');
-  const vh = el('div', 'gr-vh'); vh.append(el('span', 'gr-av', 'V'), (() => { const t = el('span'); t.append(el('b', null, guideName()), el('small', null, 'your AI guide')); return t; })());
+  const vera = el('aside', 'gr-vera'); vera.id = 'gr-vera'; vera.setAttribute('aria-label', 'Vera, your guide');
+  const vh = el('div', 'gr-vh'); vh.id = 'gr-vh'; vh.append(el('span', 'gr-av', 'V'), (() => { const t = el('span'); t.append(el('b', null, 'Vera'), el('small', null, 'your guide')); return t; })());
   vera.append(vh, p('gr-vnote', 'Ask me anything about getting ready, or about your business. I can open any step for you.'),
     btn('go', 'Talk to ' + guideName(), () => C.$('#vera-btn')?.click()));
   const grid = el('div', 'gr-grid'); grid.append(main, vera);
@@ -132,12 +184,15 @@ function draw() {
     C.$('#gr-meter')?.remove();
     return;
   }
+  const vb = C.$('#gr-vh b'); if (vb) vb.textContent = guideName();
+  const va = C.$('#gr-vh .gr-av'); if (va) va.textContent = guideName().slice(0, 1).toUpperCase();
+  C.$('#gr-vera')?.setAttribute('aria-label', guideName() + ', your guide');
   const st = stepsOf(S);
   if (!at || !st.find((s) => s.k === at)) at = (st.find((s) => s.state === 'now') || st[st.length - 1]).k;
   const row = C.$('#gr-steps');
   row.replaceChildren(...st.map((s) => {
-    const b = btn('gr-st gr-' + s.state, '', () => { at = s.k; draw(); });
-    b.setAttribute('role', 'listitem');
+    const b = btn('gr-st gr-' + s.state, '', () => { at = s.k; bz.open = null; bz.draft = ''; draw(); });
+    b.setAttribute('role', 'listitem'); b.dataset.step = s.k;
     b.append(el('small', null, s.n + (s.k === 'find' && !s.done && Number.isFinite(Number(s.pct)) ? ' ' + DOT + ' ' + num(s.pct) + '%' : '') + (s.done ? ' ' + DOT + ' done' : '')), el('b', null, s.name));
     if (s.k === at) b.setAttribute('aria-current', 'step');
     return b;
@@ -155,19 +210,23 @@ function more() {
   return d;
 }
 // THE BRAIN, ONE PRESS AWAY (inventory: nothing of the Brain is lost). It opens the Brain itself, with a way back.
-function openBrain() {
-  C.goto('s-summary');
-  const sec = C.$('#s-summary');
-  if (sec && !sec.querySelector('#gr-back')) { const b = btn('go ghost door-back', String.fromCharCode(8592) + ' Getting ready', () => C.goto('s-ready')); b.id = 'gr-back'; sec.prepend(b); }
-}
+// SUPERSEDED (seat getting-ready-fix-1): the "Getting ready" pill this added to the Brain; the way back is now the one line
+// unmount() puts at the top of any page while the brain is not Ready.
+function openBrain() { C.goto('s-summary'); }
 
-// THE SPEND LINE in the masthead: what one-time reading has cost so far this month (the meter) and what this step costs.
+// THE SPEND LINE in the masthead: what setup has spent on AI so far (the meter's one-time reading lines this month, never the
+// balance; the balance is only in its own place) and what this step costs. Always in cents, so it cannot be mistaken for the
+// balance (seat getting-ready-fix-1: $14.52 spent read as "$15" beside a $15.03 balance).
 function stepPrice(S, k) {
   if (k === 'find') { const n = (S.prog ?? []).filter((r) => r.kind === 'gmail').reduce((a, r) => a + (Number(r.files_waiting_for_owner) || 0), 0); return { n, rate: true }; }
   if (k === 'understand') return S.groups && Number.isFinite(Number(S.groups.total_usd)) ? { usd: Number(S.groups.total_usd) } : { counting: true };
   return { free: true };
 }
-function soFar(S) { const d = S.ai?.plain?.daily; if (!Array.isArray(d)) return null; return d.reduce((a, x) => a + (Number(x.one_time_usd) || 0), 0); }
+function soFar(S) {
+  const pl = S.ai?.plain; if (!pl) return null;
+  if (Number.isFinite(Number(pl.one_time_usd)) && pl.one_time_usd !== null) return Number(pl.one_time_usd);
+  const d = pl.daily; if (!Array.isArray(d)) return null; return d.reduce((a, x) => a + (Number(x.one_time_usd) || 0), 0);
+}
 function balanceLeft(S) { const b = S.ai?.plain?.balance; return b && b.set_up ? Math.max(0, Number(b.left_usd) || 0) : null; }
 async function meter(S) {
   const head = C.$('.masthead');
@@ -180,11 +239,12 @@ async function meter(S) {
     if (!pr.n) step = 'nothing waiting';
     else { const E = await estimates({ askBody: C.askBody }).catch(() => null); const rate = Number(E?.all?.estimate?.per_file_findable_usd); step = Number.isFinite(rate) && rate > 0 ? 'up to about ' + usd(pr.n * rate) : 'not priced yet'; }
   }
-  const a = el('span', null, 'So far '); a.append(el('b', null, sf === null ? 'not read' : usd(sf)));
+  const spent = sf === null ? 'not read' : usd2(sf);
+  const a = el('span', null, 'Setup so far '); a.append(el('b', null, spent));
   const b = el('span', null, 'This step '); b.append(el('b', null, step));
   m.replaceChildren(a, el('span', null, DOT), b);
-  m.setAttribute('aria-label', 'So far ' + (sf === null ? 'not read' : usd(sf)) + ' on one-time reading this month. This step: ' + step + '.');
-  m.onclick = () => { const bl = balanceLeft(S); toast('So far ' + (sf === null ? 'not read' : usd(sf)) + ' on one-time reading this month, from the AI meter. This step: ' + step + '. ' + (bl === null ? 'No AI balance is set up.' : 'Your AI balance: ' + usd(bl) + '.')); };
+  m.setAttribute('aria-label', 'Setup has spent ' + spent + ' on AI so far. This step: ' + step + '.');
+  m.onclick = () => toast('Setup has spent ' + spent + ' on AI so far: reading your mail and files once, this month, from the AI meter. This step: ' + step + '.');
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -294,7 +354,7 @@ function paidReturn(S) {
 function balanceAct(S) {
   const bl = balanceLeft(S);
   const last = cardOf(S)?.payments?.[0];
-  return act('Your AI balance: ' + (bl === null ? 'none yet' : usd(bl)), last ? String(last.line) : "AI is paid from it at the makers' price, nothing added.", btn('go ghost', 'Top up', () => topUp(S)));
+  return act('Your AI balance: ' + (bl === null ? 'none yet' : usd2(bl)), last ? String(last.line) : "AI is paid from it at the makers' price, nothing added.", btn('go ghost', 'Top up', () => topUp(S)));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -302,15 +362,14 @@ function balanceAct(S) {
 const H = (t) => el('h1', 'gr-h', t);
 const CARDS = {
   start(S) {
-    const out = [H('Your business, read by AI that works for you.'), p('gr-lead', 'Before you use the Tool, it gets to know your business. Six steps, and ' + guideName() + ' with you the whole way.')];
-    const row = el('div', 'gr-row2');
-    const lf = el('label', 'gr-field', 'Your language'); const sel = el('select'); for (const [code, , own] of LANGS) { const o = el('option', null, own); o.value = code; if (code === screenLang()) o.selected = true; sel.appendChild(o); }
-    sel.addEventListener('change', () => setLang(sel.value, { say: (t) => toast(String(t)) })); lf.appendChild(sel);
-    const gf = el('label', 'gr-field', "Your guide's name"); const gi = el('input'); gi.value = guideName(); gi.maxLength = 30; gi.setAttribute('autocomplete', 'off'); gf.appendChild(gi);
-    gi.addEventListener('change', () => save('guide_name', { name: gi.value.trim() || 'Vera' }));
-    row.append(lf, gf);
+    // Alex's words, approved 2026-11-06 16:37 PT (seat getting-ready-fix-1). Language comes from the sign-in and is switched
+    // beside her name at the top; the guide's name is changed by asking Vera ("Call me something else") (decision 1127).
+    const out = [H('Not a chatbot. An AI workhorse for your business.'),
+      p('gr-lead', 'It reads everything, learns what matters, and answers with the proof, every day, in the background.'),
+      p(null, 'AI does three different jobs, and they cost very different amounts. So we split them, and you only pay for what is worth it to you.')];
     const layers = el('div', 'gr-layers');
-    for (const [n, w, e] of [['Find', 'Reads everything once so you can search it.', 'A few dollars, priced first'], ['Understand', 'Turns what matters into facts.', 'You choose, priced first'], ['Reason', 'Answers you from those facts, with the proof.', 'About 1 cent a question']]) { const d = el('div', 'gr-ly'); d.append(el('b', null, n), el('span', null, w), el('em', null, e)); layers.appendChild(d); }
+    for (const [n, w, e] of [['Find', 'Ask for the contract we signed with our biggest client last spring and it finds it, even if those words appear nowhere.', 'A few dollars, priced first'], ['Understand', 'Every invoice becomes facts: who, how much, due when, paid or not.', 'You choose, priced first'], ['Reason', 'Answers in plain words, always showing where they came from.', 'About 1 cent a question']]) { const d = el('div', 'gr-ly'); d.append(el('b', null, n), el('span', null, w), el('em', null, e)); layers.appendChild(d); }
+    const story = btn('go ghost gr-story', 'See how it works, 2 minutes', () => import('./setup.js?v=2026-11-07-getting-ready-fix-1').then((M) => M.openStory()).catch((e) => toast('The story could not be opened: ' + String(e?.message ?? e) + '.')));
     const prom = el('div', 'gr-promise');
     for (const [b, t] of [['Your database is yours.', 'Leave any time and keep it.'], ['AI at cost.', 'Every cent goes to the AI makers. We add nothing.'], ['Nothing without your yes.', 'Every price is shown before it starts.']]) { const d = el('div'); d.append(el('b', null, b), document.createTextNode(t)); prom.appendChild(d); }
     const agreed = mark(S, 'agreed');
@@ -323,7 +382,7 @@ const CARDS = {
       if (!box.checked) { toast('Check the box first: it says you have read the terms.'); box.focus(); return; }
       go.disabled = true; await save('agreed', { yes: true }, TERMS_V); go.disabled = false;
     });
-    out.push(row, layers, prom, lab, terms, (() => { const d = el('div', 'gr-go'); d.appendChild(go); return d; })());
+    out.push(layers, (() => { const d = el('div', 'gr-go'); d.appendChild(story); return d; })(), prom, lab, terms, (() => { const d = el('div', 'gr-go'); d.appendChild(go); return d; })());
     if (agreed) out.push(p('gr-small', 'You agreed on ' + new Date(agreed.at || Date.now()).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + '.'));
     if (S.marksErr) out.push(p('gr-small', 'Your yes is kept in this browser for now, because the Tool could not record it just now (' + String(S.marksErr) + ').'));
     return out;
@@ -348,15 +407,64 @@ const CARDS = {
       p('gr-lead', S.src ? (n ? 'Done. You signed in with each company, so the Tool never saw your passwords.' : 'Nothing is connected yet. Start with your mailbox.') : 'What is connected could not be read just now. It tries again on its own.'),
       list, act('Anything missing?', "A colleague's mailbox, a drive, another system.", btn('go ghost', 'Add something', () => C.goto('s-connect')))];
   },
+  // STEP 3, ANSWERED IN PLACE (seat getting-ready-fix-1; Alex 16:41 PT: the list and Vera felt disconnected). The open
+  // question becomes a large box under itself, with the microphone, Continue and Skip; on Continue her words appear under the
+  // question with Vera's one line under them, the circle checks green, the next question opens. Every question carries its own
+  // Answer with Vera. The conversation is vera.js's (window.veraBusiness): same words in her column, same rules (1121, 1122:
+  // nothing added, the summary in her words at the end), kept in the one profile store only on her yes.
   business(S) {
-    const said = mark(S, 'business')?.value ?? {};
-    const Q = ['What kind of business is it?', 'How do you make money?', 'What does your ideal customer look like?', 'How does a job go, from the first request to getting paid?', 'Who do you pay to get the work done?', 'How do new customers find you?'];
-    const ol = el('ol', 'gr-secs');
-    Q.forEach((q, i) => { const li = el('li', said['a' + i] ? 'done' : ''); li.append(el('span', 'gr-c'), (() => { const t = el('span'); t.append(el('b', null, q), el('small', null, said['a' + i] ? String(said['a' + i]) : 'Not told yet')); return t; })()); ol.appendChild(li); });
-    return [H('Step 3 ' + DOT + ' Tell us about your business.'),
-      p('gr-lead', 'Talk to ' + guideName() + ', or type. Say whatever comes to mind, in your own words and the language of your trade. There are no wrong answers. About two minutes, free.'),
-      ol, p('gr-small', 'Your words become "How your business works". The Tool reads everything through them. Change them any time.'),
-      act(guideName() + ' asks you, one at a time', 'In the conversation on the right.', btn('go', 'Start with ' + guideName(), () => C.$('#vera-btn')?.click()))];
+    const V = window.veraBusiness;
+    const out = [H('Step 3 ' + DOT + ' Tell us about your business.'),
+      p('gr-lead', 'Say whatever comes to mind, in your own words and the language of your trade. There are no wrong answers. About two minutes, free.')];
+    if (!V) { out.push(p('gr-small', guideName() + ' could not be loaded just now, so this step cannot be answered here. Reload the page to try again.')); return out; }
+    const kept = keptWords(S);
+    const T = V.state();
+    const ol = el('ol', 'gr-secs gr-qs');
+    V.questions.forEach((q, i) => {
+      const now = T ? T.said[i] : '';
+      const old = kept[V.keys[i]] || '';
+      const skipped = !!(T && T.skipped[i]);
+      const li = el('li', (now || (!T && old)) ? 'done' : skipped ? 'skipped' : '');
+      if (bz.open === i) li.classList.add('open');
+      const body = el('span');
+      body.appendChild(el('b', null, q));
+      if (now) {
+        body.appendChild(el('span', 'gr-words', now));
+        const v = el('span', 'gr-vline'); v.append(el('span', 'gr-av', guideName().slice(0, 1).toUpperCase()), el('span', null, V.thanks)); body.appendChild(v);
+      } else if (old) {
+        body.appendChild(el('span', 'gr-words', old));
+        body.appendChild(el('small', null, 'What you told ' + guideName() + ' before.'));
+      } else if (skipped) body.appendChild(el('small', null, 'Skipped.'));
+      if (bz.open === i) body.appendChild(answerBox(i, now ? 'Add to it' : null));
+      else body.appendChild(btn('gr-link gr-qbtn', (now || old ? 'Add more with ' : 'Answer with ') + guideName(), () => openQ(i)));
+      li.append(el('span', 'gr-c'), body);
+      ol.appendChild(li);
+    });
+    out.push(ol);
+    const all = T && V.questions.every((_, i) => T.said[i] || T.skipped[i]);
+    if (T && (all || bz.done)) {
+      const sum = el('div', 'gr-sum');
+      sum.append(el('b', null, 'Here is what you told me, in your words.'), p('gr-small', 'Each answer is under its question above.'));
+      if (T.extra) sum.appendChild(p(null, 'Anything else: ' + T.extra));
+      sum.appendChild(p(null, 'Is this right, and is there anything else you want to say?'));
+      if (bz.more) sum.appendChild(answerBox(-1, null));
+      const acts = el('div', 'gr-chips');
+      const keep = btn('go', 'That is right, keep it', async () => {
+        keep.disabled = true; const r = await V.keep(); bz = { open: null, draft: '', more: false, done: false };
+        toast(String(r?.note || 'Kept.')); R = await read(false); draw();
+      });
+      acts.append(keep, btn('go ghost', 'Something else to add', () => { bz.more = true; draw(); C.$('#gr-q-in')?.focus(); }),
+        btn('go ghost', 'Stop for now', () => { V.stop(); bz = { open: null, draft: '', more: false, done: false }; draw(); }));
+      sum.appendChild(acts);
+      out.push(sum);
+    } else if (!T || bz.open === null) {
+      const first = V.questions.findIndex((_, i) => !(T ? (T.said[i] || T.skipped[i]) : kept[V.keys[i]]));
+      const startAt = first < 0 ? 0 : first;
+      out.push(act(Object.keys(kept).length && !T ? 'Kept as How your business works' : guideName() + ' asks, one question at a time', 'Answer right here, under each question. Skip any.', btn('go', T ? 'Go on' : (Object.keys(kept).length ? 'Change or add' : 'Start with ' + guideName()), () => openQ(startAt))));
+    }
+    if (S.profErr) out.push(p('gr-small', 'What you told ' + guideName() + ' before could not be read just now (' + String(S.profErr) + ').'));
+    out.push(p('gr-small', 'Your words become "How your business works". The Tool reads everything through them. Nothing is kept until you say it is right. Change them any time.'));
+    return out;
   },
   find(S) {
     const d = S.road;
@@ -423,6 +531,48 @@ const CARDS = {
     return out;
   },
 };
+// THE ANSWER BOX under a question (i), or under the summary for anything else (i = -1): large, growing as she types, the one
+// microphone of the Tool beside it (box.js micFor), Continue and Skip.
+function answerBox(i, hint) {
+  const V = window.veraBusiness;
+  const w = el('div', 'gr-ans');
+  const t = el('textarea', 'gr-ans-in'); t.id = 'gr-q-in'; t.rows = 3; t.value = bz.draft || ''; t.placeholder = hint || 'Type, or press the microphone and say it';
+  t.setAttribute('aria-label', i >= 0 ? V.questions[i] : 'Anything else you want to say');
+  const fit = () => { t.style.height = 'auto'; t.style.height = Math.max(96, Math.min(t.scrollHeight, 360)) + 'px'; };
+  t.addEventListener('input', () => { bz.draft = t.value; fit(); });
+  const mic = el('button', 'onebox-icon onebox-mic gr-ans-mic'); mic.id = 'gr-q-mic'; mic.type = 'button'; mic.setAttribute('aria-label', 'Speak instead of typing'); mic.title = 'Speak instead of typing';
+  mic.appendChild((() => { const NS = 'http://www.w3.org/2000/svg'; const s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); const pa = document.createElementNS(NS, 'path'); pa.setAttribute('d', 'M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2z'); s.appendChild(pa); return s; })());
+  const said = el('p', 'onebox-mic-said'); said.id = 'gr-q-said'; said.hidden = true; said.setAttribute('role', 'status');
+  const row = el('div', 'gr-ans-row'); row.append(t, mic);
+  const go = btn('go', 'Continue', () => {
+    const v = t.value.trim();
+    if (!v) { toast('Say or type something first, or press Skip.'); t.focus(); return; }
+    bz.draft = '';
+    if (i < 0) { V.more(v); bz.more = false; draw(); return; }
+    V.answer(i, v); nextQ(i);
+  });
+  const skip = btn('go ghost', i < 0 ? 'Nothing else' : 'Skip', () => { bz.draft = ''; if (i < 0) { bz.more = false; draw(); return; } const st = V.state(); if (!st?.said[i]) V.skip(i); nextQ(i); });
+  const acts = el('div', 'gr-chips'); acts.append(go, skip);
+  w.append(row, said, acts);
+  setTimeout(() => { try { micFor({ btn: '#gr-q-mic', input: '#gr-q-in', said: '#gr-q-said' }); } catch (_) { /* typing still works */ } fit(); t.focus({ preventScroll: false }); }, 0);
+  return w;
+}
+async function openQ(i) {
+  const V = window.veraBusiness;
+  if (!V) return;
+  if (!V.running()) { const ok = await V.begin(); if (!ok) { toast('Only the owner tells ' + guideName() + ' how the business works.'); return; } }
+  bz.open = i; bz.draft = ''; bz.more = false;
+  V.ask(i);
+  draw();
+}
+function nextQ(i) {
+  const V = window.veraBusiness; const T = V.state();
+  const n = V.questions.findIndex((_, k) => k > i && !(T.said[k] || T.skipped[k]));
+  const m = n >= 0 ? n : V.questions.findIndex((_, k) => !(T.said[k] || T.skipped[k]));
+  if (m >= 0) { bz.open = m; V.ask(m); }
+  else { bz.open = null; bz.done = true; V.summary(); }
+  draw();
+}
 function line(a, b) { const d = el('div', 'gr-l'); d.append(el('span', null, a), el('span', null, b)); return d; }
 function ring(pct) {
   const NS = 'http://www.w3.org/2000/svg'; const s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 120 120'); s.setAttribute('class', 'gr-ring'); s.setAttribute('aria-hidden', 'true');
