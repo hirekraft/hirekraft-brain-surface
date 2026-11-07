@@ -2627,6 +2627,9 @@ body.br-panel-open { overflow: hidden; }
   body .vera-btn { right: 16px; bottom: calc(56px + 14px + env(safe-area-inset-bottom)); width: 64px; height: 64px; padding: 0; justify-content: center; position: fixed; }
   body .vera-btn .vera-dot { position: absolute; top: 10px; right: 12px; }
   .vera-acts .go { flex: 1 1 100%; }
+  /* seat vera-guide: in Getting ready's column on a phone she sits under the step, not over it. */
+  .panel.in-vera { min-height: 460px; max-height: 82vh; }
+  .vera-sug { padding-left: calc(var(--u) * 3); padding-right: calc(var(--u) * 3); }
   /* The conversation and its "put away" tab sit over the bar, never under it. */
   .panel-tab { top: auto; bottom: calc(64px + 96px + env(safe-area-inset-bottom)); transform: none; }
 
@@ -2915,6 +2918,25 @@ body.br-panel-open .panel { z-index: 63; }
 .vera-acts { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); }
 .vera-acts .go { margin: 0; min-height: var(--tap); white-space: normal; text-align: left; }
 .vera-here { outline: 3px solid var(--act); outline-offset: 3px; }
+/* VERA IN THE RIGHT COLUMN OF GETTING READY (seat vera-guide, 2026-11-07, decision 1124): the one panel element moved into
+   the column the screen gives her ([data-vera-column]), static and always open there; Put away and Full screen do not apply.
+   Her suggested questions sit above the box; her business conversation's summary is her words, section by section. */
+.panel.in-vera { position: static; width: auto; max-width: none; height: 100%; min-height: 540px; max-height: calc(100vh - 110px);
+  border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: none; z-index: auto; }
+.panel.in-vera .panel-handle, .panel.in-vera #panel-away, .panel.in-vera #panel-full { display: none; }
+body[data-vera-col] .vera-btn { display: none; }
+#gr-vera:has(> .panel.in-vera) > :not(.panel):not(.gr-vh) { display: none; }   /* fill/ready.js's note and button, while she is there */
+.vera-sug { flex: none; display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1.5); padding: calc(var(--u) * 2) calc(var(--u) * 4.5) 0; min-width: 0; }
+.vera-sug:empty { display: none; }
+.vera-chip { min-height: var(--tap); padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink);
+  font: inherit; font-size: var(--t-small); text-align: left; white-space: normal; overflow-wrap: anywhere; max-width: 100%; cursor: pointer; }
+.vera-chip:hover, .vera-chip:focus-visible { border-color: var(--act); }
+.vera-chip-main { background: var(--act); color: var(--on-act); border-color: var(--act); font-weight: var(--w-mid); }
+.vera-mine { margin: 0 0 var(--gap) auto; max-width: 90%; padding: calc(var(--u) * 2.5) calc(var(--u) * 3.5); border-radius: var(--radius-lg);
+  background: var(--paper-2); overflow-wrap: anywhere; width: fit-content; }
+.vera-mine p { margin: 0; }
+.vera-sum { border: 2px solid var(--act); }
+.vera-sum-h { font-size: var(--t-micro); font-weight: var(--w-strong); letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); margin-top: calc(var(--u) * 1.5) !important; }
 /* ── GETTING READY (seat getting-ready-screen, 2026-11-07, decision 1124; picture 5y8NLrpbGds7NpcJ9ovp6K): until the brain
    is Ready the Tool opens on one screen: the steps row, the current step only on the left, the right column kept for
    Vera, the other tabs dimmed with one line. The spend line sits in the masthead; one sheet before every spend, one toast
