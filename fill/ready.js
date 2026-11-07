@@ -99,6 +99,7 @@ export async function mount(c) {
   C.$('#gr-left').replaceChildren(p('working no-late', 'Reading where your Tool stands'));
   R = await read(true);
   draw();
+  paidReturn(R);
   clearTimeout(poll);
   if ((Number(R.road?.findable?.reading) || 0) > 0 || (Number(R.road?.understanding?.waiting) || 0) > 0) poll = setTimeout(() => { if (!C.$('#s-ready')?.hidden && !C.$('#gr-sheet')) mount(C); }, 60000);
 }
@@ -211,13 +212,23 @@ const PRESS = () => ({ sb: C.sb, el: (t, c) => el(t, c), askBody: C.askBody, she
 
 // TOP UP. With card payments (seat stripe-payments: topup_start), the press goes to Stripe's own page; until then it
 // records a request Verrandi sees, and says so. Either way a sheet first, and nothing until Yes.
+// The card fee is its own line before she pays (decision 1081): Stripe's US price, 2.9% + 30 cents on the whole charge,
+// the same sum studio-core pay_fee() puts on Stripe's page. While Stripe is in test mode the sheet says so: a test
+// payment is shown, never added to the balance (HQ money rule, 2026-11-07).
+const cardFee = (a) => Math.round((Math.ceil(((a + 0.30) / (1 - 0.029)) * 100) / 100 - a) * 100) / 100;
+function cardOf(S) { return S.ai?.plain?.balance?.card ?? null; }
 function topUp(S) {
   const pay = !!S.marks?.payments;
+  const card = cardOf(S);
+  const test = !card || card.mode !== 'live';
   const body = el('div');
   body.appendChild(p('gr-small', pay ? "You pay on Stripe's own page; the Tool never sees your card. Your balance goes up when the payment is through." : 'Top up by card is coming. For now your request goes to Verrandi, who adds it to your balance and tells you.'));
+  if (pay && test) body.appendChild(p('gr-small gr-test', 'Card payments are in test mode: on Stripe use the test card 4242 4242 4242 4242, any future date, any 3 digits. A test payment is shown here and is never added to your balance.'));
   let pick = 50;
+  const fee = p('gr-small gr-fee', '');
+  const say = () => { yes.textContent = (pay ? 'Pay $' : 'Ask for $') + pick; if (pay) { const f = cardFee(pick); fee.textContent = 'Top-up $' + pick.toFixed(2) + ' + card fee at cost $' + f.toFixed(2) + ' = $' + (pick + f).toFixed(2) + '. The fee is what the card company charges, passed on exactly.'; } };
   const seg = el('div', 'gr-seg');
-  for (const a of [25, 50, 100, 250]) { const b = btn('gr-amt' + (a === pick ? ' on' : ''), '$' + a, () => { pick = a; seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); yes.textContent = (pay ? 'Pay $' : 'Ask for $') + pick; }); seg.appendChild(b); }
+  for (const a of [25, 50, 100, 250]) { const b = btn('gr-amt' + (a === pick ? ' on' : ''), '$' + a, () => { pick = a; seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); say(); }); seg.appendChild(b); }
   const out = p('gr-small', '');
   const yes = btn('go', (pay ? 'Pay $' : 'Ask for $') + pick, async () => {
     yes.disabled = true; no.disabled = true; out.className = 'working no-late gr-small'; out.textContent = pay ? 'Opening the payment page' : 'Sending your request';
@@ -231,12 +242,57 @@ function topUp(S) {
   });
   const no = btn('go ghost', 'Not now', () => sheet.close());
   const acts = el('div', 'gr-chips'); acts.append(yes, no);
-  body.append(seg, acts, out);
+  say();
+  body.append(seg);
+  if (pay) body.append(fee);
+  body.append(acts, out);
+  if (pay) body.append(autoBlock(S));
   sheet.open('Top up your AI balance', body);
+}
+
+// AUTOMATIC TOP-UP: her saved card adds her chosen amount when the balance falls under her line, within her monthly
+// limit; she turns it off with one press. The card is saved by Stripe at her first payment; before that, one line says so.
+function autoBlock(S) {
+  const card = cardOf(S);
+  const box = el('div', 'gr-auto');
+  box.appendChild(el('b', null, 'Automatic top-up'));
+  if (!card?.card) { box.appendChild(p('gr-small', 'After your first card payment your card is saved by Stripe, and it can top up for you when the balance runs low.')); return box; }
+  const A = card.auto || {};
+  const out = p('gr-small', '');
+  const send = async (on, below, amount, cap) => {
+    out.className = 'working no-late gr-small'; out.textContent = on ? 'Switching it on' : 'Switching it off';
+    const { data, error } = await C.sb.rpc('topup_auto_set', on ? { p_on: true, p_below_usd: below, p_amount_usd: amount, p_month_cap_usd: cap } : { p_on: false }).catch((e) => ({ error: e }));
+    out.className = 'gr-small';
+    if (error || !data || data.ok !== true) { out.textContent = 'Not changed: ' + String(error?.message ?? data?.note ?? 'no reason was given') + '.'; return; }
+    sheet.close(); toast(String(data.note));
+  };
+  if (A.on) {
+    box.appendChild(p('gr-small', 'On: when your balance falls under $' + Number(A.below_usd).toFixed(0) + ', ' + card.card + ' adds $' + Number(A.amount_usd).toFixed(0) + ' plus the card fee, up to $' + Number(A.month_cap_usd).toFixed(0) + ' a month ($' + Number(A.this_month_usd || 0).toFixed(0) + ' so far this month).'));
+    box.append(btn('go ghost', 'Turn off', () => send(false)), out);
+    return box;
+  }
+  const num = (label, v) => { const f = el('label', 'gr-field', label); const i = el('input'); i.type = 'number'; i.min = '0'; i.step = '5'; i.value = String(v); i.inputMode = 'numeric'; f.appendChild(i); return [f, i]; };
+  const [f1, below] = num('When it falls under $', 30), [f2, amount] = num('add $', 50), [f3, cap] = num('up to $ a month', 200);
+  const row = el('div', 'gr-row3'); row.append(f1, f2, f3);
+  box.append(p('gr-small', 'Use ' + card.card + ' to top up by itself when the balance runs low.'), row,
+    btn('go ghost', 'Turn on', () => send(true, Number(below.value), Number(amount.value), Number(cap.value))), out);
+  return box;
+}
+// Back from Stripe (?paid=<id>): say what happened, from the payment's own record, once; then clean the address.
+function paidReturn(S) {
+  const q = new URLSearchParams(location.search);
+  if (!q.has('paid')) return;
+  q.delete('paid'); const done = q.get('done'); q.delete('done');
+  history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q.toString() : '') + location.hash);
+  const last = cardOf(S)?.payments?.[0];
+  if (done === '0') toast('Payment not finished: nothing was charged.');
+  else if (last && last.status !== 'open') toast(String(last.line));
+  else toast('Payment received by Stripe; the Tool records it in a moment. Press Top up to see it.');
 }
 function balanceAct(S) {
   const bl = balanceLeft(S);
-  return act('Your AI balance: ' + (bl === null ? 'none yet' : usd(bl)), "AI is paid from it at the makers' price, nothing added.", btn('go ghost', 'Top up', () => topUp(S)));
+  const last = cardOf(S)?.payments?.[0];
+  return act('Your AI balance: ' + (bl === null ? 'none yet' : usd(bl)), last ? String(last.line) : "AI is paid from it at the makers' price, nothing added.", btn('go ghost', 'Top up', () => topUp(S)));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
