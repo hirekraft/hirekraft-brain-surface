@@ -3756,7 +3756,7 @@ let routed = false;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
 const hasSetupMark = () => { try { return !!localStorage.getItem("tool.setup.return"); } catch (_) { return false; } };   // setup.js RETURN_KEY
 const setupReturning = () => import("./setup.js?v=2026-11-06-brain-status").then((S) => S.returning()).catch(() => false);
-const READY_JS = './ready.js?v=2026-11-07-getting-ready-1';   // seat getting-ready-screen
+const READY_JS = './ready.js?v=2026-11-07-stripe-payments-1';   // seat getting-ready-screen
 let readyMod = null;
 const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () => !!shape?.viewer?.all_access, readSources, goto, goTab, roomPage: (k, a) => { room(); roomPage(k, a); } });
 const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
