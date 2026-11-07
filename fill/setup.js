@@ -340,7 +340,7 @@ export function mount(ctx, at) {
 // THE STORY: How the Tool works, the workhorse story, from any screen.
 const STORY = [
   ['Most people think AI is a chatbot.', 'You ask, it answers, and you cannot tell whether it is true. That fear is fair. The chatbot is only the last step.'],
-  ['This is a workhorse, not a chatbot.', 'Three layers of AI working on your own data every day, in the background: your mail, your files, your calendar, your books and your systems. Steady, checkable work.'],
+  ['Not a chatbot. An AI workhorse for your business.', 'It reads everything, learns what matters, and answers with the proof, every day, in the background.'],   // Alex's words 2026-11-06 16:37 PT, as Getting ready's Welcome (seat getting-ready-fix-1)
   ['It lives in your own database.', 'In your name, paid by you. Cancel any time: we step out, and the database with everything the Tool labelled stays yours, ready for any AI you choose.', DB],
   ['It works in three layers.', 'Find searches everything by meaning. Understand labels each item. Reason answers you. Each layer has its own price, at cost, and you see it.', LIBRARY],
   ['Find: search that knows what you mean.', 'The email where a client agreed to new terms. The signed contract buried in a shared drive. The invoice in your accounting system nobody can locate. It finds them by meaning, everywhere at once, and shows you your own documents. It never invents anything.'],
