@@ -3755,8 +3755,8 @@ async function loadSecurity() {
 let routed = false;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
 const hasSetupMark = () => { try { return !!localStorage.getItem("tool.setup.return"); } catch (_) { return false; } };   // setup.js RETURN_KEY
-const setupReturning = () => import("./setup.js?v=2026-11-06-brain-status").then((S) => S.returning()).catch(() => false);
-const READY_JS = './ready.js?v=2026-11-07-stripe-payments-2';   // seat getting-ready-screen
+const setupReturning = () => import("./setup.js?v=2026-11-07-getting-ready-fix-1").then((S) => S.returning()).catch(() => false);
+const READY_JS = './ready.js?v=2026-11-07-getting-ready-fix-1';   // seat getting-ready-screen
 let readyMod = null;
 const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () => !!shape?.viewer?.all_access, readSources, goto, goTab, roomPage: (k, a) => { room(); roomPage(k, a); } });
 const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
@@ -3781,7 +3781,7 @@ async function routeOnState(mode) {
   // source opens the setup (fill/setup.js), as does #setup, and so does coming back from a sign-in started on its Connect
   // step. SUPERSEDED: the old s-intro as the first screen of a signed-in brain with nothing connected; s-intro stays the
   // screen for nobody signed in (above). #how opens How the Tool works over whatever screen this lands on.
-  if (location.hash === "#how") import("./setup.js?v=2026-11-06-brain-status").then((S) => S.openStory()).catch(() => { /* the story is extra; the screen still lands */ });
+  if (location.hash === "#how") import("./setup.js?v=2026-11-07-getting-ready-fix-1").then((S) => S.openStory()).catch(() => { /* the story is extra; the screen still lands */ });
   if (location.hash === "#setup") { goto("s-setup"); return; }
   const connected = connectedCount();
   // The module is fetched only when this browser holds the marker, so an ordinary opening waits on nothing new.
@@ -3832,7 +3832,7 @@ function goto(id, key) {
     showSubtabs(sec, 'drives', shape?.viewer?.email);
     drawBrain(false);
   }
-  if (id === 's-setup') import('./setup.js?v=2026-11-06-brain-status').then((S) => S.mount({ sec: $('#s-setup'), shape: () => shape, openConnect, goTab, readEstimate }, key)).catch((e) => { const m = $('#s-setup'); if (m) m.textContent = 'The setup could not be loaded: ' + String(e?.message ?? e); });   // seat brain-tab-setup
+  if (id === 's-setup') import('./setup.js?v=2026-11-07-getting-ready-fix-1').then((S) => S.mount({ sec: $('#s-setup'), shape: () => shape, openConnect, goTab, readEstimate }, key)).catch((e) => { const m = $('#s-setup'); if (m) m.textContent = 'The setup could not be loaded: ' + String(e?.message ?? e); });   // seat brain-tab-setup
   if (id === 's-ready') import(READY_JS).then((G) => { readyMod = G; G.mount(readyCtx()); }).catch((e) => { const m = $('#gr-left'); if (m) m.textContent = 'Getting ready could not be loaded: ' + String(e?.message ?? e); });   // seat getting-ready-screen
   else if (readyMod) readyMod.unmount();
   if (id === "s-tests") loadTests();
@@ -3869,7 +3869,7 @@ function room() {
     aiBlocks: roomBlocks,
     door: (key) => { userMoved = true; const [t, sub] = String(key).split('/'); if (sub) { location.hash = '#' + t + '/' + sub; if (document.body.dataset.tab !== t) goTab(t); } else goTab(t); },
     connectSystem: (name) => connectSystem(name),
-    openStory: () => import('./setup.js?v=2026-11-06-brain-status').then((S) => S.openStory()).catch(() => goto('s-intro')),   // How the Tool works (seat brain-tab-setup)
+    openStory: () => import('./setup.js?v=2026-11-07-getting-ready-fix-1').then((S) => S.openStory()).catch(() => goto('s-intro')),   // How the Tool works (seat brain-tab-setup)
     // Add a source: the part that was Brain's third sub-tab moves onto the room's page, and back when the page closes.
     openAdd: (host) => { const part = $('#s-summary [data-sub="add"]'); if (!part) return null; const home = part.parentElement, next = part.nextSibling; host.appendChild(part); part.hidden = false; if (!$('#connect-stage').children.length) stageTypes(); return { part, home, next }; },
     closeAdd: (m) => { if (m?.home) { m.home.insertBefore(m.part, m.next); m.part.hidden = true; } },
@@ -4220,7 +4220,7 @@ function workPanel(onWork) {
 // WIDE VIEW BESIDE THE CONVERSATION (seat conversation-panel, item 15): a table or chart from an answer, or a PDF made
 // from it, shown wide on the right of Work. Asked for from another tab, it opens Work first. Closed, the conversation
 // takes the width. What it shows is a copy of what is already drawn in the answer, never a new reading.
-function showWide(title, node) {
+function showWide(title, node) { if (document.body.dataset.tab === 'ready') return;   // on Getting ready nothing in Vera's column changes tab, so no wide view (seat getting-ready-fix-1, Alex 2026-11-06 16:42 PT)
   if ($('#s-work')?.hidden) { userMoved = true; goTab('work'); }
   const v = $('#work-view'), body = $('#work-view-body');
   if (!v || !body) return;
