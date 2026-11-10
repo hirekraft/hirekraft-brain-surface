@@ -3141,4 +3141,9 @@ body.fd-open .vera-btn, body.gr-novera .vera-btn { display: none; }
 .gs-live.gs-inline { display: grid; gap: calc(var(--u) * 2); padding: calc(var(--u) * 3); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
 .gs-sample .gr-go { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; }
 .gs-sample .gr-go .go { margin: 0; }
+/* ── AUDIT FIX SCREEN (seat audit-fix-screen, 2026-11-10, ruling 1142): the note under an old mailbox on its own line, and two
+   buttons side by side on the credit step when a funded brain is short of what step 3 needs. Tokens only. ── */
+.gs-oldrow > .gs-oldnote { flex-basis: 100%; }
+.gr-go.gs-two { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; }
+.gr-go.gs-two .go { margin: 0; min-height: 44px; }
 @media (max-width: 720px) { body .gs-oldrow { padding-left: 0; } body .gs-sample .gs-limit { max-width: none; } body .gs-q .gr-seg .gr-amt { min-height: 44px; } }
