@@ -2548,6 +2548,10 @@ body.br-panel-open { overflow: hidden; }
   body .gr-vera { position: static; } body .vera-chip, body .gr-qbtn, body .gr-way .gr-link { min-height: 44px; }   /* seat getting-ready-fix-1: taps */
   body .gr-card { padding: calc(var(--u) * 4.5); }
   body .gr-meter { margin-left: 0; order: 9; flex-basis: 100%; justify-content: center; min-height: 44px; }
+  /* seat setup-front-door: the front door and Getting started at 390 px; tiles one or two across, taps 44 px */
+  body .fd { padding: calc(var(--u) * 4) 16px calc(var(--u) * 10); } body .fd .am-three { grid-template-columns: minmax(0, 1fr); }
+  body .gs-tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } body .gs-tile, body .gs-how, body .gr-why summary { min-height: 44px; }
+  body #gr .gr-st { min-width: 56px; } body #gr .gr-st b { font-size: var(--t-micro); }
   body .gr-st, body .gr-amt, body .gr-sug button, body .gr-why summary, body .gr-link, body .gr-act .go, body .gr-go .go, body .gr-chips .go { min-height: 44px; }
   body .gr-sheet { bottom: 12px; }
   /* seat agents-tab: the team as two columns of buttons, the steps one under another, the card stacked */
@@ -3047,3 +3051,73 @@ body:not(.gr-on) .gr-meter { display: none; }
 .gr-toast { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); background: var(--ink); color: var(--paper); border-radius: var(--radius-lg); padding: 10px 18px; z-index: 70; font-size: var(--t-small); overflow-wrap: anywhere; }
 #s-ready.step { background: none; border: 0; box-shadow: none; padding: 0; }
 .gr-st b { overflow-wrap: normal; word-break: normal; hyphens: auto; } /* ── GETTING READY, FIX 1 (seat getting-ready-fix-1, 2026-11-07; Alex's walk 2026-11-06 16:35-16:43 PT). ── One place to ask on Getting ready: the top box and the phone's Ask are hidden while it shows; Vera's column is the place. Her column never changes tab: Open in Work, Your conversations and an answer's Open wide are not shown there. Her box grows with what she types. Step 3 is answered in place under each question. While the brain is not Ready the tabs stay dimmed on every page and lead back here; any other page carries one line, Back to getting ready. */ body.gr-on #onebox, body.gr-on #tabs .tab-ask { display: none; } .panel.in-vera #panel-work, .panel.in-vera #panel-list, .panel.in-vera .wide-open { display: none; } .onebox-bar textarea { flex: 1; min-width: 0; font: inherit; font-size: calc(var(--t-read) * 1.15); line-height: 1.4; border: 0; background: none; color: var(--ink); outline: none; padding: calc(var(--u) * 1.5) 0; resize: none; overflow-y: auto; max-height: 220px; min-height: 1.4em; } .onebox-bar textarea::placeholder { color: var(--ink-4); } .panel-box { align-items: flex-end; } body.gr-pending #tabs { opacity: .45; } body.gr-pending:not(.gr-on) #tabs { pointer-events: auto; } body.gr-pending #brain-banner { display: none; } .gr-way { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 3); margin: calc(var(--u) * 3) 0 0; padding: calc(var(--u) * 2) calc(var(--u) * 4); border-radius: var(--radius-lg); background: var(--paper-2); font-size: var(--t-small); color: var(--ink-2); } .gr-way .gr-link { min-height: var(--tap); font-weight: var(--w-mid); } body.gr-on .gr-way { display: none; } .gr-story { margin: 0; } .gr-qs li { align-items: flex-start; } .gr-qs li > span:last-child { display: grid; gap: calc(var(--u) * 1.5); min-width: 0; flex: 1; } .gr-qs li.open { background: var(--paper-2); border-radius: var(--radius-lg); padding: calc(var(--u) * 3); } .gr-words { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); } .gr-vline { display: flex; align-items: center; gap: calc(var(--u) * 2); color: var(--ink-2); font-size: var(--t-small); } .gr-vline .gr-av { width: 24px; height: 24px; font-size: var(--t-micro); flex: none; } .gr-qbtn { justify-self: start; min-height: var(--tap); padding: 0; } .gr-ans { display: grid; gap: calc(var(--u) * 2); } .gr-ans-row { display: flex; align-items: flex-end; gap: calc(var(--u) * 2); border: 1.5px solid var(--line); border-radius: var(--radius-lg); background: var(--paper); padding: calc(var(--u) * 2) calc(var(--u) * 2) calc(var(--u) * 2) calc(var(--u) * 3); } .gr-ans-row:focus-within { border-color: var(--act); } .gr-ans-in { flex: 1; min-width: 0; min-height: 96px; font: inherit; font-size: var(--t-read); line-height: 1.45; border: 0; background: none; color: var(--ink); outline: none; resize: none; overflow-y: auto; } .gr-ans-mic { flex: none; min-width: var(--tap); min-height: var(--tap); } .gr-sum { display: grid; gap: calc(var(--u) * 2); border: 2px solid var(--act); border-radius: var(--radius-lg); padding: calc(var(--u) * 4); margin-top: var(--gap); } .vera-name-in { flex: 1; min-width: 8rem; min-height: var(--tap); font: inherit; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 0 calc(var(--u) * 3); background: var(--paper); color: var(--ink); }
+
+/* ── THE FRONT DOOR AND GETTING STARTED (seat setup-front-door, 2026-11-10; decisions 1101, 1131 to 1135; spec
+   studio-walkers briefs/mockups/getting-started-spec.md). One design language: the Access Map's am-* cards, points and
+   labels are reused as they are; this block adds only the overlay, the tiles with their fills (color for the three AI
+   layers and for state only), the step numbers, the fill-up bar, the per-source rows and the chips. Tokens only, so every
+   look holds. Phone rules in A PHONE IS A FIRST-CLASS SIZE. SUPERSEDED: setup.css (the old setup and story). ── */
+.fd { position: fixed; inset: 0; z-index: 70; overflow-y: auto; background: var(--ground); padding: calc(var(--u) * 6) 16px calc(var(--u) * 12); }
+.fd[hidden] { display: none; }
+body.fd-open { overflow: hidden; }
+body.fd-open .vera-btn, body.gr-novera .vera-btn { display: none; }
+.fd-page { font-size: var(--t-read); }
+.fd-top, .gs-top { display: flex; align-items: center; justify-content: space-between; gap: calc(var(--u) * 3); flex-wrap: wrap; min-width: 0; }
+.fd-close { min-height: 44px; margin: 0; }
+.am-ic.gs-okic { color: var(--ok-ink); }
+.fd-chips { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); }
+.fd-chip { display: inline-flex; align-items: center; gap: calc(var(--u) * 1.5); padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; font-size: var(--t-small); background: var(--paper); }
+.fd-chip .am-ic { width: 18px; height: 18px; color: var(--ink-3); }
+.fd-tiles .am-p { border: 0; }
+.fd-read { background: var(--people-soft); } .fd-warn { background: var(--warn-soft); } .fd-ok { background: var(--money-soft); }
+.fd-tt { font-family: var(--font-head); font-size: var(--t-head); color: var(--ink); }
+.fd-pr { font-weight: var(--w-strong); color: var(--ink); }
+.fd-ft { font-style: normal; font-size: var(--t-small); font-weight: var(--w-strong); color: var(--ink-2); }
+.fd-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: calc(var(--u) * 3); }
+.fd-steps li { display: flex; gap: calc(var(--u) * 3); align-items: flex-start; min-width: 0; overflow-wrap: anywhere; }
+.fd-n, .gs-n { display: inline-grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--paper-2); color: var(--ink-2); font-weight: var(--w-strong); font-size: var(--t-small); }
+.fd-gow { display: flex; }
+.fd-go { min-height: 48px; margin: 0; }
+/* GETTING STARTED: the step buttons with numbers (done = green), the fill-up bar, cards */
+#gr .gr-st { display: flex; align-items: center; gap: calc(var(--u) * 2); }
+#gr .gs-n.gs-done { background: var(--money); color: var(--on-act); }
+#gr .gr-st.gr-done, #gr .gr-st.gr-now { background: var(--paper-2); }
+.gs-how { min-height: 44px; }
+.gs-fill { display: grid; gap: 6px; margin: 0 0 var(--gap); }
+.gs-bar { height: 8px; border-radius: 999px; background: var(--paper-2); overflow: hidden; min-width: 0; }
+.gs-bar i { display: block; height: 100%; background: var(--money); border-radius: 999px; }
+.gs-bar.gs-thick { height: 14px; }
+.gs-line { font-size: var(--t-small); color: var(--ink-3); }
+.gr-grid.gr-solo { grid-template-columns: minmax(0, 1fr); }
+.gr-vera[hidden] { display: none; }
+.gs-okline { display: flex; align-items: center; gap: calc(var(--u) * 2); color: var(--ok-ink); }
+.gs-pl { display: flex; justify-content: space-between; align-items: flex-start; gap: calc(var(--u) * 4); padding: 8px 0; border-top: 1px solid var(--line-2); min-width: 0; }
+.gs-pl:first-of-type { border-top: 0; }
+.gs-pl > span { min-width: 0; overflow-wrap: anywhere; } .gs-pl small { display: block; color: var(--ink-3); font-size: var(--t-small); }
+.gs-pv { white-space: nowrap; }
+.gs-qs { display: grid; gap: calc(var(--u) * 2); margin-top: var(--gap); }
+.gs-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: calc(var(--u) * 2.5); min-width: 0; }
+.gs-tile { display: grid; gap: 4px; align-content: start; text-align: left; min-height: 96px; padding: calc(var(--u) * 3.5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper); color: var(--ink); cursor: pointer; min-width: 0; overflow-wrap: anywhere; font: inherit; }
+.gs-tile:hover { border-color: var(--ink); }
+.gs-tile.gs-on { background: var(--money-soft); border-color: var(--money-soft); }
+.gs-tt { display: flex; align-items: center; gap: calc(var(--u) * 2); } .gs-tt .am-ic { width: 22px; height: 22px; color: var(--ink-2); }
+.gs-tile small { color: var(--ink-3); font-size: var(--t-small); }
+.gs-chip { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: var(--paper-2); color: var(--ink-2); font-size: var(--t-small); font-weight: var(--w-mid); }
+.gs-chip::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .7; }
+.gs-chip-ok { background: var(--paper); color: var(--ok-ink); } .gs-row .gs-chip-ok { background: var(--money-soft); }
+.gs-chip-warn { background: var(--warn-soft); color: var(--warn); }
+.gs-plan { border: 2px solid var(--ink); }
+.gs-green { background: var(--money-soft); border-color: var(--money-soft); }
+.gs-rows { display: grid; gap: 0; min-width: 0; }
+.gs-row { display: flex; justify-content: space-between; align-items: center; gap: calc(var(--u) * 3); padding: 10px 0; border-top: 1px solid var(--line-2); min-width: 0; flex-wrap: wrap; }
+.gs-row:first-child { border-top: 0; }
+.gs-row > b, .gs-rl { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.gs-row small { color: var(--ink-3); font-size: var(--t-small); overflow-wrap: anywhere; }
+.gs-rl { display: grid; gap: 6px; }
+.gs-total { font-weight: var(--w-strong); margin: 0; }
+.gs-live { border: 2px solid var(--warn); }
+.gs-big { font-family: var(--font-head); font-size: var(--t-hero); line-height: 1.1; overflow-wrap: anywhere; }
+.gs-now { display: flex; align-items: center; gap: calc(var(--u) * 2); margin: 0; overflow-wrap: anywhere; }
+.gs-pulse { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--warn); animation: gs-pulse 1.4s ease-in-out infinite; }
+@keyframes gs-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .gs-pulse { animation: none; } }
