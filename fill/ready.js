@@ -777,6 +777,7 @@ const CARDS = {
       ['Who in my company will see what?', 'Everyone sees only what they can already open in your own systems. Your owner sees what your owner can see; a new hire sees what a new hire can see.'],
       ['What about pay, health and personal matters?', 'Every item gets a quick privacy check when it comes in, so sensitive things reach only the people who should see them. Anything made from private information stays just as private.'],
       ['How far back does it go?', 'The last 2 years, unless you choose otherwise. Older mail can be added any time, with its price shown first.'],
+      ['What does it cost after this?', 'Making new mail and files searchable as they arrive costs a few cents a month. Understanding, the next step, has its own price, shown there first.'],
       ['Is everything made searchable, even junk mail?', 'Yes: everything you connect, so nothing is missed. Pictures and recordings are separate choices. Sorting out what matters comes at the next step.'],
       ['Can I disconnect something later?', 'Yes, any time, in Settings. You see every connection there.'],
     ]));
