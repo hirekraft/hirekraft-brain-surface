@@ -73,22 +73,33 @@ async function read(fresh) {
   if (S.owner) jobs.push(readPlan(S), readSearchProgress(S));   // step 3's priced card and its live line (seat setup-screens-2)
   // step 4's live card: understand_progress through its owner door (seat setup-wire: understand_progress itself is the service's only,
   // so the call this replaced always failed, silently, and the card could never show)
-  if (S.owner) jobs.push(C.sb.rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) S.uprog = data.sources ?? []; else S.uprogErr = error?.message ?? data?.note ?? 'no reason was given'; }, (e) => { S.uprogErr = e?.message ?? String(e); }));
+  if (S.owner) jobs.push(C.sb.rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) S.uprog = data.sources ?? []; else S.uprogErr = String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'); }, (e) => { S.uprogErr = String(e?.message ?? e); }));
   await Promise.all(jobs);
   return S;
 }
 function mark(S, key) { const m = S.marks?.mine?.[key]; if (m) return m; if (S.marksErr) return localMarks()[key] ?? null; return null; }
 
 // The five steps from real state (spec page 2). state: done, now (the current one), todo, wait (not read).
-// Credit counts as done at $20 or more, or once step 3 is done (spending the credit on step 3 must not send her back).
+// AI CREDIT IS DONE (seat audit-fix-screen, ruling 1142.6 over 1138.1; it was $20 or more, which asked HireKraft, funded before,
+// to pay $20.91 again): once step 3 is done (spending the credit on step 3 must not send her back); for a brain never funded, at
+// $20; for a brain funded before, when the balance covers what step 3 still needs (search_plan's price of what is checked; nothing
+// planned needs nothing). A plan that could not be read does not send a funded brain back to pay: step 3 carries that failure.
+const fundedBefore = (S) => Number(S.ai?.plain?.balance?.put_in_usd) > 0;
+function stepNeed(S) { if (!S.splan || S.splan.ok !== true) return null; return Math.round(chosenOf(S.splan).reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100; }
+function creditDone(S, searchable) {
+  if (searchable) return true;
+  const bal = balanceLeft(S); if (bal === null) return false;
+  if (!fundedBefore(S)) return bal >= 20;
+  const need = stepNeed(S);
+  return need === null || bal + 0.000001 >= need;
+}
 function stepsOf(S) {
   const road = roadSteps(S);
   const live = !!(S.road || S.src);
-  const bal = balanceLeft(S);
   const searchable = road[0].state === 'done' && road[1].state === 'done';
   const out = [
     { k: 'db', n: '1', name: 'Your database', done: live, wait: !live },
-    { k: 'credit', n: '2', name: 'AI credit', done: (bal !== null && bal >= 20) || searchable },
+    { k: 'credit', n: '2', name: 'AI credit', done: creditDone(S, searchable) },
     { k: 'connect', n: '3', name: 'Connect and search', done: searchable, wait: road[1].state === 'wait' },
     { k: 'understand', n: '4', name: 'Understand', done: road[2].state === 'done', wait: road[2].state === 'wait' },
     { k: 'ready', n: '5', name: 'Ready', done: road[3].state === 'done' },
@@ -130,6 +141,8 @@ export async function mount(c) {
   R = await read(true);
   if (was?.mgroups && !was.mgroups.err && Date.now() - gAt < 300000) R.mgroups = was.mgroups;   // the groups are counted once per five minutes, not on every refresh
   if (was?.uans && was.uans.ok === true) R.uans = was.uans;   // the three answers' suggestions: counted once per visit
+  if (R.sprogErr && was?.sprog?.state === 'reading') R.sprog = was.sprog;   // a failed progress reading keeps the last count seen (C5)
+  if (R.uprogErr && was?.uprog) R.uprog = was.uprog;
   pending = !isReady(R);
   document.body.classList.toggle('gr-pending', pending);
   document.body.dataset.guide = guideName();
@@ -137,11 +150,12 @@ export async function mount(c) {
   paidReturn(R);
   clearTimeout(poll);
   searchPoll();
-  if ((Number(R.road?.findable?.reading) || 0) > 0 || (Number(R.road?.understanding?.waiting) || 0) > 0) poll = setTimeout(() => { if (!C.$('#s-ready')?.hidden && !C.$('#gr-sheet')) mount(C); }, 60000);
+  if ((Number(R.road?.findable?.reading) || 0) > 0 || (Number(R.road?.understanding?.waiting) || 0) > 0 || R.sprogErr || R.uprogErr) poll = setTimeout(() => { if (!C.$('#s-ready')?.hidden && !C.$('#gr-sheet')) mount(C); }, 60000);
 }
 // Leaving Getting ready while the brain is not Ready: one line at the top of the page she goes to, back to the step she left.
 export function unmount() {
   document.body.classList.remove('gr-on', 'gr-novera'); C?.$('#gr-meter')?.remove(); clearTimeout(poll);
+  if (String(location.hash || '').startsWith('#gs-')) { try { history.replaceState(null, '', location.pathname + location.search); } catch (_) { /* harmless */ } }   // the kept step belongs to this page only
   if (pending && C && !C.$('#gr-way')) {
     const w = el('div', 'gr-way'); w.id = 'gr-way'; w.setAttribute('role', 'status');
     w.append(el('span', null, 'Your brain is not ready yet.'), btn('gr-link', String.fromCharCode(8592) + ' Back to getting ready', () => C.goto('s-ready')));
@@ -211,7 +225,12 @@ function draw() {
   const va = C.$('#gr-vh .gr-av'); if (va) va.textContent = guideName().slice(0, 1).toUpperCase();
   C.$('#gr-vera')?.setAttribute('aria-label', guideName() + ', your guide');
   const st = stepsOf(S);
+  // A RELOAD RETURNS TO THE STEP SHE WAS ON (seat audit-fix-screen, ruling 1142.7): the open step is kept in the address as
+  // #gs-<step> and opened first; the first step not done only when the address names none (it used to be always, so a reload
+  // in step 3 or 4 on HireKraft landed on step 2's payment).
+  if (!at) { const h = String(location.hash || ''); const k = h.startsWith('#gs-') ? h.slice(4) : ''; if (st.find((s) => s.k === k)) at = k; }
   if (!at || !st.find((s) => s.k === at)) at = (st.find((s) => s.state === 'now') || st[st.length - 1]).k;
+  if (!C.$('#s-ready')?.hidden && location.hash !== '#gs-' + at) { try { history.replaceState(null, '', location.pathname + location.search + '#gs-' + at); } catch (_) { /* the step still opens */ } }
   const nov = NOVERA.includes(at);
   document.body.classList.toggle('gr-novera', nov);
   const vcol = C.$('#gr-vera'); if (vcol) vcol.hidden = nov;
@@ -412,8 +431,17 @@ function tileBtn(icon, title, line1, word, on, fn) {
 // polled every 15 seconds while it reads. The start time, the count, the bar, minutes left from the measured pace (or
 // "measuring"), and what is being read now ('<mailbox>: <year>' or a drive's name; never a subject or a person).
 const hm = (iso) => { const d = new Date(iso); return Number.isFinite(d.getTime()) ? d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null; };
+// SEAT audit-fix-screen (C5): when search_progress is refused or fails, the card says so in words, with the last count seen if
+// there was one; it used to be left out, with no words.
+const NOREAD = 'Could not read the progress just now.';
+function progressFailed(id, title, why) {
+  const c = el('section', 'am-step gs-live'); c.id = id;
+  c.append(el('span', 'am-num', title), p(null, NOREAD + ' Anything you started keeps going.'), el('p', 'am-small', 'Why: ' + String(why) + '. It tries again on its own.'));
+  return c;
+}
 function liveCard(S) {
   const g = S.sprog;
+  if (S.sprogErr && !(g && g.ok === true && g.state === 'reading')) return progressFailed('gs-live', 'Making it searchable', S.sprogErr);
   if (!g || g.ok !== true || g.state !== 'reading') return null;
   const all = Number(g.items_total) || 0, done = Number(g.items_done) || 0;
   const c = el('section', 'am-step gs-live'); c.id = 'gs-live';
@@ -424,6 +452,7 @@ function liveCard(S) {
   const ml = g.minutes_left;
   c.appendChild(p('gr-small', ml === null || ml === undefined ? 'Time: measuring' : 'about ' + num(ml) + ' minutes left'));
   if (g.now_reading) { const d = el('p', 'gs-now'); d.append(el('i', 'gs-pulse'), document.createTextNode('Reading ' + String(g.now_reading))); c.appendChild(d); }
+  if (S.sprogErr) c.appendChild(p('gr-small gs-over', NOREAD + ' It keeps going. The count above is the last one seen.'));
   c.appendChild(p('gr-small', 'You can close this page or keep working. It keeps going, and every box below shows where it is.'));
   return c;
 }
@@ -438,7 +467,7 @@ let plan = { months: 24, off: {} };
 function planRows(P) { return (P?.sources ?? []).filter((r) => r.state !== 'not_connected'); }
 function chosenOf(P) { return planRows(P).filter((r) => r.state === 'to_read' && !plan.off[r.key]); }
 function countLine(r) {
-  if (r.kind === 'mail') { const a = (Number(r.attachments) || 0) + (Number(r.attachments_estimated) || 0); return num(r.emails) + ' emails ' + DOT + ' ' + num(a) + ' attachments' + (Number(r.attachments_estimated) ? ' (some estimated)' : ''); }
+  if (r.kind === 'mail') { const a = (Number(r.attachments) || 0) + (Number(r.attachments_estimated) || 0); return num(r.emails) + ' emails in the mailbox ' + DOT + ' ' + num(a) + ' attachments' + (Number(r.attachments_estimated) ? ' (some estimated)' : ''); }   // the mailbox's own count; step 4 counts what was kept (seat audit-fix-screen, C3)
   return num(r.files) + ' files';
 }
 function searchCard(S) {
@@ -491,7 +520,7 @@ function searchCard(S) {
   const over = known && cost > bal + 0.000001;
   if (!known) c.appendChild(p('gr-small', 'Your credit could not be read just now, so nothing can be started. It tries again on its own.'));
   else if (over) c.appendChild(p('gr-small gs-over', 'This is more than your credit: add ' + usd2(Math.ceil(Number(((cost - bal) * 100).toFixed(6))) / 100) + ' first, or untick something.'));
-  else c.appendChild(p('gr-small', 'From your $20 credit, leaving ' + usd2(Math.max(0, bal - cost)) + '.'));
+  else c.appendChild(p('gr-small', 'From your credit of ' + usd2(bal) + ', leaving ' + usd2(Math.max(0, bal - cost)) + '.'));
   // Time: the chosen sources run side by side, so the longest one; any unmeasured one makes it "measuring".
   const mins = pick.length && pick.every((r) => r.minutes !== null && r.minutes !== undefined) ? Math.max(...pick.map((r) => Number(r.minutes) || 0)) : null;
   c.appendChild(p('gr-small', mins !== null ? 'about ' + num(mins) + ' minutes' : 'Time: measuring'));
@@ -513,6 +542,7 @@ function oldRow(r) {
   const d = el('div', 'gs-oldrow');
   d.append(el('small', null, on ? 'Old, searchable only: you can search it, nobody else can, and it gets no privacy check.' : 'Only you need to search this one? Mark it old: it costs less and nobody else can find it.'),
     btn('gr-link', on ? 'Undo: not old' : 'Old, searchable only', () => markOld(r, !on)));
+  if (on) d.appendChild(el('small', 'gs-oldnote', 'For an old mailbox kept for finding people, Everything under How far back is usually right.'));   // seat audit-fix-screen, brief item 5
   return d;
 }
 function markOld(r, old) {
@@ -588,7 +618,8 @@ async function readPlan(S) {
 }
 async function readSearchProgress(S) {
   const { data, error } = await C.sb.rpc('search_progress', {}).catch((e) => ({ error: e }));
-  if (!error && data && data.ok === true) S.sprog = data; else S.sprog = null;
+  if (!error && data && data.ok === true) { S.sprog = data; S.sprogErr = null; }
+  else { S.sprogErr = String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'); if (S.sprog?.state !== 'reading') S.sprog = null; }   // the last count seen is kept, said as such
 }
 // While it reads, the live card and the progress rows are refreshed every 15 seconds (only on step 3, only while shown).
 let sPoll = null;
@@ -599,14 +630,14 @@ function searchPoll() {
     if (C.$('#s-ready')?.hidden || at !== 'connect' || C.$('#gr-sheet')) { searchPoll(); return; }
     await readSearchProgress(R);
     const live = C.$('#gs-live'), next = liveCard(R);
-    if (live && next) live.replaceWith(next); else if (!next) { mount(C); return; }
+    if (live && next) live.replaceWith(next); else if (!next) { mount(C); return; } else if (!live) { mount(C); return; }
     searchPoll();
   }, 15000);
 }
 // PROGRESS: one row per source with its own meter and chip (Reading amber, Waiting grey, Searchable green).
 function progressCard(S, rows, prog) {
   const bal = balanceLeft(S);
-  const c = card('steps', 'Progress' + (bal !== null ? ' ' + DOT + ' your credit ' + usd2(bal) + ' left of $20' : ''), null);
+  const c = card('steps', 'Progress' + (bal !== null ? ' ' + DOT + ' your credit ' + usd2(bal) + ' left' : ''), null);
   const list = el('div', 'gs-rows');
   for (const x of prog) {
     const all = totalOf(x), done = Number(x.done) || 0;
@@ -691,16 +722,24 @@ const CARDS = {
   },
   credit(S) {
     const bal = balanceLeft(S);
-    const out = [H('Add your first $20 of AI credit.'),
+    const funded = fundedBefore(S), ok = creditDone(S, false), need = stepNeed(S);
+    const out = [H(funded ? 'Your AI credit.' : 'Add your first $20 of AI credit.'),
       points([
         ['ai', 'A one-time amount, paid ahead, for the AI work of making everything you connect searchable.'],
         ['coin', 'It goes to the AI companies at their own price. Verrandi adds nothing.'],
         ['eye', 'Whatever is left stays in your balance for later.'],
         ['shield', "You type your card on Stripe's own page. Your card number never reaches Verrandi."],
       ])];
-    if (bal !== null && bal >= 20) {
+    if (ok) {
       const gw = goOn('connect'); const cb = gw.querySelector('button'); cb.addEventListener('click', (e) => { if (!agreedNow()) { e.stopImmediatePropagation(); toast('Check the box first: it says you agree to the terms of use.'); } }, true);
-      out.push(card('coin', 'Your AI balance', null, priceRow('AI credit', usd2(bal))), okMark('Your credit is in'), termsLine(S), gw);
+      out.push(card('coin', 'Your AI balance', null, priceRow('AI credit', usd2(bal))), okMark(funded && need !== null && need > 0 ? 'Your credit covers step 3: ' + usd2(need) + ' for what is checked' : 'Your credit is in'), termsLine(S), gw);
+    } else if (funded && bal !== null) {
+      // FUNDED BEFORE, SHORT OF WHAT STEP 3 NEEDS (seat audit-fix-screen): the shortfall, never a new $20; and the cheaper way, in step 3.
+      const gap = Math.ceil(Number((((need || 0) - bal) * 100).toFixed(6))) / 100;
+      out.push(card('coin', 'Your AI balance', null, priceRow('AI credit', usd2(bal)), priceRow('Step 3, for what is checked', usd2(need))));
+      out.push(p('gr-small gs-over', 'Step 3 needs ' + usd2(gap) + ' more. Add it, or in step 3 mark a mailbox only you search as Old, searchable only: it costs less, and this step turns done when your credit covers it.'));
+      const gw = el('div', 'gr-go gs-two'); gw.append(btn('go', 'Go to step 3', () => { at = 'connect'; draw(); window.scrollTo({ top: 0 }); }), btn('go ghost', 'Top up', () => topUp(S)));
+      out.push(termsLine(S), gw);
     } else {
       // THE FEE is studio-core pay_fee's sum (the same sum cardFee() carries, proven equal on 8 of 8 amounts by seat
       // stripe-payments, and topup_start answers it again); never a typed figure.
@@ -950,7 +989,7 @@ async function readGroups(S) {
 function understandLive(S) {
   // a mailbox counts here once it is pressed (its groups are kept); a sample alone is shown by its own block (sampleBlock)
   const rows = (S.uprog ?? []).filter((x) => (x.state === 'reading' || x.state === 'at_ceiling') && Array.isArray(x.groups) && x.groups.length);
-  if (!rows.length) return null;
+  if (!rows.length) return S.uprogErr ? progressFailed('gs-ulive', 'Understanding your mail', S.uprogErr) : null;
   const total = rows.reduce((a, x) => a + (Number(x.total) || 0), 0), done = rows.reduce((a, x) => a + (Number(x.done) || 0), 0);
   const spent = rows.reduce((a, x) => a + (Number(x.so_far_usd ?? x.spent_usd) || 0), 0);
   const lim = rows.every((x) => Number.isFinite(Number(x.ceiling_usd)) && x.ceiling_usd !== null) ? rows.reduce((a, x) => a + Number(x.ceiling_usd), 0) : null;
@@ -964,6 +1003,7 @@ function understandLive(S) {
   c.appendChild(p('gr-small', mins === null ? 'Time: measuring the pace' : 'about ' + num(mins) + ' minutes left'));
   const track = rows.every((x) => x.on_track_usd !== null && x.on_track_usd !== undefined && Number.isFinite(Number(x.on_track_usd))) ? rows.reduce((a, x) => a + Number(x.on_track_usd), 0) : null;
   c.appendChild(p(null, 'So far ' + usd2(spent) + (track !== null ? ', on track for ' + usd2(track) : ', on track for: measuring') + (lim !== null ? ' ' + DOT + ' your limit ' + usd2(lim) : '') + '.'));
+  if (S.uprogErr) c.appendChild(p('gr-small gs-over', NOREAD + ' It keeps going. The count above is the last one seen.'));
   if (rows.some((x) => x.state === 'at_ceiling')) c.appendChild(p('gr-small', 'It stopped before your limit. What is left is not read; you can raise the limit and press again.'));
   const out = p('gr-small', '');
   const stop = btn('go ghost', 'Stop', async () => {
@@ -1007,7 +1047,7 @@ function uPoll() {
   if (!busy) return;
   uT = setTimeout(async () => {
     if (C.$('#s-ready')?.hidden || at !== 'understand' || C.$('#gr-sheet') || typing()) { uPoll(); return; }
-    await Promise.all([readSample(R), C.sb.rpc('understand_progress_mine').then(({ data }) => { if (data && data.ok === true) R.uprog = data.sources ?? []; }, () => {})]);
+    await Promise.all([readSample(R), C.sb.rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) { R.uprog = data.sources ?? []; R.uprogErr = null; } else R.uprogErr = String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'); }, (e) => { R.uprogErr = String(e?.message ?? e); })]);
     draw();
   }, 20000);
 }
@@ -1035,7 +1075,7 @@ function answersCard(S) {
   const q1 = el('div', 'gs-q'); q1.appendChild(el('b', null, 'What is each mailbox for?'));
   for (const m of A.mailboxes ?? []) {
     const r = el('div', 'gs-qrow'); const l = el('span', 'gs-rl');
-    l.append(el('b', null, fmtShort(m.mailbox || m.source_key)), el('small', null, num(m.emails_2y) + ' emails in 2 years'));
+    l.append(el('b', null, fmtShort(m.mailbox || m.source_key)), el('small', null, num(m.emails_2y) + ' emails kept in 2 years (junk left out)'));
     r.append(l, seg(MAILBOX_FOR, ua.mailboxes[m.source_key] || 'everything', (v) => { ua.mailboxes[m.source_key] = v; draw(); }, 'What ' + fmtShort(m.mailbox || m.source_key) + ' is for'));
     q1.appendChild(r);
   }
