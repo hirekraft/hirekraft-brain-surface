@@ -472,6 +472,35 @@ function rename() {
   });
 }
 
+// SETTINGS (seat setup-screens-2, spec part 2, decision 1138): "Your guide · Change" opens this same rename, and VERA
+// PROPOSES A CHANGE: Settings hands her the exact change, its price and the row's own function (P.yes); she says it in her
+// column with Yes and Not now. Nothing happens until the person presses Yes, and Yes is that same function (one path). She
+// never presses (1115). A proposal with no yes is only said (a change that is not built yet).
+window.veraRename = () => { open(); rename(); };
+window.veraPropose = (P) => {
+  open();
+  if (P.asked) said(String(P.asked), true);
+  const d = turn();
+  d.appendChild(el('p', null, String(P.say || '')));
+  if (!P.yes) { speak(String(P.say || '')); return; }
+  const box = el('div', 'vera-prop');
+  for (const [a, b] of P.lines || []) { const r = el('div', 'gs-pl'); r.append(el('span', null, String(a)), el('b', 'gs-pv', String(b))); box.appendChild(r); }
+  const acts = el('div', 'vera-acts');
+  const yes = el('button', 'go', 'Yes, do it'); yes.type = 'button';
+  const no = el('button', 'go ghost', 'Not now'); no.type = 'button';
+  const out = el('p', 'vera-small');
+  acts.append(yes, no); box.append(acts, out); d.appendChild(box);
+  speak(String(P.say || ''));
+  yes.addEventListener('click', async () => {
+    yes.disabled = true; no.disabled = true; out.className = 'vera-small working no-late'; out.textContent = 'Doing it';
+    let r;
+    try { r = await P.yes(); } catch (e) { r = { ok: false, note: 'Not changed: ' + String(e?.message ?? e) + '.' }; }
+    out.className = 'vera-small'; out.textContent = String(r?.note || (r?.ok ? 'Done.' : 'Not changed.'));
+    if (r?.ok) acts.remove(); else { yes.disabled = false; no.disabled = false; }
+  });
+  no.addEventListener('click', () => { acts.remove(); out.textContent = 'Nothing was changed.'; });
+};
+
 // WHILE SHE IS IN THE COLUMN, NOTHING OF HERS CHANGES TAB (seat getting-ready-fix-1, Alex 16:42 PT). These three move to
 // Work (lens.js): Open in Work, Your conversations, and an answer's Open wide. In her column they are hidden (skin.css) and,
 // if pressed anyway, refused here in the capture phase so lens.js never hears them.
