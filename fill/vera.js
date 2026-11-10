@@ -210,6 +210,7 @@ function suggestions() {
   const p = priceOnScreen();
   const S = {
     start: ['What does this cost me in total?', 'Who can see my data?', 'How long does this take?'],
+    credit: ['Is $20 enough?', 'Is my card safe?'],
     db: ['What does the database cost me?', 'What happens if I cancel?'],
     connect: ['Is everything connected?', 'Why does it need my mailbox?'],
     business: ['Why do you ask this?', 'Can I change it later?'],
@@ -231,7 +232,7 @@ function drawSug() {
   box.dataset.sig = sig;
   box.replaceChildren();
   if (talk && !talk.inPlace) { drawTalkActs(box); return; }
-  if (key === 'start' && readyNow()) {
+  if (key === 'connect' && readyNow()) {   // seat setup-front-door: Welcome is gone; she first appears on step 3
     const n = el('button', 'vera-chip', 'Call me something else'); n.type = 'button'; n.addEventListener('click', rename); box.appendChild(n);
   }
   // On Getting ready step 3 is answered on the card itself (fill/ready.js); her column keeps only questions about the step.
