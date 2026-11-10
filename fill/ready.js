@@ -975,50 +975,238 @@ function understandLive(S) {
   c.appendChild(p('gr-small', 'You can close this page or keep working. It keeps going, and you get one short email when it is done.'));
   return c;
 }
+// ---------------------------------------------------------------------------------------------------------------------
+// STEP 4, WIRED (seat setup-wire over seat understand-step's brain side). All owner only: the brain refuses anyone else.
+const GROUP_TITLE = { people: 'Your conversations', money: 'Money mail', automated: 'Automated mail', rest: 'Everything else' };
+const MAILBOX_FOR = [['everything', 'Everything'], ['sales', 'Sales'], ['accounting', 'Accounting'], ['hiring', 'Hiring'], ['old', 'Old, searchable only']];
+const WORK_WITH = [['businesses', 'Businesses'], ['people', 'People'], ['both', 'Both']];
+const SAMPLE_CAP = 3;   // the sample's own limit, never passed (understand_sample p_cap_usd); about $2 is what 100 conversations cost
+let ua = null;          // her three answers as she taps them: { mailboxes: {key: for}, work_with, money_words: [] }
+const fmtShort = (k) => String(k || '').split(':').pop();
+function chosenGroups(S) { const G = S.mgroups; if (!G || G.err || !G.groups) return ['money', 'people'].filter((g) => g === 'money' || !uOff[g]); return G.groups.filter((g) => g.always || !uOff[g.group]).map((g) => g.group); }
+async function readAnswers(S) {
+  const [a, m] = await Promise.all([
+    C.sb.rpc('understand_answers_suggest', { p_identity: null }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) })),
+    C.sb.rpc('understand_answers_moved', { p_identity: null }).then(({ data, error }) => (error ? null : data), () => null),
+  ]);
+  S.uans = a || { ok: false, note: 'no reason was given' };
+  S.umoved = m && m.ok === true ? m : null;
+}
+async function readSample(S) {
+  const { data, error } = await C.sb.rpc('understand_sample', { p_groups: chosenGroups(S), p_months: 24, p_confirm: false, p_size: 100, p_cap_usd: SAMPLE_CAP, p_identity: null }).catch((e) => ({ error: e }));
+  S.usam = error ? { ok: false, note: String(error.message ?? error) } : (data || { ok: false, note: 'no reason was given' });
+}
+// While the sample or a press reads, step 4 refreshes every 20 seconds (only while it is shown and nothing is typed or open).
+let uT = null;
+function uPoll() {
+  clearTimeout(uT);
+  const S = R;
+  if (!S || at !== 'understand') return;
+  const busy = S.usam?.state === 'reading' || (S.uprog ?? []).some((x) => x.state === 'reading' && Array.isArray(x.groups) && x.groups.length);
+  if (!busy) return;
+  uT = setTimeout(async () => {
+    if (C.$('#s-ready')?.hidden || at !== 'understand' || C.$('#gr-sheet') || typing()) { uPoll(); return; }
+    await Promise.all([readSample(R), C.sb.rpc('understand_progress_mine').then(({ data }) => { if (data && data.ok === true) R.uprog = data.sources ?? []; }, () => {})]);
+    draw();
+  }, 20000);
+}
+// her answers as kept, or else as suggested from counts (nothing read by AI)
+function answersFrom(A) {
+  if (A.answers && typeof A.answers === 'object') return { mailboxes: { ...(A.answers.mailboxes || {}) }, work_with: A.answers.work_with || A.work_with?.suggested || 'businesses', money_words: [...(A.answers.money_words || [])] };
+  const mb = {}; for (const m of A.mailboxes ?? []) mb[m.source_key] = m.suggested || 'everything';
+  return { mailboxes: mb, work_with: A.work_with?.suggested || 'businesses', money_words: (A.money_words ?? []).filter((w) => w.suggested).map((w) => w.word) };
+}
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function seg(list, now, fn, label) {
+  const d = el('div', 'gr-seg'); d.setAttribute('role', 'group'); if (label) d.setAttribute('aria-label', label);
+  for (const [v, t] of list) { const b = btn('gr-amt' + (v === now ? ' on' : ''), t, () => fn(v)); b.setAttribute('aria-pressed', v === now ? 'true' : 'false'); d.appendChild(b); }
+  return d;
+}
+// THREE QUICK QUESTIONS (1136): pre-filled, tap what is not right, Keep my answers (understand_answers_set), then what moved
+// (understand_answers_moved: the conversations per group before and now, only counts that changed).
+function answersCard(S) {
+  const c = card('chat', 'Three quick questions ' + DOT + ' free', null, el('p', 'am-small', 'Already filled in from what was counted. Tap anything that is not right.'));
+  c.id = 'gs-answers';
+  const A = S.uans;
+  if (!A) { c.appendChild(p('working no-late gr-small', 'Filling in your answers from what was counted')); return c; }
+  if (A.ok !== true) { c.appendChild(p('gr-small', 'Your answers could not be read just now: ' + String(A.note ?? A.reason ?? 'no reason was given') + '. The standard sorting is used: your conversations and money mail.')); return c; }
+  if (!ua) ua = answersFrom(A);
+  const q1 = el('div', 'gs-q'); q1.appendChild(el('b', null, 'What is each mailbox for?'));
+  for (const m of A.mailboxes ?? []) {
+    const r = el('div', 'gs-qrow'); const l = el('span', 'gs-rl');
+    l.append(el('b', null, fmtShort(m.mailbox || m.source_key)), el('small', null, num(m.emails_2y) + ' emails in 2 years'));
+    r.append(l, seg(MAILBOX_FOR, ua.mailboxes[m.source_key] || 'everything', (v) => { ua.mailboxes[m.source_key] = v; draw(); }, 'What ' + fmtShort(m.mailbox || m.source_key) + ' is for'));
+    q1.appendChild(r);
+  }
+  q1.appendChild(el('p', 'am-small', 'Old, searchable only: it stays searchable and is not read for understanding.'));
+  const q2 = el('div', 'gs-q'); q2.append(el('b', null, 'Who do you work with?'), seg(WORK_WITH, ua.work_with, (v) => { ua.work_with = v; draw(); }, 'Who you work with'));
+  q2.appendChild(el('p', 'am-small', 'Anyone you have ever written to always counts as someone you work with.'));
+  const q3 = el('div', 'gs-q'); q3.appendChild(el('b', null, 'What do you call the money paperwork?'));
+  const words = el('div', 'gr-seg'); words.setAttribute('role', 'group'); words.setAttribute('aria-label', 'Your money paperwork');
+  const listed = (A.money_words ?? []).map((w) => w.word);
+  const own = ua.money_words.filter((w) => !listed.includes(w));
+  for (const w of [...(A.money_words ?? []).map((x) => [x.word, x.conversations]), ...own.map((x) => [x, null])]) {
+    const on = ua.money_words.includes(w[0]);
+    const b = btn('gr-amt' + (on ? ' on' : ''), w[0].slice(0, 1).toUpperCase() + w[0].slice(1) + (w[1] ? ' ' + DOT + ' ' + num(w[1]) : ''), () => { ua.money_words = on ? ua.money_words.filter((x) => x !== w[0]) : [...ua.money_words, w[0]]; draw(); });
+    b.setAttribute('aria-pressed', on ? 'true' : 'false'); words.appendChild(b);
+  }
+  q3.appendChild(words);
+  const add = el('div', 'gs-wordadd'); const inp = el('input'); inp.id = 'gs-word-in'; inp.type = 'text'; inp.maxLength = 40; inp.placeholder = 'Your own word'; inp.setAttribute('aria-label', 'Your own word for money paperwork');
+  const addIt = () => { const v = inp.value.trim().toLowerCase(); if (!v) return; if (!ua.money_words.includes(v)) ua.money_words = [...ua.money_words, v]; inp.value = ''; draw(); };
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') addIt(); });
+  add.append(inp, btn('go ghost', '+ Add', addIt)); q3.append(add, el('p', 'am-small', 'The numbers are conversations in your last 2 years whose subject uses that word.'));
+  c.append(q1, q2, q3);
+  const kept = A.answers && typeof A.answers === 'object';
+  const changed = !kept || !same(answersFrom(A), ua);
+  const out = p('gr-small', '');
+  const keep = btn('go', kept ? 'Keep my changes' : 'Keep my answers', async () => {
+    keep.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Keeping your answers and sorting again';
+    const { data, error } = await C.sb.rpc('understand_answers_set', { p_answers: ua, p_identity: null }).catch((e) => ({ error: e }));
+    if (error || !data || data.ok !== true) { out.className = 'gr-small'; out.textContent = 'Not kept: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; keep.disabled = false; return; }
+    toast(String(data.note || 'Kept. Your mail is sorted again with your answers.'));
+    R.uans = null; R.mgroups = null; gAt = 0; ua = null; R.gLoad = false; R.usam = null;
+    draw();
+  });
+  keep.disabled = !changed;
+  const g = el('div', 'gr-go'); g.appendChild(keep); c.append(g, out);
+  if (!changed) c.appendChild(p('gr-small', 'Kept. Change any tap and press Keep my changes.'));
+  c.appendChild(movedBlock(S));
+  return c;
+}
+// WHAT MOVED: real counts only, the groups that changed, from understand_answers_moved.
+function movedBlock(S) {
+  const M = S.umoved;
+  const d = el('div', 'gs-moved');
+  if (!M || M.answered !== true) { d.appendChild(el('p', 'am-small', 'Until you keep your answers, the standard sorting is used: your conversations and money mail.')); return d; }
+  const keys = [...new Set([...Object.keys(M.before || {}), ...Object.keys(M.now || {})])];
+  const ch = keys.map((k) => [k, Number(M.before?.[k]?.conversations) || 0, Number(M.now?.[k]?.conversations) || 0]).filter(([, a, b]) => a !== b);
+  d.appendChild(el('b', null, 'What your answers moved'));
+  if (M.state === 'sorting') d.appendChild(p('gr-small', 'Sorting again with your answers: ' + num(M.left_to_sort_again) + ' emails left. The counts follow when it is done.'));
+  if (!ch.length) d.appendChild(p('gr-small', M.state === 'sorting' ? 'Nothing has moved yet.' : 'Your answers did not move any conversation.'));
+  for (const [k, a, b] of ch) d.appendChild(priceRow(GROUP_TITLE[k] || k, num(a) + ' ' + ARROW + ' ' + num(b), 'conversations in your last 2 years'));
+  return d;
+}
+// THE SAMPLE, THE MEASURED PRICE, THE LIMIT AND UNDERSTAND MY MAIL (1137).
+function sampleBlock(S) {
+  const d = el('div', 'gs-sample'); d.id = 'gs-sample';
+  const U = S.usam;
+  const bal = balanceLeft(S);
+  d.appendChild(priceRow('Your balance', bal === null ? 'not read' : usd2(bal)));
+  if (!U) { d.appendChild(p('working no-late gr-small', 'Reading where the sample stands')); return d; }
+  if (U.ok !== true) {
+    d.appendChild(p('gr-small', 'The sample ' + (U.reason === 'too_few_read' ? 'could not measure a price: ' : 'could not be read just now: ') + String(U.note ?? U.reason ?? 'no reason was given') + (U.reason === 'too_few_read' ? '' : '. It tries again on its own.')));
+    return d;
+  }
+  if (U.state === 'preview') {
+    d.appendChild(p('gr-small', 'Nothing beyond the sample is read until you set your limit.'));
+    const short = bal === null || bal < SAMPLE_CAP;
+    if (short) d.appendChild(p('gr-small gs-over', 'The sample needs ' + usd2(SAMPLE_CAP) + ' of credit' + (bal === null ? '; your balance could not be read.' : '; your balance is ' + usd2(bal) + '.')));
+    const go = btn('go', 'Read the sample ' + DOT + ' about $2', () => samplePress(S, U));
+    go.disabled = short || !(Number(U.conversations) > 0);
+    const gw = el('div', 'gr-go'); gw.appendChild(go); if (short) gw.appendChild(btn('go ghost', 'Top up', () => topUp(S)));
+    d.append(gw, el('p', 'am-small', String(U.note || '')));
+    return d;
+  }
+  if (U.state === 'reading') {
+    const c = el('div', 'gs-live gs-inline');
+    c.append(el('b', null, 'Reading the sample: ' + num(U.read) + ' of ' + num(U.size)), p('gr-small', 'So far ' + usd2(U.spent_usd) + ', never more than ' + usd2(U.cap_usd) + '. Your measured price appears here when it is read.'));
+    const out = p('gr-small', '');
+    const stop = btn('go ghost', 'Stop', () => stopAll(S, (U.by_mailbox ?? []).map((x) => x.source_key), out, stop));
+    c.append(stop, out); d.appendChild(c);
+    return d;
+  }
+  // done: the price measured on her mail, her limit, and the press
+  const rem = Number(U.predicted_remaining_usd), lo = Number(U.low_usd), hi = Number(U.high_usd);
+  d.appendChild(priceRow('Measured on your own mail, for the rest', usd2(rem), 'Likely between ' + usd2(lo) + ' and ' + usd2(hi) + '. The sample cost ' + usd2(U.sample_spent_usd) + ' (' + num(U.read) + ' read' + (Number(U.could_not_read) ? ', ' + num(U.could_not_read) + ' could not be read' : '') + ').'));
+  d.appendChild(el('p', 'am-small', String(U.basis || '')));
+  if (Array.isArray(U.groups_not_sampled) && U.groups_not_sampled.length) d.appendChild(el('p', 'am-small', 'Not in the sample: ' + U.groups_not_sampled.map((g) => GROUP_TITLE[g] || g).join(', ') + '. They are priced at the rate measured on the rest.'));
+  const boxes = (U.by_mailbox ?? []).filter((x) => Number(x.conversations) > 0);
+  const lab = el('label', 'gr-field gs-limit', 'Your limit, $');
+  const inp = el('input'); inp.id = 'gs-limit'; inp.type = 'number'; inp.min = '0'; inp.step = '1'; inp.inputMode = 'decimal';
+  inp.value = String(uLimit !== null ? uLimit : Math.ceil(rem));
+  lab.appendChild(inp); d.appendChild(lab);
+  const shareLine = el('p', 'am-small'); const over = p('gr-small gs-over', ''); const out = p('gr-small', '');
+  const go = btn('go', '', () => understandPress(S, U, Number(inp.value), boxes, out, go));
+  const tw = el('div', 'gr-go'); tw.appendChild(go);
+  const topBtn = btn('go ghost', 'Top up', () => topUp(S));
+  const card0 = cardOf(S);
+  const test = p('gr-small gr-test', 'Card payments are in test mode: a test payment is shown but never added to your balance, so it cannot pay for this step.');
+  const say = () => {
+    const L = Number(inp.value);
+    uLimit = Number.isFinite(L) ? L : null;
+    const sh = shares(L, boxes);
+    shareLine.textContent = boxes.length > 1 ? 'Each mailbox has its own limit for now, so yours is shared out by the sample' + String.fromCharCode(8217) + 's prediction for each: ' + sh.map(([k, v]) => fmtShort(k) + ' ' + usd2(v)).join(', ') + '.' : '';
+    const gap = bal === null ? null : Math.round((L - bal) * 100) / 100;
+    over.textContent = gap !== null && gap > 0 ? 'This is more than your balance: add ' + usd2(gap) + ' first, or lower your limit.' : '';
+    topBtn.hidden = !(gap !== null && gap > 0);
+    test.hidden = topBtn.hidden || !!(card0 && card0.mode === 'live');
+    go.textContent = 'Understand my mail ' + DOT + ' up to ' + (Number.isFinite(L) ? usd2(L) : '$0.00');
+    go.disabled = !Number.isFinite(L) || L <= 0 || bal === null || (gap !== null && gap > 0) || !boxes.length || !sh.length;
+  };
+  inp.addEventListener('input', say);
+  tw.appendChild(topBtn);
+  d.append(shareLine, over, test, tw, out, el('p', 'am-small', 'It stops before your limit, even with what is being read at that moment. Stop works any time; you pay only for what was read.'));
+  say();
+  return d;
+}
+let uLimit = null;
+// Her one limit shared out over the mailboxes by the characters the sample predicts for each (understand-step's gap: each
+// mailbox press carries its own limit). Cents rounded down, so the shares never add up to more than her limit.
+function shares(L, boxes) {
+  if (!Number.isFinite(L) || L <= 0) return [];
+  const all = boxes.reduce((a, x) => a + (Number(x.characters) || 0), 0);
+  if (!all) return [];
+  return boxes.map((x) => [x.source_key, Math.floor((L * (Number(x.characters) || 0) / all) * 100) / 100]).filter(([, v]) => v > 0);
+}
+function samplePress(S, U) {
+  const body = el('div');
+  body.append(priceRow('Conversations read first', num(U.size), 'chosen across your mailboxes and lengths'), priceRow('Never more than', usd2(U.cap_usd), 'usually about $2'),
+    p('gr-small', 'Then you see the price measured on your own mail, and set your limit. Nothing else is read until then.'));
+  const said = p('gr-small', '');
+  const yes = btn('go', 'Yes, read the sample', async () => {
+    yes.disabled = true; no.disabled = true; said.className = 'working no-late gr-small'; said.textContent = 'Starting the sample';
+    const { data, error } = await C.sb.rpc('understand_sample', { p_groups: chosenGroups(S), p_months: 24, p_confirm: true, p_size: 100, p_cap_usd: SAMPLE_CAP, p_identity: null }).catch((e) => ({ error: e }));
+    if (error || !data || data.ok !== true) { said.className = 'gr-small'; said.textContent = 'Not started: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; yes.disabled = false; no.disabled = false; return; }
+    sheet.close(); toast(String(data.note || 'The sample is being read.')); R.usam = data; draw();
+  });
+  const no = btn('go ghost', 'Not now', () => sheet.close());
+  const acts = el('div', 'gr-chips'); acts.append(yes, no); body.append(acts, said);
+  sheet.open('Read the sample?', body);
+}
+function understandPress(S, U, L, boxes, out, go) {
+  const sh = shares(L, boxes);
+  const groups = chosenGroups(S);
+  const body = el('div');
+  body.append(priceRow('Conversations to understand', num((Number(U.conversations) || 0) - (Number(U.already_read) || 0)), groups.map((g) => GROUP_TITLE[g] || g).join(', ') + ', last 2 years'),
+    priceRow('Measured price', usd2(U.predicted_remaining_usd), 'likely between ' + usd2(U.low_usd) + ' and ' + usd2(U.high_usd)), priceRow('Your limit, never passed', usd2(L)));
+  if (sh.length > 1) body.appendChild(p('gr-small', 'Shared out: ' + sh.map(([k, v]) => fmtShort(k) + ' ' + usd2(v)).join(', ') + '.'));
+  body.appendChild(p('gr-small', 'Stop works any time; you pay only for what was read. You get one short email when it is done.'));
+  const said = p('gr-small', '');
+  const yes = btn('go', 'Yes, understand my mail ' + DOT + ' up to ' + usd2(L), async () => {
+    yes.disabled = true; no.disabled = true; said.className = 'working no-late gr-small'; said.textContent = 'Starting: 0 of ' + sh.length + ' mailboxes';
+    const res = [];
+    for (const [k, v] of sh) {
+      const r = await C.sb.rpc('source_read_approve', { p_source_key: k, p_mode: 'understand', p_months: 24, p_confirm: true, p_groups: groups, p_ceiling_usd: v }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) }));
+      res.push([k, r]); said.textContent = 'Starting: ' + res.length + ' of ' + sh.length + ' mailboxes';
+    }
+    const bad = res.filter(([, r]) => !r || r.ok !== true);
+    if (bad.length) { said.className = 'gr-small'; said.textContent = (bad.length === res.length ? 'Not started: ' : 'Started for ' + (res.length - bad.length) + ' of ' + res.length + ' mailboxes. Not started for ') + bad.map(([k, r]) => fmtShort(k) + ' (' + String(r?.note ?? r?.reason ?? 'no reason was given') + ')').join(', ') + '.'; no.disabled = false; no.textContent = 'Close'; if (bad.length < res.length) setTimeout(() => mount(C), 2500); return; }
+    sheet.close(); toast('Started: your mail is being understood. It stops before ' + usd2(L) + '. You get one short email when it is done.');
+    mount(C);
+  });
+  const no = btn('go ghost', 'Not now', () => sheet.close());
+  const acts = el('div', 'gr-chips'); acts.append(yes, no); body.append(acts, said);
+  sheet.open('Understand my mail?', body);
+}
+async function stopAll(S, keys, out, b) {
+  b.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Stopping';
+  const res = await Promise.all(keys.map((k) => C.sb.rpc('source_read_approve', { p_source_key: k, p_mode: 'understand_stop', p_months: null, p_confirm: true }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) }))));
+  out.className = 'gr-small'; out.textContent = res.map((r) => String(r?.note ?? r?.reason ?? 'no reason was given')).join(' ');
+  setTimeout(() => mount(C), 2500);
+}
+// Settings' Change on the answers opens this step (one path).
+export function openStep(c, k) { C = c; at = k; c.goto('s-ready'); }
 // SETTINGS uses these, so every Change there is the same function as here (one path): Top up (with the card and automatic
 // top-up in its sheet), the balance, and the readings.
 export function topUpFor(c, S) { C = c; topUp(S); }
 export { balanceLeft, cardOf, cardFee, monthlyOf, understandModel, brainCard };
-// THE ANSWER BOX under a question (i), or under the summary for anything else (i = -1): large, growing as she types, the one
-// microphone of the Tool beside it (box.js micFor), Continue and Skip.
-function answerBox(i, hint) {
-  const V = window.veraBusiness;
-  const w = el('div', 'gr-ans');
-  const t = el('textarea', 'gr-ans-in'); t.id = 'gr-q-in'; t.rows = 3; t.value = bz.draft || ''; t.placeholder = hint || 'Type, or press the microphone and say it';
-  t.setAttribute('aria-label', i >= 0 ? V.questions[i] : 'Anything else you want to say');
-  const fit = () => { t.style.height = 'auto'; t.style.height = Math.max(96, Math.min(t.scrollHeight, 360)) + 'px'; };
-  t.addEventListener('input', () => { bz.draft = t.value; fit(); });
-  const mic = el('button', 'onebox-icon onebox-mic gr-ans-mic'); mic.id = 'gr-q-mic'; mic.type = 'button'; mic.setAttribute('aria-label', 'Speak instead of typing'); mic.title = 'Speak instead of typing';
-  mic.appendChild((() => { const NS = 'http://www.w3.org/2000/svg'; const s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); const pa = document.createElementNS(NS, 'path'); pa.setAttribute('d', 'M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2z'); s.appendChild(pa); return s; })());
-  const said = el('p', 'onebox-mic-said'); said.id = 'gr-q-said'; said.hidden = true; said.setAttribute('role', 'status');
-  const row = el('div', 'gr-ans-row'); row.append(t, mic);
-  const go = btn('go', 'Continue', () => {
-    const v = t.value.trim();
-    if (!v) { toast('Say or type something first, or press Skip.'); t.focus(); return; }
-    bz.draft = '';
-    if (i < 0) { V.more(v); bz.more = false; draw(); return; }
-    V.answer(i, v); nextQ(i);
-  });
-  const skip = btn('go ghost', i < 0 ? 'Nothing else' : 'Skip', () => { bz.draft = ''; if (i < 0) { bz.more = false; draw(); return; } const st = V.state(); if (!st?.said[i]) V.skip(i); nextQ(i); });
-  const acts = el('div', 'gr-chips'); acts.append(go, skip);
-  w.append(row, said, acts);
-  setTimeout(() => { try { micFor({ btn: '#gr-q-mic', input: '#gr-q-in', said: '#gr-q-said' }); } catch (_) { /* typing still works */ } fit(); t.focus({ preventScroll: false }); }, 0);
-  return w;
-}
-async function openQ(i) {
-  const V = window.veraBusiness;
-  if (!V) return;
-  if (!V.running()) { const ok = await V.begin(); if (!ok) { toast('Only the owner tells ' + guideName() + ' how the business works.'); return; } }
-  bz.open = i; bz.draft = ''; bz.more = false;
-  V.ask(i);
-  draw();
-}
-function nextQ(i) {
-  const V = window.veraBusiness; const T = V.state();
-  const n = V.questions.findIndex((_, k) => k > i && !(T.said[k] || T.skipped[k]));
-  const m = n >= 0 ? n : V.questions.findIndex((_, k) => !(T.said[k] || T.skipped[k]));
-  if (m >= 0) { bz.open = m; V.ask(m); }
-  else { bz.open = null; bz.done = true; V.summary(); }
-  draw();
-}
-function line(a, b) { const d = el('div', 'gr-l'); d.append(el('span', null, a), el('span', null, b)); return d; }
