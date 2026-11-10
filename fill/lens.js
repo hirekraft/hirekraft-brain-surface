@@ -3754,10 +3754,11 @@ async function loadSecurity() {
 // merely-wrong screen.
 let routed = false;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
-const hasSetupMark = () => { try { return !!localStorage.getItem("tool.setup.return"); } catch (_) { return false; } };   // setup.js RETURN_KEY
-const setupReturning = () => import("./setup.js?v=2026-11-07-getting-ready-fix-1").then((S) => S.returning()).catch(() => false);
-const READY_JS = './ready.js?v=2026-11-07-getting-ready-fix-1';   // seat getting-ready-screen
+const READY_JS = './ready.js?v=2026-11-10-setup-front-door';   // seat getting-ready-screen
 let readyMod = null;
+// THE FRONT DOOR, How Verrandi Works (fill/setup.js, seat setup-front-door): from #how and the Brain at any time. Get started
+// opens Getting started at step 1; someone who is not the owner sees it without prices or Get started.
+const openDoor = () => import("./setup.js?v=2026-11-10-setup-front-door").then((S) => S.openStory({ owner: !!shape?.viewer?.all_access, start: () => goto('s-ready') })).catch(() => { /* the story is extra; the screen still lands */ });
 const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () => !!shape?.viewer?.all_access, readSources, goto, goTab, roomPage: (k, a) => { room(); roomPage(k, a); } });
 const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
 async function routeOnState(mode) {
@@ -3777,16 +3778,12 @@ async function routeOnState(mode) {
   // failure rather than a first-run screen, which would assert an empty brain on
   // the strength of a request that never came back.
   if (mode === "unknown") { goto("s-summary"); return; }
-  // THE FIRST STATE OF THE BRAIN TAB (seat brain-tab-setup, 2026-11-05, decision 1084 amended): a brain with no connected
-  // source opens the setup (fill/setup.js), as does #setup, and so does coming back from a sign-in started on its Connect
-  // step. SUPERSEDED: the old s-intro as the first screen of a signed-in brain with nothing connected; s-intro stays the
-  // screen for nobody signed in (above). #how opens How the Tool works over whatever screen this lands on.
-  if (location.hash === "#how") import("./setup.js?v=2026-11-07-getting-ready-fix-1").then((S) => S.openStory()).catch(() => { /* the story is extra; the screen still lands */ });
-  if (location.hash === "#setup") { goto("s-setup"); return; }
-  const connected = connectedCount();
-  // The module is fetched only when this browser holds the marker, so an ordinary opening waits on nothing new.
-  const back = hasSetupMark() && await setupReturning();
-  if (!connected || back) { goto("s-setup", back ? "connect" : undefined); return; }
+  // s-intro stays the screen for nobody signed in (above).
+  // SUPERSEDED (seat setup-front-door, 2026-11-10, HQ brief): the old one-step-per-screen setup (#s-setup, setup.js STEPS)
+  // and its sign-in return marker. Getting started (fill/ready.js) is the one setup; #setup and a brain with nothing
+  // connected open it, and the front door "How Verrandi Works" (fill/setup.js) opens over it for an owner, once per browser.
+  if (location.hash === "#how") openDoor();
+  if (location.hash === "#setup" || !connectedCount()) { goto('s-ready'); return; }
   // GETTING READY (seat getting-ready-screen, 2026-11-07, decision 1124): until the brain is Ready the Tool opens on the
   // Getting ready screen (fill/ready.js), not on a tab. A reading that fails opens the Tool as before.
   if (await readyGate()) { goto('s-ready'); return; }
@@ -3813,7 +3810,7 @@ function goto(id, key) {
   if (id === 's-connect') { id = 's-summary'; part = 'add'; }   // connecting is Brain's Add a source part (seat brain-and-drives)
   // The Brain tab of a brain with nothing connected is the setup (seat brain-tab-setup). Only when the reading came back:
   // a failed reading keeps the Brain tab carrying its own failure, never a first-run screen.
-  if (id === 's-summary' && !part && readingState === 'live' && shape && !connectedCount()) id = 's-setup';
+  if (id === 's-summary' && !part && key !== 'panel' && readingState === 'live' && shape && !connectedCount()) id = 's-ready';   // seat setup-front-door: Getting started, not the retired #s-setup
   // A sub-tab link (#security/audit) is kept only while that tab is shown (seat people-and-access).
   if (/^#[a-z]+[/]/.test(location.hash) && location.hash.slice(1).split('/')[0] !== (Object.keys(SUB_TABS).find((k) => SUB_TABS[k] === id) ?? '')) { try { history.replaceState(null, '', location.pathname + location.search); } catch (_) { /* link stays */ } }
   document.querySelectorAll("section.step").forEach((s) => { s.hidden = s.id !== id; });
@@ -3832,7 +3829,6 @@ function goto(id, key) {
     showSubtabs(sec, 'drives', shape?.viewer?.email);
     drawBrain(false);
   }
-  if (id === 's-setup') import('./setup.js?v=2026-11-07-getting-ready-fix-1').then((S) => S.mount({ sec: $('#s-setup'), shape: () => shape, openConnect, goTab, readEstimate }, key)).catch((e) => { const m = $('#s-setup'); if (m) m.textContent = 'The setup could not be loaded: ' + String(e?.message ?? e); });   // seat brain-tab-setup
   if (id === 's-ready') import(READY_JS).then((G) => { readyMod = G; G.mount(readyCtx()); }).catch((e) => { const m = $('#gr-left'); if (m) m.textContent = 'Getting ready could not be loaded: ' + String(e?.message ?? e); });   // seat getting-ready-screen
   else if (readyMod) readyMod.unmount();
   if (id === "s-tests") loadTests();
@@ -3869,7 +3865,7 @@ function room() {
     aiBlocks: roomBlocks,
     door: (key) => { userMoved = true; const [t, sub] = String(key).split('/'); if (sub) { location.hash = '#' + t + '/' + sub; if (document.body.dataset.tab !== t) goTab(t); } else goTab(t); },
     connectSystem: (name) => connectSystem(name),
-    openStory: () => import('./setup.js?v=2026-11-07-getting-ready-fix-1').then((S) => S.openStory()).catch(() => goto('s-intro')),   // How the Tool works (seat brain-tab-setup)
+    openStory: () => openDoor(),   // How Verrandi Works, the front door (seat setup-front-door)
     // Add a source: the part that was Brain's third sub-tab moves onto the room's page, and back when the page closes.
     openAdd: (host) => { const part = $('#s-summary [data-sub="add"]'); if (!part) return null; const home = part.parentElement, next = part.nextSibling; host.appendChild(part); part.hidden = false; if (!$('#connect-stage').children.length) stageTypes(); return { part, home, next }; },
     closeAdd: (m) => { if (m?.home) { m.home.insertBefore(m.part, m.next); m.part.hidden = true; } },
