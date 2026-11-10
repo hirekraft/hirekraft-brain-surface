@@ -3754,7 +3754,7 @@ async function loadSecurity() {
 // merely-wrong screen.
 let routed = false;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
-const READY_JS = './ready.js?v=2026-11-10-setup-wire';   // seat getting-ready-screen; token seat setup-screens-2
+const READY_JS = './ready.js?v=2026-11-10-audit-fix-screen';   // seat getting-ready-screen; token seat setup-screens-2
 let readyMod = null;
 // THE FRONT DOOR, How Verrandi Works (fill/setup.js, seat setup-front-door): from #how and the Brain at any time. Get started
 // opens Getting started at step 1; someone who is not the owner sees it without prices or Get started.
@@ -3763,7 +3763,7 @@ const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () =>
 const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
 // SETTINGS (seat setup-screens-2, decision 1138): after Ready, the same page becomes Settings (fill/settings.js, #s-settings,
 // #settings). The masthead carries one link: Getting started until Ready, Settings after (settings.js mastLink).
-const SETTINGS_JS = './settings.js?v=2026-11-10-setup-wire';
+const SETTINGS_JS = './settings.js?v=2026-11-10-audit-fix-screen';
 let settingsMod = null;
 const setupLink = (notReady) => import(SETTINGS_JS).then((M) => M.mastLink(readyCtx(), notReady)).catch(() => { /* the Brain button still leads back */ });
 async function routeOnState(mode) {
