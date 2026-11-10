@@ -8,12 +8,15 @@
 // ASK VERA TO CHANGE IT: a tap hands Vera the exact change, its price and the row's own function; she shows it in her column
 // with Yes and Not now (vera.js window.veraPropose). Nothing changes until the owner presses Yes, and Yes is that same
 // function. She never presses (1115).
-// NOT BUILT (said as "coming", never as working, 1075): the plan as a subscription, statements, cancel, team invites, and
-// the three answers (seat understand-step's brain side, not landed when this was built).
+// NOT BUILT (said as "coming", never as working, 1075): the plan as a subscription, statements, cancel, team invites.
+// SEAT setup-wire (2026-11-10, decision 1141): Add 2 more years goes through lens-ask {search_go} (the balance read from the meter
+// by the Tool, never sent by the page); Stop reading the old StratServ mailbox is source_mark_old (her yes first); Your answers
+// shows the three answers as kept (understand_answers_suggest) with Change opening step 4; New mail says "Understood as it
+// arrives" only for mailboxes with a pressed group (understand_progress_mine), otherwise "Not understood yet" (ruling 1141.4).
 // A COLLEAGUE sees only her own language and emails (spec): no prices, no money rows, no presses on the business.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 import { ic, card } from './setup.js?v=2026-11-10-setup-front-door';
-import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel } from './ready.js?v=2026-11-10-setup-screens-2b';
+import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep } from './ready.js?v=2026-11-10-setup-wire';
 import { screenLangName } from './words.js?v=2026-10-29-thinkrooms-3';
 
 const DOT = String.fromCharCode(183);
@@ -53,6 +56,8 @@ async function read() {
     jobs.push(C.sb.rpc('connector_status').then(({ data }) => { R.conn = data; }, () => {}));
     jobs.push(C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) R.ai = r.ai; else R.aiErr = r?.error ?? 'no reason was given'; }, (e) => { R.aiErr = e?.message ?? String(e); }));
     jobs.push(C.askBody({ read_estimate: { months: 24 } }).then((r) => { if (r && r.ok === true) R.est = r; }, () => {}));
+    jobs.push(C.sb.rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) R.uprog = data.sources ?? []; else R.uprogErr = error?.message ?? data?.note ?? 'no reason was given'; }, (e) => { R.uprogErr = e?.message ?? String(e); }));
+    jobs.push(C.sb.rpc('understand_answers_suggest', { p_identity: null }).then(({ data, error }) => { R.uans = error ? { ok: false, note: error.message } : data; }, (e) => { R.uans = { ok: false, note: String(e?.message ?? e) }; }));
   }
   await Promise.all(jobs);
   return R;
@@ -118,16 +123,23 @@ function proposeLimit(asked) {
 }
 // Two more years: search_go for 4 years, preview first (the same press as Getting started step 3), Yes confirms it.
 async function proposeYears(asked) {
-  const bal = Number(S.est?.balance?.balance_left_usd ?? S.est?.estimate?.balance?.balance_left_usd);
-  const args = { p_months: 48, p_sources: null, p_balance_usd: Number.isFinite(bal) ? bal : null };
-  const { data, error } = await C.sb.rpc('search_go', { ...args, p_confirm: false }).catch((e) => ({ error: e }));
+  // through lens-ask (ruling 1141.5): the Tool reads the balance from the meter itself; the page sends none
+  const ask = async (confirm) => { const r = await C.askBody({ search_go: { months: 48, sources: null, confirm } }); return r && r.ok === true ? { data: r } : { error: { message: String(r?.note ?? r?.reason ?? r?.error ?? 'no reason was given') } }; };
+  const { data, error } = await ask(false);
   if (error || !data || data.ok !== true) { propose({ asked, say: 'This cannot be done just now: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '. Nothing was changed.' }); return; }
   if (data.nothing_to_read) { propose({ asked, say: 'Your last 4 years are already searchable. Nothing to change.' }); return; }
   propose({ asked, say: 'Here is the change and its price, one time.', lines: [['Make searchable', '4 years of mail and files'], ['Items', num(data.total_items)], ['Price, one time', usd2(data.total_usd)], ['Time', data.minutes === null || data.minutes === undefined ? 'measuring' : 'about ' + num(data.minutes) + ' minutes']],
-    yes: async () => { const r = await C.sb.rpc('search_go', { ...args, p_confirm: true }).catch((e) => ({ error: e })); const ok = !r.error && r.data && r.data.ok === true; return { ok, note: ok ? String(r.data.note || 'Started. You get one short email when it is done.') : 'Not started: ' + String(r.error?.message ?? r.data?.note ?? r.data?.reason ?? 'no reason was given') + '.' }; } });
+    yes: async () => { const r = await ask(true); const ok = !r.error && r.data && r.data.ok === true; return { ok, note: ok ? String(r.data.note || 'Started. You get one short email when it is done.') : 'Not started: ' + String(r.error?.message ?? r.data?.note ?? r.data?.reason ?? 'no reason was given') + '.' }; } });
 }
-// An old mailbox: that change is the answer "Old, searchable only", which is not built yet. She says so and changes nothing.
-function proposeOld(asked) { propose({ asked, say: 'That change is your answer "Old, searchable only" for that mailbox, which is still being built. Nothing was changed.' }); }
+// An old mailbox: Old, searchable only (source_mark_old, the same press as step 3's row). Free; nobody else can then find it.
+function proposeOld(asked) {
+  const boxes = (S.src?.rows ?? []).filter((r) => r.group === 'email');
+  const old = boxes.find((r) => String(r.name || r.source_key).toLowerCase().includes('stratserv'));
+  if (!old) { propose({ asked, say: 'Tell me which mailbox, or use Old, searchable only on its row in Getting started, step 3. Nothing was changed.' }); return; }
+  const name = String(old.name || old.source_key);
+  propose({ asked, say: 'Here is the change. It is free, and it makes what is left to make searchable cheaper.', lines: [['Mailbox', name], ['Old, searchable only', 'you can search it; nobody else can, and it gets no privacy check']],
+    yes: async () => { const { data, error } = await C.sb.rpc('source_mark_old', { p_source_key: old.source_key, p_old: true, p_identity: null }).catch((e) => ({ error: e })); const ok = !error && data && data.ok === true; if (ok) setTimeout(() => mount(C), 1500); return { ok, note: ok ? String(data.note || 'Marked old, searchable only.') : 'Not changed: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.' }; } });
+}
 // The guide's name: getting_ready_mark guide_name, the same as "Call me something else". Free.
 function proposeName(asked) {
   propose({ asked, say: 'Here is the change. It is free.', lines: [['Your guide' + AP + 's name', guide() + ' ' + String.fromCharCode(8594) + ' Max']],
@@ -185,15 +197,31 @@ function underCard() {
   const M = monthlyOf({ est: S.est });
   const c = card('brain', 'Understanding', null);
   c.appendChild(row('What is understood', S.road ? (parts.length ? parts.join(', ') : 'Nothing yet') : 'not read', link('Change', () => { C.goto('s-summary', 'panel'); C.roomPage('step', 'u'); })));
-  c.appendChild(row('New mail', 'Understood as it arrives' + (M !== null ? ' ' + DOT + ' about ' + usd2(M) + ' a month, estimated' : ''), null));
+  // ruling 1141.4: only mailboxes with a pressed group are understood as mail arrives (understand_progress_mine: groups kept and not stopped)
+  const boxes = (S.src?.rows ?? []).filter((r) => r.group === 'email');
+  const pressed = new Set((S.uprog ?? []).filter((x) => Array.isArray(x.groups) && x.groups.length && x.state !== 'stopped').map((x) => x.source_key));
+  const yes = boxes.filter((r) => pressed.has(r.source_key));
+  const nm = (r) => String(r.name || r.source_key).split(':').pop();
+  const nv = !S.uprog ? 'not read' : !yes.length ? 'Not understood yet' : yes.length === boxes.length ? 'Understood as it arrives' + (M !== null ? ' ' + DOT + ' about ' + usd2(M) + ' a month, estimated' : '') : 'Understood as it arrives in ' + num(yes.length) + ' of ' + num(boxes.length) + ' mailboxes';
+  c.appendChild(row('New mail', nv, null));
+  if (S.uprog && yes.length && yes.length < boxes.length) c.appendChild(el('p', 'am-small', 'Not understood yet: ' + boxes.filter((r) => !pressed.has(r.source_key)).map(nm).join(', ') + '.'));
+  if (!S.uprog && S.uprogErr) c.appendChild(el('p', 'am-small', 'What is understood as it arrives could not be read just now (' + String(S.uprogErr) + ').'));
   const m = understandModel({ ai: S.ai });
   c.appendChild(row('The AI that does the work', m || 'not read', link('Change', () => C.goTab('ai'))));
   return c;
 }
-// YOUR ANSWERS: the three answers of step 4 (not built yet, seat understand-step).
+// YOUR ANSWERS: the three answers of step 4 as kept (understand_answers_suggest answers); Change opens step 4 (one path).
+const FOR = { everything: 'Everything', sales: 'Sales', accounting: 'Accounting', hiring: 'Hiring', old: 'Old, searchable only' };
+const WITH = { businesses: 'Businesses', people: 'People', both: 'Both' };
 function answersCard() {
   const c = card('tag', 'Your answers', null);
-  for (const w of ['What each mailbox is for', 'Who you work with', 'Your money paperwork']) c.appendChild(row(w, 'Not answered yet', coming()));
+  const A = S.uans?.ok === true ? S.uans.answers : null;
+  const ch = () => link('Change', () => openStep(C, 'understand'));
+  if (S.uans && S.uans.ok !== true) c.appendChild(p('gr-small', 'Your answers could not be read just now (' + String(S.uans.note ?? S.uans.reason ?? 'no reason was given') + ').'));
+  const mb = A?.mailboxes && typeof A.mailboxes === 'object' ? Object.entries(A.mailboxes).map(([k, v]) => k.split(':').pop() + ' ' + (FOR[v] || v)).join(', ') : '';
+  c.appendChild(row('What each mailbox is for', mb || 'Not answered yet', ch()));
+  c.appendChild(row('Who you work with', A?.work_with ? (WITH[A.work_with] || A.work_with) : 'Not answered yet', ch()));
+  c.appendChild(row('Your money paperwork', Array.isArray(A?.money_words) && A.money_words.length ? A.money_words.join(', ') : 'Not answered yet', ch()));
   c.appendChild(el('p', 'am-small', guide() + ' uses these to sort what is worth reading.'));
   return c;
 }
