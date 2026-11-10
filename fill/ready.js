@@ -65,8 +65,8 @@ async function read(fresh) {
   if (S.owner) jobs.push(C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) S.ai = r.ai; else S.aiErr = r?.error ?? 'no reason was given'; }, (e) => { S.aiErr = e?.message ?? String(e); }));
   if (S.owner) jobs.push(C.sb.rpc('business_profile_list').then(({ data, error }) => { if (!error && data && data.ok === true) S.prof = data.statements ?? []; else S.profErr = error?.message ?? data?.note ?? 'no reason was given'; }, (e) => { S.profErr = e?.message ?? String(e); }));
   if (S.owner) jobs.push(readPlan(S), readSearchProgress(S));   // step 3's priced card and its live line (seat setup-screens-2)
+  if (S.owner) jobs.push(C.sb.rpc('understand_progress', { p_source: null }).then(({ data, error }) => { if (!error && data && data.ok === true) S.uprog = data.sources ?? []; }, () => {}));   // step 4's live card
   await Promise.all(jobs);
-  if (S.owner && S.marks?.groups) await C.sb.rpc('understand_groups').then(({ data, error }) => { if (!error && data && data.ok !== false) S.groups = data; else S.groupsErr = error?.message ?? data?.reason; }, (e) => { S.groupsErr = e?.message ?? String(e); });
   return S;
 }
 // What she already told Vera about her business, in the one profile store (business_profile_owner_say keeps it there).
@@ -121,7 +121,9 @@ export async function mount(c) {
   wayBack();
   if (!host.dataset.built) build();
   if (!R) C.$('#gr-left').replaceChildren(p('working no-late', 'Reading where your Tool stands'));
+  const was = R;
   R = await read(true);
+  if (was?.mgroups && !was.mgroups.err && Date.now() - gAt < 300000) R.mgroups = was.mgroups;   // the groups are counted once per five minutes, not on every refresh
   pending = !isReady(R);
   document.body.classList.toggle('gr-pending', pending);
   document.body.dataset.guide = guideName();
@@ -222,6 +224,7 @@ function draw() {
   const box = C.$('#gr-left');
   box.replaceChildren(...(CARDS[at] || CARDS.ready)(S, st));
   box.appendChild(more());
+  if (at === 'understand' && S.owner && !S.mgroups && !S.gLoad) { S.gLoad = true; readGroups(S).then(() => { if (R === S && at === 'understand' && !typing() && !C.$('#gr-sheet')) draw(); }); }   // step 4's groups, read when she is on it
   if (nov) C.$('#gr-meter')?.remove(); else meter(S);
   // The front door first, once per browser, until Get started (and never over a sheet or a story already open).
   if (!doorShown && !doorPassed() && pending && !storyOpen() && !C.$('#gr-sheet')) { doorShown = true; door(); }
@@ -254,7 +257,7 @@ function openBrain() { C.goto('s-summary'); }
 // balance (seat getting-ready-fix-1: $14.52 spent read as "$15" beside a $15.03 balance).
 function stepPrice(S, k) {
   if (k === 'connect') { if (!S.splan) return { counting: true }; const pk = chosenOf(S.splan); return { exact: Math.round(pk.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100 }; }   // search_plan's price for what is checked
-  if (k === 'understand') return S.groups && Number.isFinite(Number(S.groups.total_usd)) ? { usd: Number(S.groups.total_usd) } : { counting: true };
+  if (k === 'understand') { const G = S.mgroups; if (!G || G.err || !G.priced) return { counting: true }; return { usd: G.groups.filter((g) => g.always || !uOff[g.group]).reduce((a, g) => a + (g.usd || 0), 0) }; }   // mail_groups' estimate for what is checked
   return { free: true };
 }
 function soFar(S) {
@@ -528,16 +531,18 @@ async function searchPreview(S, pick, out, go) {
   sheet.open('Make it all searchable?', body);
 }
 // THE BALANCE FOR THE PLAN: the meter's own (lens-ask read_estimate balance), kept for five minutes.
-let balAt = 0, balV = null;
+// The same reading gives step 4 and step 5 their monthly figure and price per email (S.est).
+let balAt = 0, balV = null, estV = null;
 async function meterBalance() {
-  if (balV !== null && Date.now() - balAt < 300000) return balV;
+  if (estV && Date.now() - balAt < 300000) return balV;
   const r = await C.askBody({ read_estimate: { months: 24 } }).catch(() => null);
   const b = Number(r?.balance?.balance_left_usd ?? r?.estimate?.balance?.balance_left_usd);
-  balV = Number.isFinite(b) ? b : null; balAt = Date.now();
+  balV = Number.isFinite(b) ? b : null; balAt = Date.now(); estV = r && r.ok === true ? r : null;
   return balV;
 }
 async function readPlan(S) {
   const b = await meterBalance();
+  S.est = estV;
   const { data, error } = await C.sb.rpc('search_plan', { p_months: plan.months, p_balance_usd: b }).catch((e) => ({ error: e }));
   if (error || !data || data.ok !== true) { S.splan = null; S.splanErr = error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'; }
   else { S.splan = data; S.splanErr = null; }
@@ -792,48 +797,219 @@ const CARDS = {
     out.push(p('gr-small', 'Your words become "How your business works". The Tool reads everything through them. Nothing is kept until you say it is right. Change them any time.'));
     return out;
   },
-  understand(S) {
-    const out = [H('Step 4 ' + DOT + ' Understand what matters.')];
-    out.push(p('gr-lead', 'Not every email needs it. Your mail is sorted into groups first: your real business conversations, money mail, automated mail and everything else. You see each group with its count, examples and price before anything starts.'));
-    const G = S.groups;
-    if (!G || !Array.isArray(G.groups)) {
-      out.push(act('Sorting your mail into groups', 'Counting. The groups, their examples and prices show here when the count is done; until then nothing can be started here.', el('span', 'gr-soft', 'counting')));
-    } else {
-      const list = el('div', 'gr-groups');
-      for (const g of G.groups) {
-        const d = el('details', 'gr-gr'); const s = el('summary');
-        const t = el('span'); t.append(el('b', null, String(g.title ?? g.name ?? 'Group')), el('small', null, num(g.count) + ' ' + String(g.unit ?? 'emails') + (g.note ? ' ' + DOT + ' ' + String(g.note) : '')));
-        s.append(t, el('span', 'gr-pr', Number.isFinite(Number(g.usd)) ? 'about ' + usd(g.usd) : String(g.price_word ?? 'counting')));
-        d.appendChild(s);
-        const ex = el('ul'); for (const x of (g.examples ?? []).slice(0, 3)) ex.appendChild(el('li', null, String(x))); d.appendChild(ex);
-        list.appendChild(d);
-      }
-      out.push(list, p('gr-small', "Go with a price ceiling and a Stop while it runs comes with the groups; until then the Brain's own Go is one press away under See everything in your brain."));
+  // STEP 4 · UNDERSTAND (spec part 2, approved 2026-11-09; seat setup-screens-2). Every number is the brain's: the groups,
+  // counts and prices are mail_groups' (per mailbox, summed), priced with the meter's measured price of one email
+  // (read_estimate per_message_usd), each estimate with its range (1137); the time from mail_groups' hours. The three
+  // answers, the sample, the limit before the read and overnight half price are seat understand-step's brain side, which had
+  // not landed when this was built: they are shown as "coming", never as working (1075). The live card and Stop are the
+  // existing ones (understand_progress, source_read_approve 'understand_stop').
+  understand(S, st) {
+    const out = [H('Understand what matters.'), p('gr-lead', 'Everything is searchable now. Understanding reads each conversation once and notes the facts in it, so you can ask exact questions. You choose what is worth it.')];
+    const live = understandLive(S); if (live) out.push(live);
+    // THREE QUICK QUESTIONS (1136): the brain side that keeps the answers and turns them into sorting is not built yet.
+    const qs = card('chat', 'Three quick questions ' + DOT + ' free', null, el('p', 'am-small', 'Already filled in from what was counted. Tap anything that is not right.'));
+    for (const [q, taps] of [['What is each mailbox for?', ['Everything', 'Sales', 'Accounting', 'Hiring', 'Old, searchable only']], ['Who do you work with?', ['Businesses', 'People', 'Both']], ['What do you call the money paperwork?', ['Invoice', 'Timesheet', 'Purchase order', 'Receipt', 'Bill', '+ your word']]]) {
+      const d = el('div', 'gs-q'); d.appendChild(el('b', null, q));
+      const seg = el('div', 'gr-seg'); for (const t of taps) { const b = btn('gr-amt', t); b.disabled = true; seg.appendChild(b); } d.appendChild(seg);
+      qs.appendChild(d);
     }
-    out.push(balanceAct(S));
-    // THE BUSINESS QUESTIONS, reachable here until step 4 is approved (1132: Vera asks them while Understand reads).
-    out.push(act('Tell us about your business', 'In your own words, about two minutes, free. ' + guideName() + ' asks, one question at a time.', btn('go ghost', 'Answer with ' + guideName(), () => { at = 'business'; draw(); window.scrollTo({ top: 0 }); })));
-    out.push(fold('What does it cost me every month after this?', p(null, 'Keeping up with new mail and answering your questions. Your monthly limit, set in the next step, keeps it there. The figure for a normal month is measured before it is shown.')));
+    qs.append(el('span', 'gs-coming', 'coming'), el('p', 'am-small', 'Your answers will sort what is worth reading. Until they can be kept, the standard sorting is used: your conversations and money mail.'));
+    out.push(qs);
+    out.push(groupsCard(S));
+    const M = monthlyOf(S);
+    const how = card('coin', 'How your price works', null);
+    const ol = el('ol', 'gs-num3');
+    for (const [n, t] of [['1', 'A small sample first, about $2. 100 of your conversations are read, and you see the price measured on your own mail.'], ['2', 'You set the limit. It starts at that price, it is never passed, and Stop works any time: you pay only for what was read.'], ['3', 'Then only new mail, ' + (M === null ? 'its monthly price measured' : 'about ' + usd2(M) + ' a month') + ', shown measured after your first month, in Settings.']]) { const li = el('li'); li.append(el('span', 'gs-n', n), el('span', null, t)); ol.appendChild(li); }
+    how.appendChild(ol);
+    if (M !== null) how.appendChild(el('p', 'am-small', 'The monthly figure is an estimate from your own mail' + String.fromCharCode(8217) + 's pace, from the AI meter.'));
+    out.push(how);
+    const model = understandModel(S);
+    const ai = card('ai', 'The AI that does the work', null);
+    const row = el('div', 'gs-pl'); const l = el('span'); l.append(el('b', null, model || 'Claude, by Anthropic'), el('small', null, 'Best score on our test of real business questions. You can change it in Settings.'));
+    row.append(l, el('span', 'gs-rec', 'Recommended')); ai.appendChild(row);
+    out.push(ai);
+    const done = st.find((x) => x.k === 'understand')?.done;
+    const acts = el('div', 'gr-chips');
+    const cont = btn('go', 'Continue', () => { at = 'ready'; draw(); window.scrollTo({ top: 0 }); }); cont.disabled = !done;
+    acts.append(cont, btn('go ghost', 'Ask Vera', () => { const b = C.$('#vera-btn'); if (b) b.click(); C.$('#panel-input')?.focus(); }));
+    out.push(acts);
+    out.push(questions([
+      ['Is this one time?', 'Yes. This reads your past mail once. After that, only new mail in the same groups is read as it arrives, ' + (M === null ? 'its monthly price measured' : 'about ' + usd2(M) + ' a month') + ' at your pace, plus about 1 cent for each question you ask.'],
+      ['Why a sample first?', 'Every business' + String.fromCharCode(8217) + 's mail is different. The sample measures what your own mail costs to understand, so the price you agree to is yours, not an average.'],
+      ['Can it cost more than I agreed?', 'No. It stops before your limit. If something is left, it tells you how much and what it would cost, and you decide.'],
+      ['What happens to the mail I do not choose?', 'It stays searchable. If a question needs it later, that piece is read then, with its price shown.'],
+      ['What is overnight at half price?', 'The AI companies charge about half for work that can wait until morning. Same result, ready the next day.'],
+      ['Will I know when it is done?', 'Yes, one short email from your own mailbox to you. You can close the page in the meantime.'],
+    ]));
     return out;
   },
+  // STEP 5 · READY (spec part 2). The brain's rows from the same readings the Brain shows (brain_road, the one reading of
+  // sources); the monthly costs: the database from the AI tab's own estimate (Supabase's list price), keeping up from the
+  // meter's monthly estimate per source (read_estimate monthly_usd), questions and the plan as approved words.
   ready(S, st) {
     const ok = st[st.length - 1].done;
-    const out = [H('Step 5 ' + DOT + ' Ready.'), p('gr-lead', ok ? 'You are ready to use the Tool now. It keeps up every day by itself.' : 'When steps 1 to 4 are done, this turns green and you are told. From then on the Tool keeps up every day by itself.')];
-    const bills = el('div', 'gr-bills');
-    const b1 = el('div', 'gr-bill'); b1.append(el('b', null, 'From Supabase: your database'), line('Each month', 'about $25'), el('small', 'gr-soft', 'On your own account.'));
-    const b2 = el('div', 'gr-bill'); b2.append(el('b', null, 'From us: one statement'), line('The Tool, you + 4 colleagues', '$50 founding ' + DOT + ' $100'), line("AI, at the makers' price", 'at cost'), line('Card fee', 'at cost'));
-    bills.append(b1, b2); out.push(bills);
-    const lim = el('div', 'gr-limit'); out.push(lim);
-    if (S.ai?.limit) import('./ai.js?v=2026-11-05-brain-tab-room').then((A) => lim.replaceChildren(A.limitBlock(S.ai.limit, { el: (t, c) => el(t, c), askBody: C.askBody }, () => mount(C)))).catch(() => lim.replaceChildren(p('gr-small', 'Your monthly AI limit could not be shown just now.')));
-    else lim.appendChild(p('gr-small', 'Your monthly AI limit could not be read just now' + (S.aiErr ? ' (' + String(S.aiErr) + ')' : '') + '.'));
-    out.push(balanceAct(S));
-    const mail = btn('go', 'Open Mail', () => { unmount(); C.goTab('email'); }); mail.disabled = !ok;
-    out.push(act('Then: open your Mail', 'It looks like the mail you know, with ' + guideName() + ' beside it.', mail),
-      act('Already use Claude?', 'Ask your brain from inside Claude too.', btn('go ghost', 'Connect my Claude', () => { openBrain(); C.roomPage('assistadd'); })),
-      act('Invite your team', 'Each person sees only what your own systems let them open.', btn('go ghost', 'Invite', () => { unmount(); location.hash = '#security/people'; C.goTab('security'); })));
+    const out = [H(ok ? 'Your brain is ready.' : 'Your brain is not ready yet.')];
+    out.push(ok ? (() => { const d = okMark('Everything is connected and searchable, and what matters is understood. It keeps up by itself.'); return d; })() : p('gr-lead', 'When steps 1 to 4 are done, this turns green and you are told. From then on it keeps up by itself.'));
+    out.push(brainCard(S));
+    const M = monthlyOf(S);
+    const db = S.ai?.cost?.database;
+    const cost = card('coin', 'What it costs from now on, every month', null,
+      priceRow('Your database, paid to Supabase', db?.known && Number.isFinite(Number(db.estimate_usd)) ? 'about ' + usd(db.estimate_usd) : 'about $25', db?.known ? 'From Supabase' + String.fromCharCode(8217) + 's published price for your ' + String(db.plan || '') + ' plan; the exact figure is on their invoice.' : 'Supabase' + String.fromCharCode(8217) + 's price; the exact figure is on their invoice.'),
+      priceRow('Keeping new mail searchable and understood', M === null ? 'measured after your first month' : 'about ' + usd2(M), M === null ? null : 'Estimated from your own mail' + String.fromCharCode(8217) + 's pace, from the AI meter.'),
+      priceRow('Your questions', 'about 1 cent each'),
+      priceRow('The Tool', 'your plan'),
+      el('p', 'am-small', 'Estimates until your first month is measured; then the measured numbers are in Settings, with your monthly limit.'));
+    out.push(cost);
+    const t = el('div', 'gs-tiles');
+    const mail = tileBtn('mail', 'Open my Mail', 'It looks like the mail you know, with ' + guideName() + ' beside it', ok ? 'Open' : 'When ready', ok, () => { if (!ok) { toast('Your Mail opens when your brain is ready.'); return; } unmount(); C.goTab('email'); });
+    const claude = tileBtn('ai', 'Connect my Claude', 'Ask your brain from inside Claude', 'Connect', false, () => brainPanel('assistadd'));
+    const team = tileBtn('person', 'Invite your team', 'Each sees only what they can already open', 'coming', false, () => toast('Inviting your team from here is coming. Each person will see only what they can already open.'));
+    t.append(mail, claude, team);
+    out.push(card('hand', 'Start working', null, t));
+    if (ok) { const g = el('div', 'gr-go'); g.appendChild(btn('go ghost', 'Open Settings', () => C.goto('s-settings'))); out.push(g); }
+    out.push(questions([
+      ['Where do I change my choices?', 'In Settings: your connections, how far back, what is understood, which AI, your monthly limit, your card, your language and your guide' + String.fromCharCode(8217) + 's name.'],
+      ['How do I know it is working?', 'The Brain shows how everything stands, in green, yellow and red, always with words. If something stops, it says what and what is being done.'],
+      ['Can I add more later?', 'Yes, any time, from Settings. Each addition shows its price before anything is read.'],
+    ]));
     return out;
   },
 };
+// THE BRAIN, ONE ROW PER KIND (step 5): counts from brain_road and the one reading of sources; Understood only where the
+// brain counts understood items of that kind, otherwise Searchable.
+function brainCard(S) {
+  const rows = S.src?.rows ?? [], d = S.road;
+  const n = (g) => rows.filter((r) => r.group === g).length;
+  const c = card('brain', 'Your brain', null);
+  const list = el('div', 'gs-rows');
+  const add = (title, line1, understood) => { const r = el('div', 'gs-row'); const l = el('span', 'gs-rl'); l.append(el('b', null, title), el('small', null, line1)); r.append(l, el('span', understood ? 'gs-chip gs-chip-ok' : 'gs-chip gs-chip-read', understood ? 'Understood' : 'Searchable')); list.appendChild(r); };
+  if (!d) { c.appendChild(p('gr-small', 'Your brain could not be read just now' + (S.roadErr ? ' (' + String(S.roadErr) + ')' : '') + '. It tries again on its own.')); return c; }
+  const U = d.understood || {};
+  if (n('email')) add('Mail', num(n('email')) + (n('email') === 1 ? ' mailbox' : ' mailboxes') + ' ' + DOT + ' ' + num(d.mail?.emails) + ' emails' + (Number(U.mail) ? ' ' + DOT + ' ' + num(U.mail) + ' understood' : ''), Number(U.mail) > 0);
+  const files = ['read', 'not_read', 'waiting', 'waiting_yes'].reduce((a, k) => a + (Number(d.files?.[k]) || 0), 0);
+  if (n('drives')) add('Drives', num(n('drives')) + (n('drives') === 1 ? ' drive' : ' drives') + ' ' + DOT + ' ' + num(files) + ' files' + (Number(U.files) ? ' ' + DOT + ' ' + num(U.files) + ' understood' : ''), Number(U.files) > 0);
+  if (n('systems')) add('Systems', num(n('systems')) + (n('systems') === 1 ? ' system' : ' systems') + (Number(U.records) ? ' ' + DOT + ' ' + num(U.records) + ' records understood' : ''), Number(U.records) > 0);
+  if (n('calendar') || n('contacts')) add('Calendar and contacts', [n('calendar') ? num(n('calendar')) + ' calendar' + (n('calendar') === 1 ? '' : 's') : '', n('contacts') ? num(n('contacts')) + ' contact list' + (n('contacts') === 1 ? '' : 's') : ''].filter(Boolean).join(' ' + DOT + ' '), false);
+  if (Number(S.conn?.saves)) add('Your AI chats', num(S.conn.saves) + ' saved', false);
+  if (!list.children.length) list.appendChild(p('gr-small', 'Nothing is connected yet.'));
+  c.appendChild(list);
+  return c;
+}
+// THE MONTHLY FIGURE for keeping up: the meter's estimate per source (read_estimate monthly_usd), summed; null when none.
+function monthlyOf(S) {
+  const list = S.est?.estimate?.sources;
+  if (!Array.isArray(list)) return null;
+  const v = list.map((x) => Number(x.monthly_usd)).filter(Number.isFinite);
+  return v.length ? Math.round(v.reduce((a, x) => a + x, 0) * 100) / 100 : null;
+}
+// The model that understands, from the AI tab (which AI does what), or null.
+function understandModel(S) {
+  const st = (S.ai?.steps ?? []).find((x) => String(x.title || '').toLowerCase().includes('understand'));
+  return st ? String(st.model_name || '') + (st.maker ? ', by ' + String(st.maker) : '') : null;
+}
+// UNDERSTAND YOUR PAST MAIL · ONE TIME: mail_groups per mailbox, summed by group. Money mail is always chosen; automated and
+// everything else are off by default and stay searchable. Read the sample, the limit and Understand my mail come with seat
+// understand-step's sample (not built when this was drawn): the button says so and starts nothing.
+let uOff = { automated: true, rest: true }, gAt = 0;
+function groupsCard(S) {
+  const c = card('brain', 'Understand your past mail ' + DOT + ' one time', null);
+  c.classList.add('gs-plan'); c.id = 'gs-under';
+  const G = S.mgroups;
+  if (!G) { c.appendChild(p('working no-late gr-small', 'Sorting your mail into groups, for free')); return c; }
+  if (G.err) { c.appendChild(p('gr-small', 'The groups could not be read just now: ' + String(G.err) + '. It tries again on its own.')); return c; }
+  c.appendChild(el('p', 'am-small', 'Sorted for free with your answers. Untick anything you do not need.'));
+  const list = el('div', 'gs-rows');
+  const priced = G.priced;
+  for (const g of G.groups) {
+    const row = el('label', 'gs-row gs-tick' + (g.always ? ' gs-fixed' : ''));
+    const box = el('input'); box.type = 'checkbox'; box.checked = g.always || !uOff[g.group]; box.disabled = !!g.always; box.setAttribute('aria-label', g.title);
+    box.addEventListener('change', () => { uOff[g.group] = !box.checked; draw(); });
+    const l = el('span', 'gs-rl');
+    const keep = g.group === 'automated' || g.group === 'rest' ? '; stays searchable' : '';
+    l.append(el('b', null, g.title + (g.always ? ' (always)' : '')), el('small', null, g.what + ' ' + DOT + ' ' + num(g.to_read) + ' conversations' + keep));
+    row.append(box, l, el('b', 'gs-pv', priced && Number.isFinite(g.usd) ? usd2(g.usd) : 'measuring'));
+    list.appendChild(row);
+  }
+  c.appendChild(list);
+  const pick = G.groups.filter((g) => g.always || !uOff[g.group]);
+  const convs = pick.reduce((a, g) => a + g.to_read, 0);
+  const tot = Math.round(pick.reduce((a, g) => a + (g.usd || 0), 0) * 100) / 100;
+  const lo = Math.round(pick.reduce((a, g) => a + (g.low || 0), 0)), hi = Math.round(pick.reduce((a, g) => a + (g.high || 0), 0));
+  const tl = el('div', 'gs-pl gs-totalrow'); tl.append(el('b', 'gs-total', 'Total: ' + num(convs) + ' conversations ' + DOT + ' one time'), el('b', 'gs-pv', priced ? usd2(tot) : 'measuring'));
+  c.appendChild(tl);
+  if (priced) c.appendChild(p(null, 'Likely between $' + num(lo) + ' and $' + num(hi) + '. A small sample of your own mail turns this into your real price before the rest is read.'));
+  c.appendChild(el('p', 'am-small', priced ? 'The measured price of one email of average length on your own meter, times each conversation' + String.fromCharCode(8217) + 's length; the range runs from your cheapest to your dearest mailbox.' : 'What understanding costs has not been measured on your mail yet, so no price is given.'));
+  const hrs = pick.length && pick.every((g) => Number.isFinite(g.hours)) ? Math.max(...G.byBox.map((bx) => pick.reduce((a, g) => a + (bx[g.group] || 0), 0))) : null;
+  const when = el('div', 'gs-when');
+  const now = btn('gr-amt on', 'Now ' + DOT + ' ' + (hrs === null ? 'time measuring' : 'about ' + num(Math.max(1, Math.round(hrs))) + ' hours')); now.setAttribute('aria-pressed', 'true');
+  const night = btn('gr-amt', 'Overnight ' + DOT + ' half price'); night.disabled = true;
+  when.append(now, night, el('span', 'gs-coming', 'overnight: coming'));
+  c.append(el('b', 'gs-lab', 'When'), when);
+  const bal = balanceLeft(S);
+  c.appendChild(priceRow('Your balance', bal === null ? 'not read' : usd2(bal)));
+  c.appendChild(p('gr-small', 'Nothing beyond the sample is read until you set your limit.'));
+  const go = btn('go', 'Read the sample ' + DOT + ' about $2'); go.disabled = true;
+  const gw = el('div', 'gr-go'); gw.append(go, el('span', 'gs-coming', 'coming'));
+  c.append(gw, el('p', 'am-small', 'The sample, its measured price, your limit and Understand my mail are being built. Until then nothing is read from here.'));
+  return c;
+}
+// mail_groups for every mailbox (2 years), summed by group; kept for the visit. Owner only (the brain refuses anyone else).
+async function readGroups(S) {
+  const boxes = (S.src?.rows ?? []).filter((r) => r.group === 'email').map((r) => r.source_key);
+  if (!boxes.length) { S.mgroups = { groups: [], byBox: [], priced: false }; return; }
+  if (!S.est) { await meterBalance(); S.est = estV; }
+  const E = S.est;
+  const per = Number(E?.estimate?.per_message_usd);
+  const rates = Number.isFinite(per) && per > 0 ? { items: { understand_mail: { usd: per } } } : null;
+  const all = await Promise.all(boxes.map((k) => C.sb.rpc('mail_groups', { p_source_key: k, p_months: 24, p_rates: rates }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: e?.message ?? String(e) }))));
+  const bad = all.find((x) => !x || x.ok !== true);
+  if (bad && all.every((x) => !x || x.ok !== true)) { S.mgroups = { err: String(bad?.note ?? bad?.reason ?? 'no reason was given') }; return; }
+  const by = {}; const byBox = [];
+  for (const r of all) {
+    if (!r || r.ok !== true) continue;
+    const bx = {};
+    for (const g of r.groups ?? []) {
+      const k = String(g.group);
+      const o = by[k] || (by[k] = { group: k, title: String(g.title || k), what: String(g.what || ''), always: !!g.always, to_read: 0, usd: 0, low: 0, high: 0, hours: 0 });
+      o.to_read += Number(g.to_read) || 0; o.usd += Number(g.usd) || 0; o.low += Number(g.low_usd) || 0; o.high += Number(g.high_usd) || 0;
+      if (Number.isFinite(Number(g.hours))) { o.hours += Number(g.hours); bx[k] = Number(g.hours); } else o.hours = NaN;
+    }
+    byBox.push(bx);
+  }
+  gAt = Date.now();
+  const order = ['people', 'money', 'automated', 'rest'];
+  S.mgroups = { groups: order.filter((k) => by[k]).map((k) => by[k]).concat(Object.keys(by).filter((k) => !order.includes(k)).map((k) => by[k])), byBox, priced: !!rates, held: all.filter((x) => !x || x.ok !== true).length };
+}
+// WHILE IT IS UNDERSTOOD: understand_progress (counts, spent, the limit, minutes left), and Stop through the one press
+// (source_read_approve 'understand_stop'): what is mid-read finishes, nothing more is taken.
+function understandLive(S) {
+  const rows = (S.uprog ?? []).filter((x) => x.state === 'reading' || x.state === 'at_ceiling');
+  if (!rows.length) return null;
+  const total = rows.reduce((a, x) => a + (Number(x.total) || 0), 0), done = rows.reduce((a, x) => a + (Number(x.done) || 0), 0);
+  const spent = rows.reduce((a, x) => a + (Number(x.spent_usd) || 0), 0);
+  const lim = rows.every((x) => Number.isFinite(Number(x.ceiling_usd)) && x.ceiling_usd !== null) ? rows.reduce((a, x) => a + Number(x.ceiling_usd), 0) : null;
+  const c = el('section', 'am-step gs-live'); c.id = 'gs-ulive';
+  c.appendChild(el('span', 'am-num', 'Understanding your mail'));
+  c.appendChild(el('div', 'gs-big', num(done) + ' of ' + num(total)));
+  const bar = el('div', 'gs-bar gs-thick'); const i = el('i'); i.style.width = (total ? Math.min(100, Math.round((done / total) * 100)) : 0) + '%'; bar.appendChild(i); c.appendChild(bar);
+  const mins = rows.every((x) => x.minutes_left !== null && x.minutes_left !== undefined) ? Math.max(...rows.map((x) => Number(x.minutes_left) || 0)) : null;
+  c.appendChild(p('gr-small', mins === null ? 'Time: measuring' : 'about ' + num(mins) + ' minutes left'));
+  c.appendChild(p(null, 'So far ' + usd2(spent) + (lim !== null ? ', your limit ' + usd2(lim) : '') + '.'));
+  const out = p('gr-small', '');
+  const stop = btn('go ghost', 'Stop', async () => {
+    stop.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Stopping';
+    const res = await Promise.all(rows.map((x) => C.sb.rpc('source_read_approve', { p_source_key: x.source_key, p_mode: 'understand_stop', p_months: null, p_confirm: true }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) }))));
+    out.className = 'gr-small'; out.textContent = res.map((r) => String(r?.note ?? r?.reason ?? 'no reason was given')).join(' ');
+    setTimeout(() => mount(C), 2500);
+  });
+  const g = el('div', 'gr-go'); g.appendChild(stop); c.append(g, out);
+  c.appendChild(p('gr-small', 'You can close this page or keep working. It keeps going, and you get one short email when it is done.'));
+  return c;
+}
+// SETTINGS uses these, so every Change there is the same function as here (one path): Top up (with the card and automatic
+// top-up in its sheet), the balance, and the readings.
+export function topUpFor(c, S) { C = c; topUp(S); }
+export { balanceLeft, cardOf, cardFee, monthlyOf, understandModel, brainCard };
 // THE ANSWER BOX under a question (i), or under the summary for anything else (i = -1): large, growing as she types, the one
 // microphone of the Tool beside it (box.js micFor), Continue and Skip.
 function answerBox(i, hint) {
