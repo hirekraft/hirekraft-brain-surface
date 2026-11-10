@@ -18,7 +18,8 @@
 // photos square until seat scans-photos ships fill/scans.js (the square appears by itself when that file exists).
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
-import { understandBlock, filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-07-getting-ready-1';   // the two presses (seat brain-status-2)
+import { filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-07-getting-ready-1';   // the files press and the reading's progress (seat brain-status-2; understandBlock retired here by seat audit-fix-screen)
+const READY_FOR_STEP = './ready.js?v=2026-11-10-audit-fix-screen-2';   // the same module instance lens.js loads (step 4 opens there)
 
 let C = null;   // { sb, el, $, askBody, isOwner, viewDeps, readSources, drawGroup, aiBlocks, door, goto, openAdd, closeAdd, connectSystem, me }
 let reading = null;   // the latest set of readings, so a page opens on what the room shows
@@ -238,9 +239,14 @@ function steps(R) {
     return out;
   }
   const F = d.findable, M = d.mail, Fi = d.files, U = d.understood;
-  const fDone = Number(F.left) === 0;
+  // SEARCHABLE IS THE BRAIN'S (seat audit-fix-screen, ruling 1142.1, audit-fix-brain I1): done when nothing a press can still read is
+  // waiting (brain_road ready.searchable); what can never be read (too large, held by policy, recordings, pictures) is said beside it,
+  // never counted against it. SUPERSEDED: findable.left = 0, which counted those and so could never be reached on HireKraft.
+  const RS = d.ready && typeof d.ready === 'object' && typeof d.ready.searchable === 'boolean' ? d.ready : null;
+  const fDone = RS ? RS.searchable === true : Number(F.left) === 0;
+  const NS = RS && RS.not_searchable && RS.not_searchable.note ? String(RS.not_searchable.note) : '';
   out.push({ k: 'f', name: 'Findable', state: fDone ? 'done' : 'now', big: fDone ? 'Done' : num(F.pct) + '%', pct: Number(F.pct),
-    sub: fDone ? 'everything can be found and quoted' : (Number(F.reading) > 0 ? num(F.reading) + ' files being read now. ' : '') + num(F.left) + ' left: ' + [Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0) ? num(Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0)) + ' mail attachments' : '', Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes) ? num(Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes)) + ' drive files' : ''].filter(Boolean).join(', ') });
+    sub: RS ? (fDone ? 'everything a press can read can be found and quoted' : (Number(F.reading) > 0 ? num(F.reading) + ' files being read now. ' : '') + num(RS.to_read) + ' left to make searchable') + (NS ? '. Not counted: ' + NS : '') : fDone ? 'everything can be found and quoted' : (Number(F.reading) > 0 ? num(F.reading) + ' files being read now. ' : '') + num(F.left) + ' left: ' + [Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0) ? num(Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0)) + ' mail attachments' : '', Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes) ? num(Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes)) + ' drive files' : ''].filter(Boolean).join(', ') });
   const files = Number(Fi.read) + Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes);
   // READY IS THE BRAIN'S (seat setup-wire, decision 1141 ruling 1): brain_road 'ready' decides understood and ready, one rule for the
   // Brain and Getting started: everything connected searchable, the groups she chose understood with nothing waiting, keeping up.
@@ -386,7 +392,13 @@ function paintStart(R) {
   l2.appendChild(b);
   const pr = understandProgress(C, R);
   if (pr) l2.appendChild(pr);
-  if (!pickHost) { pickHost = C.el('div', 'br-press'); pickHost.id = 'br-und-pick'; understandBlock(C, pickHost, R, () => drawRoom(true)); }
+  // ONE PRESS FOR UNDERSTANDING (seat audit-fix-screen, ruling 1142.3): understanding is started in Getting started, step 4 (a sample
+  // first, then her limit, through lens-ask). SUPERSEDED: brainpress understandBlock's own Go here, a second door to the same press
+  // with no limit, which the revoke of source_read_approve 'understand' for signed-in people would refuse.
+  if (!pickHost) { pickHost = C.el('div', 'br-press'); pickHost.id = 'br-und-pick';
+    const go = C.el('button', 'go'); go.type = 'button'; go.textContent = 'Choose in Getting started, step 4';
+    go.addEventListener('click', () => { import(READY_FOR_STEP).then((M) => M.openStep(C, 'understand')).catch(() => C.goto('s-ready')); });
+    pickHost.append(txt('p', 'br-small', 'A sample of your own mail first, then your limit, never passed.'), go); }
   l2.appendChild(pickHost);
   out.push(l1, l2, txt('p', 'br-small br-note', 'When this is done, it says Getting started: done and folds away.'));
   box.replaceChildren(...out);
