@@ -3754,7 +3754,7 @@ async function loadSecurity() {
 // merely-wrong screen.
 let routed = false;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
-const READY_JS = './ready.js?v=2026-11-10-setup-front-door';   // seat getting-ready-screen
+const READY_JS = './ready.js?v=2026-11-10-setup-screens-2';   // seat getting-ready-screen; token seat setup-screens-2
 let readyMod = null;
 // THE FRONT DOOR, How Verrandi Works (fill/setup.js, seat setup-front-door): from #how and the Brain at any time. Get started
 // opens Getting started at step 1; someone who is not the owner sees it without prices or Get started.
