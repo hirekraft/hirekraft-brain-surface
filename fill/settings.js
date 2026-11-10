@@ -16,7 +16,7 @@
 // A COLLEAGUE sees only her own language and emails (spec): no prices, no money rows, no presses on the business.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 import { ic, card } from './setup.js?v=2026-11-10-setup-front-door';
-import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep } from './ready.js?v=2026-11-10-setup-wire';
+import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep } from './ready.js?v=2026-11-10-audit-fix-screen';
 import { screenLangName } from './words.js?v=2026-10-29-thinkrooms-3';
 
 const DOT = String.fromCharCode(183);
