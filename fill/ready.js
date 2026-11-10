@@ -26,7 +26,6 @@
 // the step row (1132: Vera asks them while Understand reads); until step 4 is approved they open from step 4's card.
 import { micFor } from './box.js?v=2026-10-29-thinkrooms-b';
 import { roadSteps } from './brainroom.js?v=2026-11-07-getting-ready-1';
-import { filesBlock, estimates } from './brainpress.js?v=2026-11-07-getting-ready-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
 const DOT = String.fromCharCode(183);
@@ -34,6 +33,12 @@ const ARROW = String.fromCharCode(8594);
 const num = (n) => Number(n || 0).toLocaleString('en-US');
 const usd = (n) => { const x = Number(n); if (!Number.isFinite(x)) return null; return x < 10 ? '$' + x.toFixed(2) : '$' + Math.round(x).toLocaleString('en-US'); };
 const LOCAL = 'tool.ready.marks';
+// THE TERMS YES (seat setup-screens-2, HQ 2026-11-10 06:35 UTC): one line with a check box above the credit step's button,
+// "I agree to the terms of use", the existing plain words opened in place, kept by getting_ready_mark 'agreed' with the
+// wording it was given to. A brain that already holds 'agreed' shows it checked. Built as one helper (termsLine) so HQ can
+// move it after Alex's word on its place. The words are the retired Welcome card's (getting-ready-terms-1), unchanged.
+const TERMS_V = 'getting-ready-terms-1';
+const TERMS = 'The Tool helps; you decide. What it shows you is help, not legal, tax or financial advice, and every decision is yours: we are not responsible for what you decide or sign based on what you see here. Your data stays yours: cancel any time and keep your database. Nothing that costs money starts without your yes, and every price is shown before it starts.';
 
 let C = null, R = null, at = null, host = null, poll = null, pending = false;
 let bz = { open: null, draft: '', more: false, done: false };   // step 3 on the card: which question is open, what is typed
@@ -59,6 +64,7 @@ async function read(fresh) {
   ];
   if (S.owner) jobs.push(C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) S.ai = r.ai; else S.aiErr = r?.error ?? 'no reason was given'; }, (e) => { S.aiErr = e?.message ?? String(e); }));
   if (S.owner) jobs.push(C.sb.rpc('business_profile_list').then(({ data, error }) => { if (!error && data && data.ok === true) S.prof = data.statements ?? []; else S.profErr = error?.message ?? data?.note ?? 'no reason was given'; }, (e) => { S.profErr = e?.message ?? String(e); }));
+  if (S.owner) jobs.push(readPlan(S), readSearchProgress(S));   // step 3's priced card and its live line (seat setup-screens-2)
   await Promise.all(jobs);
   if (S.owner && S.marks?.groups) await C.sb.rpc('understand_groups').then(({ data, error }) => { if (!error && data && data.ok !== false) S.groups = data; else S.groupsErr = error?.message ?? data?.reason; }, (e) => { S.groupsErr = e?.message ?? String(e); });
   return S;
@@ -122,6 +128,7 @@ export async function mount(c) {
   if (!typing()) draw();
   paidReturn(R);
   clearTimeout(poll);
+  searchPoll();
   if ((Number(R.road?.findable?.reading) || 0) > 0 || (Number(R.road?.understanding?.waiting) || 0) > 0) poll = setTimeout(() => { if (!C.$('#s-ready')?.hidden && !C.$('#gr-sheet')) mount(C); }, 60000);
 }
 // Leaving Getting ready while the brain is not Ready: one line at the top of the page she goes to, back to the step she left.
@@ -246,7 +253,7 @@ function openBrain() { C.goto('s-summary'); }
 // balance; the balance is only in its own place) and what this step costs. Always in cents, so it cannot be mistaken for the
 // balance (seat getting-ready-fix-1: $14.52 spent read as "$15" beside a $15.03 balance).
 function stepPrice(S, k) {
-  if (k === 'connect') { const n = (S.prog ?? []).filter((r) => r.kind === 'gmail').reduce((a, r) => a + (Number(r.files_waiting_for_owner) || 0), 0); return { n, rate: true }; }
+  if (k === 'connect') { if (!S.splan) return { counting: true }; const pk = chosenOf(S.splan); return { exact: Math.round(pk.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100 }; }   // search_plan's price for what is checked
   if (k === 'understand') return S.groups && Number.isFinite(Number(S.groups.total_usd)) ? { usd: Number(S.groups.total_usd) } : { counting: true };
   return { free: true };
 }
@@ -262,11 +269,7 @@ async function meter(S) {
   let m = C.$('#gr-meter');
   if (!m) { m = btn('gr-meter', ''); m.id = 'gr-meter'; head.appendChild(m); }
   const sf = soFar(S), pr = stepPrice(S, at);
-  let step = pr.free ? 'free' : pr.counting ? 'counting' : pr.usd !== undefined ? 'about ' + usd(pr.usd) : null;
-  if (pr.rate) {
-    if (!pr.n) step = 'nothing waiting';
-    else { const E = await estimates({ askBody: C.askBody }).catch(() => null); const rate = Number(E?.all?.estimate?.per_file_findable_usd); step = Number.isFinite(rate) && rate > 0 ? 'up to about ' + usd(pr.n * rate) : 'not priced yet'; }
-  }
+  const step = pr.free ? 'free' : pr.counting ? 'counting' : pr.exact !== undefined ? usd2(pr.exact) : pr.usd !== undefined ? 'about ' + usd(pr.usd) : null;
   const spent = sf === null ? 'not read' : usd2(sf);
   const a = el('span', null, 'Setup so far '); a.append(el('b', null, spent));
   const b = el('span', null, 'This step '); b.append(el('b', null, step));
@@ -399,46 +402,162 @@ function tileBtn(icon, title, line1, word, on, fn) {
   b.setAttribute('aria-label', title + (line1 ? ', ' + line1 : '') + ': ' + word);
   return b;
 }
-// THE LIVE CARD, while anything is being read: the count, the bar, the time from the measured pace (never invented).
-function liveCard(S, rows, prog) {
-  const now = prog.filter((x) => x.state === 'reading');
-  if (!now.length) return null;
-  const all = prog.reduce((a, x) => a + totalOf(x), 0), done = prog.reduce((a, x) => a + (Number(x.done) || 0), 0);
-  const c = el('section', 'am-step gs-live');
-  c.appendChild(el('span', 'am-num', 'Making it searchable'));
+// THE LIVE CARD, once Make it all searchable is pressed (seat setup-screens-2): search_progress (seat searchable-plan),
+// polled every 15 seconds while it reads. The start time, the count, the bar, minutes left from the measured pace (or
+// "measuring"), and what is being read now ('<mailbox>: <year>' or a drive's name; never a subject or a person).
+const hm = (iso) => { const d = new Date(iso); return Number.isFinite(d.getTime()) ? d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null; };
+function liveCard(S) {
+  const g = S.sprog;
+  if (!g || g.ok !== true || g.state !== 'reading') return null;
+  const all = Number(g.items_total) || 0, done = Number(g.items_done) || 0;
+  const c = el('section', 'am-step gs-live'); c.id = 'gs-live';
+  const t = hm(g.started_at);
+  c.appendChild(el('span', 'am-num', 'Making it searchable' + (t ? ' ' + DOT + ' started ' + t : '')));
   c.appendChild(el('div', 'gs-big', num(done) + ' of ' + num(all) + ' items'));
-  const bar = el('div', 'gs-bar gs-thick'); const i = el('i'); i.style.width = (all ? Math.round((done / all) * 100) : 0) + '%'; bar.appendChild(i); c.appendChild(bar);
-  const mins = now.every((x) => x.minutes_left !== null && x.minutes_left !== undefined) ? Math.max(...now.map((x) => Number(x.minutes_left) || 0)) : null;
-  if (mins !== null) c.appendChild(p('gr-small', 'about ' + num(mins) + ' minutes left'));
-  const d = el('p', 'gs-now'); d.append(el('i', 'gs-pulse'), document.createTextNode('Reading ' + nameOf(rows, now[0].source))); c.appendChild(d);
+  const bar = el('div', 'gs-bar gs-thick'); const i = el('i'); i.style.width = (all ? Math.min(100, Math.round((done / all) * 100)) : 0) + '%'; bar.appendChild(i); c.appendChild(bar);
+  const ml = g.minutes_left;
+  c.appendChild(p('gr-small', ml === null || ml === undefined ? 'Time: measuring' : 'about ' + num(ml) + ' minutes left'));
+  if (g.now_reading) { const d = el('p', 'gs-now'); d.append(el('i', 'gs-pulse'), document.createTextNode('Reading ' + String(g.now_reading))); c.appendChild(d); }
   c.appendChild(p('gr-small', 'You can close this page or keep working. It keeps going, and every box below shows where it is.'));
   return c;
 }
-// MAKE EVERYTHING SEARCHABLE. The one priced press (search_plan) is seat searchable-plan's and has not landed: until it does,
-// this card draws what is counted from the progress function, says "Time: measuring" unless every reading source has a
-// measured pace, shows no price it cannot read, and offers the Tool's one real press today (brainpress filesBlock: the
-// attachments waiting for her yes, with its own price first). No Make it all searchable button before its back end (1075).
-function searchCard(S, rows, prog) {
+// MAKE EVERYTHING SEARCHABLE (spec step 3; seat setup-screens-2 over seat searchable-plan's search_plan and search_go).
+// How far back (2 years, 4 years, Everything), a check box per source with its counts and exact price, the total, what is
+// left of the credit or how much to add, the time from the measured pace or "measuring", and the one press: a preview
+// first (search_go without confirm), then Yes (search_go with confirm). Every number is the brain's; the boundary line
+// under the total says what it counts. The balance passed is the meter's (lens-ask read_estimate), as the interface says;
+// the guarantee that nothing is spent past it is the AI proxy's own stop.
+let plan = { months: 24, off: {} };
+function planRows(P) { return (P?.sources ?? []).filter((r) => r.state !== 'not_connected'); }
+function chosenOf(P) { return planRows(P).filter((r) => r.state === 'to_read' && !plan.off[r.key]); }
+function countLine(r) {
+  if (r.kind === 'mail') { const a = (Number(r.attachments) || 0) + (Number(r.attachments_estimated) || 0); return num(r.emails) + ' emails ' + DOT + ' ' + num(a) + ' attachments' + (Number(r.attachments_estimated) ? ' (some estimated)' : ''); }
+  return num(r.files) + ' files';
+}
+function searchCard(S) {
   const c = card('eye', 'Make everything searchable', null);
-  c.classList.add('gs-plan');
-  if (!prog.length) { c.appendChild(p('gr-small', S.progErr ? 'What is counted could not be read just now (' + String(S.progErr) + '). It tries again on its own.' : 'Connect something and it is counted here, for free.')); return c; }
+  c.classList.add('gs-plan'); c.id = 'gs-plan';
+  const P = S.splan;
+  if (!P || P.ok !== true) {
+    c.appendChild(p('gr-small', S.splanErr ? 'What is counted could not be read just now: ' + String(S.splanErr) + '. It tries again on its own.' : 'Connect something and it is counted here, for free.'));
+    return c;
+  }
+  // How far back: the three choices, each with its own total, or "counting" while a choice is not complete.
+  const seg = el('div', 'gr-seg gs-back'); seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'How far back');
+  for (const ch of (P.choices ?? [])) {
+    const m = ch.months === null || ch.months === undefined ? null : Number(ch.months);
+    const on = m === (plan.months === null ? null : Number(plan.months));
+    const b = btn('gr-amt' + (on ? ' on' : ''), String(ch.label || (m ? m / 12 + ' years' : 'Everything')), async () => { if (on) return; plan.months = m; plan.off = {}; await rePlan(); });
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    seg.appendChild(b);
+  }
+  c.append(el('b', 'gs-lab', 'How far back'), seg);
   const list = el('div', 'gs-rows');
-  for (const x of prog) {
-    const r = el('div', 'gs-row');
-    const n = Number(x.done) + Number(x.waiting);
-    const what = x.kind === 'gmail' ? num(n) + ' emails' + (Number(x.files_waiting_for_owner) ? ' ' + DOT + ' ' + num(x.files_waiting_for_owner) + ' attachments' : '') : num(n + Number(x.waiting_for_owner)) + ' files';
-    r.append(el('b', null, nameOf(rows, x.source)), el('small', null, what));
-    list.appendChild(r);
+  for (const r of planRows(P)) {
+    const row = el('label', 'gs-row gs-tick');
+    const l = el('span', 'gs-rl');
+    if (r.state === 'to_read') {
+      const box = el('input'); box.type = 'checkbox'; box.checked = !plan.off[r.key]; box.setAttribute('aria-label', String(r.label));
+      box.addEventListener('change', () => { plan.off[r.key] = !box.checked; draw(); });
+      row.appendChild(box);
+    }
+    l.append(el('b', null, String(r.label || r.key)), el('small', null, r.state === 'not_counted' ? String(r.note || 'Not counted yet.') : countLine(r)));
+    row.appendChild(l);
+    if (r.state === 'to_read') row.appendChild(el('b', 'gs-pv', usd2(r.usd) ?? 'not priced'));
+    else if (r.state === 'searchable') row.appendChild(el('span', 'gs-chip gs-chip-ok', 'Searchable'));
+    else row.appendChild(el('span', 'gs-chip', 'counting'));
+    list.appendChild(row);
   }
   c.appendChild(list);
-  c.appendChild(el('p', 'gs-total', 'Total: ' + num(prog.reduce((a, x) => a + totalOf(x), 0)) + ' items'));
-  const now = prog.filter((x) => x.state === 'reading');
-  const mins = now.length && now.every((x) => x.minutes_left !== null && x.minutes_left !== undefined) ? Math.max(...now.map((x) => Number(x.minutes_left) || 0)) : null;
+  const pick = chosenOf(P);
+  const cur = (P.choices ?? []).find((ch) => (ch.months ?? null) === (plan.months ?? null));
+  const complete = !cur || cur.complete !== false;
+  const items = pick.reduce((a, r) => a + (Number(r.to_read) || 0), 0);
+  const cost = Math.round(pick.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100;
+  const tl = el('div', 'gs-pl gs-totalrow');
+  tl.append(el('b', 'gs-total', complete ? 'Total: ' + num(items) + ' items' : 'Total: counting'), el('b', 'gs-pv', complete ? usd2(cost) : 'counting'));
+  c.appendChild(tl);
+  if (P.boundary) c.appendChild(el('p', 'am-small', String(P.boundary)));
+  const bal = Number(P.balance_usd);
+  const known = P.balance_known === true && Number.isFinite(bal);
+  const over = known && cost > bal + 0.000001;
+  if (!known) c.appendChild(p('gr-small', 'Your credit could not be read just now, so nothing can be started. It tries again on its own.'));
+  else if (over) c.appendChild(p('gr-small gs-over', 'This is more than your credit: add ' + usd2(Math.ceil(Number(((cost - bal) * 100).toFixed(6))) / 100) + ' first, or untick something.'));
+  else c.appendChild(p('gr-small', 'From your $20 credit, leaving ' + usd2(Math.max(0, bal - cost)) + '.'));
+  // Time: the chosen sources run side by side, so the longest one; any unmeasured one makes it "measuring".
+  const mins = pick.length && pick.every((r) => r.minutes !== null && r.minutes !== undefined) ? Math.max(...pick.map((r) => Number(r.minutes) || 0)) : null;
   c.appendChild(p('gr-small', mins !== null ? 'about ' + num(mins) + ' minutes' : 'Time: measuring'));
-  const press = el('div', 'gr-press'); c.appendChild(press);
-  filesBlock(PRESS(), press, { ...S, owner: true }, () => setTimeout(() => mount(C), 2000));
+  c.appendChild(p(null, 'Untick anything you do not need. Counted for free; nothing is read until you press.'));
+  const out = p('gr-small', '');
+  const go = btn('go', 'Make it all searchable', () => searchPreview(S, pick, out, go));
+  go.disabled = !known || over || !complete || !pick.length || S.sprog?.state === 'reading';
+  const gw = el('div', 'gr-go'); gw.appendChild(go);
+  c.append(gw, out);
+  if (S.sprog?.state === 'reading') c.appendChild(p('gr-small', 'It is being made searchable now; the box above shows where it is.'));
   c.appendChild(el('p', 'am-small', 'Connect or upload something more, and it joins the count before you press. Scans and photos are priced on their own.'));
   return c;
+}
+async function rePlan() {
+  const card0 = C.$('#gs-plan'); if (card0) card0.replaceChildren(p('working no-late', 'Counting, for free'));
+  await readPlan(R);
+  draw();
+}
+// The preview, then Yes: both are search_go, the one press (nothing else starts reading from this card).
+async function searchPreview(S, pick, out, go) {
+  go.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Working out the exact price';
+  const args = { p_months: plan.months, p_sources: pick.map((r) => r.key), p_balance_usd: S.splan?.balance_usd ?? null };
+  const { data, error } = await C.sb.rpc('search_go', { ...args, p_confirm: false }).catch((e) => ({ error: e }));
+  out.className = 'gr-small'; out.textContent = ''; go.disabled = false;
+  if (error || !data || data.ok !== true) { out.textContent = 'Not started: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; return; }
+  if (data.nothing_to_read) { out.textContent = 'Everything you chose is already searchable.'; return; }
+  const body = el('div');
+  body.append(priceRow('Items to make searchable', num(data.total_items)), priceRow('Price, one time', usd2(data.total_usd)),
+    p('gr-small', data.minutes === null || data.minutes === undefined ? 'Time: measuring' : 'about ' + num(data.minutes) + ' minutes'));
+  if (data.note) body.appendChild(p('gr-small', String(data.note)));
+  const said = p('gr-small', '');
+  const yes = btn('go', 'Yes, make it searchable ' + DOT + ' ' + usd2(data.total_usd), async () => {
+    yes.disabled = true; no.disabled = true; said.className = 'working no-late gr-small'; said.textContent = 'Starting';
+    const r = await C.sb.rpc('search_go', { ...args, p_confirm: true }).catch((e) => ({ error: e }));
+    if (r.error || !r.data || r.data.ok !== true) { said.className = 'gr-small'; said.textContent = 'Not started: ' + String(r.error?.message ?? r.data?.note ?? r.data?.reason ?? 'no reason was given') + '.'; yes.disabled = false; no.disabled = false; return; }
+    sheet.close(); toast(String(r.data.note || 'Started. You get one short email when it is done.'));
+    mount(C);
+  });
+  const no = btn('go ghost', 'Not now', () => sheet.close());
+  const acts = el('div', 'gr-chips'); acts.append(yes, no);
+  body.append(acts, said);
+  sheet.open('Make it all searchable?', body);
+}
+// THE BALANCE FOR THE PLAN: the meter's own (lens-ask read_estimate balance), kept for five minutes.
+let balAt = 0, balV = null;
+async function meterBalance() {
+  if (balV !== null && Date.now() - balAt < 300000) return balV;
+  const r = await C.askBody({ read_estimate: { months: 24 } }).catch(() => null);
+  const b = Number(r?.balance?.balance_left_usd ?? r?.estimate?.balance?.balance_left_usd);
+  balV = Number.isFinite(b) ? b : null; balAt = Date.now();
+  return balV;
+}
+async function readPlan(S) {
+  const b = await meterBalance();
+  const { data, error } = await C.sb.rpc('search_plan', { p_months: plan.months, p_balance_usd: b }).catch((e) => ({ error: e }));
+  if (error || !data || data.ok !== true) { S.splan = null; S.splanErr = error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'; }
+  else { S.splan = data; S.splanErr = null; }
+}
+async function readSearchProgress(S) {
+  const { data, error } = await C.sb.rpc('search_progress', {}).catch((e) => ({ error: e }));
+  if (!error && data && data.ok === true) S.sprog = data; else S.sprog = null;
+}
+// While it reads, the live card and the progress rows are refreshed every 15 seconds (only on step 3, only while shown).
+let sPoll = null;
+function searchPoll() {
+  clearTimeout(sPoll);
+  if (R?.sprog?.state !== 'reading') return;
+  sPoll = setTimeout(async () => {
+    if (C.$('#s-ready')?.hidden || at !== 'connect' || C.$('#gr-sheet')) { searchPoll(); return; }
+    await readSearchProgress(R);
+    const live = C.$('#gs-live'), next = liveCard(R);
+    if (live && next) live.replaceWith(next); else if (!next) { mount(C); return; }
+    searchPoll();
+  }, 15000);
 }
 // PROGRESS: one row per source with its own meter and chip (Reading amber, Waiting grey, Searchable green).
 function progressCard(S, rows, prog) {
@@ -479,6 +598,24 @@ function brainPanel(key) {
   }
   C.roomPage(key);
 }
+function termsLine(S) {
+  const agreed = mark(S, 'agreed');
+  const w = el('div', 'gs-terms'); w.id = 'gs-terms';
+  const lab = el('label', 'gr-agree'); const box = el('input'); box.type = 'checkbox'; box.id = 'gs-agree'; box.checked = !!agreed; box.disabled = !!agreed;
+  lab.append(box, el('span', null, 'I agree to the terms of use'));
+  const said = p('gr-small', agreed ? 'You agreed on ' + new Date(agreed.at || Date.now()).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + '.' : '');
+  box.addEventListener('change', async () => {
+    if (!box.checked) return;
+    box.disabled = true; said.className = 'working no-late gr-small'; said.textContent = 'Keeping your yes';
+    const { data, error } = await C.sb.rpc('getting_ready_mark', { p_key: 'agreed', p_value: { yes: true }, p_wording: TERMS_V }).catch((e) => ({ error: e }));
+    said.className = 'gr-small';
+    if (error || !data || data.ok !== true) { box.checked = false; box.disabled = false; said.textContent = 'Not kept: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; return; }
+    R = await read(false); draw();
+  });
+  w.append(lab, fold('Read the terms (2 minutes)', p(null, TERMS), p('gr-small', 'These are the plain words. The full user agreement follows them.')), said);
+  return w;
+}
+const agreedNow = () => !!C.$('#gs-agree')?.checked;
 const H = (t) => el('h1', 'gr-h', t);
 const CARDS = {
   db(S) {
@@ -518,7 +655,8 @@ const CARDS = {
         ['shield', "You type your card on Stripe's own page. Your card number never reaches Verrandi."],
       ])];
     if (bal !== null && bal >= 20) {
-      out.push(card('coin', 'Your AI balance', null, priceRow('AI credit', usd2(bal))), okMark('Your credit is in'), goOn('connect'));
+      const gw = goOn('connect'); const cb = gw.querySelector('button'); cb.addEventListener('click', (e) => { if (!agreedNow()) { e.stopImmediatePropagation(); toast('Check the box first: it says you agree to the terms of use.'); } }, true);
+      out.push(card('coin', 'Your AI balance', null, priceRow('AI credit', usd2(bal))), okMark('Your credit is in'), termsLine(S), gw);
     } else {
       // THE FEE is studio-core pay_fee's sum (the same sum cardFee() carries, proven equal on 8 of 8 amounts by seat
       // stripe-payments, and topup_start answers it again); never a typed figure.
@@ -530,6 +668,7 @@ const CARDS = {
       if (pay && (!card0 || card0.mode !== 'live')) out.push(p('gr-small gr-test', 'Card payments are in test mode: on Stripe use the test card 4242 4242 4242 4242, any future date, any 3 digits. A test payment is shown here and is never added to your balance.'));
       const msg = p('gr-small', '');
       const go = btn('go', 'Add $20 with Stripe', async () => {
+        if (!agreedNow()) { msg.textContent = 'Check the box first: it says you agree to the terms of use.'; C.$('#gs-agree')?.focus(); return; }
         if (!pay) { msg.textContent = 'Card payments are not switched on for this brain yet, so nothing was started.'; return; }
         go.disabled = true; msg.className = 'working no-late gr-small'; msg.textContent = 'Opening the payment page';
         try {
@@ -540,7 +679,7 @@ const CARDS = {
         } catch (e) { msg.className = 'gr-small'; msg.textContent = 'Not started: ' + String(e?.message ?? e) + '.'; go.disabled = false; }
       });
       const gw = el('div', 'gr-go'); gw.appendChild(go);
-      out.push(gw, msg);
+      out.push(termsLine(S), gw, msg);
     }
     out.push(questions([
       ['What does "searchable" mean?', 'Every email, attachment and file you connect is read once and gets a fingerprint of its meaning, so you can find it by what it is about, not only by its exact words. It shows you your own documents and never invents anything.'],
@@ -558,7 +697,7 @@ const CARDS = {
     const by = (g) => rows.filter((r) => r.group === g);
     const out = [H('Connect everything you use.'), p('gr-lead', 'Tap each one and sign in on their page. Everything you connect is counted for free, then made searchable in one go.')];
     const prog = S.prog ?? [];
-    const live = liveCard(S, rows, prog); if (live) out.push(live);
+    const live = liveCard(S); if (live) out.push(live);
     // WHERE YOUR BUSINESS LIVES: from the one reading of sources (sources_view); connected = green.
     const t1 = el('div', 'gs-tiles');
     for (const [g, icon, title, sq, one, many, line0] of [
@@ -579,7 +718,7 @@ const CARDS = {
       tileBtn('photo', 'Scans and photos', 'Documents in pictures, read as a choice with its own price', 'Choose', false, () => brainPanel('scans')));
     out.push(card('upload', 'Bring in what you already have', null, t2, el('p', 'am-small', 'Saved AI chats stay private to the person who added them. A big download is counted and priced before anything is read.')));
     out.push(card('ai', 'Your own AI assistant', null, (() => { const d = el('div', 'gr-act'); const t = el('span'); t.append(el('b', null, 'Connect your Claude'), el('small', null, 'Ask your brain from inside Claude, with what you are allowed to see. It works as soon as your brain is searchable.')); d.append(t, btn('go ghost', 'Connect', () => brainPanel('assistadd'))); return d; })()));
-    out.push(searchCard(S, rows, prog));
+    out.push(searchCard(S));
     out.push(progressCard(S, rows, prog));
     const stop = card('check', 'You could stop here', null, p(null, 'Once everything is green, you already have a working tool: search across your whole business, by meaning, in a second. If that is all you need, the ', el('b', null, 'Search'), ' plan is $40 a month (founding price $20). Understanding comes next, if you want it.'));
     stop.classList.add('gs-green'); out.push(stop);
