@@ -3754,13 +3754,18 @@ async function loadSecurity() {
 // merely-wrong screen.
 let routed = false;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
-const READY_JS = './ready.js?v=2026-11-10-setup-screens-2';   // seat getting-ready-screen; token seat setup-screens-2
+const READY_JS = './ready.js?v=2026-11-10-setup-screens-2b';   // seat getting-ready-screen; token seat setup-screens-2
 let readyMod = null;
 // THE FRONT DOOR, How Verrandi Works (fill/setup.js, seat setup-front-door): from #how and the Brain at any time. Get started
 // opens Getting started at step 1; someone who is not the owner sees it without prices or Get started.
 const openDoor = () => import("./setup.js?v=2026-11-10-setup-front-door").then((S) => S.openStory({ owner: !!shape?.viewer?.all_access, start: () => goto('s-ready') })).catch(() => { /* the story is extra; the screen still lands */ });
 const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () => !!shape?.viewer?.all_access, readSources, goto, goTab, roomPage: (k, a) => { room(); roomPage(k, a); } });
 const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
+// SETTINGS (seat setup-screens-2, decision 1138): after Ready, the same page becomes Settings (fill/settings.js, #s-settings,
+// #settings). The masthead carries one link: Getting started until Ready, Settings after (settings.js mastLink).
+const SETTINGS_JS = './settings.js?v=2026-11-10-setup-screens-2b';
+let settingsMod = null;
+const setupLink = (notReady) => import(SETTINGS_JS).then((M) => M.mastLink(readyCtx(), notReady)).catch(() => { /* the Brain button still leads back */ });
 async function routeOnState(mode) {
   if (routed) return;                           // this chooses the OPENING screen, once
   if (userMoved) return;                        // never move someone who has chosen
@@ -3783,10 +3788,12 @@ async function routeOnState(mode) {
   // and its sign-in return marker. Getting started (fill/ready.js) is the one setup; #setup and a brain with nothing
   // connected open it, and the front door "How Verrandi Works" (fill/setup.js) opens over it for an owner, once per browser.
   if (location.hash === "#how") openDoor();
-  if (location.hash === "#setup" || !connectedCount()) { goto('s-ready'); return; }
+  if (location.hash === "#setup" || !connectedCount()) { setupLink(true); goto('s-ready'); return; }
   // GETTING READY (seat getting-ready-screen, 2026-11-07, decision 1124): until the brain is Ready the Tool opens on the
   // Getting ready screen (fill/ready.js), not on a tab. A reading that fails opens the Tool as before.
-  if (await readyGate()) { goto('s-ready'); return; }
+  if (await readyGate()) { setupLink(true); goto('s-ready'); return; }
+  setupLink(false);
+  if (location.hash === "#settings" && $("#s-settings")) { goto('s-settings'); return; }   // seat setup-screens-2
   // THE TAB SHE USED LAST, in this browser; Mail the first time (seat conversation-panel, Alex 2026-10-12).
   // An owner-only tab remembered by someone who is not the owner falls back to Mail.
   let last = null;
@@ -3831,6 +3838,8 @@ function goto(id, key) {
   }
   if (id === 's-ready') import(READY_JS).then((G) => { readyMod = G; G.mount(readyCtx()); }).catch((e) => { const m = $('#gr-left'); if (m) m.textContent = 'Getting ready could not be loaded: ' + String(e?.message ?? e); });   // seat getting-ready-screen
   else if (readyMod) readyMod.unmount();
+  if (id === 's-settings') import(SETTINGS_JS).then((M) => { settingsMod = M; M.mount(readyCtx()); }).catch((e) => { const m = $('#st'); if (m) m.textContent = 'Settings could not be loaded: ' + String(e?.message ?? e); });   // seat setup-screens-2
+  else if (settingsMod) settingsMod.unmount();
   if (id === "s-tests") loadTests();
   if (id === "s-totest") import("./totest.js?v=2026-10-29-ask-agent").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + String(e?.message ?? e); });   // seat test-list
   if (id === "s-security") loadSecurity();
@@ -3849,7 +3858,7 @@ function goto(id, key) {
   doorBack(id, isDoor);
   document.body.dataset.tab = tabNow;
   // Remembered so the Tool opens where she was (seat conversation-panel); first-run screens are not tabs.
-  if (!['s-intro', 's-kinds', 's-setup', 's-ready'].includes(id)) { try { localStorage.setItem(TAB_KEY, tabNow); } catch (_) { /* this page only */ } }
+  if (!['s-intro', 's-kinds', 's-setup', 's-ready', 's-settings'].includes(id)) { try { localStorage.setItem(TAB_KEY, tabNow); } catch (_) { /* this page only */ } }
   drawBox();
 }
 
