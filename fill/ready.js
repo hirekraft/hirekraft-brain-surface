@@ -24,8 +24,17 @@
 // RETIRED: the Welcome card with its layers, promises and terms box (replaced by the front door; the terms are not in the
 // approved copy, said to HQ), and the separate Make findable step (folded into step 3). The business questions moved off
 // the step row (1132: Vera asks them while Understand reads); until step 4 is approved they open from step 4's card.
-import { micFor } from './box.js?v=2026-10-29-thinkrooms-b';
-import { roadSteps } from './brainroom.js?v=2026-11-07-getting-ready-1';
+// SEAT setup-wire (2026-11-10; decision 1141; brief studio-walkers briefs/seat-setup-wire.md): the screens wired to the brain parts
+// that landed after them. STEP 3 asks lens-ask {search_plan} / {search_go}, which reads the balance from the AI meter itself (the
+// screen sends none), and each mailbox row carries "Old, searchable only" (source_mark_old, her press, undo). STEP 4: the three
+// questions pre-filled (understand_answers_suggest / _set / _moved, what moved with real counts only), Read the sample
+// (understand_sample, its measured price with its range), her limit starting at the predicted price and shared out over her
+// mailboxes by the sample's prediction (each mailbox press has its own limit: said under the field), Understand my mail
+// (source_read_approve per mailbox), "so far, on track for", minutes only once the pace is measured, Stop; overnight hidden (not
+// built). READY is the brain's own (brain_road 'ready', read through brainroom.js roadSteps). RETIRED here (ruling 1141.2): the
+// business conversation card (CARDS.business, its answer box, the microphone import, the kept-words reading) and the dead helpers
+// setup-screens-2 named (balanceAct, act, line); Vera asks about the business later in the Tool (vera.js keeps her conversation).
+import { roadSteps } from './brainroom.js?v=2026-11-10-setup-wire';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
 const DOT = String.fromCharCode(183);
@@ -41,14 +50,12 @@ const TERMS_V = 'getting-ready-terms-1';
 const TERMS = 'The Tool helps; you decide. What it shows you is help, not legal, tax or financial advice, and every decision is yours: we are not responsible for what you decide or sign based on what you see here. Your data stays yours: cancel any time and keep your database. Nothing that costs money starts without your yes, and every price is shown before it starts.';
 
 let C = null, R = null, at = null, host = null, poll = null, pending = false;
-let bz = { open: null, draft: '', more: false, done: false };   // step 3 on the card: which question is open, what is typed
 const usd2 = (n) => { const x = Number(n); return Number.isFinite(x) ? '$' + x.toFixed(2) : null; };
 
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 function btn(cls, text, fn) { const b = el('button', cls, text); b.type = 'button'; if (fn) b.addEventListener('click', fn); return b; }
 function fold(q, ...body) { const d = el('details', 'gr-why'); d.appendChild(el('summary', null, q)); const b = el('div'); b.append(...body); d.appendChild(b); return d; }
 function p(cls, ...parts) { const e = el('p', cls); for (const x of parts) e.append(typeof x === 'string' ? document.createTextNode(x) : x); return e; }
-function act(title, small, ...buttons) { const d = el('div', 'gr-act'); const t = el('span'); t.append(el('b', null, title)); if (small) t.append(el('small', null, small)); d.append(t, ...buttons); return d; }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // THE READINGS
@@ -63,15 +70,13 @@ async function read(fresh) {
     C.sb.rpc('getting_ready_marks').then(({ data, error }) => { if (!error && data && data.ok === true) S.marks = data; else S.marksErr = error?.message ?? data?.reason ?? 'no reason was given'; }, (e) => { S.marksErr = e?.message ?? String(e); }),
   ];
   if (S.owner) jobs.push(C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) S.ai = r.ai; else S.aiErr = r?.error ?? 'no reason was given'; }, (e) => { S.aiErr = e?.message ?? String(e); }));
-  if (S.owner) jobs.push(C.sb.rpc('business_profile_list').then(({ data, error }) => { if (!error && data && data.ok === true) S.prof = data.statements ?? []; else S.profErr = error?.message ?? data?.note ?? 'no reason was given'; }, (e) => { S.profErr = e?.message ?? String(e); }));
   if (S.owner) jobs.push(readPlan(S), readSearchProgress(S));   // step 3's priced card and its live line (seat setup-screens-2)
-  if (S.owner) jobs.push(C.sb.rpc('understand_progress', { p_source: null }).then(({ data, error }) => { if (!error && data && data.ok === true) S.uprog = data.sources ?? []; }, () => {}));   // step 4's live card
+  // step 4's live card: understand_progress through its owner door (seat setup-wire: understand_progress itself is the service's only,
+  // so the call this replaced always failed, silently, and the card could never show)
+  if (S.owner) jobs.push(C.sb.rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) S.uprog = data.sources ?? []; else S.uprogErr = error?.message ?? data?.note ?? 'no reason was given'; }, (e) => { S.uprogErr = e?.message ?? String(e); }));
   await Promise.all(jobs);
   return S;
 }
-// What she already told Vera about her business, in the one profile store (business_profile_owner_say keeps it there).
-const PRE = 'how your business works, in your words: ';
-function keptWords(S) { const o = {}; for (const s of S.prof ?? []) { const a = String(s.area || ''); if (a.startsWith(PRE) && s.status !== 'rejected') o[a.slice(PRE.length)] = String(s.statement || ''); } return o; }
 function mark(S, key) { const m = S.marks?.mine?.[key]; if (m) return m; if (S.marksErr) return localMarks()[key] ?? null; return null; }
 
 // The five steps from real state (spec page 2). state: done, now (the current one), todo, wait (not read).
@@ -124,6 +129,7 @@ export async function mount(c) {
   const was = R;
   R = await read(true);
   if (was?.mgroups && !was.mgroups.err && Date.now() - gAt < 300000) R.mgroups = was.mgroups;   // the groups are counted once per five minutes, not on every refresh
+  if (was?.uans && was.uans.ok === true) R.uans = was.uans;   // the three answers' suggestions: counted once per visit
   pending = !isReady(R);
   document.body.classList.toggle('gr-pending', pending);
   document.body.dataset.guide = guideName();
@@ -143,7 +149,7 @@ export function unmount() {
   }
 }
 // She is typing an answer on the card: a reading that comes back must not redraw it away.
-function typing() { const t = C?.$('#gr-q-in'); return !!t && (document.activeElement === t || t.value.trim().length > 0); }
+function typing() { for (const q of ['#gs-word-in', '#gs-limit']) { const t = C?.$(q); if (t && document.activeElement === t) return true; } const w = C?.$('#gs-word-in'); return !!w && w.value.trim().length > 0; }
 // THE WAY BACK (Alex 16:43 PT: he left setup and did not know how to return). While not Ready, the masthead Brain button,
 // the Brain line under the tabs and every tab lead back to Getting ready, at the step she left (at is kept). Capture phase,
 // so the press never reaches the tab it was on. The Brain itself stays one press away under See everything in your brain.
@@ -212,7 +218,7 @@ function draw() {
   C.$('#gr-grid')?.classList.toggle('gr-solo', nov);
   const row = C.$('#gr-steps');
   row.replaceChildren(...st.map((s) => {
-    const b = btn('gr-st gr-' + s.state, '', () => { at = s.k; bz.open = null; bz.draft = ''; draw(); });
+    const b = btn('gr-st gr-' + s.state, '', () => { at = s.k; draw(); });
     b.setAttribute('role', 'listitem'); b.dataset.step = s.k;
     const n = el('span', 'gs-n', s.n); if (s.done) n.classList.add('gs-done');
     b.append(n, el('b', null, s.name));
@@ -224,7 +230,8 @@ function draw() {
   const box = C.$('#gr-left');
   box.replaceChildren(...(CARDS[at] || CARDS.ready)(S, st));
   box.appendChild(more());
-  if (at === 'understand' && S.owner && !S.mgroups && !S.gLoad) { S.gLoad = true; readGroups(S).then(() => { if (R === S && at === 'understand' && !typing() && !C.$('#gr-sheet')) draw(); }); }   // step 4's groups, read when she is on it
+  if (at === 'understand' && S.owner && !S.gLoad) { S.gLoad = true; Promise.all([S.mgroups ? null : readGroups(S), S.uans ? null : readAnswers(S)]).then(() => readSample(S)).then(() => { if (R === S && at === 'understand' && !typing() && !C.$('#gr-sheet')) draw(); }); }   // step 4's groups, answers and sample, read when she is on it
+  uPoll();
   if (nov) C.$('#gr-meter')?.remove(); else meter(S);
   // The front door first, once per browser, until Get started (and never over a sheet or a story already open).
   if (!doorShown && !doorPassed() && pending && !storyOpen() && !C.$('#gr-sheet')) { doorShown = true; door(); }
@@ -257,6 +264,7 @@ function openBrain() { C.goto('s-summary'); }
 // balance (seat getting-ready-fix-1: $14.52 spent read as "$15" beside a $15.03 balance).
 function stepPrice(S, k) {
   if (k === 'connect') { if (!S.splan) return { counting: true }; const pk = chosenOf(S.splan); return { exact: Math.round(pk.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100 }; }   // search_plan's price for what is checked
+  if (k === 'understand' && S.usam?.ok === true && S.usam.state === 'done' && Number.isFinite(Number(S.usam.predicted_remaining_usd))) return { usd: Number(S.usam.predicted_remaining_usd) };   // measured on her own mail
   if (k === 'understand') { const G = S.mgroups; if (!G || G.err || !G.priced) return { counting: true }; return { usd: G.groups.filter((g) => g.always || !uOff[g.group]).reduce((a, g) => a + (g.usd || 0), 0) }; }   // mail_groups' estimate for what is checked
   return { free: true };
 }
@@ -385,11 +393,6 @@ function paidReturn(S) {
   else if (last && last.status !== 'open') toast(String(last.line));
   else toast('Payment received by Stripe; the Tool records it in a moment. Press Top up to see it.');
 }
-function balanceAct(S) {
-  const bl = balanceLeft(S);
-  const last = cardOf(S)?.payments?.[0];
-  return act('Your AI balance: ' + (bl === null ? 'none yet' : usd2(bl)), last ? String(last.line) : "AI is paid from it at the makers' price, nothing added.", btn('go ghost', 'Top up', () => topUp(S)));
-}
 
 // ---------------------------------------------------------------------------------------------------------------------
 // THE STEPS
@@ -428,8 +431,9 @@ function liveCard(S) {
 // How far back (2 years, 4 years, Everything), a check box per source with its counts and exact price, the total, what is
 // left of the credit or how much to add, the time from the measured pace or "measuring", and the one press: a preview
 // first (search_go without confirm), then Yes (search_go with confirm). Every number is the brain's; the boundary line
-// under the total says what it counts. The balance passed is the meter's (lens-ask read_estimate), as the interface says;
-// the guarantee that nothing is spent past it is the AI proxy's own stop.
+// under the total says what it counts. SEAT setup-wire (ruling 1141.5): the plan and the press go through lens-ask
+// {search_plan} / {search_go}, which reads the balance from the AI meter itself; the screen sends no balance (it used to pass
+// read_estimate's, which a page could change). On each mailbox row: Old, searchable only (source_mark_old, her press; undo).
 let plan = { months: 24, off: {} };
 function planRows(P) { return (P?.sources ?? []).filter((r) => r.state !== 'not_connected'); }
 function chosenOf(P) { return planRows(P).filter((r) => r.state === 'to_read' && !plan.off[r.key]); }
@@ -470,6 +474,7 @@ function searchCard(S) {
     else if (r.state === 'searchable') row.appendChild(el('span', 'gs-chip gs-chip-ok', 'Searchable'));
     else row.appendChild(el('span', 'gs-chip', 'counting'));
     list.appendChild(row);
+    if (r.kind === 'mail' && r.state !== 'not_counted') list.appendChild(oldRow(r));
   }
   c.appendChild(list);
   const pick = chosenOf(P);
@@ -500,6 +505,33 @@ function searchCard(S) {
   c.appendChild(el('p', 'am-small', 'Connect or upload something more, and it joins the count before you press. Scans and photos are priced on their own.'));
   return c;
 }
+// OLD, SEARCHABLE ONLY (decision 1140; source_mark_old, seat privacy-check-rules): a mailbox she only wants to search herself is
+// made searchable with no privacy check, so it costs less and nobody else can find what is in it. Her press, with a yes first;
+// pressed again, it is undone. The row's price is the brain's after the change (the plan is read again).
+function oldRow(r) {
+  const on = r.old_searchable_only === true;
+  const d = el('div', 'gs-oldrow');
+  d.append(el('small', null, on ? 'Old, searchable only: you can search it, nobody else can, and it gets no privacy check.' : 'Only you need to search this one? Mark it old: it costs less and nobody else can find it.'),
+    btn('gr-link', on ? 'Undo: not old' : 'Old, searchable only', () => markOld(r, !on)));
+  return d;
+}
+function markOld(r, old) {
+  const body = el('div');
+  body.appendChild(p(null, old ? 'You can still search everything in it. Nobody else in your business can find what is in it, and it gets no privacy check, so it costs less. Press Undo on its row any time.'
+    : 'Its emails and attachments then get the privacy check, within the daily limit, and your team can find what they are allowed to see.'));
+  const said = p('gr-small', '');
+  const yes = btn('go', old ? 'Yes, mark it old' : 'Yes, undo', async () => {
+    yes.disabled = true; no.disabled = true; said.className = 'working no-late gr-small'; said.textContent = old ? 'Marking it old' : 'Undoing';
+    const { data, error } = await C.sb.rpc('source_mark_old', { p_source_key: r.key, p_old: old, p_identity: null }).catch((e) => ({ error: e }));
+    if (error || !data || data.ok !== true) { said.className = 'gr-small'; said.textContent = 'Not changed: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; yes.disabled = false; no.disabled = false; return; }
+    sheet.close(); toast(String(data.note || 'Changed.'));
+    await rePlan();
+  });
+  const no = btn('go ghost', 'Not now', () => sheet.close());
+  const acts = el('div', 'gr-chips'); acts.append(yes, no);
+  body.append(acts, said);
+  sheet.open((old ? 'Mark ' : 'Undo old for ') + String(r.label || r.key) + (old ? ' old, searchable only?' : '?'), body);
+}
 async function rePlan() {
   const card0 = C.$('#gs-plan'); if (card0) card0.replaceChildren(p('working no-late', 'Counting, for free'));
   await readPlan(R);
@@ -508,8 +540,8 @@ async function rePlan() {
 // The preview, then Yes: both are search_go, the one press (nothing else starts reading from this card).
 async function searchPreview(S, pick, out, go) {
   go.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Working out the exact price';
-  const args = { p_months: plan.months, p_sources: pick.map((r) => r.key), p_balance_usd: S.splan?.balance_usd ?? null };
-  const { data, error } = await C.sb.rpc('search_go', { ...args, p_confirm: false }).catch((e) => ({ error: e }));
+  const args = { months: plan.months, sources: pick.map((r) => r.key) };
+  const { data, error } = await goAsk({ ...args, confirm: false });
   out.className = 'gr-small'; out.textContent = ''; go.disabled = false;
   if (error || !data || data.ok !== true) { out.textContent = 'Not started: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; return; }
   if (data.nothing_to_read) { out.textContent = 'Everything you chose is already searchable.'; return; }
@@ -520,7 +552,7 @@ async function searchPreview(S, pick, out, go) {
   const said = p('gr-small', '');
   const yes = btn('go', 'Yes, make it searchable ' + DOT + ' ' + usd2(data.total_usd), async () => {
     yes.disabled = true; no.disabled = true; said.className = 'working no-late gr-small'; said.textContent = 'Starting';
-    const r = await C.sb.rpc('search_go', { ...args, p_confirm: true }).catch((e) => ({ error: e }));
+    const r = await goAsk({ ...args, confirm: true });
     if (r.error || !r.data || r.data.ok !== true) { said.className = 'gr-small'; said.textContent = 'Not started: ' + String(r.error?.message ?? r.data?.note ?? r.data?.reason ?? 'no reason was given') + '.'; yes.disabled = false; no.disabled = false; return; }
     sheet.close(); toast(String(r.data.note || 'Started. You get one short email when it is done.'));
     mount(C);
@@ -530,8 +562,8 @@ async function searchPreview(S, pick, out, go) {
   body.append(acts, said);
   sheet.open('Make it all searchable?', body);
 }
-// THE BALANCE FOR THE PLAN: the meter's own (lens-ask read_estimate balance), kept for five minutes.
-// The same reading gives step 4 and step 5 their monthly figure and price per email (S.est).
+// THE METER'S READ ESTIMATE (lens-ask read_estimate), kept for five minutes: step 4 and step 5's monthly figure and price per
+// email (S.est). Step 3's plan no longer uses its balance (lens-ask reads the meter itself).
 let balAt = 0, balV = null, estV = null;
 async function meterBalance() {
   if (estV && Date.now() - balAt < 300000) return balV;
@@ -540,12 +572,19 @@ async function meterBalance() {
   balV = Number.isFinite(b) ? b : null; balAt = Date.now(); estV = r && r.ok === true ? r : null;
   return balV;
 }
+// THE PLAN AND THE PRESS, THROUGH LENS-ASK (ruling 1141.5): the same JSON as the brain's search_plan / search_go, with the balance
+// lens-ask reads from the meter. A refusal or an unreachable Tool comes back as { error } with its reason, never as an empty plan.
+async function planAsk(months) {
+  const r = await C.askBody({ search_plan: { months } });
+  return r && r.ok === true ? { data: r } : { error: { message: String(r?.note ?? r?.reason ?? r?.error ?? 'no reason was given') } };
+}
+async function goAsk(q) {
+  const r = await C.askBody({ search_go: q });
+  return r && r.ok === true ? { data: r } : { data: r && typeof r === 'object' && r.ok === false && (r.note || r.reason) ? r : null, error: r && r.ok === false && (r.note || r.reason) ? null : { message: String(r?.error ?? 'no reason was given') } };
+}
 async function readPlan(S) {
-  const b = await meterBalance();
-  S.est = estV;
-  const { data, error } = await C.sb.rpc('search_plan', { p_months: plan.months, p_balance_usd: b }).catch((e) => ({ error: e }));
-  if (error || !data || data.ok !== true) { S.splan = null; S.splanErr = error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'; }
-  else { S.splan = data; S.splanErr = null; }
+  const [, pl] = await Promise.all([meterBalance().then(() => { S.est = estV; }), planAsk(plan.months)]);
+  if (pl.error) { S.splan = null; S.splanErr = pl.error.message; } else { S.splan = pl.data; S.splanErr = null; }
 }
 async function readSearchProgress(S) {
   const { data, error } = await C.sb.rpc('search_progress', {}).catch((e) => ({ error: e }));
