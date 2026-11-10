@@ -3788,12 +3788,14 @@ async function routeOnState(mode) {
   // and its sign-in return marker. Getting started (fill/ready.js) is the one setup; #setup and a brain with nothing
   // connected open it, and the front door "How Verrandi Works" (fill/setup.js) opens over it for an owner, once per browser.
   if (location.hash === "#how") openDoor();
+  // #settings opens Settings directly, also before Ready (so an owner can look at it while setting up); the masthead link
+  // still says Getting started until Ready (seat setup-screens-2).
+  if (location.hash === "#settings" && $("#s-settings") && connectedCount()) { goto('s-settings'); readyGate().then((nr) => setupLink(!!nr)); return; }
   if (location.hash === "#setup" || !connectedCount()) { setupLink(true); goto('s-ready'); return; }
   // GETTING READY (seat getting-ready-screen, 2026-11-07, decision 1124): until the brain is Ready the Tool opens on the
   // Getting ready screen (fill/ready.js), not on a tab. A reading that fails opens the Tool as before.
   if (await readyGate()) { setupLink(true); goto('s-ready'); return; }
   setupLink(false);
-  if (location.hash === "#settings" && $("#s-settings")) { goto('s-settings'); return; }   // seat setup-screens-2
   // THE TAB SHE USED LAST, in this browser; Mail the first time (seat conversation-panel, Alex 2026-10-12).
   // An owner-only tab remembered by someone who is not the owner falls back to Mail.
   let last = null;
