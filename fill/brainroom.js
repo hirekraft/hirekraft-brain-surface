@@ -242,7 +242,12 @@ function steps(R) {
   out.push({ k: 'f', name: 'Findable', state: fDone ? 'done' : 'now', big: fDone ? 'Done' : num(F.pct) + '%', pct: Number(F.pct),
     sub: fDone ? 'everything can be found and quoted' : (Number(F.reading) > 0 ? num(F.reading) + ' files being read now. ' : '') + num(F.left) + ' left: ' + [Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0) ? num(Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0)) + ' mail attachments' : '', Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes) ? num(Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes)) + ' drive files' : ''].filter(Boolean).join(', ') });
   const files = Number(Fi.read) + Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes);
-  const uDone = Number(U.mail) >= Number(M.emails) && Number(U.files) >= files;
+  // READY IS THE BRAIN'S (seat setup-wire, decision 1141 ruling 1): brain_road 'ready' decides understood and ready, one rule for the
+  // Brain and Getting started: everything connected searchable, the groups she chose understood with nothing waiting, keeping up.
+  // Not every email. SUPERSEDED 2026-11-10 (HQ ruling 1141, seat setup-wire): understood only when every email and file was understood,
+  // which a choice of groups could never reach. A brain whose road predates the 'ready' object keeps the old rule.
+  const RD = d.ready && typeof d.ready === 'object' ? d.ready : null;
+  const uDone = RD ? RD.understood === true : Number(U.mail) >= Number(M.emails) && Number(U.files) >= files;
   // seat brain-status-2: while the reader works the step is yellow (learning) with its progress; until anything is pressed it
   // is red and says the rest waits for her.
   const W = d.understanding || {};
@@ -250,10 +255,10 @@ function steps(R) {
   out.push({ k: 'u', name: 'Understood', state: uDone ? 'done' : uNow ? 'now' : 'zero',
     big: num(U.mail) + ' emails ' + DOT + ' ' + num(U.files) + ' files',
     sub: uNow ? 'understanding: ' + num(W.done) + ' of ' + num(W.pressed) + ' read' + (Number(W.minutes_left) > 0 ? ', about ' + (Number(W.minutes_left) < 90 ? num(W.minutes_left) + ' minutes' : Math.round(Number(W.minutes_left) / 60) + ' hours') + ' left' : '')
-      : 'of ' + num(M.emails) + ' emails and ' + num(files) + ' files. The rest waits for you.',
+      : uDone && RD ? 'what you chose is understood; the rest stays searchable' : 'of ' + num(M.emails) + ' emails and ' + num(files) + ' files. The rest waits for you.',
     pct: uNow && Number(W.pressed) > 0 ? Number(W.done) * 100 / Number(W.pressed) : undefined });
-  const ready = fDone && uDone && out[0].state === 'done';
-  out.push({ k: 'r', name: 'Ready', state: ready ? 'done' : 'next', big: ready ? 'You are ready' : 'Not yet', sub: ready ? 'keeps up every day' : 'when 2 and 3 are done' });
+  const ready = (RD ? RD.ok === true : fDone && uDone) && out[0].state === 'done';
+  out.push({ k: 'r', name: 'Ready', state: ready ? 'done' : 'next', big: ready ? 'You are ready' : 'Not yet', sub: ready ? 'keeps up every day' : RD && RD.keeping_up === false ? num(RD.refresh_errors) + (Number(RD.refresh_errors) === 1 ? ' connection' : ' connections') + ' could not refresh: see Connected' : 'when 2 and 3 are done' });
   return out;
 }
 
