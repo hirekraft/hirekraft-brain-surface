@@ -782,78 +782,14 @@ const CARDS = {
     ]));
     return out;
   },
-  business(S) {
-    const V = window.veraBusiness;
-    const out = [H('Tell us about your business.'),
-      p('gr-lead', 'Say whatever comes to mind, in your own words and the language of your trade. There are no wrong answers. About two minutes, free.')];
-    if (!V) { out.push(p('gr-small', guideName() + ' could not be loaded just now, so this step cannot be answered here. Reload the page to try again.')); return out; }
-    const kept = keptWords(S);
-    const T = V.state();
-    const ol = el('ol', 'gr-secs gr-qs');
-    V.questions.forEach((q, i) => {
-      const now = T ? T.said[i] : '';
-      const old = kept[V.keys[i]] || '';
-      const skipped = !!(T && T.skipped[i]);
-      const li = el('li', (now || (!T && old)) ? 'done' : skipped ? 'skipped' : '');
-      if (bz.open === i) li.classList.add('open');
-      const body = el('span');
-      body.appendChild(el('b', null, q));
-      if (now) {
-        body.appendChild(el('span', 'gr-words', now));
-        const v = el('span', 'gr-vline'); v.append(el('span', 'gr-av', guideName().slice(0, 1).toUpperCase()), el('span', null, V.thanks)); body.appendChild(v);
-      } else if (old) {
-        body.appendChild(el('span', 'gr-words', old));
-        body.appendChild(el('small', null, 'What you told ' + guideName() + ' before.'));
-      } else if (skipped) body.appendChild(el('small', null, 'Skipped.'));
-      if (bz.open === i) body.appendChild(answerBox(i, now ? 'Add to it' : null));
-      else body.appendChild(btn('gr-link gr-qbtn', (now || old ? 'Add more with ' : 'Answer with ') + guideName(), () => openQ(i)));
-      li.append(el('span', 'gr-c'), body);
-      ol.appendChild(li);
-    });
-    out.push(ol);
-    const all = T && V.questions.every((_, i) => T.said[i] || T.skipped[i]);
-    if (T && (all || bz.done)) {
-      const sum = el('div', 'gr-sum');
-      sum.append(el('b', null, 'Here is what you told me, in your words.'), p('gr-small', 'Each answer is under its question above.'));
-      if (T.extra) sum.appendChild(p(null, 'Anything else: ' + T.extra));
-      sum.appendChild(p(null, 'Is this right, and is there anything else you want to say?'));
-      if (bz.more) sum.appendChild(answerBox(-1, null));
-      const acts = el('div', 'gr-chips');
-      const keep = btn('go', 'That is right, keep it', async () => {
-        keep.disabled = true; const r = await V.keep(); bz = { open: null, draft: '', more: false, done: false };
-        toast(String(r?.note || 'Kept.')); R = await read(false); draw();
-      });
-      acts.append(keep, btn('go ghost', 'Something else to add', () => { bz.more = true; draw(); C.$('#gr-q-in')?.focus(); }),
-        btn('go ghost', 'Stop for now', () => { V.stop(); bz = { open: null, draft: '', more: false, done: false }; draw(); }));
-      sum.appendChild(acts);
-      out.push(sum);
-    } else if (!T || bz.open === null) {
-      const first = V.questions.findIndex((_, i) => !(T ? (T.said[i] || T.skipped[i]) : kept[V.keys[i]]));
-      const startAt = first < 0 ? 0 : first;
-      out.push(act(Object.keys(kept).length && !T ? 'Kept as How your business works' : guideName() + ' asks, one question at a time', 'Answer right here, under each question. Skip any.', btn('go', T ? 'Go on' : (Object.keys(kept).length ? 'Change or add' : 'Start with ' + guideName()), () => openQ(startAt))));
-    }
-    if (S.profErr) out.push(p('gr-small', 'What you told ' + guideName() + ' before could not be read just now (' + String(S.profErr) + ').'));
-    out.push(p('gr-small', 'Your words become "How your business works". The Tool reads everything through them. Nothing is kept until you say it is right. Change them any time.'));
-    return out;
-  },
-  // STEP 4 · UNDERSTAND (spec part 2, approved 2026-11-09; seat setup-screens-2). Every number is the brain's: the groups,
-  // counts and prices are mail_groups' (per mailbox, summed), priced with the meter's measured price of one email
-  // (read_estimate per_message_usd), each estimate with its range (1137); the time from mail_groups' hours. The three
-  // answers, the sample, the limit before the read and overnight half price are seat understand-step's brain side, which had
-  // not landed when this was built: they are shown as "coming", never as working (1075). The live card and Stop are the
-  // existing ones (understand_progress, source_read_approve 'understand_stop').
+  // STEP 4 · UNDERSTAND (spec part 2, approved 2026-11-09). Every number is the brain's: the groups, counts and prices are
+  // mail_groups' (per mailbox, summed), priced with the meter's measured price of one email (read_estimate per_message_usd), each
+  // estimate with its range (1137). SEAT setup-wire wired what seat understand-step landed: the three questions (answersCard), the
+  // sample and its measured price, her limit and Understand my mail (sampleBlock), and the live card through its owner door.
   understand(S, st) {
     const out = [H('Understand what matters.'), p('gr-lead', 'Everything is searchable now. Understanding reads each conversation once and notes the facts in it, so you can ask exact questions. You choose what is worth it.')];
     const live = understandLive(S); if (live) out.push(live);
-    // THREE QUICK QUESTIONS (1136): the brain side that keeps the answers and turns them into sorting is not built yet.
-    const qs = card('chat', 'Three quick questions ' + DOT + ' free', null, el('p', 'am-small', 'Already filled in from what was counted. Tap anything that is not right.'));
-    for (const [q, taps] of [['What is each mailbox for?', ['Everything', 'Sales', 'Accounting', 'Hiring', 'Old, searchable only']], ['Who do you work with?', ['Businesses', 'People', 'Both']], ['What do you call the money paperwork?', ['Invoice', 'Timesheet', 'Purchase order', 'Receipt', 'Bill', '+ your word']]]) {
-      const d = el('div', 'gs-q'); d.appendChild(el('b', null, q));
-      const seg = el('div', 'gr-seg'); for (const t of taps) { const b = btn('gr-amt', t); b.disabled = true; seg.appendChild(b); } d.appendChild(seg);
-      qs.appendChild(d);
-    }
-    qs.append(el('span', 'gs-coming', 'coming'), el('p', 'am-small', 'Your answers will sort what is worth reading. Until they can be kept, the standard sorting is used: your conversations and money mail.'));
-    out.push(qs);
+    out.push(answersCard(S));
     out.push(groupsCard(S));
     const M = monthlyOf(S);
     const how = card('coin', 'How your price works', null);
@@ -877,7 +813,6 @@ const CARDS = {
       ['Why a sample first?', 'Every business' + String.fromCharCode(8217) + 's mail is different. The sample measures what your own mail costs to understand, so the price you agree to is yours, not an average.'],
       ['Can it cost more than I agreed?', 'No. It stops before your limit. If something is left, it tells you how much and what it would cost, and you decide.'],
       ['What happens to the mail I do not choose?', 'It stays searchable. If a question needs it later, that piece is read then, with its price shown.'],
-      ['What is overnight at half price?', 'The AI companies charge about half for work that can wait until morning. Same result, ready the next day.'],
       ['Will I know when it is done?', 'Yes, one short email from your own mailbox to you. You can close the page in the meantime.'],
     ]));
     return out;
@@ -947,8 +882,7 @@ function understandModel(S) {
   return st ? String(st.model_name || '') + (st.maker ? ', by ' + String(st.maker) : '') : null;
 }
 // UNDERSTAND YOUR PAST MAIL · ONE TIME: mail_groups per mailbox, summed by group. Money mail is always chosen; automated and
-// everything else are off by default and stay searchable. Read the sample, the limit and Understand my mail come with seat
-// understand-step's sample (not built when this was drawn): the button says so and starts nothing.
+// everything else are off by default and stay searchable. Under the groups, the sample and the limit (sampleBlock).
 let uOff = { automated: true, rest: true }, gAt = 0;
 function groupsCard(S) {
   const c = card('brain', 'Understand your past mail ' + DOT + ' one time', null);
@@ -962,7 +896,7 @@ function groupsCard(S) {
   for (const g of G.groups) {
     const row = el('label', 'gs-row gs-tick' + (g.always ? ' gs-fixed' : ''));
     const box = el('input'); box.type = 'checkbox'; box.checked = g.always || !uOff[g.group]; box.disabled = !!g.always; box.setAttribute('aria-label', g.title);
-    box.addEventListener('change', () => { uOff[g.group] = !box.checked; draw(); });
+    box.addEventListener('change', async () => { uOff[g.group] = !box.checked; uLimit = null; draw(); await readSample(R); if (at === 'understand' && !C.$('#gr-sheet')) draw(); });   // the sample's prediction follows her choice
     const l = el('span', 'gs-rl');
     const keep = g.group === 'automated' || g.group === 'rest' ? '; stays searchable' : '';
     l.append(el('b', null, g.title + (g.always ? ' (always)' : '')), el('small', null, g.what + ' ' + DOT + ' ' + num(g.to_read) + ' conversations' + keep));
@@ -978,18 +912,9 @@ function groupsCard(S) {
   c.appendChild(tl);
   if (priced) c.appendChild(p(null, 'Likely between $' + num(lo) + ' and $' + num(hi) + '. A small sample of your own mail turns this into your real price before the rest is read.'));
   c.appendChild(el('p', 'am-small', priced ? 'The measured price of one email of average length on your own meter, times each conversation' + String.fromCharCode(8217) + 's length; the range runs from your cheapest to your dearest mailbox.' : 'What understanding costs has not been measured on your mail yet, so no price is given.'));
-  const hrs = pick.length && pick.every((g) => Number.isFinite(g.hours)) ? Math.max(...G.byBox.map((bx) => pick.reduce((a, g) => a + (bx[g.group] || 0), 0))) : null;
-  const when = el('div', 'gs-when');
-  const now = btn('gr-amt on', 'Now ' + DOT + ' ' + (hrs === null ? 'time measuring' : 'about ' + num(Math.max(1, Math.round(hrs))) + ' hours')); now.setAttribute('aria-pressed', 'true');
-  const night = btn('gr-amt', 'Overnight ' + DOT + ' half price'); night.disabled = true;
-  when.append(now, night, el('span', 'gs-coming', 'overnight: coming'));
-  c.append(el('b', 'gs-lab', 'When'), when);
-  const bal = balanceLeft(S);
-  c.appendChild(priceRow('Your balance', bal === null ? 'not read' : usd2(bal)));
-  c.appendChild(p('gr-small', 'Nothing beyond the sample is read until you set your limit.'));
-  const go = btn('go', 'Read the sample ' + DOT + ' about $2'); go.disabled = true;
-  const gw = el('div', 'gr-go'); gw.append(go, el('span', 'gs-coming', 'coming'));
-  c.append(gw, el('p', 'am-small', 'The sample, its measured price, your limit and Understand my mail are being built. Until then nothing is read from here.'));
+  // OVERNIGHT AT HALF PRICE is not built (seat understand-step: it needs a second way of reading), so it is not shown. Time is
+  // given once the reading has started and its pace is measured (the live card), never guessed here.
+  c.appendChild(sampleBlock(S));
   return c;
 }
 // mail_groups for every mailbox (2 years), summed by group; kept for the visit. Owner only (the brain refuses anyone else).
@@ -1022,18 +947,23 @@ async function readGroups(S) {
 // WHILE IT IS UNDERSTOOD: understand_progress (counts, spent, the limit, minutes left), and Stop through the one press
 // (source_read_approve 'understand_stop'): what is mid-read finishes, nothing more is taken.
 function understandLive(S) {
-  const rows = (S.uprog ?? []).filter((x) => x.state === 'reading' || x.state === 'at_ceiling');
+  // a mailbox counts here once it is pressed (its groups are kept); a sample alone is shown by its own block (sampleBlock)
+  const rows = (S.uprog ?? []).filter((x) => (x.state === 'reading' || x.state === 'at_ceiling') && Array.isArray(x.groups) && x.groups.length);
   if (!rows.length) return null;
   const total = rows.reduce((a, x) => a + (Number(x.total) || 0), 0), done = rows.reduce((a, x) => a + (Number(x.done) || 0), 0);
-  const spent = rows.reduce((a, x) => a + (Number(x.spent_usd) || 0), 0);
+  const spent = rows.reduce((a, x) => a + (Number(x.so_far_usd ?? x.spent_usd) || 0), 0);
   const lim = rows.every((x) => Number.isFinite(Number(x.ceiling_usd)) && x.ceiling_usd !== null) ? rows.reduce((a, x) => a + Number(x.ceiling_usd), 0) : null;
   const c = el('section', 'am-step gs-live'); c.id = 'gs-ulive';
   c.appendChild(el('span', 'am-num', 'Understanding your mail'));
   c.appendChild(el('div', 'gs-big', num(done) + ' of ' + num(total)));
   const bar = el('div', 'gs-bar gs-thick'); const i = el('i'); i.style.width = (total ? Math.min(100, Math.round((done / total) * 100)) : 0) + '%'; bar.appendChild(i); c.appendChild(bar);
-  const mins = rows.every((x) => x.minutes_left !== null && x.minutes_left !== undefined) ? Math.max(...rows.map((x) => Number(x.minutes_left) || 0)) : null;
-  c.appendChild(p('gr-small', mins === null ? 'Time: measuring' : 'about ' + num(mins) + ' minutes left'));
-  c.appendChild(p(null, 'So far ' + usd2(spent) + (lim !== null ? ', your limit ' + usd2(lim) : '') + '.'));
+  // minutes left only when every reading mailbox has its pace measured (understand_progress pace_measured); on track only when
+  // every one has a measured total (on_track_usd), otherwise said plainly
+  const mins = rows.every((x) => x.pace_measured === true && x.minutes_left !== null && x.minutes_left !== undefined) ? Math.max(...rows.map((x) => Number(x.minutes_left) || 0)) : null;
+  c.appendChild(p('gr-small', mins === null ? 'Time: measuring the pace' : 'about ' + num(mins) + ' minutes left'));
+  const track = rows.every((x) => x.on_track_usd !== null && x.on_track_usd !== undefined && Number.isFinite(Number(x.on_track_usd))) ? rows.reduce((a, x) => a + Number(x.on_track_usd), 0) : null;
+  c.appendChild(p(null, 'So far ' + usd2(spent) + (track !== null ? ', on track for ' + usd2(track) : ', on track for: measuring') + (lim !== null ? ' ' + DOT + ' your limit ' + usd2(lim) : '') + '.'));
+  if (rows.some((x) => x.state === 'at_ceiling')) c.appendChild(p('gr-small', 'It stopped before your limit. What is left is not read; you can raise the limit and press again.'));
   const out = p('gr-small', '');
   const stop = btn('go ghost', 'Stop', async () => {
     stop.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Stopping';
