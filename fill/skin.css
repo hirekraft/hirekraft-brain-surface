@@ -2415,6 +2415,11 @@ body.br-panel-open { overflow: hidden; }
 .br-confirm p { margin: 0; }
 .br-prog { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
 .br-said { overflow-wrap: anywhere; }
+/* THE READING LINE (seat findable-fix, 2026-11-11, decision 1147): per source done of total, the measured pace, the time left, live. */
+.br-ll { display: flex; flex-direction: column; gap: calc(var(--u) * 2.5); min-width: 0; overflow-wrap: anywhere; }
+.br-ll p { margin: 0; }
+.br-ll-h { display: flex; align-items: center; gap: calc(var(--u) * 2); min-width: 0; overflow-wrap: anywhere; }
+.br-ll .br-pb { height: 8px; }
 .br-ptabs { display: flex; gap: calc(var(--u) * 1.5); flex-wrap: wrap; }
 .br-fold > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
 .br-live { font-size: var(--t-small); color: var(--ink-3); margin-top: calc(var(--u) * 3); overflow-wrap: anywhere; }
