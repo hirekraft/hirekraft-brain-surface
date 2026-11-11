@@ -49,7 +49,7 @@
 //    $20"): the last answer seen in this browser stands in, said as not read.
 // 4. WHAT COULD NOT BE READ IS SAID IN WORDS AND TRIED AGAIN (netLine, settle): after 10, 20, 40, then every 60 seconds. A draw
 //    that throws says so and tries again (paint); mount() can no longer be left on its first line.
-import { roadSteps } from './brainroom.js?v=2026-11-11-step3-reading-row';
+import { roadSteps } from './brainroom.js?v=2026-11-11-drive-gap';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
