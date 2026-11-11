@@ -17,7 +17,7 @@ import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
 import { removeControl, readChooser } from "./sources.js?v=2026-11-06-brain-status-2"; // remove a source, choose how older mail is read (seat sources-basics)
 import { readSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-05-brain-tab-room"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
-import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-10-audit-fix-screen-2"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
+import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-11-ready-never-spins"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 // BRAIN AND DRIVES FROM ONE READING (seat brain-and-drives, 2026-10-28, decision 1030): sources_view, asked once per brain
 // reading (fresh) and shared by the counts, the Sources list, the count under Brain's heading and the Drives tab.
@@ -265,12 +265,19 @@ let lastPrint = null;
 
 // Returns true when it drew, false when the new reading draws nothing new (onlyIfChanged), so the caller knows.
 let claimTried = false;
+// A READING THAT DOES NOT ANSWER HAS FAILED (seat ready-never-spins, 2026-11-11). The opening screen waited on these three with no
+// limit, so one request that never came back left the Tool on its holding state for good. Now the brain's shape has OPEN_WAIT_MS
+// to answer and is then treated as every other failed reading (the lens carries the failure; the next reading recovers); the
+// mailbox and drive states have the same limit and are then left unasserted, as when they fail.
+const OPEN_WAIT_MS = 8000;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function readBrain(opts = {}) {
   const tree = $("#tree");
   try {
     const mbx = readMailboxes();
     const drv = readDriveStates();
-    const { data, error } = await sb.rpc("brain_shape");
+    const sides = Promise.race([Promise.all([mbx, drv]), sleep(OPEN_WAIT_MS)]);
+    const { data, error } = await Promise.race([sb.rpc("brain_shape"), sleep(OPEN_WAIT_MS).then(() => ({ error: new Error("your brain did not answer within " + OPEN_WAIT_MS / 1000 + " seconds") }))]);
     if (error) throw error;
 
     if (data?.state === "unbound") {
@@ -285,7 +292,7 @@ async function readBrain(opts = {}) {
     }
 
     shape = data;
-    await Promise.all([mbx, drv]);
+    await sides;
     const print = readingPrint();
     if (opts.onlyIfChanged && print === lastPrint) {
       // Nothing she can see changed: only the time of the reading moves.
@@ -3754,7 +3761,7 @@ async function loadSecurity() {
 // merely-wrong screen.
 let routed = false;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
-const READY_JS = './ready.js?v=2026-11-10-audit-fix-screen-2';   // seat getting-ready-screen; token seat setup-screens-2
+const READY_JS = './ready.js?v=2026-11-11-ready-never-spins';   // seat getting-ready-screen; token seat setup-screens-2
 let readyMod = null;
 // THE FRONT DOOR, How Verrandi Works (fill/setup.js, seat setup-front-door): from #how and the Brain at any time. Get started
 // opens Getting started at step 1; someone who is not the owner sees it without prices or Get started.
@@ -3763,7 +3770,7 @@ const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () =>
 const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
 // SETTINGS (seat setup-screens-2, decision 1138): after Ready, the same page becomes Settings (fill/settings.js, #s-settings,
 // #settings). The masthead carries one link: Getting started until Ready, Settings after (settings.js mastLink).
-const SETTINGS_JS = './settings.js?v=2026-11-10-audit-fix-screen-2';
+const SETTINGS_JS = './settings.js?v=2026-11-11-ready-never-spins';
 let settingsMod = null;
 const setupLink = (notReady) => import(SETTINGS_JS).then((M) => M.mastLink(readyCtx(), notReady)).catch(() => { /* the Brain button still leads back */ });
 async function routeOnState(mode) {
@@ -3838,7 +3845,7 @@ function goto(id, key) {
     showSubtabs(sec, 'drives', shape?.viewer?.email);
     drawBrain(false);
   }
-  if (id === 's-ready') import(READY_JS).then((G) => { readyMod = G; G.mount(readyCtx()); }).catch((e) => { const m = $('#gr-left'); if (m) m.textContent = 'Getting ready could not be loaded: ' + String(e?.message ?? e); });   // seat getting-ready-screen
+  if (id === 's-ready') import(READY_JS).then((G) => { readyMod = G; return G.mount(readyCtx()); }).catch((e) => { const m = $('#gr-left'); if (m) m.textContent = 'Getting ready could not be loaded: ' + String(e?.message ?? e); });   // seat getting-ready-screen
   else if (readyMod) readyMod.unmount();
   if (id === 's-settings') import(SETTINGS_JS).then((M) => { settingsMod = M; M.mount(readyCtx()); }).catch((e) => { const m = $('#st'); if (m) m.textContent = 'Settings could not be loaded: ' + String(e?.message ?? e); });   // seat setup-screens-2
   else if (settingsMod) settingsMod.unmount();
