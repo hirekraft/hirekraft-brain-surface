@@ -49,7 +49,7 @@
 //    $20"): the last answer seen in this browser stands in, said as not read.
 // 4. WHAT COULD NOT BE READ IS SAID IN WORDS AND TRIED AGAIN (netLine, settle): after 10, 20, 40, then every 60 seconds. A draw
 //    that throws says so and tries again (paint); mount() can no longer be left on its first line.
-import { roadSteps } from './brainroom.js?v=2026-11-11-ready-never-spins';
+import { roadSteps } from './brainroom.js?v=2026-11-11-ready-never-spins-2';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
 const DOT = String.fromCharCode(183);
@@ -115,14 +115,20 @@ function read(fresh) {
   // so the call this replaced always failed, silently, and the card could never show)
   if (S.owner) core.push(capped(S, 'understand progress', () => rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) S.uprog = data.sources ?? []; else S.uprogErr = String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'); })));
   S.core = Promise.all(core);
-  // THE PRICED READINGS (rule 3), lens-ask's, which reads the AI meter: the credit, the estimate, step 3's plan. Never awaited by
-  // the first draw. A failure keeps the last value this page saw (mount carries it over) and sets its Err, said by netLine.
+  // THE PRICED READINGS (rule 3), lens-ask's, which reads the AI meter: the credit and step 3's plan. Never awaited by the first
+  // draw. A failure keeps the last value this page saw (mount carries it over) and sets its Err, said by netLine.
+  // THE ESTIMATE IS ASKED ONLY WHERE IT IS SHOWN (steps 4 and 5; needEst, from draw). It was asked on every opening and was the
+  // slowest reading of the three (5 to 7 s on HireKraft, measured 2026-11-11) for figures steps 1 to 3 never show.
   S.money = (S.owner ? Promise.all([
     capped(S, 'credit', () => C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) { S.ai = r.ai; S.aiErr = null; } else S.aiErr = r?.error ?? 'no reason was given'; }, (e) => { S.aiErr = e?.message ?? String(e); })),
-    capped(S, 'estimate', () => meterBalance().then(() => { if (estV) { S.est = estV; S.estErr = null; } else S.estErr = 'no reason was given'; })),
     capped(S, 'plan', () => readPlan(S, true)),
   ]) : Promise.resolve()).then(() => { S.moneyIn = true; });
   return S;
+}
+function needEst(S) {
+  if (!S.owner || S.est || S.estAsked) return;
+  S.estAsked = true;
+  capped(S, 'estimate', () => meterBalance().then(() => { if (estV) { S.est = estV; S.estErr = null; } else S.estErr = 'no reason was given'; })).then(() => { if (R !== S) return; if (at === 'understand' || at === 'ready') paint(); settle(S); });
 }
 // What could not be read (failed, or not answered within the limit), in her words; empty when everything is in.
 function notRead(S) {
@@ -340,6 +346,7 @@ function draw() {
   box.appendChild(more());
   if (at === 'understand' && S.owner && !S.gLoad) { S.gLoad = true; Promise.all([S.mgroups ? null : readGroups(S), S.uans ? null : readAnswers(S)]).then(() => readSample(S)).then(() => { if (R === S && at === 'understand' && !typing() && !C.$('#gr-sheet')) draw(); }); }   // step 4's groups, answers and sample, read when she is on it
   uPoll();
+  if (at === 'understand' || at === 'ready') needEst(S);   // the monthly figure and the price per email, asked where they are shown
   if (nov) C.$('#gr-meter')?.remove(); else meter(S);
   // The front door first, once per browser, until Get started (and never over a sheet or a story already open).
   if (!doorShown && !doorPassed() && pending && !storyOpen() && !C.$('#gr-sheet')) { doorShown = true; door(); }
@@ -684,13 +691,15 @@ async function searchPreview(S, pick, out, go) {
 }
 // THE METER'S READ ESTIMATE (lens-ask read_estimate), kept for five minutes: step 4 and step 5's monthly figure and price per
 // email (S.est). Step 3's plan no longer uses its balance (lens-ask reads the meter itself).
-let balAt = 0, balV = null, estV = null;
-async function meterBalance() {
-  if (estV && Date.now() - balAt < 300000) return balV;
-  const r = await C.askBody({ read_estimate: { months: 24 } }).catch(() => null);
-  const b = Number(r?.balance?.balance_left_usd ?? r?.estimate?.balance?.balance_left_usd);
-  balV = Number.isFinite(b) ? b : null; balAt = Date.now(); estV = r && r.ok === true ? r : null;
-  return balV;
+let balAt = 0, balV = null, estV = null, estFly = null;
+function meterBalance() {
+  if (estV && Date.now() - balAt < 300000) return Promise.resolve(balV);
+  if (!estFly) estFly = C.askBody({ read_estimate: { months: 24 } }).catch(() => null).then((r) => {   // one request, however many ask at once
+    const b = Number(r?.balance?.balance_left_usd ?? r?.estimate?.balance?.balance_left_usd);
+    balV = Number.isFinite(b) ? b : null; balAt = Date.now(); estV = r && r.ok === true ? r : null; estFly = null;
+    return balV;
+  });
+  return estFly;
 }
 // THE PLAN AND THE PRESS, THROUGH LENS-ASK (ruling 1141.5): the same JSON as the brain's search_plan / search_go, with the balance
 // lens-ask reads from the meter. A refusal or an unreachable Tool comes back as { error } with its reason, never as an empty plan.
