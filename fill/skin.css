@@ -3146,4 +3146,6 @@ body.fd-open .vera-btn, body.gr-novera .vera-btn { display: none; }
 .gs-oldrow > .gs-oldnote { flex-basis: 100%; }
 .gr-go.gs-two { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; }
 .gr-go.gs-two .go { margin: 0; min-height: 44px; }
-@media (max-width: 720px) { body .gs-oldrow { padding-left: 0; } body .gs-sample .gs-limit { max-width: none; } body .gs-q .gr-seg .gr-amt { min-height: 44px; } }
+@media (max-width: 720px) { body .gs-oldrow { padding-left: 0; } body .gs-sample .gs-limit { max-width: none; } body .gs-q .gr-seg .gr-amt { min-height: 44px; }
+  /* seat ready-never-spins 2026-11-11: a price row's value may be words ("measured after your first month"), which did not wrap and pushed step 5 sideways at phone width in German-length words. A figure is short and stays on one line as before. */
+  body .gs-pl .gs-pv { white-space: normal; text-align: right; overflow-wrap: anywhere; max-width: 55%; } }
