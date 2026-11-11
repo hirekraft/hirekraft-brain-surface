@@ -10,6 +10,13 @@
 // "Yes, go ahead". Nothing is pressed on her behalf (decision 1115). Progress comes from brain_road (understanding and
 // files being read) and source_read_progress (per mailbox), never from the press's own answer.
 // No regex literals and no backslashes (STANDING-CLAUSES).
+// SEAT findable-fix (2026-11-11, decision 1147): A PRESS SHOWS IT IS WORKING. While anything is in line the block says, per
+// mailbox or drive, how many are done of how many, the measured pace per minute and the time left from that pace, and it
+// reads itself again every 10 seconds where it stands (the Brain and the Mail side panel) until the line is empty. The
+// numbers are source_read_progress's (line_done, line_total, per_minute, minutes_left), read through the one door
+// (fill/door.js). SUPERSEDED: the single line 'N in line' drawn from brain_road once a minute, whose time came from the last
+// full hour (it said 7,060 minutes ten minutes after a press of 22,384 files).
+import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 
 const DOT = String.fromCharCode(183);
 const DASH = String.fromCharCode(8211);
@@ -17,6 +24,9 @@ const num = (n) => Number(n || 0).toLocaleString('en-US');
 const usd = (n) => { const x = Number(n); if (!Number.isFinite(x)) return null; return x < 10 ? '$' + x.toFixed(2) : '$' + Math.round(x).toLocaleString('en-US'); };
 const hrs = (h) => { const x = Number(h); if (!Number.isFinite(x)) return null; return x < 1 ? 'under an hour' : 'about ' + Math.round(x) + (Math.round(x) === 1 ? ' hour' : ' hours'); };
 const mins = (m) => { const x = Number(m); if (!Number.isFinite(x)) return 'time left: counting'; if (x <= 0) return 'done'; return x < 90 ? 'about ' + x + ' minutes left' : 'about ' + Math.round(x / 60) + ' hours left'; };
+const leftWords = (m) => { const x = Number(m); if (m === null || m === undefined || !Number.isFinite(x)) return 'time left: measuring'; if (x <= 1) return 'under a minute left'; if (x < 90) return 'about ' + Math.round(x) + ' minutes left'; const h = Math.round(x / 6) / 10; return 'about ' + (h >= 10 ? Math.round(h) : h) + ' hours left'; };
+const clock = (iso) => { const d = new Date(iso); return Number.isFinite(d.getTime()) ? d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null; };
+const shortName = (k) => String(k).split(':').slice(1).join(':') || String(k);
 
 function txt(C, tag, cls, text) { const e = C.el(tag, cls); e.textContent = text; return e; }
 function btn(C, cls, text) { const b = C.el('button', cls); b.type = 'button'; b.textContent = text; return b; }
@@ -168,23 +178,68 @@ async function confirmStep(C, total, res, tot, mode, after) {
 // ---------------------------------------------------------------------------------------------------------------------
 // READ THEM: the files attached to mail that is already findable. Per mailbox from source_read_progress; the exact number
 // and the price come from the press's own preview, so the button never offers more than the press reads.
+// THE READING LINE. One row per source with work in line. A brain that does not yet answer the line's own columns (before
+// file findable-fix-1) is said with what it does answer: how many are in line.
+const inLine = (prog) => prog.filter((r) => Number(r.waiting) > 0);
+function lineBlock(C, prog, names) {
+  const rows = inLine(prog);
+  if (!rows.length) return null;
+  const box = C.el('div', 'br-ll'); box.setAttribute('role', 'status');
+  for (const r of rows) {
+    const l = C.el('div', 'br-prog');
+    const all = Number(r.line_total), done = Number(r.line_done), has = Number.isFinite(all) && all > 0 && Number.isFinite(done);
+    const pm = Number(r.per_minute);
+    const t = r.line_started ? clock(r.line_started) : null;
+    const head = C.el('b', 'br-ll-h'); head.append(C.el('i', 'gs-pulse'), document.createTextNode('Reading ' + String(names[r.source] || shortName(r.source)) + (t ? ' ' + DOT + ' started ' + t : '')));
+    l.appendChild(head);
+    if (r.state === 'stopped') l.appendChild(txt(C, 'span', 'br-small', (has ? num(done) + ' of ' + num(all) + ' done' + ' ' + DOT + ' ' : num(r.waiting) + ' in line ' + DOT + ' ') + 'nothing has moved for 30 minutes. The Tool starts it again on its own and says here if it cannot.'));
+    else if (has) l.appendChild(txt(C, 'span', 'br-small', num(done) + ' of ' + num(all) + ' done ' + DOT + ' ' + (pm > 0 ? num(Math.round(pm)) + ' a minute, measured ' + DOT + ' ' + leftWords(r.minutes_left) : 'measuring the pace')));
+    else l.appendChild(txt(C, 'span', 'br-small', num(r.waiting) + ' in line ' + DOT + ' ' + leftWords(r.minutes_left)));
+    const pb = C.el('span', 'br-pb'); const f = C.el('i', 'br-kf'); f.style.width = Math.max(1, Math.min(100, has ? done * 100 / all : 0)).toFixed(1) + '%'; pb.appendChild(f); l.appendChild(pb);
+    box.appendChild(l);
+  }
+  box.appendChild(txt(C, 'p', 'br-small', 'This updates by itself every few seconds. You can leave the page or keep working; it keeps going.'));
+  return box;
+}
+// Every 10 seconds while something is in line and the block is on the page: one light reading, the line drawn again in
+// place. When the line is empty the whole view is read again once (after), so it says what was read. One timer per block.
+const polls = new WeakMap();
+let lastDone = null;   // the line that just emptied, said for ten minutes where the line was
+function linePoll(C, host, R, after, on) {
+  clearTimeout(polls.get(host));
+  if (!on) return;
+  polls.set(host, setTimeout(async () => {
+    if (!host.isConnected) return;
+    if (document.hidden || host.dataset.hold) { linePoll(C, host, R, after, true); return; }
+    const { data, error } = await brainDoor(C.sb, 'source_read_progress', {});
+    if (!host.isConnected) return;
+    if (error || !Array.isArray(data)) {   // said, and tried again: the last count stays
+      const old = host.querySelector('.br-ll');
+      if (old && !old.querySelector('.br-ll-err')) old.appendChild(txt(C, 'p', 'br-small br-ll-err', 'The count could not be read just now; this is the last one seen. It keeps going and is read again in a moment.'));
+      linePoll(C, host, R, after, true); return;
+    }
+    R.prog = data;
+    const next = lineBlock(C, data, {});
+    const old = host.querySelector('.br-ll');
+    if (!next) { lastDone = { at: Date.now(), n: inLine(R.prog0 ?? []).reduce((x, r) => x + (Number(r.line_total) || 0), 0) }; if (old) old.remove(); if (after) after(); return; }
+    R.prog0 = data;
+    if (old) old.replaceWith(next); else host.prepend(next);
+    linePoll(C, host, R, after, true);
+  }, 10000));
+}
+
 export function filesBlock(C, host, R, after) {
   const rows = (R.prog ?? []).filter((r) => r.kind === 'gmail' && Number(r.files_waiting_for_owner) > 0);
-  const d = R.road;
   const out = [];
-  const reading = Number(d?.findable?.reading) || 0;
-  if (reading > 0) {
-    const pc = Number(d.mail.attach_read) + reading > 0 ? Number(d.mail.attach_read) * 100 / (Number(d.mail.attach_read) + reading) : 0;
-    const l = C.el('div', 'br-prog');
-    l.append(txt(C, 'b', null, 'Reading files attached to your mail'), txt(C, 'span', 'br-small', num(reading) + ' in line ' + DOT + ' ' + mins(d.findable.minutes_left)));
-    const pb = C.el('span', 'br-pb'); const f = C.el('i', 'br-kf'); f.style.width = Math.max(2, Math.min(100, pc)).toFixed(1) + '%'; pb.appendChild(f); l.appendChild(pb);
-    out.push(l);
-  }
+  const live = lineBlock(C, R.prog ?? [], {});
+  if (live) { out.push(live); R.prog0 = R.prog; }
+  else if (lastDone && Date.now() - lastDone.at < 600000) out.push(txt(C, 'p', 'br-small br-ll-done', 'Finished: ' + (lastDone.n ? num(lastDone.n) + ' in that line are done' : 'the line is done') + '. What could not be read is listed with its reason.'));
+  linePoll(C, host, R, after, !!live);
   if (!rows.length) { host.replaceChildren(...out); return; }
   const line = C.el('div', 'br-prog');
   line.append(txt(C, 'b', null, 'Files attached to older mail'),
     txt(C, 'span', 'br-small', rows.map((r) => String(r.source).split(':').slice(1).join(':') + ' ' + num(r.files_waiting_for_owner)).join(' ' + DOT + ' ')),
-    txt(C, 'span', 'br-small', 'Waiting for your yes. Word, Excel, PowerPoint, PDF and text files are read with no AI; pictures are not read and recordings wait for understanding, so the press reads fewer than this.'));
+    txt(C, 'span', 'br-small', 'Waiting for your yes. Word, Excel, PowerPoint, PDF and text files, read with no AI. Pictures, scans and recordings are not in this count.'));
   out.push(line);
   if (R.owner) {
     const total = C.el('div', 'br-total');
@@ -236,10 +291,12 @@ async function filesConfirm(C, total, res, rows, after) {
         if (data?.ok) q += Number(data.files_queued) || 0; else bad.push(data?.note ?? 'refused');
       } catch (e) { bad.push(e?.message ?? String(e)); }
     }
-    setTimeout(free, 30000);
-    said(C, p, (q ? 'Started: ' + num(q) + ' files are being made findable. You can leave this page; the road shows how far it is.' : 'Nothing started.') + (bad.length ? ' Not started: ' + bad.length + ' (' + bad[0] + ').' : ''));
+    said(C, p, (q ? 'Started: ' + num(q) + ' files are being made findable. The count, the pace and the time left show here in a few seconds.' : 'Nothing started.') + (bad.length ? ' Not started: ' + bad.length + ' (' + bad[0] + ').' : ''));
     landed(C, p);
-    if (after) after();
+    // seat findable-fix (1147): the block is freed at once, so the live line replaces this sentence within seconds (it used
+    // to hold the old block, with its buttons greyed, for 30 seconds). Nothing started: the buttons work again.
+    if (q) { free(); if (after) after(); }
+    else { setTimeout(free, 8000); no.disabled = false; total.querySelectorAll('button').forEach((b) => { b.disabled = false; }); }
   });
 }
 
