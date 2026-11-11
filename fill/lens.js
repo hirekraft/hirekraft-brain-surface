@@ -17,7 +17,7 @@ import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
 import { removeControl, readChooser } from "./sources.js?v=2026-11-06-brain-status-2"; // remove a source, choose how older mail is read (seat sources-basics)
 import { readSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-05-brain-tab-room"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
-import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-11-findable-fix-1"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
+import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-11-step3-reading-row"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 // BRAIN AND DRIVES FROM ONE READING (seat brain-and-drives, 2026-10-28, decision 1030): sources_view, asked once per brain
 // reading (fresh) and shared by the counts, the Sources list, the count under Brain's heading and the Drives tab.
@@ -3761,7 +3761,7 @@ async function loadSecurity() {
 // merely-wrong screen.
 let routed = false;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
-const READY_JS = './ready.js?v=2026-11-11-findable-fix-1';   // seat getting-ready-screen; token seat setup-screens-2
+const READY_JS = './ready.js?v=2026-11-11-step3-reading-row';   // seat getting-ready-screen; token seat setup-screens-2
 let readyMod = null;
 // THE FRONT DOOR, How Verrandi Works (fill/setup.js, seat setup-front-door): from #how and the Brain at any time. Get started
 // opens Getting started at step 1; someone who is not the owner sees it without prices or Get started.
@@ -3770,7 +3770,7 @@ const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () =>
 const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
 // SETTINGS (seat setup-screens-2, decision 1138): after Ready, the same page becomes Settings (fill/settings.js, #s-settings,
 // #settings). The masthead carries one link: Getting started until Ready, Settings after (settings.js mastLink).
-const SETTINGS_JS = './settings.js?v=2026-11-11-findable-fix-1';
+const SETTINGS_JS = './settings.js?v=2026-11-11-step3-reading-row';
 let settingsMod = null;
 const setupLink = (notReady) => import(SETTINGS_JS).then((M) => M.mastLink(readyCtx(), notReady)).catch(() => { /* the Brain button still leads back */ });
 async function routeOnState(mode) {
