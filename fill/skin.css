@@ -3154,3 +3154,22 @@ body.fd-open .vera-btn, body.gr-novera .vera-btn { display: none; }
 @media (max-width: 720px) { body .gs-oldrow { padding-left: 0; } body .gs-sample .gs-limit { max-width: none; } body .gs-q .gr-seg .gr-amt { min-height: 44px; }
   /* seat ready-never-spins 2026-11-11: a price row's value may be words ("measured after your first month"), which did not wrap and pushed step 5 sideways at phone width in German-length words. A figure is short and stays on one line as before. */
   body .gs-pl .gs-pv { white-space: normal; text-align: right; overflow-wrap: anywhere; max-width: 55%; } }
+/* ── ONE PATH UNTIL READY (seat setup-one-path, 2026-11-11, decision 1150 points 1 to 3; picture Cbdma9KRabK6Pb5YFdwkrd Parts 0 and 1).
+   OVER THE STEP: while Getting started shows one of the Brain's pages, the Brain section is in the page with only its side panel
+   and scrim visible, so the step under it keeps its place. THE BRAIN TAB is in the row from Ready on. THE ONE SHAPE of a step:
+   what it does, cost and time side by side, their source, then the progress in the same card. A main button that cannot be
+   pressed looks like a quiet one, so each step shows one main button. Tokens only. ── */
+body.gr-over #s-summary { padding: 0; margin: 0; min-height: 0; border: 0; background: none; }
+body.gr-over #s-summary > :not(#brain-room), body.gr-over #br-view { display: none; }
+body.gr-pending #tabs .tab[data-tab=brain] { display: none; }
+.gs-shape { gap: calc(var(--u) * 3); }
+.gs-does { margin: 0; font-size: var(--t-read); color: var(--ink); overflow-wrap: anywhere; }
+.gs-ct { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(var(--u) * 2.5); min-width: 0; }
+.gs-ct > div { display: grid; gap: 2px; align-content: start; min-width: 0; padding: calc(var(--u) * 3); border-radius: var(--radius); background: var(--paper-2); }
+.gs-ct small { font-size: var(--t-micro); font-weight: var(--w-strong); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.gs-ct b { overflow-wrap: anywhere; }
+.gs-shape > .gs-live { border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: calc(var(--u) * 3) 0 0; }
+.gs-credit { display: grid; gap: calc(var(--u) * 2); min-width: 0; padding: calc(var(--u) * 4); border: 2px solid var(--warn); border-radius: var(--radius); overflow-wrap: anywhere; }
+.gr-more .gs-set { flex: 1 1 100%; }
+#gr-left .go:disabled:not(.ghost) { background: none; color: var(--ink-3); border: 1px solid var(--line); box-shadow: none; }
+@media (max-width: 720px) { body .gs-ct { grid-template-columns: minmax(0, 1fr); } body .gs-credit { padding: calc(var(--u) * 3); } }

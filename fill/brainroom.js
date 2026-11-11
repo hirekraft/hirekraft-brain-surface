@@ -19,7 +19,7 @@
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
 import { filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-11-findable-fix-1';   // the files press and the reading's progress (seat brain-status-2; understandBlock retired here by seat audit-fix-screen)
-const READY_FOR_STEP = './ready.js?v=2026-11-11-drive-gap';   // the same module instance lens.js loads (step 4 opens there)
+const READY_FOR_STEP = './ready.js?v=2026-11-11-setup-one-path';   // the same module instance lens.js loads (step 4 opens there)
 
 let C = null;   // { sb, el, $, askBody, isOwner, viewDeps, readSources, drawGroup, aiBlocks, door, goto, openAdd, closeAdd, connectSystem, me }
 let reading = null;   // the latest set of readings, so a page opens on what the room shows
@@ -622,6 +622,7 @@ export function closePage() {
   page.hidden = true; view.hidden = false; const sc = C.$('#br-scrim'); if (sc) sc.hidden = true;
   document.body.classList.remove('br-panel-open');
   try { if (location.hash.startsWith('#brain/')) history.replaceState(null, '', location.pathname + location.search); } catch (_) { /* link stays */ }
+  window.dispatchEvent(new Event('br-closed'));   // seat setup-one-path (decision 1150.1): Getting started opens these pages over its step and returns to it here
 }
 export function pageOpen() { const p = C?.$('#br-page'); return !!p && !p.hidden; }
 function putAddBack() {

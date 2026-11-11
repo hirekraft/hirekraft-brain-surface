@@ -17,7 +17,7 @@ import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
 import { removeControl, readChooser } from "./sources.js?v=2026-11-06-brain-status-2"; // remove a source, choose how older mail is read (seat sources-basics)
 import { readSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-05-brain-tab-room"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
-import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-11-drive-gap"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
+import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-11-setup-one-path"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 // BRAIN AND DRIVES FROM ONE READING (seat brain-and-drives, 2026-10-28, decision 1030): sources_view, asked once per brain
 // reading (fresh) and shared by the counts, the Sources list, the count under Brain's heading and the Drives tab.
@@ -3760,17 +3760,23 @@ async function loadSecurity() {
 // route that declines to move now leaves the person waiting rather than on a
 // merely-wrong screen.
 let routed = false;
+// BACK FROM A PROVIDER'S SIGN-IN (seat setup-one-path, decision 1150.1): where the round trip ends is chosen by routeOnState, once
+// the brain is read: Getting started at the Connect step while the brain is not Ready, the Brain (or Systems) after. It used to
+// go straight to the Brain page, which during setup was the second page with the second numbering.
+let landedBack = null;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
-const READY_JS = './ready.js?v=2026-11-11-drive-gap';   // seat getting-ready-screen; token seat setup-screens-2
+const READY_JS = './ready.js?v=2026-11-11-setup-one-path';   // seat getting-ready-screen; token seat setup-screens-2
 let readyMod = null;
 // THE FRONT DOOR, How Verrandi Works (fill/setup.js, seat setup-front-door): from #how and the Brain at any time. Get started
 // opens Getting started at step 1; someone who is not the owner sees it without prices or Get started.
 const openDoor = () => import("./setup.js?v=2026-11-10-setup-front-door").then((S) => S.openStory({ owner: !!shape?.viewer?.all_access, start: () => goto('s-ready') })).catch(() => { /* the story is extra; the screen still lands */ });
-const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () => !!shape?.viewer?.all_access, readSources, goto, goTab, roomPage: (k, a) => { room(); roomPage(k, a); } });
+const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () => !!shape?.viewer?.all_access, readSources, goto, goTab, roomPage: (k, a) => { room(); roomPage(k, a); },
+  // OVER THE STEP (seat setup-one-path): the room is drawn where it lives and only its side panel shows (skin.css body.gr-over)
+  overRoom: (k) => { room(); drawRoom(false); if (k) roomPage(k); }, overClose: () => roomClose() });
 const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
 // SETTINGS (seat setup-screens-2, decision 1138): after Ready, the same page becomes Settings (fill/settings.js, #s-settings,
 // #settings). The masthead carries one link: Getting started until Ready, Settings after (settings.js mastLink).
-const SETTINGS_JS = './settings.js?v=2026-11-11-drive-gap';
+const SETTINGS_JS = './settings.js?v=2026-11-11-setup-one-path';
 let settingsMod = null;
 const setupLink = (notReady) => import(SETTINGS_JS).then((M) => M.mastLink(readyCtx(), notReady)).catch(() => { /* the Brain button still leads back */ });
 async function routeOnState(mode) {
@@ -3801,8 +3807,9 @@ async function routeOnState(mode) {
   if (location.hash === "#setup" || !connectedCount()) { setupLink(true); goto('s-ready'); return; }
   // GETTING READY (seat getting-ready-screen, 2026-11-07, decision 1124): until the brain is Ready the Tool opens on the
   // Getting ready screen (fill/ready.js), not on a tab. A reading that fails opens the Tool as before.
-  if (await readyGate()) { setupLink(true); goto('s-ready'); return; }
+  if (await readyGate()) { setupLink(true); if (landedBack && readyMod?.stepAt) readyMod.stepAt('connect'); landedBack = null; goto('s-ready'); return; }
   setupLink(false);
+  if (landedBack) { const g = landedBack; landedBack = null; if (g === 'google') goto('s-lens', 'systems'); else goto('s-summary'); return; }
   // THE TAB SHE USED LAST, in this browser; Mail the first time (seat conversation-panel, Alex 2026-10-12).
   // An owner-only tab remembered by someone who is not the owner falls back to Mail.
   let last = null;
@@ -3827,6 +3834,9 @@ function goto(id, key) {
   // The Brain tab of a brain with nothing connected is the setup (seat brain-tab-setup). Only when the reading came back:
   // a failed reading keeps the Brain tab carrying its own failure, never a first-run screen.
   if (id === 's-summary' && !part && key !== 'panel' && readingState === 'live' && shape && !connectedCount()) id = 's-ready';   // seat setup-front-door: Getting started, not the retired #s-setup
+  // ONE PATH UNTIL READY (seat setup-one-path, decision 1150.1): while Getting started is shown and the brain is not Ready, ready.js
+  // decides: the Brain's Add a source opens over the step, Settings and the stories open, everything else stays shut with one line.
+  if (readyMod?.held && readyMod.held(id, part)) return;
   // A sub-tab link (#security/audit) is kept only while that tab is shown (seat people-and-access).
   if (/^#[a-z]+[/]/.test(location.hash) && location.hash.slice(1).split('/')[0] !== (Object.keys(SUB_TABS).find((k) => SUB_TABS[k] === id) ?? '')) { try { history.replaceState(null, '', location.pathname + location.search); } catch (_) { /* link stays */ } }
   document.querySelectorAll("section.step").forEach((s) => { s.hidden = s.id !== id; });
@@ -3979,11 +3989,13 @@ const GROUP_TAB = (k, label) => ({ key: k, label: label ?? GROUPS.find((g) => g.
 // seat brain-status-build (2026-11-06): the picture's order. BRAIN LEAVES THE ROW (decision 1110): it is the button in the
 // masthead now; goTab('brain'), #brain links and the remembered tab still reach it. THE DRIVE TAB RETURNS (decision 1112,
 // reverses the tab part of 1079): for now it is the s-drives page as it is; its own picture comes later.
+// BRAIN IS A TAB AGAIN, FROM READY (seat setup-one-path, 2026-11-11, decision 1150.1, over the row part of 1110): until Ready it is
+// not in the row (skin.css body.gr-pending); at Ready it appears as its own tab. The masthead button stays.
 const TABS = [GROUP_TAB('email', 'Mail'), GROUP_TAB('drives', 'Drive'), GROUP_TAB('calendar'), GROUP_TAB('contacts'), { key: 'thoughts', label: 'Thinkrooms' }, { key: 'work', label: 'Work' }, { key: 'money', label: 'Accounting', owner: true },
   { key: 'marketing', label: 'Marketing and sales' },   // Marketing and sales: seat job-alerts, 2026-10-30, decision 1039 (fill/marketing.js)
   // THE AGENTS TAB (seat agents-tab, 2026-11-05, decisions 1092-1102): her team of seven experts, between Marketing and sales and Brain; drawn by fill/agents.js.
   { key: 'agents', label: 'Agents' },
-  { key: 'brain', label: 'Brain', door: true }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
+  { key: 'brain', label: 'Brain' }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
   { ...GROUP_TAB('systems'), door: true }, { ...GROUP_TAB('loose'), door: true },
   // THE AI TAB (seat ai-tab, 2026-10-23, decision 1007; working name, Alex may rename): owner only, drawn by fill/ai.js.
   { key: 'ai', label: 'AI', owner: true, door: true }];
@@ -4818,8 +4830,7 @@ readBrain();                     // then the live reading lands into the frame
   const declined = q.get("connect_declined");
   const failed = q.get("connect_error");
   if (!done && !declined && !failed) return;
-  userMoved = true;
-  goto("s-summary");
+  landedBack = done && done.startsWith('google:') ? 'google' : 'brain';   // routeOnState takes her there, or back to Getting started (seat setup-one-path)
   // Clear the marker so a reload does not repeat the message as though it just happened.
   history.replaceState({}, "", location.pathname);
 
@@ -4834,7 +4845,6 @@ readBrain();                     // then the live reading lands into the frame
   // The per-person Google sign-in (seat calendar-contacts): no drive picker, nothing to adopt. Its card says what
   // Google allowed; nothing is read from it until the calendar and contacts readers are switched on.
   if (done.startsWith("google:")) {
-    goto("s-lens", "systems");
     return say(`Your Google sign-in is saved for ${done.replace(/^google:/, "")}. Systems shows what Google `
       + `allowed. Nothing from your calendar or address book has been read yet.`);
   }

@@ -16,7 +16,7 @@
 // A COLLEAGUE sees only her own language and emails (spec): no prices, no money rows, no presses on the business.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 import { ic, card } from './setup.js?v=2026-11-10-setup-front-door';
-import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep, brainDoor } from './ready.js?v=2026-11-11-drive-gap';
+import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep, brainDoor } from './ready.js?v=2026-11-11-setup-one-path';
 // SEAT ready-never-spins (2026-11-11): every brain call here goes through ready.js brainDoor (a real promise that cannot throw). The
 // client's own rpc call object has then and no catch: the two presses below that put .catch on it (Mark it old, the guide's name)
 // threw on press.
