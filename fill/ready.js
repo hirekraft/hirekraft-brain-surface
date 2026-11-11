@@ -49,7 +49,19 @@
 //    $20"): the last answer seen in this browser stands in, said as not read.
 // 4. WHAT COULD NOT BE READ IS SAID IN WORDS AND TRIED AGAIN (netLine, settle): after 10, 20, 40, then every 60 seconds. A draw
 //    that throws says so and tries again (paint); mount() can no longer be left on its first line.
-import { roadSteps } from './brainroom.js?v=2026-11-11-drive-gap';
+// SEAT setup-one-path (2026-11-11; decision 1150 points 1, 2, 3 and 6; picture Cbdma9KRabK6Pb5YFdwkrd Parts 0 and 1; Alex 15:14 PT: lost
+// between two pages with two numberings). ONE PATH: until Ready this is the only page. Its five steps are the only numbers; the
+// Brain's road is not shown during setup. Every tile opens the Brain's own page OVER the step she is on (brainPanel: the same
+// side panel, drawn by brainroom.js, never a second copy); Close returns her to the same step and the same spot (closeOver).
+// The one router asks held() before it moves, so nothing on this page or in a panel can carry her to another page. The tabs are
+// greyed with one line (LINE). ORDER: Your database, Connect (free), Make it searchable (the first money: the AI credit is asked
+// there, creditAsk, the amount the checked press needs plus a cushion, never asked of a balance that covers it), Understand, Ready.
+// SAME SHAPE (shape): what it does and what you get, cost and time with their source, then the progress in that same place after
+// the press; one enabled main button per step; the Settings line at the foot of every step (more).
+// SUPERSEDED HERE, 2026-11-11, Alex's yes on 1150: the separate AI credit step and its card (1131, 1138.1, 1142.6: creditDone,
+// creditSeen, fundedBefore, stepNeed), no Vera before credit (1132), See everything in your brain (the way onto the Brain page),
+// and brainPanel going to the Brain page.
+import { roadSteps } from './brainroom.js?v=2026-11-11-setup-one-path';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
@@ -65,6 +77,7 @@ const LOCAL = 'tool.ready.marks';
 const TERMS_V = 'getting-ready-terms-1';
 const TERMS = 'The Tool helps; you decide. What it shows you is help, not legal, tax or financial advice, and every decision is yours: we are not responsible for what you decide or sign based on what you see here. Your data stays yours: cancel any time and keep your database. Nothing that costs money starts without your yes, and every price is shown before it starts.';
 
+const LINE = 'Mail, Drives and the rest open when step 5 says Ready.';
 let C = null, R = null, at = null, host = null, poll = null, pending = false;
 const usd2 = (n) => { const x = Number(n); return Number.isFinite(x) ? '$' + x.toFixed(2) : null; };
 
@@ -138,33 +151,16 @@ function notRead(S) {
 }
 function mark(S, key) { const m = S.marks?.mine?.[key]; if (m) return m; if (S.marksErr) return localMarks()[key] ?? null; return null; }
 
-// The five steps from real state (spec page 2). state: done, now (the current one), todo, wait (not read).
-// AI CREDIT IS DONE (seat audit-fix-screen, ruling 1142.6 over 1138.1; it was $20 or more, which asked HireKraft, funded before,
-// to pay $20.91 again): once step 3 is done (spending the credit on step 3 must not send her back); for a brain never funded, at
-// $20; for a brain funded before, when the balance covers what step 3 still needs (search_plan's price of what is checked; nothing
-// planned needs nothing). A plan that could not be read does not send a funded brain back to pay: step 3 carries that failure.
-const fundedBefore = (S) => Number(S.ai?.plain?.balance?.put_in_usd) > 0;
-function stepNeed(S) { if (!S.splan || S.splan.ok !== true) return null; return Math.round(chosenOf(S.splan).reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100; }
-function creditDone(S, searchable) {
-  if (searchable) return true;
-  const bal = balanceLeft(S); if (bal === null) return false;
-  if (!fundedBefore(S)) return bal >= 20;
-  const need = stepNeed(S);
-  return need === null || bal + 0.000001 >= need;
-}
-// UNTIL THE CREDIT IS READ (rule 3) step 2 is neither done nor to pay: the last answer this browser saw stands in.
-const CREDIT_SEEN = 'tool.ready.credit';
-function creditSeen(v) { try { if (v === undefined) return localStorage.getItem(CREDIT_SEEN) === '1'; localStorage.setItem(CREDIT_SEEN, v ? '1' : '0'); } catch (_) { /* storage off: not seen */ } return false; }
+// The five steps from real state (decision 1150.2). state: done, now (the current one), todo, wait (not read). No step waits on
+// the credit any more: it is asked inside Make it searchable, only when the checked press costs more than the balance.
 function stepsOf(S) {
   const road = roadSteps(S);
   const live = !!(S.road || S.src);
   const searchable = road[0].state === 'done' && road[1].state === 'done';
-  const cd = S.ai ? creditDone(S, searchable) : (searchable || creditSeen());
-  if (S.ai && S.owner) creditSeen(cd);
   const out = [
     { k: 'db', n: '1', name: 'Your database', done: live, wait: !live },
-    { k: 'credit', n: '2', name: 'AI credit', done: cd, wait: !S.ai },
-    { k: 'connect', n: '3', name: 'Connect and search', done: searchable, wait: road[1].state === 'wait' },
+    { k: 'connect', n: '2', name: 'Connect', done: road[0].state === 'done', wait: road[0].state === 'wait' },
+    { k: 'search', n: '3', name: 'Make it searchable', done: searchable, wait: road[1].state === 'wait' },
     { k: 'understand', n: '4', name: 'Understand', done: road[2].state === 'done', wait: road[2].state === 'wait' },
     { k: 'ready', n: '5', name: 'Ready', done: road[3].state === 'done' },
   ];
@@ -172,7 +168,7 @@ function stepsOf(S) {
   out.forEach((s, i) => { s.state = s.done ? 'done' : i === cur ? 'now' : s.wait ? 'wait' : 'todo'; });
   return out;
 }
-const NOVERA = ['db', 'credit'];   // no Vera before credit (1132)
+const NOVERA = [];   // her column is beside every step (decision 1150.4; seat setup-vera fills it)
 const isReady = (S) => roadSteps(S)[3].state === 'done';
 
 // lens.js asks this once at opening: true sends her to Getting ready. A reading that failed answers false, so the Tool opens
@@ -263,6 +259,8 @@ function wayBack() {
   if (wired) return;
   wired = true;
   window.addEventListener('gr-refresh', () => { if (C && !C.$('#s-ready')?.hidden) mount(C); });
+  // the Brain's page closed (brainroom.js closePage): back to the step and the spot she was on, unless another page opened in its place
+  window.addEventListener('br-closed', () => setTimeout(() => { const pg = C?.$('#br-page'); if (!pg || pg.hidden) closeOver(true); }, 0));
   window.addEventListener('fd-start', () => { at = 'db'; if (C && R && !C.$('#s-ready')?.hidden) { draw(); window.scrollTo({ top: 0 }); } });
   document.addEventListener('click', (e) => {
     if (!pending || !document.body.classList.contains('gr-pending') || !e.target.closest) return;
@@ -275,13 +273,13 @@ function wayBack() {
     }
     e.preventDefault(); e.stopImmediatePropagation();
     C.$('#tabs')?.classList.remove('more-open');
-    if (here) toast('The rest of the Tool opens when your brain is ready.'); else C.goto('s-ready');
+    if (here) toast(LINE); else C.goto('s-ready');
   }, true);
 }
 
 function build() {
   host.dataset.built = '1';
-  const dim = p('gr-dim', 'The rest of the Tool opens when your brain is ready.');
+  const dim = p('gr-dim', LINE);
   const top = el('div', 'gs-top');
   const lab = el('span', 'am-lab'); lab.append(ic('steps'), document.createTextNode('Verrandi ' + DOT + ' Getting started'));
   top.append(lab, btn('gr-link gs-how', 'See how it works', () => door()));
@@ -320,7 +318,7 @@ function draw() {
   // #gs-<step> and opened first; the first step not done only when the address names none (it used to be always, so a reload
   // in step 3 or 4 on HireKraft landed on step 2's payment).
   if (!at) { const h = String(location.hash || ''); const k = h.startsWith('#gs-') ? h.slice(4) : ''; if (st.find((s) => s.k === k)) at = k; }
-  if (!at || !st.find((s) => s.k === at)) { at = (st.find((s) => s.state === 'now') || st[st.length - 1]).k; autoAt = !S.ai; }   // chosen before the credit was read: chosen again when it is (landed, mount)
+  if (!at || !st.find((s) => s.k === at)) { at = (st.find((s) => s.state === 'now') || st[st.length - 1]).k; autoAt = false; }   // chosen before the credit was read: chosen again when it is (landed, mount)
   if (!C.$('#s-ready')?.hidden && location.hash !== '#gs-' + at) { try { history.replaceState(null, '', location.pathname + location.search + '#gs-' + at); } catch (_) { /* the step still opens */ } }
   const nov = NOVERA.includes(at);
   document.body.classList.toggle('gr-novera', nov);
@@ -363,19 +361,52 @@ function fillBar(st) {
 function more() {
   const d = el('div', 'gr-more');
   d.append(el('span', null, 'You can close this page. It goes on by itself, and this screen shows where it stands when you come back.'),
-    btn('gr-link', 'See everything in your brain ' + ARROW, () => openBrain()));
+    el('span', 'gs-set', 'You can come back to this in Settings.'));
   return d;
 }
-// THE BRAIN, ONE PRESS AWAY (inventory: nothing of the Brain is lost). It opens the Brain itself, with a way back.
-// SUPERSEDED (seat getting-ready-fix-1): the "Getting ready" pill this added to the Brain; the way back is now the one line
-// unmount() puts at the top of any page while the brain is not Ready.
-function openBrain() { C.goto('s-summary'); }
+// OVER THE STEP (decision 1150.1). The Brain's page is shown over this page: #s-summary is un-hidden with only its side panel
+// visible (skin.css body.gr-over), the router is not used, so this page neither scrolls nor redraws. closeOver puts the spot back
+// and reads again, so what she just connected shows.
+let overY = null;
+function closeOver(refresh) {
+  if (!document.body.classList.contains('gr-over')) return;
+  document.body.classList.remove('gr-over');
+  const sec = C.$('#s-summary'); if (sec && !C.$('#s-ready')?.hidden) sec.hidden = true;
+  const y = overY; overY = null;
+  if (y === null) return;
+  window.scrollTo({ top: y });
+  if (refresh) mount(C).then(() => window.scrollTo({ top: y }));
+}
+// THE ROUTER ASKS HERE BEFORE IT MOVES (lens.js goto). While the brain is not Ready and this page is shown: the Brain page opens
+// over the step (Add a source) or closes back to it, Settings and the stories stay open to her, and anything else stays shut with
+// the one line. True means: held, do not move.
+const FREE = ['s-ready', 's-settings', 's-intro', 's-accessmap', 's-tests', 's-totest'];
+export function held(id, part) {
+  if (!pending || !C || !document.body.classList.contains('gr-on')) return false;
+  if (FREE.includes(id)) { closeOver(false); return false; }
+  if (id === 's-summary') { if (part === 'add') brainPanel('add'); else { if (C.overClose) C.overClose(); closeOver(true); } return true; }
+  toast(LINE);
+  return true;
+}
+// Back from a sign-in on a provider's page (lens.js): the step she left.
+export function stepAt(k) { at = k; autoAt = false; }
+// EVERY STEP THE SAME SHAPE (decision 1150.3): what it does and what you get; cost and time, each measured or said as measured
+// before you press; where the figures come from; and, after the press, the progress in this same place (act).
+function shape(does, cost, time, src, act) {
+  const c = el('section', 'am-step gs-shape'); c.id = 'gs-shape';
+  const g = el('div', 'gs-ct');
+  for (const [a, b] of [['Cost', cost], ['Time', time]]) { const d = el('div'); d.append(el('small', null, a), el('b', null, b)); g.appendChild(d); }
+  c.append(p('gs-does', does), g, el('p', 'am-small', src));
+  if (act) c.appendChild(act);
+  return c;
+}
+const leftWords = (m) => { const x = Number(m); if (m === null || m === undefined || !Number.isFinite(x)) return 'time left: measuring'; if (x < 90) return 'about ' + num(Math.max(1, Math.round(x))) + ' minutes left'; return 'about ' + num(Math.round(x / 60)) + ' hours left'; };
 
 // THE SPEND LINE in the masthead: what setup has spent on AI so far (the meter's one-time reading lines this month, never the
 // balance; the balance is only in its own place) and what this step costs. Always in cents, so it cannot be mistaken for the
 // balance (seat getting-ready-fix-1: $14.52 spent read as "$15" beside a $15.03 balance).
 function stepPrice(S, k) {
-  if (k === 'connect') { if (!S.splan) return { counting: true }; const pk = chosenOf(S.splan); return { exact: Math.round(pk.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100 }; }   // search_plan's price for what is checked
+  if (k === 'search') { if (!S.splan) return { counting: true }; const pk = chosenOf(S.splan); return { exact: Math.round(pk.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100 }; }   // search_plan's price for what is checked
   if (k === 'understand' && S.usam?.ok === true && S.usam.state === 'done' && Number.isFinite(Number(S.usam.predicted_remaining_usd))) return { usd: Number(S.usam.predicted_remaining_usd) };   // measured on her own mail
   if (k === 'understand') { const G = S.mgroups; if (!G || G.err || !G.priced) return { counting: true }; return { usd: G.groups.filter((g) => g.always || !uOff[g.group]).reduce((a, g) => a + (g.usd || 0), 0) }; }   // mail_groups' estimate for what is checked
   return { free: true };
@@ -543,10 +574,10 @@ function liveCard(S) {
   c.appendChild(el('div', 'gs-big', num(done) + ' of ' + num(all) + ' items'));
   const bar = el('div', 'gs-bar gs-thick'); const i = el('i'); i.style.width = (all ? Math.min(100, Math.round((done / all) * 100)) : 0) + '%'; bar.appendChild(i); c.appendChild(bar);
   const ml = g.minutes_left;
-  c.appendChild(p('gr-small', ml === null || ml === undefined ? 'Time: measuring' : 'about ' + num(ml) + ' minutes left'));
+  const pm = (S.prog ?? []).reduce((a, x) => a + (Number(x.per_minute) || 0), 0);   // source_read_progress's measured pace, summed over what is reading
+  c.appendChild(p('gr-small', (pm > 0 ? num(Math.round(pm)) + ' a minute, measured' : 'pace: measuring') + ' ' + DOT + ' ' + leftWords(ml)));
   if (g.now_reading) { const d = el('p', 'gs-now'); d.append(el('i', 'gs-pulse'), document.createTextNode('Reading ' + String(g.now_reading))); c.appendChild(d); }
   if (S.sprogErr) c.appendChild(p('gr-small gs-over', NOREAD + ' It keeps going. The count above is the last one seen.'));
-  c.appendChild(p('gr-small', 'You can close this page or keep working. It keeps going, and every box below shows where it is.'));
   return c;
 }
 // MAKE EVERYTHING SEARCHABLE (spec step 3; seat setup-screens-2 over seat searchable-plan's search_plan and search_go).
@@ -564,7 +595,7 @@ function countLine(r) {
   return num(r.files) + ' files';
 }
 function searchCard(S) {
-  const c = card('eye', 'Make everything searchable', null);
+  const c = card('eye', 'What is read, and its price', null);
   c.classList.add('gs-plan'); c.id = 'gs-plan';
   const P = S.splan;
   if (!P || P.ok !== true) {
@@ -614,20 +645,70 @@ function searchCard(S) {
   const known = P.balance_known === true && Number.isFinite(bal);
   const over = known && cost > bal + 0.000001;
   if (!known) c.appendChild(p('gr-small', 'Your credit could not be read just now, so nothing can be started. It tries again on its own.'));
-  else if (over) c.appendChild(p('gr-small gs-over', 'This is more than your credit: add ' + usd2(Math.ceil(Number(((cost - bal) * 100).toFixed(6))) / 100) + ' first, or untick something.'));
+  else if (over) c.appendChild(creditAsk(S, cost, bal));
   else c.appendChild(p('gr-small', 'From your credit of ' + usd2(bal) + ', leaving ' + usd2(Math.max(0, bal - cost)) + '.'));
   // Time: the chosen sources run side by side, so the longest one; any unmeasured one makes it "measuring".
   const mins = pick.length && pick.every((r) => r.minutes !== null && r.minutes !== undefined) ? Math.max(...pick.map((r) => Number(r.minutes) || 0)) : null;
   c.appendChild(p('gr-small', mins !== null ? 'about ' + num(mins) + ' minutes' : 'Time: measuring'));
   c.appendChild(p(null, 'Untick anything you do not need. Counted for free; nothing is read until you press.'));
   const out = p('gr-small', '');
-  const go = btn('go', 'Make it all searchable', () => searchPreview(S, pick, out, go));
+  if (pick.length) c.appendChild(termsLine(S));   // the yes to the terms, kept once, before the first press that costs
+  const go = btn('go', 'Make it all searchable', () => { if (!agreedNow()) { out.textContent = 'Check the box first: it says you agree to the terms of use.'; C.$('#gs-agree')?.focus(); return; } searchPreview(S, pick, out, go); });
   go.disabled = !known || over || !complete || !pick.length || S.sprog?.state === 'reading';
   const gw = el('div', 'gr-go'); gw.appendChild(go);
   c.append(gw, out);
   if (S.sprog?.state === 'reading') c.appendChild(p('gr-small', 'It is being made searchable now; the box above shows where it is.'));
   c.appendChild(el('p', 'am-small', 'Connect or upload something more, and it joins the count before you press. Scans and photos are priced on their own.'));
   return c;
+}
+// THE AI CREDIT, ASKED WHERE THE FIRST MONEY IS SPENT (decision 1150.2; supersedes the AI credit step). Only when what is checked
+// costs more than the balance: the shortfall plus a quarter as a cushion, in whole dollars, never under the $5 a card payment
+// takes (topup_start's own floor). The fee is cardFee's sum (studio-core pay_fee's, which topup_start answers again). A balance
+// that covers the press is never asked. Other amount opens the one Top up sheet.
+function creditAsk(S, cost, bal) {
+  const gap = Math.ceil(Number(((cost - bal) * 100).toFixed(6))) / 100;
+  const add = Math.max(5, Math.ceil(gap * 1.25));
+  const f = cardFee(add);
+  const d = el('div', 'gs-credit'); d.id = 'gs-credit';
+  d.append(el('b', null, 'Add AI credit first ' + DOT + ' ' + usd2(add)),
+    p('gr-small', 'What is checked costs ' + usd2(cost) + ' and your credit is ' + usd2(bal) + '. ' + usd2(add) + ' covers the ' + usd2(gap) + ' this step needs, with a cushion so it cannot stop halfway. What is left stays in your balance for the next step. Or untick something.'),
+    priceRow('AI credit', usd2(add)), priceRow('Card fee, at the card company' + String.fromCharCode(8217) + 's price', usd2(f)), priceRow('Total, one time', usd2(add + f)),
+    el('p', 'am-small', 'From the count above and your AI meter' + String.fromCharCode(8217) + 's balance. The credit goes to the AI companies at their own price; Verrandi adds nothing. You type your card on Stripe' + String.fromCharCode(8217) + 's own page.' + (add === 5 && gap * 1.25 < 5 ? ' $5 is the smallest card payment.' : '')));
+  const pay = !!S.marks?.payments, card0 = cardOf(S);
+  if (pay && (!card0 || card0.mode !== 'live')) d.appendChild(p('gr-small gr-test', 'Card payments are in test mode: on Stripe use the test card 4242 4242 4242 4242, any future date, any 3 digits. A test payment is shown here and is never added to your balance.'));
+  const msg = p('gr-small', '');
+  const go = btn('go', 'Add ' + usd2(add) + ' with Stripe', async () => {
+    if (!agreedNow()) { msg.textContent = 'Check the box first: it says you agree to the terms of use.'; C.$('#gs-agree')?.focus(); return; }
+    if (!pay) { msg.textContent = 'Card payments are not switched on for this brain yet, so nothing was started.'; return; }
+    go.disabled = true; msg.className = 'working no-late gr-small'; msg.textContent = 'Opening the payment page';
+    const { data, error } = await rpc('topup_start', { p_amount_usd: add });
+    if (error || !data || data.ok !== true || !data.url) { msg.className = 'gr-small'; msg.textContent = 'Not started: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; go.disabled = false; return; }
+    location.href = String(data.url);
+  });
+  const gw = el('div', 'gr-go gs-two'); gw.append(go, btn('go ghost', 'Other amount', () => topUp(S)));
+  d.append(gw, msg);
+  return d;
+}
+// THE HEAD OF STEP 3 in the one shape: the price of what is checked (search_plan's), the time from the measured pace, and the
+// reading itself in the same place once it is pressed (liveCard).
+function searchShape(S) {
+  const P = S.splan && S.splan.ok === true ? S.splan : null;
+  const pick = P ? chosenOf(P) : [];
+  const cost = Math.round(pick.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100;
+  const mins = pick.length && pick.every((r) => r.minutes !== null && r.minutes !== undefined) ? Math.max(...pick.map((r) => Number(r.minutes) || 0)) : null;
+  const live = liveCard(S), done = roadSteps(S)[1].state === 'done';
+  return shape('Everything you connected is read once and gets a fingerprint of its meaning. You get search across your whole business, by what things are about.',
+    live && !pick.length ? 'as you agreed when you pressed' : !P ? 'measured before you press' : pick.length ? usd2(cost) + ', one time' : done ? 'nothing more to pay' : 'nothing checked',
+    live ? 'reading now' : mins !== null ? 'about ' + num(mins) + ' minutes' : pick.length ? 'measured once it starts' : done ? 'done' : 'measured before you press',
+    P ? 'Counted from your own mail and files, for free, at the AI companies' + String.fromCharCode(8217) + ' own prices from your AI meter. The pace is measured while it reads.' : 'Counting is free. The price is worked out from the count before you press.', live);
+}
+function understandShape(S) {
+  const U = S.usam, live = understandLive(S);
+  const m = !!U && U.ok === true && U.state === 'done' && Number.isFinite(Number(U.predicted_remaining_usd));
+  return shape('Each conversation you choose is read once and the facts in it are noted. You get exact answers: who, how much, when.',
+    live ? 'inside your limit' : m ? usd2(U.predicted_remaining_usd) + ', likely ' + usd2(U.low_usd) + ' to ' + usd2(U.high_usd) : 'measured before you press',
+    live ? 'reading now' : 'measured once it starts',
+    m ? 'Measured on a sample of your own mail. Your limit is never passed.' : 'A sample of about $2 measures the price on your own mail first. Your limit is never passed.', live);
 }
 // OLD, SEARCHABLE ONLY (decision 1140; source_mark_old, seat privacy-check-rules): a mailbox she only wants to search herself is
 // made searchable with no privacy check, so it costs less and nobody else can find what is in it. Her press, with a yes first;
@@ -724,7 +805,7 @@ function searchPoll() {
   clearTimeout(sPoll);
   if (R?.sprog?.state !== 'reading') return;
   sPoll = setTimeout(async () => {
-    if (C.$('#s-ready')?.hidden || at !== 'connect' || C.$('#gr-sheet')) { searchPoll(); return; }
+    if (C.$('#s-ready')?.hidden || at !== 'search' || C.$('#gr-sheet')) { searchPoll(); return; }
     await readSearchProgress(R);
     const live = C.$('#gs-live'), next = liveCard(R);
     if (live && next) live.replaceWith(next); else if (!next) { mount(C); return; } else if (!live) { mount(C); return; }
@@ -761,14 +842,16 @@ function priceRow(a, b, small) { const d = el('div', 'gs-pl'); const l = el('spa
 // THE BRAIN'S OWN PANELS, one press away (the room's own presses: the one connect flow, Downloads, Loose files, Scans,
 // Connect your Claude). The Brain opens with the way back line (unmount) at the top.
 function brainPanel(key) {
-  if (key === 'add') { C.goto('s-connect'); return; }   // the one connect flow: the Brain's Add a source
-  C.goto('s-summary', 'panel');   // 'panel': the Brain opens even with nothing connected yet (lens.js goto)
+  const sec = C.$('#s-summary');
+  if (!sec || !C.overRoom) { toast('That could not be opened just now.'); return; }
+  if (overY === null) overY = window.scrollY;
+  document.body.classList.add('gr-over'); sec.hidden = false;
+  if (key !== 'scans' && key !== 'mail') { C.overRoom(key); return; }
+  C.overRoom(null);
   if (key === 'scans' || key === 'mail') {   // these open from their own square on the room, which draws first
     let n = 0;
-    const t = setInterval(() => { const q = C.$('#s-summary [data-square="' + key + '"]'); n += 1; if (q) { clearInterval(t); q.click(); } else if (n > 30) { clearInterval(t); toast('That panel could not be opened just now. It is on the Brain, under ' + (key === 'mail' ? 'Mail' : 'Scans and photos') + '.'); } }, 100);
-    return;
+    const t = setInterval(() => { const q = C.$('#s-summary [data-square="' + key + '"]'); n += 1; if (q) { clearInterval(t); q.click(); } else if (n > 30) { clearInterval(t); closeOver(false); toast('That could not be opened just now. Try again in a moment.'); } }, 100);
   }
-  C.roomPage(key);
 }
 function termsLine(S) {
   const agreed = mark(S, 'agreed');
@@ -801,7 +884,8 @@ const CARDS = {
       ]),
       card('coin', 'What it costs, every month', null, priceRow('Your own database, by Supabase', 'about $25 / month', 'The cost of having a real database that belongs to you. Paid to Supabase directly, on your own card. Not a Verrandi charge. Very large businesses pay a little more as it grows.'))];
     // ONE SUPABASE SIGN-IN IS NOT BUILT (spec): a brain that exists shows it is set up; a brain that does not answer says so.
-    if (live) out.push(okMark('Your database is set up'), goOn('credit'));
+    out.splice(1, 0, shape('A database of your own, where everything the Tool learns about your business is kept. You get a memory that stays yours.', 'about $25 a month', live ? 'done: it is set up' : 'not answering just now', 'Paid to Supabase on your own card, at Supabase' + String.fromCharCode(8217) + 's published price. Not a Verrandi charge.'));
+    if (live) out.push(okMark('Your database is set up'), goOn('connect'));
     else out.push(p('gr-lead', 'Your database did not answer just now. It tries again on its own.'));
     out.push(questions([
       ['What makes it an AI database?', 'A regular database keeps your records as they are. Yours also keeps what the Tool works out about each one: a fingerprint of its meaning, so it can be found by what it is about; what it is, who it is about and which client; and how people, companies, money and promises connect. Your data becomes AI-quality data, and any AI you choose, now or later, can use it.'],
@@ -820,9 +904,7 @@ const CARDS = {
   connect(S) {
     const rows = S.src?.rows ?? [];
     const by = (g) => rows.filter((r) => r.group === g);
-    const out = [H('Connect everything you use.'), p('gr-lead', 'Tap each one and sign in on their page. Everything you connect is counted for free, then made searchable in one go.')];
-    const prog = S.prog ?? [];
-    const live = liveCard(S); if (live) out.push(live);
+    const out = [H('Connect everything you use.'), shape('Tap each one and sign in on their page. You get everything you use in one place, counted for free.', 'free', 'one sign-in each, on their own page', 'Connecting and counting use no AI, so they cost nothing. Step 3 shows the count and its price before anything is read.')];
     // WHERE YOUR BUSINESS LIVES: from the one reading of sources (sources_view); connected = green.
     const t1 = el('div', 'gs-tiles');
     for (const [g, icon, title, sq, one, many, line0] of [
@@ -843,6 +925,16 @@ const CARDS = {
       tileBtn('photo', 'Scans and photos', 'Documents in pictures, read as a choice with its own price', 'Choose', false, () => brainPanel('scans')));
     out.push(card('upload', 'Bring in what you already have', null, t2, el('p', 'am-small', 'Saved AI chats stay private to the person who added them. A big download is counted and priced before anything is read.')));
     out.push(card('ai', 'Your own AI assistant', null, (() => { const d = el('div', 'gr-act'); const t = el('span'); t.append(el('b', null, 'Connect your Claude'), el('small', null, 'Ask your brain from inside Claude, with what you are allowed to see. It works as soon as your brain is searchable.')); d.append(t, btn('go ghost', 'Connect', () => brainPanel('assistadd'))); return d; })()));
+    out.push(rows.length ? goOn('search') : (() => { const d = el('div', 'gr-go'); d.appendChild(btn('go', 'Connect your first one', () => brainPanel('add'))); return d; })());
+    out.push(questions(CARDS.connectQs().filter((q, i) => i < 4 || i === 7)));
+    return out;
+  },
+  // STEP 3 · MAKE IT SEARCHABLE (decision 1150.2): the count and its price, the AI credit asked here when it is short, the one
+  // press, and its progress in the head.
+  search(S) {
+    const rows = S.src?.rows ?? [];
+    const prog = S.prog ?? [];
+    const out = [H('Make everything searchable.'), searchShape(S)];
     out.push(searchCard(S));
     out.push(progressCard(S, rows, prog));
     const stop = card('check', 'You could stop here', null, p(null, 'Once everything is green, you already have a working tool: search across your whole business, by meaning, in a second. If that is all you need, the ', el('b', null, 'Search'), ' plan is $40 a month (founding price $20). Understanding comes next, if you want it.'));
@@ -850,9 +942,19 @@ const CARDS = {
     const green = rows.length > 0 && prog.length > 0 && prog.every((r) => r.state === 'up_to_date');
     const acts = el('div', 'gr-chips');
     const cont = btn('go', 'Continue', () => { at = 'understand'; draw(); window.scrollTo({ top: 0 }); }); cont.disabled = !(green || roadSteps(S)[1].state === 'done');   // the brain's searchable rule (1142.1), or every row green
-    acts.append(cont, btn('go ghost', 'Ask Vera', () => { const b = C.$('#vera-btn'); if (b) b.click(); C.$('#panel-input')?.focus(); }));
+    acts.append(cont);
     out.push(acts);
-    out.push(questions([
+    out.push(questions(CARDS.connectQs().filter((q, i) => i >= 4 && i < 7).concat([
+      ['What does searchable mean?', 'Every email, attachment and file you connect is read once and gets a fingerprint of its meaning, so you can find it by what it is about, not only by its exact words. It shows you your own documents and never invents anything.'],
+      ['Which AI does this step use?', 'Two, each tested for its job: OpenAI makes the search fingerprint of every item, and Claude, by Anthropic, gives every item a quick privacy check, so sensitive things reach only the right people.'],
+      ['Why pay ahead?', 'So you are never surprised by a bill, and the Tool never spends money you did not put in.'],
+      ['What happens to what is left?', 'It stays in your balance for the next steps.'],
+      ['Is my card safe?', 'You type it on the page of Stripe, the payment company. Verrandi only ever sees the card brand and the last four digits.'],
+    ])));
+    return out;
+  },
+  // the approved questions of connecting and searching, shared by steps 2 and 3 (not a step)
+  connectQs: () => ([
       ['Is connecting safe?', 'You sign in with the company itself, on their page, so the Tool never sees your password. Each connection gives permission to read, the way you let a phone app read your calendar.'],
       ['Does it change anything in my mail or files?', 'It reads. Your email still looks like your email, and your files stay where they are.'],
       ['Who in my company will see what?', 'Everyone sees only what they can already open in your own systems. Your owner sees what your owner can see; a new hire sees what a new hire can see.'],
@@ -861,16 +963,13 @@ const CARDS = {
       ['What does it cost after this?', 'Making new mail and files searchable as they arrive costs a few cents a month. Understanding, the next step, has its own price, shown there first.'],
       ['Is everything made searchable, even junk mail?', 'Yes: everything you connect, so nothing is missed. Pictures and recordings are separate choices. Sorting out what matters comes at the next step.'],
       ['Can I disconnect something later?', 'Yes, any time, in Settings. You see every connection there.'],
-    ]));
-    return out;
-  },
+    ]),
   // STEP 4 · UNDERSTAND (spec part 2, approved 2026-11-09). Every number is the brain's: the groups, counts and prices are
   // mail_groups' (per mailbox, summed), priced with the meter's measured price of one email (read_estimate per_message_usd), each
   // estimate with its range (1137). SEAT setup-wire wired what seat understand-step landed: the three questions (answersCard), the
   // sample and its measured price, her limit and Understand my mail (sampleBlock), and the live card through its owner door.
   understand(S, st) {
-    const out = [H('Understand what matters.'), p('gr-lead', 'Everything is searchable now. Understanding reads each conversation once and notes the facts in it, so you can ask exact questions. You choose what is worth it.')];
-    const live = understandLive(S); if (live) out.push(live);
+    const out = [H('Understand what matters.'), understandShape(S)];
     out.push(answersCard(S));
     out.push(groupsCard(S));
     const M = monthlyOf(S);
@@ -888,7 +987,7 @@ const CARDS = {
     const done = st.find((x) => x.k === 'understand')?.done;
     const acts = el('div', 'gr-chips');
     const cont = btn('go', 'Continue', () => { at = 'ready'; draw(); window.scrollTo({ top: 0 }); }); cont.disabled = !done;
-    acts.append(cont, btn('go ghost', 'Ask Vera', () => { const b = C.$('#vera-btn'); if (b) b.click(); C.$('#panel-input')?.focus(); }));
+    acts.append(cont);
     out.push(acts);
     out.push(questions([
       ['Is this one time?', 'Yes. This reads your past mail once. After that, only new mail in the same groups is read as it arrives, ' + (M === null ? 'its monthly price measured' : 'about ' + usd2(M) + ' a month') + ' at your pace, plus about 1 cent for each question you ask.'],
@@ -904,7 +1003,7 @@ const CARDS = {
   // meter's monthly estimate per source (read_estimate monthly_usd), questions and the plan as approved words.
   ready(S, st) {
     const ok = st[st.length - 1].done;
-    const out = [H(ok ? 'Your brain is ready.' : 'Your brain is not ready yet.')];
+    const out = [H(ok ? 'Your brain is ready.' : 'Your brain is not ready yet.'), shape('Mail, Drives and the rest of the Tool open, and your brain keeps up by itself.', 'your monthly costs, below', ok ? 'now' : 'when steps 1 to 4 are done', 'Each monthly figure below says where it comes from.')];
     out.push(ok ? (() => { const d = okMark('Everything is connected and searchable, and what matters is understood. It keeps up by itself.'); return d; })() : p('gr-lead', 'When steps 1 to 4 are done, this turns green and you are told. From then on it keeps up by itself.'));
     out.push(brainCard(S));
     const M = monthlyOf(S);
@@ -1149,7 +1248,7 @@ function answersCard(S) {
   const kept = A.answers && typeof A.answers === 'object';
   const changed = !kept || !same(answersFrom(A), ua);
   const out = p('gr-small', '');
-  const keep = btn('go', kept ? 'Keep my changes' : 'Keep my answers', async () => {
+  const keep = btn('go ghost', kept ? 'Keep my changes' : 'Keep my answers', async () => {
     keep.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Keeping your answers and sorting again';
     const { data, error } = await rpc('understand_answers_set', { p_answers: ua, p_identity: null });
     if (error || !data || data.ok !== true) { out.className = 'gr-small'; out.textContent = 'Not kept: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; keep.disabled = false; return; }
