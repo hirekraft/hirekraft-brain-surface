@@ -49,7 +49,8 @@
 //    $20"): the last answer seen in this browser stands in, said as not read.
 // 4. WHAT COULD NOT BE READ IS SAID IN WORDS AND TRIED AGAIN (netLine, settle): after 10, 20, 40, then every 60 seconds. A draw
 //    that throws says so and tries again (paint); mount() can no longer be left on its first line.
-import { roadSteps } from './brainroom.js?v=2026-11-11-ready-never-spins-2';
+import { roadSteps } from './brainroom.js?v=2026-11-11-findable-fix-1';
+import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
 const DOT = String.fromCharCode(183);
@@ -75,12 +76,8 @@ function p(cls, ...parts) { const e = el('p', cls); for (const x of parts) e.app
 // ---------------------------------------------------------------------------------------------------------------------
 // THE ONE DOOR TO THE BRAIN (rule 1). The client's call object is not a promise: it has then, and no catch or finally. This
 // wraps it in a real one that always answers { data, error } and never throws or rejects.
-export function brainDoor(sb, name, args) {
-  return new Promise((res) => {
-    const no = (e) => res({ data: null, error: { message: String(e?.message ?? e) } });
-    try { sb.rpc(name, args).then(res, no); } catch (e) { no(e); }
-  });
-}
+// (seat findable-fix, 2026-11-11: the function itself lives in fill/door.js, so brainpress.js uses the same one.)
+export { brainDoor };
 const rpc = (name, args) => brainDoor(C.sb, name, args);
 // EVERY READING HAS A LIMIT (rule 2). Answers when the reading settles or after WAIT_MS, whichever is first; never rejects. A late
 // reading is named in S.late and, when it does land, taken off and drawn (landed).
