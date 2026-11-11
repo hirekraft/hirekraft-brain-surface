@@ -671,7 +671,7 @@ function creditAsk(S, cost, bal) {
   const f = cardFee(add);
   const d = el('div', 'gs-credit'); d.id = 'gs-credit';
   d.append(el('b', null, 'Add AI credit first ' + DOT + ' ' + usd2(add)),
-    p('gr-small', 'What is checked costs ' + usd2(cost) + ' and your credit is ' + usd2(bal) + '. ' + usd2(add) + ' covers the ' + usd2(gap) + ' this step needs, with a cushion so it cannot stop halfway. What is left stays in your balance for the next step. Or untick something.'),
+    p('gr-small', 'What is checked costs ' + usd2(cost) + ' and your credit is ' + (bal < 0 ? usd2(-bal) + ' under zero' : usd2(bal)) + '. ' + usd2(add) + ' covers the ' + usd2(gap) + ' this step needs, with a cushion so it cannot stop halfway. What is left stays in your balance for the next step. Or untick something.'),
     priceRow('AI credit', usd2(add)), priceRow('Card fee, at the card company' + String.fromCharCode(8217) + 's price', usd2(f)), priceRow('Total, one time', usd2(add + f)),
     el('p', 'am-small', 'From the count above and your AI meter' + String.fromCharCode(8217) + 's balance. The credit goes to the AI companies at their own price; Verrandi adds nothing. You type your card on Stripe' + String.fromCharCode(8217) + 's own page.' + (add === 5 && gap * 1.25 < 5 ? ' $5 is the smallest card payment.' : '')));
   const pay = !!S.marks?.payments, card0 = cardOf(S);
