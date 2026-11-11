@@ -19,7 +19,7 @@
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
 import { filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-11-findable-fix-1';   // the files press and the reading's progress (seat brain-status-2; understandBlock retired here by seat audit-fix-screen)
-const READY_FOR_STEP = './ready.js?v=2026-11-11-step3-reading-row';   // the same module instance lens.js loads (step 4 opens there)
+const READY_FOR_STEP = './ready.js?v=2026-11-11-drive-gap';   // the same module instance lens.js loads (step 4 opens there)
 
 let C = null;   // { sb, el, $, askBody, isOwner, viewDeps, readSources, drawGroup, aiBlocks, door, goto, openAdd, closeAdd, connectSystem, me }
 let reading = null;   // the latest set of readings, so a page opens on what the room shows
@@ -487,8 +487,12 @@ function levelOf(s, R) {
   const d = R.road;
   const pc = (a, b) => (b > 0 ? Math.max(0, Math.min(100, a * 100 / b)) : 0);
   if (s.key === 'mail' && d) {
-    const M = d.mail, of = Number(M.emails) + Number(M.attach_read) + Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0);
-    const left = of - Number(M.emails) - Number(M.attach_read);
+    // ONE NUMBER (seat drive-gap, HQ ruling F): what a press can still read is the brain's own count (brain_road mail.attach_left), the same
+    // one the Findable step shows. SUPERSEDED 2026-11-11: added up here from waiting + could not be read + held + being read, so this card
+    // said 37,651 while the step said 37,596. A brain without attach_left keeps the old sum.
+    const M = d.mail, hasLeft = M.attach_left != null;
+    const left = hasLeft ? Number(M.attach_left) : Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0);
+    const of = Number(M.emails) + Number(M.attach_read) + left;
     const u = pc(Number(d.understood.mail), of);
     return { u, f: pc(Number(M.emails) + Number(M.attach_read), of) - u, pill: left > 0 ? ['y', 'Findable ' + DOT + ' ' + num(left) + ' attachments not read yet'] : ['y', 'Findable'] };
   }
@@ -671,7 +675,7 @@ const PAGES = {
     if (d && k === 'f') {
       const q = panel(body), M = d.mail, F = d.files;
       line(q, 'Emails', num(M.emails) + ' since ' + String(M.from).slice(0, 4) + ', all findable', null);
-      line(q, 'Mail attachments', num(M.attach_read) + ' read ' + DOT + ' ' + num(M.attach_waiting) + ' waiting to be read ' + DOT + ' ' + num(M.attach_cannot) + ' could not be read ' + DOT + ' ' + num(M.attach_held) + ' held by a privacy rule', null);
+      line(q, 'Mail attachments', num(M.attach_read) + ' read ' + DOT + ' ' + num(M.attach_left != null ? M.attach_left : M.attach_waiting) + ' waiting to be read ' + DOT + ' ' + num(M.attach_cannot) + ' could not be read ' + DOT + ' ' + num(M.attach_held) + ' held by a privacy rule', null);
       line(q, 'Drive files', num(F.read) + ' read ' + DOT + ' ' + num(F.not_read) + ' not read yet ' + DOT + ' ' + num(F.waiting) + ' waiting ' + DOT + ' ' + num(F.waiting_yes) + ' waiting for your yes', null);
       note(body, 'Left out by design and not counted: ' + num(M.attach_by_design) + ' mail attachments (pictures, automatic mail, copies) and ' + num(F.by_design) + ' drive files (pictures, videos, folders you left out, deleted).');
       const ch = C.el('div', 'br-chips');
