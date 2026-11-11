@@ -817,64 +817,6 @@ const CARDS = {
     ]));
     return out;
   },
-  credit(S) {
-    const bal = balanceLeft(S);
-    const funded = fundedBefore(S), ok = creditDone(S, false), need = stepNeed(S);
-    const out = [H(funded || !S.ai ? 'Your AI credit.' : 'Add your first $20 of AI credit.'),
-      points([
-        ['ai', 'A one-time amount, paid ahead, for the AI work of making everything you connect searchable.'],
-        ['coin', 'It goes to the AI companies at their own price. Verrandi adds nothing.'],
-        ['eye', 'Whatever is left stays in your balance for later.'],
-        ['shield', "You type your card on Stripe's own page. Your card number never reaches Verrandi."],
-      ])];
-    if (!S.ai) {
-      // NOT READ (rule 3): no balance, no shortfall and no payment are drawn from a credit that was not read.
-      out.push(S.moneyIn ? p('gr-small gs-over', 'Your credit could not be read just now, so nothing is asked of you here. Retrying.') : p('working', 'Reading your credit'));
-    } else if (ok) {
-      const gw = goOn('connect'); const cb = gw.querySelector('button'); cb.addEventListener('click', (e) => { if (!agreedNow()) { e.stopImmediatePropagation(); toast('Check the box first: it says you agree to the terms of use.'); } }, true);
-      out.push(card('coin', 'Your AI balance', null, priceRow('AI credit', usd2(bal))), okMark(funded && need !== null && need > 0 ? 'Your credit covers step 3: ' + usd2(need) + ' for what is checked' : 'Your credit is in'), termsLine(S), gw);
-    } else if (funded && bal !== null) {
-      // FUNDED BEFORE, SHORT OF WHAT STEP 3 NEEDS (seat audit-fix-screen): the shortfall, never a new $20; and the cheaper way, in step 3.
-      const gap = Math.ceil(Number((((need || 0) - bal) * 100).toFixed(6))) / 100;
-      out.push(card('coin', 'Your AI balance', null, priceRow('AI credit', usd2(bal)), priceRow('Step 3, for what is checked', usd2(need))));
-      out.push(p('gr-small gs-over', 'Step 3 needs ' + usd2(gap) + ' more. Add it, or in step 3 mark a mailbox only you search as Old, searchable only: it costs less, and this step turns done when your credit covers it.'));
-      const gw = el('div', 'gr-go gs-two'); gw.append(btn('go', 'Go to step 3', () => { at = 'connect'; draw(); window.scrollTo({ top: 0 }); }), btn('go ghost', 'Top up', () => topUp(S)));
-      out.push(termsLine(S), gw);
-    } else {
-      // THE FEE is studio-core pay_fee's sum (the same sum cardFee() carries, proven equal on 8 of 8 amounts by seat
-      // stripe-payments, and topup_start answers it again); never a typed figure.
-      const f = cardFee(20);
-      out.push(card('coin', 'What you pay, once', null, priceRow('AI credit', '$20.00'), priceRow('Card fee, at the card company' + String.fromCharCode(8217) + 's price', usd2(f)), priceRow('Total', usd2(20 + f))));
-      if (bal !== null) out.push(p('gr-small', 'Your AI balance now: ' + usd2(bal) + '.'));
-      const pay = !!S.marks?.payments;
-      const card0 = cardOf(S);
-      if (pay && (!card0 || card0.mode !== 'live')) out.push(p('gr-small gr-test', 'Card payments are in test mode: on Stripe use the test card 4242 4242 4242 4242, any future date, any 3 digits. A test payment is shown here and is never added to your balance.'));
-      const msg = p('gr-small', '');
-      const go = btn('go', 'Add $20 with Stripe', async () => {
-        if (!agreedNow()) { msg.textContent = 'Check the box first: it says you agree to the terms of use.'; C.$('#gs-agree')?.focus(); return; }
-        if (!pay) { msg.textContent = 'Card payments are not switched on for this brain yet, so nothing was started.'; return; }
-        go.disabled = true; msg.className = 'working no-late gr-small'; msg.textContent = 'Opening the payment page';
-        try {
-          const { data, error } = await rpc('topup_start', { p_amount_usd: 20 });
-          if (error) throw error;
-          if (!data || data.ok !== true || !data.url) { msg.className = 'gr-small'; msg.textContent = 'Not started: ' + String(data?.note ?? data?.reason ?? 'no reason was given') + '.'; go.disabled = false; return; }
-          location.href = String(data.url);
-        } catch (e) { msg.className = 'gr-small'; msg.textContent = 'Not started: ' + String(e?.message ?? e) + '.'; go.disabled = false; }
-      });
-      const gw = el('div', 'gr-go'); gw.appendChild(go);
-      out.push(termsLine(S), gw, msg);
-    }
-    out.push(questions([
-      ['What does "searchable" mean?', 'Every email, attachment and file you connect is read once and gets a fingerprint of its meaning, so you can find it by what it is about, not only by its exact words. It shows you your own documents and never invents anything.'],
-      ['Which AI does this step use?', 'Two, each tested for its job: OpenAI makes the search fingerprint of every item, and Claude, by Anthropic, gives every item a quick privacy check, so sensitive things reach only the right people.'],
-      ['Why pay ahead?', 'So you are never surprised by a bill, and the Tool never spends money you did not put in.'],
-      ['Is $20 enough?', 'A business with years of mail in several mailboxes uses about $20; a smaller one uses less. Before anything is read, you see the exact price for what you connected.'],
-      ['What happens to what is left?', 'It stays in your balance for the next steps.'],
-      ['Is my card safe?', "You type it on Stripe's own page. Verrandi only ever sees the card brand and the last four digits."],
-      ['When does Vera, my guide, join?', 'As soon as your credit is in. Her answers are paid from it, about 2 cents a question.'],
-    ]));
-    return out;
-  },
   connect(S) {
     const rows = S.src?.rows ?? [];
     const by = (g) => rows.filter((r) => r.group === g);
