@@ -49,7 +49,7 @@
 //    $20"): the last answer seen in this browser stands in, said as not read.
 // 4. WHAT COULD NOT BE READ IS SAID IN WORDS AND TRIED AGAIN (netLine, settle): after 10, 20, 40, then every 60 seconds. A draw
 //    that throws says so and tries again (paint); mount() can no longer be left on its first line.
-import { roadSteps } from './brainroom.js?v=2026-11-11-findable-fix-1';
+import { roadSteps } from './brainroom.js?v=2026-11-11-step3-reading-row';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
@@ -594,6 +594,7 @@ function searchCard(S) {
     l.append(el('b', null, String(r.label || r.key)), el('small', null, r.state === 'not_counted' ? String(r.note || 'Not counted yet.') : countLine(r)));
     row.appendChild(l);
     if (r.state === 'to_read') row.appendChild(el('b', 'gs-pv', usd2(r.usd) ?? 'not priced'));
+    else if (r.state === 'reading') row.appendChild(el('span', 'gs-chip gs-chip-warn', 'Reading ' + num(r.reading_done) + ' of ' + num(r.reading_total)));   // seat step3-reading-row (ruling G): already in line under her press, so no check box, no price, not in the total or the press (chosenOf takes only 'to_read')
     else if (r.state === 'searchable') row.appendChild(el('span', 'gs-chip gs-chip-ok', 'Searchable'));
     else row.appendChild(el('span', 'gs-chip', 'counting'));
     list.appendChild(row);
