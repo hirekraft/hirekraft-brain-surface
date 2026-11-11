@@ -34,7 +34,22 @@
 // built). READY is the brain's own (brain_road 'ready', read through brainroom.js roadSteps). RETIRED here (ruling 1141.2): the
 // business conversation card (CARDS.business, its answer box, the microphone import, the kept-words reading) and the dead helpers
 // setup-screens-2 named (balanceAct, act, line); Vera asks about the business later in the Tool (vera.js keeps her conversation).
-import { roadSteps } from './brainroom.js?v=2026-11-10-audit-fix-screen-2';
+// SEAT ready-never-spins (2026-11-11; Alex 2026-11-10 16:09 PT: the Tool stayed on "Reading where your Tool stands" and never
+// stopped). THE CAUSE: readSearchProgress put .catch(...) on the database client's rpc call. That call object has then and NO catch,
+// so the line threw before anything was sent, the first reading rejected and mount() was left on its line forever, on every load,
+// for every owner (and six presses carried the same line). Every served check passed because each harness gave this file an
+// invented client whose rpc returned a real promise. THE FIX IS THE CLASS, in four rules this file now keeps:
+// 1. ONE DOOR TO THE BRAIN: rpc() below (brainDoor). It always answers { data, error } as a real promise and cannot throw. No line in
+//    this file or settings.js calls the client's own rpc (the served check counts them: 0).
+// 2. EVERY READING HAS A LIMIT (capped, WAIT_MS): a reading that has not answered is named in S.late, the screen is drawn without
+//    it, and it still lands when it does answer.
+// 3. NOTHING ON THE FIRST SCREEN WAITS ON A PRICE: mount() draws from the brain's own readings; the credit, the estimate and the
+//    plan (lens-ask, which reads the AI meter) land after, each drawn when it is in. Until the credit is read, step 2 is never
+//    shown as a pay page and never decides which step opens (a failed reading used to show a funded business "Add your first
+//    $20"): the last answer seen in this browser stands in, said as not read.
+// 4. WHAT COULD NOT BE READ IS SAID IN WORDS AND TRIED AGAIN (netLine, settle): after 10, 20, 40, then every 60 seconds. A draw
+//    that throws says so and tries again (paint); mount() can no longer be left on its first line.
+import { roadSteps } from './brainroom.js?v=2026-11-11-ready-never-spins';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
 const DOT = String.fromCharCode(183);
@@ -58,24 +73,65 @@ function fold(q, ...body) { const d = el('details', 'gr-why'); d.appendChild(el(
 function p(cls, ...parts) { const e = el('p', cls); for (const x of parts) e.append(typeof x === 'string' ? document.createTextNode(x) : x); return e; }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// THE ONE DOOR TO THE BRAIN (rule 1). The client's call object is not a promise: it has then, and no catch or finally. This
+// wraps it in a real one that always answers { data, error } and never throws or rejects.
+export function brainDoor(sb, name, args) {
+  return new Promise((res) => {
+    const no = (e) => res({ data: null, error: { message: String(e?.message ?? e) } });
+    try { sb.rpc(name, args).then(res, no); } catch (e) { no(e); }
+  });
+}
+const rpc = (name, args) => brainDoor(C.sb, name, args);
+// EVERY READING HAS A LIMIT (rule 2). Answers when the reading settles or after WAIT_MS, whichever is first; never rejects. A late
+// reading is named in S.late and, when it does land, taken off and drawn (landed).
+const WAIT_MS = 8000;
+function capped(S, name, job) {
+  let fin = false, over = false;
+  const run = Promise.resolve().then(job).catch((e) => { S.threw = String(e?.message ?? e); }).then(() => { fin = true; if (over) { S.late.delete(name); landed(S); } });
+  return Promise.race([run, new Promise((r) => setTimeout(() => { if (!fin) { over = true; S.late.add(name); } r(); }, WAIT_MS))]);
+}
+function landed(S) { if (R !== S) return; if (S.moneyIn) reopen(S); paint(); settle(S); }
+// The open step was chosen before the credit was read (autoAt): now that it is read, it is chosen again, and the address it wrote
+// meanwhile does not hold it there.
+function reopen(S) {
+  if (!autoAt || !S.ai) return;
+  at = null; autoAt = false;
+  if (String(location.hash || '').startsWith('#gs-')) { try { history.replaceState(null, '', location.pathname + location.search); } catch (_) { /* the step is still chosen again */ } }
+}
+// ---------------------------------------------------------------------------------------------------------------------
 // THE READINGS
 function localMarks() { try { return JSON.parse(localStorage.getItem(LOCAL) || '{}'); } catch (_) { return {}; } }
-async function read(fresh) {
-  const S = { owner: C.isOwner() };
-  const jobs = [
-    C.readSources(C.sb, fresh).then((v) => { S.src = v; }, (e) => { S.srcErr = e; }),
-    C.sb.rpc('brain_road').then(({ data, error }) => { if (error || !data || data.ok !== true) S.roadErr = error?.message ?? data?.error ?? 'no reason was given'; else S.road = data; }, (e) => { S.roadErr = e?.message ?? String(e); }),
-    C.sb.rpc('source_read_progress').then(({ data, error }) => { if (!error) S.prog = data ?? []; else S.progErr = error.message; }, (e) => { S.progErr = e?.message ?? String(e); }),
-    C.sb.rpc('connector_status').then(({ data, error }) => { if (!error) S.conn = data; }, () => {}),
-    C.sb.rpc('getting_ready_marks').then(({ data, error }) => { if (!error && data && data.ok === true) S.marks = data; else S.marksErr = error?.message ?? data?.reason ?? 'no reason was given'; }, (e) => { S.marksErr = e?.message ?? String(e); }),
+function read(fresh) {
+  const S = { owner: C.isOwner(), late: new Set(), moneyIn: false };
+  const core = [
+    capped(S, 'sources', () => C.readSources(C.sb, fresh).then((v) => { S.src = v; }, (e) => { S.srcErr = e; })),
+    capped(S, 'road', () => rpc('brain_road').then(({ data, error }) => { if (error || !data || data.ok !== true) S.roadErr = error?.message ?? data?.error ?? 'no reason was given'; else S.road = data; })),
+    capped(S, 'progress', () => rpc('source_read_progress').then(({ data, error }) => { if (!error) S.prog = data ?? []; else S.progErr = error.message; })),
+    capped(S, 'connections', () => rpc('connector_status').then(({ data, error }) => { if (!error) S.conn = data; })),
+    capped(S, 'marks', () => rpc('getting_ready_marks').then(({ data, error }) => { if (!error && data && data.ok === true) S.marks = data; else S.marksErr = error?.message ?? data?.reason ?? 'no reason was given'; })),
   ];
-  if (S.owner) jobs.push(C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) S.ai = r.ai; else S.aiErr = r?.error ?? 'no reason was given'; }, (e) => { S.aiErr = e?.message ?? String(e); }));
-  if (S.owner) jobs.push(readPlan(S), readSearchProgress(S));   // step 3's priced card and its live line (seat setup-screens-2)
+  if (S.owner) core.push(capped(S, 'search progress', () => readSearchProgress(S)));   // step 3's live line (seat setup-screens-2)
   // step 4's live card: understand_progress through its owner door (seat setup-wire: understand_progress itself is the service's only,
   // so the call this replaced always failed, silently, and the card could never show)
-  if (S.owner) jobs.push(C.sb.rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) S.uprog = data.sources ?? []; else S.uprogErr = String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'); }, (e) => { S.uprogErr = String(e?.message ?? e); }));
-  await Promise.all(jobs);
+  if (S.owner) core.push(capped(S, 'understand progress', () => rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) S.uprog = data.sources ?? []; else S.uprogErr = String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'); })));
+  S.core = Promise.all(core);
+  // THE PRICED READINGS (rule 3), lens-ask's, which reads the AI meter: the credit, the estimate, step 3's plan. Never awaited by
+  // the first draw. A failure keeps the last value this page saw (mount carries it over) and sets its Err, said by netLine.
+  S.money = (S.owner ? Promise.all([
+    capped(S, 'credit', () => C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) { S.ai = r.ai; S.aiErr = null; } else S.aiErr = r?.error ?? 'no reason was given'; }, (e) => { S.aiErr = e?.message ?? String(e); })),
+    capped(S, 'estimate', () => meterBalance().then(() => { if (estV) { S.est = estV; S.estErr = null; } else S.estErr = 'no reason was given'; })),
+    capped(S, 'plan', () => readPlan(S, true)),
+  ]) : Promise.resolve()).then(() => { S.moneyIn = true; });
   return S;
+}
+// What could not be read (failed, or not answered within the limit), in her words; empty when everything is in.
+function notRead(S) {
+  const brain = !!(S.roadErr || S.srcErr || S.late.has('road') || S.late.has('sources'));
+  const bad = (err, name) => !!(err || S.late.has(name));
+  const ai = bad(S.aiErr, 'credit'), pl = bad(S.splanErr, 'plan'), es = bad(S.estErr, 'estimate');
+  const money = S.owner && S.moneyIn && (ai || pl || es);
+  const last = brain ? !!(S.road && S.src) : !!((ai && S.ai) || (pl && S.splan) || (es && S.est));   // an earlier reading is still on the screen in its place
+  return { brain, money, last, any: brain || money || S.late.size > 0 || !!S.threw };
 }
 function mark(S, key) { const m = S.marks?.mine?.[key]; if (m) return m; if (S.marksErr) return localMarks()[key] ?? null; return null; }
 
@@ -93,13 +149,18 @@ function creditDone(S, searchable) {
   const need = stepNeed(S);
   return need === null || bal + 0.000001 >= need;
 }
+// UNTIL THE CREDIT IS READ (rule 3) step 2 is neither done nor to pay: the last answer this browser saw stands in.
+const CREDIT_SEEN = 'tool.ready.credit';
+function creditSeen(v) { try { if (v === undefined) return localStorage.getItem(CREDIT_SEEN) === '1'; localStorage.setItem(CREDIT_SEEN, v ? '1' : '0'); } catch (_) { /* storage off: not seen */ } return false; }
 function stepsOf(S) {
   const road = roadSteps(S);
   const live = !!(S.road || S.src);
   const searchable = road[0].state === 'done' && road[1].state === 'done';
+  const cd = S.ai ? creditDone(S, searchable) : (searchable || creditSeen());
+  if (S.ai && S.owner) creditSeen(cd);
   const out = [
     { k: 'db', n: '1', name: 'Your database', done: live, wait: !live },
-    { k: 'credit', n: '2', name: 'AI credit', done: creditDone(S, searchable) },
+    { k: 'credit', n: '2', name: 'AI credit', done: cd, wait: !S.ai },
     { k: 'connect', n: '3', name: 'Connect and search', done: searchable, wait: road[1].state === 'wait' },
     { k: 'understand', n: '4', name: 'Understand', done: road[2].state === 'done', wait: road[2].state === 'wait' },
     { k: 'ready', n: '5', name: 'Ready', done: road[3].state === 'done' },
@@ -116,10 +177,10 @@ const isReady = (S) => roadSteps(S)[3].state === 'done';
 export async function notReady(c) {
   C = c;
   try {
-    const S = { owner: c.isOwner() };
+    const S = { owner: c.isOwner(), late: new Set() };
     await Promise.all([
-      c.readSources(c.sb, false).then((v) => { S.src = v; }, (e) => { S.srcErr = e; }),
-      c.sb.rpc('brain_road').then(({ data, error }) => { if (!error && data && data.ok === true) S.road = data; }, () => {}),
+      capped(S, 'sources', () => c.readSources(c.sb, false).then((v) => { S.src = v; }, (e) => { S.srcErr = e; })),
+      capped(S, 'road', () => brainDoor(c.sb, 'brain_road').then(({ data, error }) => { if (!error && data && data.ok === true) S.road = data; })),
     ]);
     if (!S.road || !S.src || S.src.ok === false) return false;
     return !isReady(S);
@@ -136,25 +197,52 @@ export async function mount(c) {
   C.$('#gr-way')?.remove();
   wayBack();
   if (!host.dataset.built) build();
-  if (!R) C.$('#gr-left').replaceChildren(p('working no-late', 'Reading where your Tool stands'));
-  const was = R;
-  R = await read(true);
-  if (was?.mgroups && !was.mgroups.err && Date.now() - gAt < 300000) R.mgroups = was.mgroups;   // the groups are counted once per five minutes, not on every refresh
-  if (was?.uans && was.uans.ok === true) R.uans = was.uans;   // the three answers' suggestions: counted once per visit
-  if (R.sprogErr && was?.sprog?.state === 'reading') R.sprog = was.sprog;   // a failed progress reading keeps the last count seen (C5)
-  if (R.uprogErr && was?.uprog) R.uprog = was.uprog;
+  if (!R) C.$('#gr-left').replaceChildren(p('working', 'Reading where your Tool stands'));
+  const was = R, S = read(true);
+  await S.core;   // the brain's own readings, each inside its limit: this cannot wait longer than WAIT_MS and cannot reject
+  if (was?.mgroups && !was.mgroups.err && Date.now() - gAt < 300000) S.mgroups = was.mgroups;   // the groups are counted once per five minutes, not on every refresh
+  if (was?.uans && was.uans.ok === true) S.uans = was.uans;   // the three answers' suggestions: counted once per visit
+  if (S.sprogErr && was?.sprog?.state === 'reading') S.sprog = was.sprog;   // a failed progress reading keeps the last count seen (C5)
+  if (S.uprogErr && was?.uprog) S.uprog = was.uprog;
+  for (const k of ['ai', 'est', 'splan']) if (S[k] === undefined && was && was[k]) S[k] = was[k];   // the last prices seen stay until the new ones land
+  if (was && !S.road && was.road) S.road = was.road;   // a refresh whose brain reading failed keeps the last one, said by netLine
+  if (was && !S.src && was.src) S.src = was.src;
+  R = S;
   pending = !isReady(R);
   document.body.classList.toggle('gr-pending', pending);
   document.body.dataset.guide = guideName();
-  if (!typing()) draw();
-  paidReturn(R);
+  paint();
+  S.money.then(() => { if (R !== S) return; reopen(S); paint(); paidReturn(S); settle(S); });
   clearTimeout(poll);
   searchPoll();
   if ((Number(R.road?.findable?.reading) || 0) > 0 || (Number(R.road?.understanding?.waiting) || 0) > 0 || R.sprogErr || R.uprogErr) poll = setTimeout(() => { if (!C.$('#s-ready')?.hidden && !C.$('#gr-sheet')) mount(C); }, 60000);
 }
+// THE DRAW, GUARDED (rule 4): a draw that throws says so in words and is tried again; the screen is never left on a working line.
+function paint() {
+  if (!R || typing()) return;
+  try { draw(); R.threw = null; }
+  catch (e) { R.threw = String(e?.message ?? e); C.$('#gr-left')?.replaceChildren(p('gr-lead', 'This page could not be drawn just now (' + R.threw + '). Trying again.')); settle(R); }
+}
+// TRIED AGAIN ON ITS OWN (rule 4): while something could not be read, the readings are made again after 10, 20, 40, then every 60
+// seconds, only while this page is shown and she is not in a sheet or typing. Everything in: the count starts over.
+let again = null, tries = 0;
+function settle(S) {
+  clearTimeout(again);
+  if (R !== S) return;
+  if (!notRead(S).any) { tries = 0; return; }
+  again = setTimeout(() => { if (C.$('#s-ready')?.hidden) return; if (C.$('#gr-sheet') || typing()) { settle(S); return; } mount(C); }, Math.min(60000, 10000 * Math.pow(2, tries++)));
+}
+// WHAT COULD NOT BE READ, IN WORDS (rule 4), one line above the card.
+function netLine(S) {
+  const n = notRead(S);
+  if (!n.brain && !n.money) return null;
+  const l = p('gr-small gs-over gs-net', n.brain ? 'Your brain could not be read just now.' : 'Your prices could not be read just now.', n.last ? ' What you see is the last reading.' : '', ' Retrying.');
+  l.id = 'gs-net'; l.setAttribute('role', 'status');
+  return l;
+}
 // Leaving Getting ready while the brain is not Ready: one line at the top of the page she goes to, back to the step she left.
 export function unmount() {
-  document.body.classList.remove('gr-on', 'gr-novera'); C?.$('#gr-meter')?.remove(); clearTimeout(poll);
+  document.body.classList.remove('gr-on', 'gr-novera'); C?.$('#gr-meter')?.remove(); clearTimeout(poll); clearTimeout(again);
   if (String(location.hash || '').startsWith('#gs-')) { try { history.replaceState(null, '', location.pathname + location.search); } catch (_) { /* harmless */ } }   // the kept step belongs to this page only
   if (pending && C && !C.$('#gr-way')) {
     const w = el('div', 'gr-way'); w.id = 'gr-way'; w.setAttribute('role', 'status');
@@ -229,7 +317,7 @@ function draw() {
   // #gs-<step> and opened first; the first step not done only when the address names none (it used to be always, so a reload
   // in step 3 or 4 on HireKraft landed on step 2's payment).
   if (!at) { const h = String(location.hash || ''); const k = h.startsWith('#gs-') ? h.slice(4) : ''; if (st.find((s) => s.k === k)) at = k; }
-  if (!at || !st.find((s) => s.k === at)) at = (st.find((s) => s.state === 'now') || st[st.length - 1]).k;
+  if (!at || !st.find((s) => s.k === at)) { at = (st.find((s) => s.state === 'now') || st[st.length - 1]).k; autoAt = !S.ai; }   // chosen before the credit was read: chosen again when it is (landed, mount)
   if (!C.$('#s-ready')?.hidden && location.hash !== '#gs-' + at) { try { history.replaceState(null, '', location.pathname + location.search + '#gs-' + at); } catch (_) { /* the step still opens */ } }
   const nov = NOVERA.includes(at);
   document.body.classList.toggle('gr-novera', nov);
@@ -237,7 +325,7 @@ function draw() {
   C.$('#gr-grid')?.classList.toggle('gr-solo', nov);
   const row = C.$('#gr-steps');
   row.replaceChildren(...st.map((s) => {
-    const b = btn('gr-st gr-' + s.state, '', () => { at = s.k; draw(); });
+    const b = btn('gr-st gr-' + s.state, '', () => { at = s.k; autoAt = false; draw(); });
     b.setAttribute('role', 'listitem'); b.dataset.step = s.k;
     const n = el('span', 'gs-n', s.n); if (s.done) n.classList.add('gs-done');
     b.append(n, el('b', null, s.name));
@@ -248,6 +336,7 @@ function draw() {
   fillBar(st);
   const box = C.$('#gr-left');
   box.replaceChildren(...(CARDS[at] || CARDS.ready)(S, st));
+  const nl = netLine(S); if (nl) box.prepend(nl);
   box.appendChild(more());
   if (at === 'understand' && S.owner && !S.gLoad) { S.gLoad = true; Promise.all([S.mgroups ? null : readGroups(S), S.uans ? null : readAnswers(S)]).then(() => readSample(S)).then(() => { if (R === S && at === 'understand' && !typing() && !C.$('#gr-sheet')) draw(); }); }   // step 4's groups, answers and sample, read when she is on it
   uPoll();
@@ -255,7 +344,7 @@ function draw() {
   // The front door first, once per browser, until Get started (and never over a sheet or a story already open).
   if (!doorShown && !doorPassed() && pending && !storyOpen() && !C.$('#gr-sheet')) { doorShown = true; door(); }
 }
-let doorShown = false;
+let doorShown = false, autoAt = false;
 // THE FILL-UP BAR under the step buttons: how far she is, from the same five steps.
 function fillBar(st) {
   const f = C.$('#gs-fill'); if (!f) return;
@@ -300,7 +389,7 @@ async function meter(S) {
   if (!m) { m = btn('gr-meter', ''); m.id = 'gr-meter'; head.appendChild(m); }
   const sf = soFar(S), pr = stepPrice(S, at);
   const step = pr.free ? 'free' : pr.counting ? 'counting' : pr.exact !== undefined ? usd2(pr.exact) : pr.usd !== undefined ? 'about ' + usd(pr.usd) : null;
-  const spent = sf === null ? 'not read' : usd2(sf);
+  const spent = sf === null ? (S.moneyIn ? 'not read' : 'reading') : usd2(sf);
   const a = el('span', null, 'Setup so far '); a.append(el('b', null, spent));
   const b = el('span', null, 'This step '); b.append(el('b', null, step));
   m.replaceChildren(a, el('span', null, DOT), b);
@@ -354,7 +443,7 @@ function topUp(S) {
   const yes = btn('go', (pay ? 'Pay $' : 'Ask for $') + pick, async () => {
     yes.disabled = true; no.disabled = true; out.className = 'working no-late gr-small'; out.textContent = pay ? 'Opening the payment page' : 'Sending your request';
     try {
-      const { data, error } = await C.sb.rpc(pay ? 'topup_start' : 'topup_request', { p_amount_usd: pick });
+      const { data, error } = await rpc(pay ? 'topup_start' : 'topup_request', { p_amount_usd: pick });
       if (error) throw error;
       if (!data || data.ok !== true) { out.className = 'gr-small'; out.textContent = 'Not sent: ' + String(data?.note ?? data?.reason ?? 'no reason was given') + '.'; yes.disabled = false; no.disabled = false; return; }
       if (pay && data.url) { location.href = String(data.url); return; }
@@ -382,7 +471,7 @@ function autoBlock(S) {
   const out = p('gr-small', '');
   const send = async (on, below, amount, cap) => {
     out.className = 'working no-late gr-small'; out.textContent = on ? 'Switching it on' : 'Switching it off';
-    const { data, error } = await C.sb.rpc('topup_auto_set', on ? { p_on: true, p_below_usd: below, p_amount_usd: amount, p_month_cap_usd: cap } : { p_on: false }).catch((e) => ({ error: e }));
+    const { data, error } = await rpc('topup_auto_set', on ? { p_on: true, p_below_usd: below, p_amount_usd: amount, p_month_cap_usd: cap } : { p_on: false });
     out.className = 'gr-small';
     if (error || !data || data.ok !== true) { out.textContent = 'Not changed: ' + String(error?.message ?? data?.note ?? 'no reason was given') + '.'; return; }
     sheet.close(); toast(String(data.note));
@@ -475,7 +564,8 @@ function searchCard(S) {
   c.classList.add('gs-plan'); c.id = 'gs-plan';
   const P = S.splan;
   if (!P || P.ok !== true) {
-    c.appendChild(p('gr-small', S.splanErr ? 'What is counted could not be read just now: ' + String(S.splanErr) + '. It tries again on its own.' : 'Connect something and it is counted here, for free.'));
+    c.appendChild(S.splanErr || S.late?.has('plan') ? p('gr-small', 'What is counted could not be read just now' + (S.splanErr ? ': ' + String(S.splanErr) : '') + '. It tries again on its own.')
+      : !S.moneyIn && S.owner ? p('working', 'Counting what there is to read, for free') : p('gr-small', 'Connect something and it is counted here, for free.'));
     return c;
   }
   // How far back: the three choices, each with its own total, or "counting" while a choice is not complete.
@@ -552,7 +642,7 @@ function markOld(r, old) {
   const said = p('gr-small', '');
   const yes = btn('go', old ? 'Yes, mark it old' : 'Yes, undo', async () => {
     yes.disabled = true; no.disabled = true; said.className = 'working no-late gr-small'; said.textContent = old ? 'Marking it old' : 'Undoing';
-    const { data, error } = await C.sb.rpc('source_mark_old', { p_source_key: r.key, p_old: old, p_identity: null }).catch((e) => ({ error: e }));
+    const { data, error } = await rpc('source_mark_old', { p_source_key: r.key, p_old: old, p_identity: null });
     if (error || !data || data.ok !== true) { said.className = 'gr-small'; said.textContent = 'Not changed: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; yes.disabled = false; no.disabled = false; return; }
     sheet.close(); toast(String(data.note || 'Changed.'));
     await rePlan();
@@ -612,12 +702,12 @@ async function goAsk(q) {
   const r = await C.askBody({ search_go: q });
   return r && r.ok === true ? { data: r } : { data: r && typeof r === 'object' && r.ok === false && (r.note || r.reason) ? r : null, error: r && r.ok === false && (r.note || r.reason) ? null : { message: String(r?.error ?? 'no reason was given') } };
 }
-async function readPlan(S) {
-  const [, pl] = await Promise.all([meterBalance().then(() => { S.est = estV; }), planAsk(plan.months)]);
-  if (pl.error) { S.splan = null; S.splanErr = pl.error.message; } else { S.splan = pl.data; S.splanErr = null; }
+async function readPlan(S, keepLast) {
+  const pl = await planAsk(plan.months);
+  if (pl.error) { if (!keepLast) S.splan = null; S.splanErr = pl.error.message; } else { S.splan = pl.data; S.splanErr = null; }
 }
 async function readSearchProgress(S) {
-  const { data, error } = await C.sb.rpc('search_progress', {}).catch((e) => ({ error: e }));
+  const { data, error } = await rpc('search_progress', {});
   if (!error && data && data.ok === true) { S.sprog = data; S.sprogErr = null; }
   else { S.sprogErr = String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'); if (S.sprog?.state !== 'reading') S.sprog = null; }   // the last count seen is kept, said as such
 }
@@ -682,10 +772,10 @@ function termsLine(S) {
   box.addEventListener('change', async () => {
     if (!box.checked) return;
     box.disabled = true; said.className = 'working no-late gr-small'; said.textContent = 'Keeping your yes';
-    const { data, error } = await C.sb.rpc('getting_ready_mark', { p_key: 'agreed', p_value: { yes: true }, p_wording: TERMS_V }).catch((e) => ({ error: e }));
+    const { data, error } = await rpc('getting_ready_mark', { p_key: 'agreed', p_value: { yes: true }, p_wording: TERMS_V });
     said.className = 'gr-small';
     if (error || !data || data.ok !== true) { box.checked = false; box.disabled = false; said.textContent = 'Not kept: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; return; }
-    R = await read(false); draw();
+    mount(C);
   });
   w.append(lab, fold('Read the terms (2 minutes)', p(null, TERMS), p('gr-small', 'These are the plain words. The full user agreement follows them.')), said);
   return w;
@@ -723,14 +813,17 @@ const CARDS = {
   credit(S) {
     const bal = balanceLeft(S);
     const funded = fundedBefore(S), ok = creditDone(S, false), need = stepNeed(S);
-    const out = [H(funded ? 'Your AI credit.' : 'Add your first $20 of AI credit.'),
+    const out = [H(funded || !S.ai ? 'Your AI credit.' : 'Add your first $20 of AI credit.'),
       points([
         ['ai', 'A one-time amount, paid ahead, for the AI work of making everything you connect searchable.'],
         ['coin', 'It goes to the AI companies at their own price. Verrandi adds nothing.'],
         ['eye', 'Whatever is left stays in your balance for later.'],
         ['shield', "You type your card on Stripe's own page. Your card number never reaches Verrandi."],
       ])];
-    if (ok) {
+    if (!S.ai) {
+      // NOT READ (rule 3): no balance, no shortfall and no payment are drawn from a credit that was not read.
+      out.push(S.moneyIn ? p('gr-small gs-over', 'Your credit could not be read just now, so nothing is asked of you here. Retrying.') : p('working', 'Reading your credit'));
+    } else if (ok) {
       const gw = goOn('connect'); const cb = gw.querySelector('button'); cb.addEventListener('click', (e) => { if (!agreedNow()) { e.stopImmediatePropagation(); toast('Check the box first: it says you agree to the terms of use.'); } }, true);
       out.push(card('coin', 'Your AI balance', null, priceRow('AI credit', usd2(bal))), okMark(funded && need !== null && need > 0 ? 'Your credit covers step 3: ' + usd2(need) + ' for what is checked' : 'Your credit is in'), termsLine(S), gw);
     } else if (funded && bal !== null) {
@@ -755,7 +848,7 @@ const CARDS = {
         if (!pay) { msg.textContent = 'Card payments are not switched on for this brain yet, so nothing was started.'; return; }
         go.disabled = true; msg.className = 'working no-late gr-small'; msg.textContent = 'Opening the payment page';
         try {
-          const { data, error } = await C.sb.rpc('topup_start', { p_amount_usd: 20 });
+          const { data, error } = await rpc('topup_start', { p_amount_usd: 20 });
           if (error) throw error;
           if (!data || data.ok !== true || !data.url) { msg.className = 'gr-small'; msg.textContent = 'Not started: ' + String(data?.note ?? data?.reason ?? 'no reason was given') + '.'; go.disabled = false; return; }
           location.href = String(data.url);
@@ -965,7 +1058,7 @@ async function readGroups(S) {
   const E = S.est;
   const per = Number(E?.estimate?.per_message_usd);
   const rates = Number.isFinite(per) && per > 0 ? { items: { understand_mail: { usd: per } } } : null;
-  const all = await Promise.all(boxes.map((k) => C.sb.rpc('mail_groups', { p_source_key: k, p_months: 24, p_rates: rates }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: e?.message ?? String(e) }))));
+  const all = await Promise.all(boxes.map((k) => rpc('mail_groups', { p_source_key: k, p_months: 24, p_rates: rates }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: e?.message ?? String(e) }))));
   const bad = all.find((x) => !x || x.ok !== true);
   if (bad && all.every((x) => !x || x.ok !== true)) { S.mgroups = { err: String(bad?.note ?? bad?.reason ?? 'no reason was given') }; return; }
   const by = {}; const byBox = [];
@@ -1008,7 +1101,7 @@ function understandLive(S) {
   const out = p('gr-small', '');
   const stop = btn('go ghost', 'Stop', async () => {
     stop.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Stopping';
-    const res = await Promise.all(rows.map((x) => C.sb.rpc('source_read_approve', { p_source_key: x.source_key, p_mode: 'understand_stop', p_months: null, p_confirm: true }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) }))));
+    const res = await Promise.all(rows.map((x) => rpc('source_read_approve', { p_source_key: x.source_key, p_mode: 'understand_stop', p_months: null, p_confirm: true }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) }))));
     out.className = 'gr-small'; out.textContent = res.map((r) => String(r?.note ?? r?.reason ?? 'no reason was given')).join(' ');
     setTimeout(() => mount(C), 2500);
   });
@@ -1027,8 +1120,8 @@ const fmtShort = (k) => String(k || '').split(':').pop();
 function chosenGroups(S) { const G = S.mgroups; if (!G || G.err || !G.groups) return ['money', 'people'].filter((g) => g === 'money' || !uOff[g]); return G.groups.filter((g) => g.always || !uOff[g.group]).map((g) => g.group); }
 async function readAnswers(S) {
   const [a, m] = await Promise.all([
-    C.sb.rpc('understand_answers_suggest', { p_identity: null }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) })),
-    C.sb.rpc('understand_answers_moved', { p_identity: null }).then(({ data, error }) => (error ? null : data), () => null),
+    rpc('understand_answers_suggest', { p_identity: null }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) })),
+    rpc('understand_answers_moved', { p_identity: null }).then(({ data, error }) => (error ? null : data), () => null),
   ]);
   S.uans = a || { ok: false, note: 'no reason was given' };
   S.umoved = m && m.ok === true ? m : null;
@@ -1054,7 +1147,7 @@ function uPoll() {
   if (!busy) return;
   uT = setTimeout(async () => {
     if (C.$('#s-ready')?.hidden || at !== 'understand' || C.$('#gr-sheet') || typing()) { uPoll(); return; }
-    await Promise.all([readSample(R), C.sb.rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) { R.uprog = data.sources ?? []; R.uprogErr = null; } else R.uprogErr = String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'); }, (e) => { R.uprogErr = String(e?.message ?? e); })]);
+    await Promise.all([readSample(R), rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) { R.uprog = data.sources ?? []; R.uprogErr = null; } else R.uprogErr = String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'); }, (e) => { R.uprogErr = String(e?.message ?? e); })]);
     draw();
   }, 20000);
 }
@@ -1109,7 +1202,7 @@ function answersCard(S) {
   const out = p('gr-small', '');
   const keep = btn('go', kept ? 'Keep my changes' : 'Keep my answers', async () => {
     keep.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Keeping your answers and sorting again';
-    const { data, error } = await C.sb.rpc('understand_answers_set', { p_answers: ua, p_identity: null }).catch((e) => ({ error: e }));
+    const { data, error } = await rpc('understand_answers_set', { p_answers: ua, p_identity: null });
     if (error || !data || data.ok !== true) { out.className = 'gr-small'; out.textContent = 'Not kept: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; keep.disabled = false; return; }
     toast(String(data.note || 'Kept. Your mail is sorted again with your answers.'));
     R.uans = null; R.mgroups = null; gAt = 0; ua = null; R.gLoad = false; R.usam = null;
@@ -1244,7 +1337,7 @@ async function understandPress(S, U, L, boxes, out, go) {
 }
 async function stopAll(S, keys, out, b) {
   b.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Stopping';
-  const res = await Promise.all(keys.map((k) => C.sb.rpc('source_read_approve', { p_source_key: k, p_mode: 'understand_stop', p_months: null, p_confirm: true }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) }))));
+  const res = await Promise.all(keys.map((k) => rpc('source_read_approve', { p_source_key: k, p_mode: 'understand_stop', p_months: null, p_confirm: true }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) }))));
   out.className = 'gr-small'; out.textContent = res.map((r) => String(r?.note ?? r?.reason ?? 'no reason was given')).join(' ');
   setTimeout(() => mount(C), 2500);
 }
@@ -1253,4 +1346,4 @@ export function openStep(c, k) { C = c; at = k; c.goto('s-ready'); }
 // SETTINGS uses these, so every Change there is the same function as here (one path): Top up (with the card and automatic
 // top-up in its sheet), the balance, and the readings.
 export function topUpFor(c, S) { C = c; topUp(S); }
-export { balanceLeft, cardOf, cardFee, monthlyOf, understandModel, brainCard };
+export { balanceLeft, cardOf, cardFee, monthlyOf, understandModel, brainCard, capped };
