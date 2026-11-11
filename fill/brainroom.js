@@ -18,8 +18,8 @@
 // photos square until seat scans-photos ships fill/scans.js (the square appears by itself when that file exists).
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
-import { filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-07-getting-ready-1';   // the files press and the reading's progress (seat brain-status-2; understandBlock retired here by seat audit-fix-screen)
-const READY_FOR_STEP = './ready.js?v=2026-11-11-ready-never-spins-2';   // the same module instance lens.js loads (step 4 opens there)
+import { filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-11-findable-fix-1';   // the files press and the reading's progress (seat brain-status-2; understandBlock retired here by seat audit-fix-screen)
+const READY_FOR_STEP = './ready.js?v=2026-11-11-findable-fix-1';   // the same module instance lens.js loads (step 4 opens there)
 
 let C = null;   // { sb, el, $, askBody, isOwner, viewDeps, readSources, drawGroup, aiBlocks, door, goto, openAdd, closeAdd, connectSystem, me }
 let reading = null;   // the latest set of readings, so a page opens on what the room shows
