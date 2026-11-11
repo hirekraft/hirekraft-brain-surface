@@ -16,7 +16,11 @@
 // A COLLEAGUE sees only her own language and emails (spec): no prices, no money rows, no presses on the business.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 import { ic, card } from './setup.js?v=2026-11-10-setup-front-door';
-import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep } from './ready.js?v=2026-11-10-audit-fix-screen-2';
+import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep, brainDoor } from './ready.js?v=2026-11-11-ready-never-spins';
+// SEAT ready-never-spins (2026-11-11): every brain call here goes through ready.js brainDoor (a real promise that cannot throw). The
+// client's own rpc call object has then and no catch: the two presses below that put .catch on it (Mark it old, the guide's name)
+// threw on press.
+const rpc = (name, args) => brainDoor(C.sb, name, args);
 import { screenLangName } from './words.js?v=2026-10-29-thinkrooms-3';
 
 const DOT = String.fromCharCode(183);
@@ -48,16 +52,16 @@ async function read() {
   const R = { owner: C.isOwner() };
   const jobs = [
     C.readSources(C.sb, true).then((v) => { R.src = v; }, (e) => { R.srcErr = e; }),
-    C.sb.rpc('getting_ready_marks').then(({ data }) => { if (data && data.ok === true) R.marks = data; }, () => {}),
-    C.sb.rpc('thoughtgram_emails_state').then(({ data }) => { R.mail = data; }, () => {}),
+    rpc('getting_ready_marks').then(({ data }) => { if (data && data.ok === true) R.marks = data; }, () => {}),
+    rpc('thoughtgram_emails_state').then(({ data }) => { R.mail = data; }, () => {}),
   ];
   if (R.owner) {
-    jobs.push(C.sb.rpc('brain_road').then(({ data }) => { if (data && data.ok === true) R.road = data; }, () => {}));
-    jobs.push(C.sb.rpc('connector_status').then(({ data }) => { R.conn = data; }, () => {}));
+    jobs.push(rpc('brain_road').then(({ data }) => { if (data && data.ok === true) R.road = data; }, () => {}));
+    jobs.push(rpc('connector_status').then(({ data }) => { R.conn = data; }, () => {}));
     jobs.push(C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) R.ai = r.ai; else R.aiErr = r?.error ?? 'no reason was given'; }, (e) => { R.aiErr = e?.message ?? String(e); }));
     jobs.push(C.askBody({ read_estimate: { months: 24 } }).then((r) => { if (r && r.ok === true) R.est = r; }, () => {}));
-    jobs.push(C.sb.rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) R.uprog = data.sources ?? []; else R.uprogErr = error?.message ?? data?.note ?? 'no reason was given'; }, (e) => { R.uprogErr = e?.message ?? String(e); }));
-    jobs.push(C.sb.rpc('understand_answers_suggest', { p_identity: null }).then(({ data, error }) => { R.uans = error ? { ok: false, note: error.message } : data; }, (e) => { R.uans = { ok: false, note: String(e?.message ?? e) }; }));
+    jobs.push(rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) R.uprog = data.sources ?? []; else R.uprogErr = error?.message ?? data?.note ?? 'no reason was given'; }, (e) => { R.uprogErr = e?.message ?? String(e); }));
+    jobs.push(rpc('understand_answers_suggest', { p_identity: null }).then(({ data, error }) => { R.uans = error ? { ok: false, note: error.message } : data; }, (e) => { R.uans = { ok: false, note: String(e?.message ?? e) }; }));
   }
   await Promise.all(jobs);
   return R;
@@ -138,12 +142,12 @@ function proposeOld(asked) {
   if (!old) { propose({ asked, say: 'Tell me which mailbox, or use Old, searchable only on its row in Getting started, step 3. Nothing was changed.' }); return; }
   const name = String(old.name || old.source_key);
   propose({ asked, say: 'Here is the change. It is free, and it makes what is left to make searchable cheaper.', lines: [['Mailbox', name], ['Old, searchable only', 'you can search it; nobody else can, and it gets no privacy check']],
-    yes: async () => { const { data, error } = await C.sb.rpc('source_mark_old', { p_source_key: old.source_key, p_old: true, p_identity: null }).catch((e) => ({ error: e })); const ok = !error && data && data.ok === true; if (ok) setTimeout(() => mount(C), 1500); return { ok, note: ok ? String(data.note || 'Marked old, searchable only.') : 'Not changed: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.' }; } });
+    yes: async () => { const { data, error } = await rpc('source_mark_old', { p_source_key: old.source_key, p_old: true, p_identity: null }); const ok = !error && data && data.ok === true; if (ok) setTimeout(() => mount(C), 1500); return { ok, note: ok ? String(data.note || 'Marked old, searchable only.') : 'Not changed: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.' }; } });
 }
 // The guide's name: getting_ready_mark guide_name, the same as "Call me something else". Free.
 function proposeName(asked) {
   propose({ asked, say: 'Here is the change. It is free.', lines: [['Your guide' + AP + 's name', guide() + ' ' + String.fromCharCode(8594) + ' Max']],
-    yes: async () => { const { data, error } = await C.sb.rpc('getting_ready_mark', { p_key: 'guide_name', p_value: { name: 'Max' }, p_wording: null }).catch((e) => ({ error: e })); const ok = !error && data && data.ok === true; if (ok) { document.body.dataset.guide = 'Max'; setTimeout(() => mount(C), 1500); } return { ok, note: ok ? 'From now on I am Max. Change it here any time.' : 'Not changed: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.' }; } });
+    yes: async () => { const { data, error } = await rpc('getting_ready_mark', { p_key: 'guide_name', p_value: { name: 'Max' }, p_wording: null }); const ok = !error && data && data.ok === true; if (ok) { document.body.dataset.guide = 'Max'; setTimeout(() => mount(C), 1500); } return { ok, note: ok ? 'From now on I am Max. Change it here any time.' : 'Not changed: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.' }; } });
 }
 
 // YOUR DATABASE
