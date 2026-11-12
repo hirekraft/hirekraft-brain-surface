@@ -70,7 +70,7 @@
 // SEAT step4-fresh (2026-11-12; decision 1158, picture RYtvsKoVGVx2ELoeqN5PNx): step 4 rebuilt as the approved fresh look on step 3's
 // own tree. See STEP 4, THE FRESH LOOK above heroU. The line under the steps names the step that is open (it named the first
 // step not done: "Step 3 of 5" while step 4 was open).
-import { roadSteps } from './brainroom.js?v=2026-11-12-step4-after-2';
+import { roadSteps } from './brainroom.js?v=2026-11-12-steps-green';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
@@ -688,7 +688,7 @@ function inPlace(box, fresh) {
   for (const x of [...box.children]) if (!keep.has(x)) x.remove();
 }
 const chip = (tone, text) => el('span', 'gs-chip' + (tone ? ' gs-chip-' + tone : ''), text);
-const WORD = { searchable: ['Searchable', 'ok'], reading: ['Reading', 'warn'], to_read: ['Needs your yes', 'warn'], not_counted: ['Counting', ''] };   // search_plan's states
+const WORD = { searchable: ['Searchable', 'ok'], reading: ['Reading', 'warn'], to_read: ['Older items wait', 'warn'], not_counted: ['Counting', ''] };   // search_plan's states
 const SV = { needs_you: ['Needs you', 'warn'], reading: ['Reading', 'warn'], up_to_date: ['Connected', 'ok'] };   // sources_view's states
 const MEET = [' meet ', ' meeting ', ' meetings '];
 const FINDS = ['find', 'search', 'show', 'where'];
@@ -756,7 +756,8 @@ function heroCard(S) {
   const top = el('div', 'gs-herotop'), l = el('div');
   l.append(K(el('div', 'gs-pct', F ? num(F.pct) + '%' : ''), 'pct'), el('p', 'gr-small', F ? 'of your mail and files are searchable' : 'Your brain could not be read just now, so the percentage is not shown. It tries again on its own.'));
   const w = K(el('div', 'gs-work'), 'work'); w.id = 'gs-work'; w.setAttribute('role', 'status'); workInto(w, S);
-  top.append(l, w);
+  const L3 = step3Left(S);
+  top.append(l, w); if (L3 && !L3.need.length && !L3.busy) top.appendChild(chip('ok', 'Done'));   // green when nothing a press can read is left (decision 1169)
   const bar = el('div', 'gs-bar gs-thick'), i = K(el('i'), 'bar'); i.style.width = (F ? Math.min(100, Number(F.pct) || 0) : 0) + '%'; bar.appendChild(i);
   const inp = el('input'); inp.id = 'gs-try-in'; inp.type = 'search'; inp.placeholder = 'Try it: search what is already searchable'; inp.setAttribute('aria-label', 'Search what is already searchable');
   const go = () => { const q = inp.value.trim(); if (!q) { inp.focus(); return; } inp.value = ''; C.ask(FINDS.includes(q.split(' ')[0].toLowerCase()) ? q : 'Find ' + q); };
@@ -815,7 +816,7 @@ function treeCard(S) {
   const row = (r, mini) => { const q = by(r), w = q ? (WORD[q.state] || [String(q.state), '']) : (SV[r.state] || ['', '']); return srcLeaf(S, q, show(r), own, !q ? '' : q.state === 'not_counted' ? String(q.note || 'Not counted yet') : mini(q), w[0], w[1]); };
   const tally = (rows) => {
     const qs = rows.map(by).filter(Boolean), n = (s) => qs.filter((q) => q.state === s).length;
-    const t = [[n('to_read'), n('to_read') === 1 ? ' needs your yes' : ' need your yes'], [n('reading'), ' reading'], [n('not_counted'), ' counting']].filter((x) => x[0]).map((x) => num(x[0]) + x[1]);
+    const t = [[n('to_read'), n('to_read') === 1 ? ' has older items waiting' : ' have older items waiting'], [n('reading'), ' reading'], [n('not_counted'), ' counting']].filter((x) => x[0]).map((x) => num(x[0]) + x[1]);
     if (t.length) return [(n('searchable') ? [num(n('searchable')) + ' searchable'] : []).concat(t).join(' ' + DOT + ' '), 'warn'];
     return qs.length ? ['Searchable', 'ok'] : ['', ''];
   };
@@ -863,14 +864,11 @@ function treeCard(S) {
 // then Yes (searchPreview). The button reads what is checked at the moment of the press, never what was checked when it was drawn.
 // A PRESS WHILE ANOTHER READS (seat press-while-reading, 2026-11-12): the button is live while another source is being read;
 // the brain leaves alone only what is already pressed and reading (search_go, per source).
-function yesCard(S) {
-  const P = S.splan && S.splan.ok === true ? S.splan : null;
-  if (!P) return null;
-  const all = planRows(P), need = all.filter((r) => r.state === 'to_read');
-  if (!need.length) return null;
-  const nm = names(S, all), pick = chosenOf(P);
-  const c = el('section', 'am-step gs-yes'); c.id = 'gs-need';
-  c.appendChild(el('h2', 'am-h2', 'One thing needs your yes'));
+// SINCE DECISION 1169 (seat steps-green 2026-11-12) this is the first line of the step's exceptions (excCard), not a card of its
+// own at the foot: Alex saw "2 need your yes" in the list and could not find where the yes was. SUPERSEDED: the heading
+// "One thing needs your yes" and the card's place under the whole list.
+function yesInto(c, S, P, need) {
+  const all = planRows(P), nm = names(S, all), pick = chosenOf(P);
   const sum = (rows) => rows.reduce((a, r) => a + (Number(r.to_read) || 0), 0);
   const cost = Math.round(pick.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100;
   const cur = (P.choices ?? []).find((ch) => (ch.months ?? null) === (plan.months ?? null)), complete = !cur || cur.complete !== false;
@@ -878,7 +876,8 @@ function yesCard(S) {
   const what = [part(pick.filter((r) => r.kind === 'mail'), 'attachment', 'attachments', 'mailboxes'), part(pick.filter((r) => r.kind !== 'mail'), 'older file', 'older files', 'drives or folders')].filter(Boolean).join(' and ');
   const mins = pick.length && pick.every((r) => r.minutes !== null && r.minutes !== undefined) ? Math.max(...pick.map((r) => Number(r.minutes) || 0)) : null;
   const say = el('p', 'gs-say');
-  say.append(K(el('span', null, pick.length ? num(sum(pick)) + (sum(pick) === 1 ? ' item: ' : ' items: ') + what + '. ' : 'Nothing is checked. '), 'what'),
+  say.append(K(el('span', null, pick.length ? num(sum(pick)) + (sum(pick) === 1 ? ' older item is' : ' older items are') + ' not searchable yet: ' + what + '. ' : 'Nothing is checked. '), 'what'),
+    'They were there before you connected, and nothing older is read without your yes. ', el('b', null, 'Can be put in: '), 'one press, ',
     K(el('b', null, !pick.length ? '' : complete ? usd2(cost) : 'counting'), 'usd'), K(el('span', null, !pick.length ? '' : mins !== null ? ', about ' + num(mins) + ' minutes.' : ', time measured as it reads.'), 'mins'));
   c.appendChild(say);
   const d = el('details', 'gs-fold'); d.id = 'gs-list'; d.open = listOpen;
@@ -915,6 +914,40 @@ function yesCard(S) {
   const act = el('div', 'gs-act');
   act.append(go, K(el('small', 'gs-srcnote', !known ? 'Your credit could not be read just now, so nothing can be started. It tries again on its own.' : over ? 'Add the credit above first.' : 'Paid from your credit (' + usd2(bal) + ' left)'), 'bal'));
   c.append(act, out);
+}
+// A STEP IS GREEN OR SHOWS ITS EXCEPTIONS, NOTHING ELSE (seat steps-green 2026-11-12, decision 1169; Alex 12:38 PT: "management
+// by exception, a fraction of the stuff should be very clearly what didn't go, and can we put it in? If yes, this is how you
+// put it in. If no, this is why, and that's it, right? And then boom, it goes to green."). Right under the answer: when
+// nothing a press can read is left, one green line; what did not go in, each in ONE line with its count and either "Can be
+// put in:" how, with its one button and price, or "Cannot be put in:" why. Every count is the brain's (search_plan's states,
+// brain_road's not_searchable). The step is green when nothing she can put in with a press is left (the brain's own rule for
+// searchable); what cannot be put in is explained and does not hold it back.
+const step3Left = (S) => { const P = S.splan && S.splan.ok === true ? S.splan : null; if (!P) return null; const r = planRows(P); return { need: r.filter((x) => x.state === 'to_read'), busy: r.some((x) => x.state === 'reading' || x.state === 'not_counted'), off: (P.sources ?? []).filter((x) => x.state === 'not_connected'), P }; };
+function excCard(S) {
+  const L = step3Left(S);
+  if (!L) return null;
+  const NS = S.road?.findable?.not_searchable ?? S.road?.ready?.not_searchable ?? {}, n = (v) => Number(v) || 0;
+  const no = [], ex = (count, words, why, act) => { const d = el('div', 'gs-ex'), t = el('span'); t.append(K(el('b', null, num(count)), 'x'), ' ' + words + ' ', el('b', 'gs-exno', act ? 'Can be put in: ' : 'Cannot be put in: '), why); d.appendChild(t); if (act) d.appendChild(act); no.push(d); };
+  if (L.off.length) ex(L.off.length, (L.off.length === 1 ? 'drive or folder is' : 'drives or folders are') + ' no longer connected, so nothing in ' + (L.off.length === 1 ? 'it' : 'them') + ' is read.', 'connect ' + (L.off.length === 1 ? 'it' : 'them') + ' again.', btn('gr-link', '+ Add a drive or folder', () => brainPanel('add')));
+  const cant = n(NS.could_not_read) + n(NS.drive_could_not_read), held = n(NS.held_by_policy) + n(NS.drive_held_by_policy), media = n(NS.pictures_and_video) + n(NS.recordings) + n(NS.scans);
+  if (cant) ex(cant, cant === 1 ? 'file could not be opened.' : 'files could not be opened.', 'damaged, locked with a password, or in a format the Tool does not read.');
+  if (held) ex(held, held === 1 ? 'is held back as private or not business.' : 'are held back as private or not business.', 'a privacy rule keeps them out, so nobody finds them by mistake.');
+  if (media) ex(media, 'pictures, recordings and scans in mail are not read.', 'reading them uses AI and is not offered until its price is measured on your own.');
+  if (n(NS.drive_not_read)) ex(n(NS.drive_not_read), 'drive files were read only in part.', 'this is ours to fix; there is nothing for you to do.');
+  if (!L.need.length && L.busy && !no.length) return null;   // still being made searchable and nothing to say yet: the answer card's Working line says it
+  const c = el('section', 'am-step gs-yes gs-exc'); c.id = 'gs-need';
+  if (L.need.length) {
+    c.appendChild(el('h2', 'am-h2', 'What did not go in'));
+    c.appendChild(el('small', 'gs-srcnote', 'One thing you can put in. When it is in, this step is green.'));
+    yesInto(c, S, L.P, L.need);
+  } else if (L.busy) c.appendChild(el('h2', 'am-h2', 'What did not go in, so far'));
+  else {
+    const d = el('div', 'gs-exdone'); d.id = 'gs-green';
+    d.append(chip('ok', 'Done'), el('b', null, 'Step 3 is green: everything that can be read is searchable.'));
+    c.appendChild(d);
+    if (no.length) c.appendChild(el('small', 'gs-srcnote', 'What could not go in is said here, each with its reason. Nothing is waiting on you.'));
+  }
+  if (no.length) { const b = el('div', 'gs-exlist'); b.id = 'gs-exlist'; b.append(...no); c.appendChild(b); }
   return c;
 }
 // WHAT IS NOT SEARCHABLE, AND WHY, folded at the foot (decision 1156.5). The table is drawn when she opens the fold, from the
@@ -955,8 +988,8 @@ function notBody(S, host) {
   const rd = n(M.attach_reading) + n(Fi.waiting);
   body.appendChild(tRow('Reading now', rd > 0 ? leftWords(F.minutes_left) : 'Nothing is being read just now', num(rd)));
   const wy = n(M.attach_waiting) + n(Fi.waiting_yes);
-  body.appendChild(tRow('Waiting for your yes', 'Attachments and drive files a press can read. ' + split(M.attach_waiting, Fi.waiting_yes), num(wy),
-    wy > 0 ? btn('gr-link', 'Yes' + String.fromCharCode(8230), () => C.$('#gs-need')?.scrollIntoView({ block: 'start' })) : null));
+  body.appendChild(tRow('Not searchable yet, can be put in', 'Attachments and drive files a press can read. ' + split(M.attach_waiting, Fi.waiting_yes), num(wy),
+    wy > 0 ? btn('gr-link', 'Put them in' + String.fromCharCode(8230), () => C.$('#gs-need')?.scrollIntoView({ block: 'start' })) : null));
   const HOW = ' No price yet: it is measured on a small sample of your own before you are asked. Not offered yet.';
   const pics = el('div', 'gs-tpics'); pics.id = 'gs-tpics';
   const choice = [
@@ -1224,9 +1257,9 @@ const CARDS = {
   search(S) {
     const rows = S.src?.rows ?? [];
     const prog = S.prog ?? [];
-    const out = [heroCard(S), treeCard(S)];
-    const yes = yesCard(S); if (yes) out.push(yes);
-    out.push(notCard(S));
+    const out = [heroCard(S)];
+    const exc = excCard(S); if (exc) out.push(exc);   // green, or the exceptions, right under the answer (decision 1169)
+    out.push(treeCard(S), notCard(S));
     const green = rows.length > 0 && prog.length > 0 && prog.every((r) => r.state === 'up_to_date');
     const acts = el('div', 'gr-chips'); acts.id = 'gs-cont';
     const cont = K(btn('go', 'Continue', () => { at = 'understand'; draw(); window.scrollTo({ top: 0 }); }), 'c'); cont.disabled = !(green || roadSteps(S)[1].state === 'done');   // the brain's searchable rule (1142.1), or every row green
@@ -1369,14 +1402,16 @@ const pressRows = (S) => (pressSettled(S) ? [] : pressAll(S).filter((x) => x.sta
 const limOf = (rows) => (rows.length && rows.every((x) => x.ceiling_usd !== null && x.ceiling_usd !== undefined && Number.isFinite(Number(x.ceiling_usd))) ? rows.reduce((a, x) => a + Number(x.ceiling_usd), 0) : null);
 const pctOf = (done, total) => (total > 0 ? Math.floor((done / total) * 100) : null);
 const srcWords = (rows) => { const m = rows.filter((x) => String(x.source_key || '').startsWith('gmail:')).length, d = rows.length - m; return [m ? num(m) + (m === 1 ? ' mailbox' : ' mailboxes') : '', d ? num(d) + (d === 1 ? ' drive' : ' drives') : ''].filter(Boolean).join(' and '); };
-// WHAT A PRESS LEFT UNREAD AT A SOURCE'S PART OF HER LIMIT: one quiet line with its own numbers, never the headline and never
-// called her limit (she set one limit; the press shared it out).
+// WHAT HER LIMIT LEFT UNREAD: one exception line with its count and how it can be put in (decision 1169). SINCE ONE LIMIT IS
+// ONE POOL (seat steps-green 2026-11-12, decision 1166, brain file steps-green-1) a source stops only when the WHOLE press has
+// used its limit, so the limit named here is hers. SUPERSEDED: "Your press set aside $4.43 of your $339.93 for it", the
+// wording of a share per source, which the brain no longer keeps as a stop.
 function leftLine(rows, lim) {
   const a = rows.filter((x) => x.state === 'at_ceiling' && Number(x.waiting) > 0);
   if (!a.length) return null;
-  const n = a.reduce((s, x) => s + Number(x.waiting), 0), part = limOf(a), sp = a.reduce((s, x) => s + (Number(x.so_far_usd ?? x.spent_usd) || 0), 0);
+  const n = a.reduce((s, x) => s + Number(x.waiting), 0);
   const l = p('gr-small gs-quiet', ''); l.id = 'gs-uleft';
-  l.append('Not read yet: ', K(el('b', null, num(n)), 'ln'), ' in ' + srcWords(a) + '. Your press set aside ' + (part !== null ? usd2(part) : 'a part') + (lim !== null ? ' of your ' + usd2(lim) : ' of your limit') + ' for ' + (a.length === 1 ? 'it' : 'them') + ' and ' + usd2(sp) + ' of that is used, so the reading stopped there. The rest of your limit was not touched. ' + (n === 1 ? 'It is' : 'They are') + ' in the list below for your next press.');
+  l.append(K(el('b', null, num(n)), 'ln'), ' in ' + srcWords(a) + (n === 1 ? ' was' : ' were') + ' not read: your limit' + (lim !== null ? ' of ' + usd2(lim) : '') + ' was used up first. ', el('b', 'gs-exno', 'Can be put in: '), 'choose ' + (n === 1 ? 'it' : 'them') + ' in the list below and press Understand again with a new limit.');
   return l;
 }
 // ONE COUNT OF WHAT COULD NOT BE READ, opened to where and why (STANDING-CLAUSES: the count, each with its reason).
@@ -1453,6 +1488,10 @@ function afterHero(S, rows) {
     c.appendChild(q);
   }
   const ll = leftLine(rows, lim); if (ll) c.appendChild(ll);
+  // WHAT FAILED ON THE TOOL'S SIDE AND IS BEING READ AGAIN (brain_road ready.being_read_again, brain file steps-green-2): an
+  // exception in repair, said in one line; it does not hold Ready back.
+  const again = Number(S.road?.ready?.being_read_again) || 0;
+  if (again > 0) { const q = p('gr-small gs-quiet', ''); q.id = 'gs-uagain'; q.append(K(el('b', null, num(again)), 'ag'), (again === 1 ? ' is' : ' are') + ' being read again: the first reading failed on the Tool' + String.fromCharCode(8217) + 's side and that is fixed. Inside your limit; there is nothing for you to do.'); c.appendChild(q); }
   const exp = sum('expired');
   if (exp > 0) c.appendChild(p('gr-small gs-quiet', num(exp) + ' were not read by the AI maker within 24 hours. They were not billed and wait for your next press.'));
   if (S.uprogErr) c.appendChild(p('gr-small gs-over', NOREAD + ' The count above is the last one seen.'));

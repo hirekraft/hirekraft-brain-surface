@@ -3381,3 +3381,11 @@ body.gr-over .br-leave { display: none; }
 .gs-unread .gs-pl > span:first-child, #gs-open .gs-pl > span:first-child { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
 .gs-each { display: grid; gap: 2px; min-width: 0; }
 .gs-after .gr-link, .gs-unread .gr-link, #gs-open .gr-link { min-height: 44px; display: inline-flex; align-items: center; }
+
+/* A STEP IS GREEN OR SHOWS ITS EXCEPTIONS (seat steps-green 2026-11-12, decision 1169): the exceptions card of step 3
+   (fill/ready.js excCard). One line per exception; the green line when nothing she can put in is left. */
+.gs-exc .gs-exlist { display: grid; gap: 8px; margin-top: 14px; }
+.gs-exc .gs-ex { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.gs-exc .gs-ex .gr-link { margin-left: 6px; min-height: 44px; }
+.gs-exc .gs-exdone { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.gs-exc .gs-exdone b { font-size: 16px; }
