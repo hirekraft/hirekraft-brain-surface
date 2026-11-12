@@ -70,7 +70,7 @@
 // SEAT step4-fresh (2026-11-12; decision 1158, picture RYtvsKoVGVx2ELoeqN5PNx): step 4 rebuilt as the approved fresh look on step 3's
 // own tree. See STEP 4, THE FRESH LOOK above heroU. The line under the steps names the step that is open (it named the first
 // step not done: "Step 3 of 5" while step 4 was open).
-import { roadSteps } from './brainroom.js?v=2026-11-12-overnight-batch';
+import { roadSteps } from './brainroom.js?v=2026-11-12-step4-fresh';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
@@ -357,7 +357,7 @@ function draw() {
   else { box.replaceChildren(...kids); if (still) for (const n of kids) n.dataset.sig = sigOf(n); }
   box.dataset.step = at;
   if (still) { const w = C.$(at === 'search' ? '#gs-work' : '#gs-uwork'); if (w) workInto(w, S); }   // a kept top card: its Working line is redrawn, not copied
-  if (at === 'understand') { const li = C.$('#gs-limit'); if (li && uLimit === null && S.usam?.ok === true && S.usam.state === 'done' && document.activeElement !== li) li.value = String(sugOf(S, S.usam)); limitSay(); }   // a kept card: the limit she has not typed follows the price; the button follows the limit
+  if (at === 'understand') { const li = C.$('#gs-limit'); if (li && uLimit === null && S.usam?.ok === true && S.usam.state === 'done' && document.activeElement !== li) li.value = sugOf(S, S.usam).toFixed(2); limitSay(); }   // a kept card: the limit she has not typed follows the price; the button follows the limit
   if (at === 'understand' && S.owner && !S.gLoad) { S.gLoad = true; Promise.all([S.uans ? null : readAnswers(S), readSample(S)]).then(() => { if (R === S && at === 'understand' && !typing() && !C.$('#gr-sheet')) draw(); }); }   // step 4's answer (rows, prices) and her words, read when she is on it
   uPoll();
   if (at === 'understand' || at === 'ready') needEst(S);   // the monthly figure and the price per email, asked where they are shown
@@ -1278,7 +1278,7 @@ function understandModel(S) {
 // pressed: a mailbox keeps its groups, a drive has none, and both keep the limit the press gave them (seat understand-drives 2026-11-12)
 const pressedRow = (x) => (Array.isArray(x.groups) && x.groups.length > 0) || (x.ceiling_usd !== null && x.ceiling_usd !== undefined);
 function understandLive(S) {
-  // a mailbox counts here once it is pressed (its groups are kept); a sample alone is shown by its own block (sampleBlock)
+  // a mailbox counts here once it is pressed (its groups are kept); a sample alone is shown in How fast (speedCard)
   const rows = (S.uprog ?? []).filter((x) => (x.state === 'reading' || x.state === 'at_ceiling') && pressedRow(x));
   if (!rows.length) return S.uprogErr ? progressFailed('gs-ulive', 'Understanding your mail', S.uprogErr) : null;
   const total = rows.reduce((a, x) => a + (Number(x.total) || 0), 0), done = rows.reduce((a, x) => a + (Number(x.done) || 0), 0);
@@ -1324,7 +1324,6 @@ const GROUP_TITLE = { people: 'Your conversations', money: 'Money mail', automat
 const WORK_WITH = [['businesses', 'Businesses'], ['people', 'People'], ['both', 'Both']];
 const SAMPLE_CAP = 5;   // the sample's own limit, never passed (understand_sample p_cap_usd, the brain's own default). SUPERSEDED 2026-11-12 (seat setup-findable-table on seat understand-files' report): 3 and the words "about $2"; the sample now reads attached files too and costs more, so the honest words are its limit
 let ua = null;          // her answers as she taps them (what each mailbox is for is passed back as kept, no longer asked: seat step4-fresh): { mailboxes: {key: for}, work_with, money_words: [] }
-const fmtShort = (k) => String(k || '').split(':').pop();
 // WHAT IS READ INSIDE A MAILBOX: her conversations and money mail; automated mail and the rest stay searchable (decision 1158: no
 // longer a choice of four boxes; the brain's sample, price and press are asked for these two groups).
 function chosenGroups() { return ['money', 'people']; }
@@ -1354,10 +1353,12 @@ function uPoll() {
   clearTimeout(uT);
   const S = R;
   if (!S || at !== 'understand') return;
-  const busy = S.usam?.state === 'reading' || (S.uprog ?? []).some((x) => x.state === 'reading' && pressedRow(x));
+  // a refused answer is asked again too (it used to say "It tries again on its own" and did not: seat step4-fresh)
+  const busy = S.usam?.state === 'reading' || (S.uprog ?? []).some((x) => x.state === 'reading' && pressedRow(x)) || (!!S.usam && S.usam.ok !== true && S.usam.reason !== 'owner_only' && S.usam.reason !== 'unbound');
   if (!busy) return;
   uT = setTimeout(async () => {
     if (C.$('#s-ready')?.hidden || at !== 'understand' || C.$('#gr-sheet') || typing()) { uPoll(); return; }
+    if (R.usam?.ok !== true) await readDoor(R);
     await Promise.all([readSample(R), rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) { R.uprog = data.sources ?? []; R.uprogErr = null; } else R.uprogErr = String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'); }, (e) => { R.uprogErr = String(e?.message ?? e); })]);
     draw();
   }, 20000);
@@ -1766,3 +1767,21 @@ export function openStep(c, k) { C = c; at = k; c.goto('s-ready'); }
 // top-up in its sheet), the balance, and the readings.
 export function topUpFor(c, S) { C = c; topUp(S); }
 export { balanceLeft, cardOf, cardFee, monthlyOf, understandModel, brainCard, capped };
+// MOVED TO SETTINGS AND THE GUIDE (seat step4-fresh 2026-11-12, decision 1158): how the price of Understand works and step 4's
+// questions. One copy of the words, kept here beside the figures they use, drawn by settings.js.
+export function priceWorks(S) {
+  const M = monthlyOf(S);
+  return ['A small sample first, never more than $' + SAMPLE_CAP + '. About 100 of your conversations and some of your files (attached to mail and in the drives you chose) are read, and you see the price measured on your own mail and files.',
+    'You set the limit. It starts at that price, it is never passed, and Stop works any time: you pay only for what was read.',
+    'Then only new mail, ' + (M === null ? 'its monthly price measured' : 'about ' + usd2(M) + ' a month') + ', shown measured after your first month.'];
+}
+export function understandQs(S) {
+  const M = monthlyOf(S);
+  return [
+    ['Is understanding one time?', 'Yes. Your past mail and files are read once. After that, only new mail is read as it arrives, ' + (M === null ? 'its monthly price measured' : 'about ' + usd2(M) + ' a month') + ' at your pace, plus about 1 cent for each question you ask.'],
+    ['Why a sample first?', 'Every business' + String.fromCharCode(8217) + 's mail is different. The sample measures what your own mail and files cost to understand, so the price you agree to is yours, not an average.'],
+    ['Can understanding cost more than I agreed?', 'No. It stops before your limit. If something is left, it tells you how much and what it would cost, and you decide.'],
+    ['What happens to what I leave searchable only?', 'It stays searchable. You can make any of it understood later, with its price shown first.'],
+    ['Will I know when understanding is done?', 'Yes, one short email from your own mailbox to you.'],
+  ];
+}
