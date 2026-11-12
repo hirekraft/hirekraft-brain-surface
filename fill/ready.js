@@ -1387,6 +1387,94 @@ function movedBlock(S) {
   for (const [k, a, b] of ch) d.appendChild(priceRow(GROUP_TITLE[k] || k, num(a) + ' ' + ARROW + ' ' + num(b), 'conversations in your last 2 years'));
   return d;
 }
+// ---------------------------------------------------------------------------------------------------------------------
+// STEP 4, THE FRESH LOOK (seat step4-fresh, 2026-11-12, decision 1158; picture RYtvsKoVGVx2ELoeqN5PNx). The same shape as step 3:
+// 1. heroU: one percentage (understood of what she chose; the brain's own rows, understand_sample 'rows'), one status word, the
+//    one Working indicator's lines (workInto), what Understood means and what Searchable only means.
+// 2. treeU, "What to understand": step 3's three folding groups (grp, driveParts, names: one tree, not a second). Each mailbox
+//    and drive: its name, what is left to read, ONE choice (Understood / Searchable only, kept by understand_choice_set) and
+//    its price at the speed she chose. Your systems: already understood, free. The rows come from the one reading of sources,
+//    so the list is there even when the prices could not be read, and then the reason is said in its place.
+//    Folded under them, insideFold: what is read inside a mailbox, her words for money paperwork and who she works with
+//    (understand_answers_set, unchanged: what each mailbox is for is no longer asked, the kept answers are passed back as kept).
+// 3. speedCard, "How fast": two cards, Overnight shown first until she has chosen (understand_door 'chosen'), one price with
+//    its range, one limit, her credit with add by card, ONE button. The press keeps the speed shown (doorKeep), previews
+//    (understand_go without confirm), then her Yes.
+// THE SAMPLE (1158: part of the press). A brain that already holds a sample (HireKraft) goes straight to the press. Where
+// there is none yet, the one button starts the sample and says so; carrying her limit across the sample so that she is not
+// asked a second time is the brain's to do and is NOT BUILT (named in the seat's report), so the words do not promise it.
+// A re-read lands in place (draw, inPlace): every figure that can change is marked (K).
+// SUPERSEDED 2026-11-12, Alex's yes on 1158: the per-mailbox purpose buttons (MAILBOX_FOR), the four group check boxes with
+// mail_groups' estimate (groupsCard, readGroups, uOff), the Cost and Time card (understandShape), "Three quick questions" as
+// a card, the separate How fast rows (doorChoice), "Read a sample of those drives too" (sampleAgain: a second sample button
+// that could fail alone; drives not in the sample are priced at the rate of her other files and that is said), and on this
+// step the cards How your price works, The AI that does the work and Questions (now in Settings and the guide).
+const CHOICES = [['understood', 'Understood'], ['findable', 'Searchable only']];
+let uPick = {};         // her taps not yet answered by the brain: { source_key: 'understood' | 'findable' }
+let uLimit = null, uDoor = null, inOpen = false, howOpen = false;
+const LQ = String.fromCharCode(8220), RQ = String.fromCharCode(8221);
+const howLong = (m) => { const x = Number(m); if (m === null || m === undefined || !Number.isFinite(x)) return 'time not measured'; if (x < 1) return 'under a minute'; if (x < 90) return 'about ' + num(Math.round(x)) + ' minutes'; if (x < 48 * 60) return 'about ' + num(Math.round(x / 60)) + ' hours'; return 'about ' + num(Math.round(x / 1440)) + ' days'; };
+const rowsOf = (U) => (Array.isArray(U?.rows) ? U.rows : []);
+const pickOf = (r) => uPick[r.source_key] || r.choice;
+const picking = () => Object.keys(uPick).length > 0;
+const leftOf = (r) => (Number(r.conversations_left) || 0) + (Number(r.files_left) || 0);
+const allOf = (r) => (Number(r.conversations) || 0) + (Number(r.files) || 0);
+const chosenRows = (U) => rowsOf(U).filter((r) => pickOf(r) === 'understood' && leftOf(r) > 0);
+function chosenWords(U) {
+  const c = chosenRows(U), m = c.filter((r) => r.kind === 'mailbox').length, dv = c.length - m;
+  return [m ? num(m) + (m === 1 ? ' mailbox' : ' mailboxes') : '', dv ? num(dv) + (dv === 1 ? ' drive' : ' drives') : ''].filter(Boolean).join(' and ');
+}
+// Her tap on a row: kept by the brain, then the price is read again. Reads the row from the page's reading at that moment (R).
+async function pick(key, v) {
+  const r = rowsOf(R?.usam).find((x) => x.source_key === key);
+  if (!r || pickOf(r) === v) return;
+  uPick[key] = v; uLimit = null; draw();
+  const { data, error } = await rpc('understand_choice_set', { p_choice: { [key]: v }, p_identity: null });
+  if (error || !data || data.ok !== true) {
+    delete uPick[key];
+    toast('Not changed: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'));
+    if (at === 'understand' && !C.$('#gr-sheet')) draw();
+    return;
+  }
+  await readSample(R);
+  if (R?.usam?.ok === true && Array.isArray(R.usam.rows)) delete uPick[key];   // the brain's rows now carry it
+  if (at === 'understand' && !C.$('#gr-sheet')) draw();
+}
+// FAST OR OVERNIGHT (seat overnight-batch 2026-11-12; decisions 1152 point 3, 1154 point 4): the factor and its source are the
+// brain's (understand_door). OVERNIGHT FIRST (1158): until she has chosen (understand_door 'chosen' false) the page shows
+// Overnight; her tap is kept at once (understand_door_set), and the press keeps the speed shown before it asks (doorKeep), so
+// what is pressed is what she saw. A brain without the second door has one speed and shows no cards.
+const DOORS = [['fast', 'As fast as possible'], ['overnight', 'Overnight']];
+const OVERNIGHT_WHEN = 'usually within a few hours, at the latest in 24';
+let doorBusy = false;
+async function readDoor(S) {
+  const { data, error } = await rpc('understand_door', { p_identity: null }).then((x) => x, (e) => ({ data: null, error: { message: String(e?.message ?? e) } }));
+  S.udoor = !error && data && data.ok === true ? data : null;
+}
+const doorF = (S) => { const f = Number(S?.udoor?.overnight?.price_factor); return Number.isFinite(f) && f > 0 && f < 1 ? f : null; };
+const doorOf = (S) => { if (doorF(S) === null) return 'fast'; if (uDoor) return uDoor; if (S.udoor.chosen === false) return 'overnight'; return S.udoor.door === 'overnight' ? 'overnight' : 'fast'; };
+const doorMul = (S) => (doorOf(S) === 'overnight' ? doorF(S) : 1);
+async function doorSet(S, v) {
+  const { data, error } = await rpc('understand_door_set', { p_door: v, p_identity: null }).then((x) => x, (e) => ({ data: null, error: { message: String(e?.message ?? e) } }));
+  if (error || !data || data.ok !== true) return { ok: false, note: String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') };
+  S.udoor = { ...S.udoor, door: data.door, chosen: true };
+  return { ok: true };
+}
+async function doorPick(v) {
+  const S = R;
+  if (!S || doorBusy || doorOf(S) === v) return;
+  doorBusy = true; uDoor = v; uLimit = null; draw();
+  const r = await doorSet(S, v);
+  doorBusy = false; uDoor = null;
+  if (!r.ok) toast('Not changed: ' + r.note);
+  if (at === 'understand' && !C.$('#gr-sheet')) draw();
+}
+// the press takes the speed the brain holds, so the speed shown is kept first when the brain does not hold it yet
+async function doorKeep(S) {
+  if (doorF(S) === null) return { ok: true };
+  if (S.udoor.chosen !== false && S.udoor.door === doorOf(S)) return { ok: true };
+  return doorSet(S, doorOf(S));
+}
 async function stopAll(S, keys, out, b) {
   b.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Stopping';
   const res = await Promise.all(keys.map((k) => rpc('source_read_approve', { p_source_key: k, p_mode: 'understand_stop', p_months: null, p_confirm: true }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) }))));
