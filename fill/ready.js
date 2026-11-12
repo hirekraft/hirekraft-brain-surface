@@ -1277,45 +1277,66 @@ function understandModel(S) {
 // (source_read_approve 'understand_stop'): what is mid-read finishes, nothing more is taken.
 // pressed: a mailbox keeps its groups, a drive has none, and both keep the limit the press gave them (seat understand-drives 2026-11-12)
 const pressedRow = (x) => (Array.isArray(x.groups) && x.groups.length > 0) || (x.ceiling_usd !== null && x.ceiling_usd !== undefined);
-function understandLive(S) {
-  // a mailbox counts here once it is pressed (its groups are kept); a sample alone is shown in How fast (speedCard)
-  const rows = (S.uprog ?? []).filter((x) => (x.state === 'reading' || x.state === 'at_ceiling') && pressedRow(x));
-  if (!rows.length) return S.uprogErr ? progressFailed('gs-ulive', 'Understanding your mail', S.uprogErr) : null;
-  const total = rows.reduce((a, x) => a + (Number(x.total) || 0), 0), done = rows.reduce((a, x) => a + (Number(x.done) || 0), 0);
+const pressRows = (S) => (S?.uprog ?? []).filter((x) => (x.state === 'reading' || x.state === 'at_ceiling') && pressedRow(x));
+// STEP 4 WHILE HER PRESS RUNS: THE TOP CARD IS THE PROGRESS (seat step4-pressed 2026-11-12, decision 1162.1). In large type: done
+// of total; what is out at the AI maker and what waits; the time; what is spent against her limit; Stop. Every number is the
+// brain's (understand_progress); the sign that it is alive is the one shared piece (workInto, mode pulse). What could not be
+// read is counted beside it (STANDING-CLAUSES). SUPERSEDED: a percentage card with a small amber line, and under it a second
+// card (understandLive) carrying the same press.
+function pressHero(S, rows) {
+  const sum = (k) => rows.reduce((a, x) => a + (Number(x[k]) || 0), 0);
+  const total = sum('total'), done = sum('done'), cnr = sum('could_not_read');
   const spent = rows.reduce((a, x) => a + (Number(x.so_far_usd ?? x.spent_usd) || 0), 0);
   const lim = rows.every((x) => Number.isFinite(Number(x.ceiling_usd)) && x.ceiling_usd !== null) ? rows.reduce((a, x) => a + Number(x.ceiling_usd), 0) : null;
-  const c = el('section', 'am-step gs-live'); c.id = 'gs-ulive';
-  c.appendChild(el('span', 'am-num', rows.some((x) => String(x.source_key || '').startsWith('drive:')) ? 'Understanding your mail and files' : 'Understanding your mail'));
-  c.appendChild(el('div', 'gs-big', num(done) + ' of ' + num(total)));
-  const bar = el('div', 'gs-bar gs-thick'); const i = el('i'); i.style.width = (total ? Math.min(100, Math.round((done / total) * 100)) : 0) + '%'; bar.appendChild(i); c.appendChild(bar);
-  // minutes left only when every reading mailbox has its pace measured (understand_progress pace_measured); on track only when
-  // every one has a measured total (on_track_usd), otherwise said plainly
-  const fastRows = rows.filter((x) => x.door !== 'overnight');
+  const drive = rows.some((x) => String(x.source_key || '').startsWith('drive:')), atc = rows.every((x) => x.state === 'at_ceiling');
+  const c = el('section', 'am-step gs-hero gs-press'); c.id = 'gs-uhero';
+  c.appendChild(el('span', 'am-num', 'Step 4 ' + DOT + ' Understand'));
+  const top = el('div', 'gs-herotop'), l = el('div'), big = el('div', 'gs-big gs-pbig');
+  big.append(K(el('span', null, num(done)), 'pd'), ' ', el('small', null, 'of'), ' ', K(el('span', null, num(total)), 'pt'));
+  l.append(big, el('p', 'gr-small', drive ? 'of the mail and files you chose are understood' : 'of the mail you chose is understood'));
+  const r = el('div', 'gs-ustate');
+  const w = K(el('div', 'gs-work'), 'work'); w.id = 'gs-uwork'; w.dataset.mode = 'pulse'; w.setAttribute('role', 'status'); workInto(w, S);
+  r.append(chip(atc ? '' : 'warn', atc ? 'Stopped at your limit' : 'Understanding'), w);
+  top.append(l, r);
+  const bar = el('div', 'gs-bar gs-thick'), i = K(el('i'), 'bar'); i.style.width = (total ? Math.min(100, Math.round((done / total) * 100)) : 0) + '%'; bar.appendChild(i);
+  c.append(top, bar);
+  // minutes left only when every source read as fast as possible has its pace measured; on track only when every one has a
+  // measured total (understand_progress pace_measured, on_track_usd); otherwise said plainly. Overnight results come back a
+  // whole part at a time, so no minute count is given for it, and that is said (seat overnight-batch).
+  const night = rows.filter((x) => x.door === 'overnight'), fastRows = rows.filter((x) => x.door !== 'overnight');
   const mins = fastRows.length && fastRows.every((x) => x.pace_measured === true && x.minutes_left !== null && x.minutes_left !== undefined) ? Math.max(...fastRows.map((x) => Number(x.minutes_left) || 0)) : null;
-  // WHICH DOOR (seat overnight-batch 2026-11-12): understand_progress says the door of each pressed source and how many items are out at
-  // the AI maker; overnight results arrive a whole part at a time, so no minute count is shown for it, and that is said.
-  const night = rows.filter((x) => x.door === 'overnight'), outN = night.reduce((a, x) => a + (Number(x.out_in_batches) || 0), 0), waitN = night.reduce((a, x) => a + (Number(x.waiting) || 0), 0);
-  if (night.length) {
-    c.appendChild(p('gr-small', (night.length === rows.length ? 'Overnight' : 'Overnight for ' + num(night.length) + ' of ' + num(rows.length)) + ': ' + num(outN) + ' out at the AI maker now, ' + num(Math.max(0, waitN - outN)) + ' waiting to be sent.'));
-    c.appendChild(p('gr-small', 'Results come back a whole part at a time, ' + OVERNIGHT_WHEN + ' after each part is sent, so the count above moves in jumps.'));
-  }
-  if (!rows.some((x) => typeof x.door === 'string')) c.appendChild(p('gr-small', mins === null ? 'Time: measuring the pace' : 'about ' + num(mins) + ' minutes left'));   // a brain without the second door: as it was
-  else if (night.length < rows.length) c.appendChild(p('gr-small', (night.length ? 'The rest, as fast as possible: ' : 'As fast as possible: ') + (mins === null ? 'measuring the pace' : 'about ' + num(mins) + ' minutes left')));
+  const outN = night.reduce((a, x) => a + (Number(x.out_in_batches) || 0), 0), waitN = Math.max(0, night.reduce((a, x) => a + (Number(x.waiting) || 0), 0) - outN);
   const track = rows.every((x) => x.on_track_usd !== null && x.on_track_usd !== undefined && Number.isFinite(Number(x.on_track_usd))) ? rows.reduce((a, x) => a + Number(x.on_track_usd), 0) : null;
-  c.appendChild(p(null, 'So far ' + usd2(spent) + (track !== null ? ', on track for ' + usd2(track) : ', on track for: measuring') + (lim !== null ? ' ' + DOT + ' your limit ' + usd2(lim) : '') + '.'));
+  const cell = (k, label, val, sub) => { const d = el('div', 'gs-pf'); d.append(el('small', null, label), K(el('b', null, val), k), K(el('small', 'gs-pfs', sub || ''), k + 's')); return d; };
+  const facts = el('div', 'gs-pfacts');
+  if (night.length) facts.appendChild(cell('o', night.length === rows.length ? 'Out at the AI maker now' : 'Overnight, out at the AI maker now', num(outN), num(waitN) + ' waiting to be sent'));
+  facts.appendChild(cell('t', 'Time left',
+    !fastRows.length ? 'Overnight' : mins === null ? 'measuring the pace' : 'about ' + num(mins) + ' minutes',
+    night.length ? (fastRows.length ? 'for what is read as fast as possible; overnight parts come back ' : 'each part comes back ') + 'usually within a few hours of being sent, at the latest in 24 hours' : ''));
+  facts.appendChild(cell('s', 'Spent so far', usd2(spent), lim !== null ? 'of your limit ' + usd2(lim) + ', never passed' : 'your limit could not be read'));
+  facts.appendChild(cell('k', 'On track for', track !== null ? usd2(track) : 'measuring', track !== null ? '' : 'a total is given once enough is read'));
+  c.appendChild(facts);
+  c.appendChild(K(p('gr-small gs-over', cnr > 0 ? num(cnr) + ' could not be read after three tries. ' + (cnr === 1 ? 'It is' : 'They are') + ' kept with the reason.' : ''), 'cn'));
+  c.lastChild.hidden = !(cnr > 0);
   if (S.uprogErr) c.appendChild(p('gr-small gs-over', NOREAD + ' It keeps going. The count above is the last one seen.'));
   if (rows.some((x) => x.state === 'at_ceiling')) c.appendChild(p('gr-small', 'It stopped before your limit. What is left is not read; you can raise the limit and press again.'));
   const exp = (S.uprog ?? []).reduce((a, x) => a + (Number(x.expired) || 0), 0);
   if (exp > 0) c.appendChild(p('gr-small gs-over', num(exp) + ' were not read by the AI maker within 24 hours. They were not billed and wait for your next press.'));
-  const out = p('gr-small', '');
-  const stop = btn('go ghost', 'Stop', async () => {
-    stop.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Stopping';
-    const res = await Promise.all(rows.map((x) => rpc('source_read_approve', { p_source_key: x.source_key, p_mode: 'understand_stop', p_months: null, p_confirm: true }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) }))));
-    out.className = 'gr-small'; out.textContent = res.map((r) => String(r?.note ?? r?.reason ?? 'no reason was given')).join(' ');
-    setTimeout(() => mount(C), 2500);
-  });
+  const out = p('gr-small', ''); out.id = 'gs-pout';
+  const stop = btn('go ghost', 'Stop', () => stopAll(R, pressRows(R).map((x) => x.source_key), out, stop)); stop.id = 'gs-pstop';
   const g = el('div', 'gr-go'); g.appendChild(stop); c.append(g, out);
-  c.appendChild(p('gr-small', 'It keeps going while you work, and you get one short email when it is done.'));
+  return c;
+}
+// HOW FAST AND THE BUTTON, WHILE HER PRESS RUNS, ARE ONE LINE (decision 1162.4): what is running, up to what, and that she is told.
+function nowLine(rows) {
+  const night = rows.filter((x) => x.door === 'overnight').length;
+  const lim = rows.every((x) => Number.isFinite(Number(x.ceiling_usd)) && x.ceiling_usd !== null) ? rows.reduce((a, x) => a + Number(x.ceiling_usd), 0) : null;
+  const c = el('section', 'am-step gs-nowline'); c.id = 'gs-unow';
+  const line = el('p', 'gs-nowsay');
+  line.append(el('b', null, night === rows.length ? 'Understanding overnight' : night === 0 ? 'Understanding as fast as possible' : 'Understanding, part of it overnight'));
+  if (lim !== null) line.append(' ' + DOT + ' ', el('span', null, 'up to'), ' ', K(el('b', null, usd2(lim)), 'lim'));
+  line.append(' ' + DOT + ' ', el('span', null, 'you get an email when it is done'));
+  c.append(line, p('gr-small', 'It keeps going while you work or close this page. Stop works any time and you pay only for what was read. How fast and your limit open again for your next press.'));
   return c;
 }
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1405,6 +1426,9 @@ function movedBlock(S) {
 // there is none yet, the one button starts the sample and says so; carrying her limit across the sample so that she is not
 // asked a second time is the brain's to do and is NOT BUILT (named in the seat's report), so the words do not promise it.
 // A re-read lands in place (draw, inPlace): every figure that can change is marked (K).
+// WHILE HER PRESS RUNS THE STEP HAS ANOTHER SHAPE (seat step4-pressed 2026-11-12, decision 1162): pressHero (the progress as the
+// top card), treeU read-only ("What you chose"), nowLine (How fast and the button as one line). heroU, treeU and speedCard as
+// described above are the step before a press and after it.
 // SUPERSEDED 2026-11-12, Alex's yes on 1158: the per-mailbox purpose buttons (MAILBOX_FOR), the four group check boxes with
 // mail_groups' estimate (groupsCard, readGroups, uOff), the Cost and Time card (understandShape), "Three quick questions" as
 // a card, the separate How fast rows (doorChoice), "Read a sample of those drives too" (sampleAgain: a second sample button
@@ -1416,7 +1440,7 @@ function movedBlock(S) {
 // only as the button words (seat step4-fresh).
 const CHOICES = [['understood', 'Understand'], ['findable', 'Keep searchable only']];
 let uPick = {};         // her taps not yet answered by the brain: { source_key: 'understood' | 'findable' }
-let uLimit = null, uDoor = null, inOpen = false, howOpen = false;
+let uLimit = null, uDoor = null, inOpen = false, howOpen = false, choseOpen = false, uGap = null;
 const LQ = String.fromCharCode(8220), RQ = String.fromCharCode(8221);
 const howLong = (m) => { const x = Number(m); if (m === null || m === undefined || !Number.isFinite(x)) return 'time not measured'; if (x < 1) return 'under a minute'; if (x < 90) return 'about ' + num(Math.round(x)) + ' minutes'; if (x < 48 * 60) return 'about ' + num(Math.round(x / 60)) + ' hours'; return 'about ' + num(Math.round(x / 1440)) + ' days'; };
 const rowsOf = (U) => (Array.isArray(U?.rows) ? U.rows : []);
