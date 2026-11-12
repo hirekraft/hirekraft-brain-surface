@@ -249,9 +249,6 @@ function drawSug() {
     for (const [q, id] of taps) { const c = el('button', 'vera-chip', q); c.type = 'button'; c.addEventListener('click', () => setupAsk(q, [id], null)); box.appendChild(c); }
     return;
   }
-  if (false) {   // SUPERSEDED 2026-11-12 (seat setup-vera): Call me something else on step 2; her name is changed from Settings
-    const n = el('button', 'vera-chip', 'Call me something else'); n.type = 'button'; n.addEventListener('click', rename); box.appendChild(n);
-  }
   // On Getting ready step 3 is answered on the card itself (fill/ready.js); her column keeps only questions about the step.
   if ((key === 'business' && !readyNow()) || (readyNow() === null && brainNow() && !brainNow().ready)) {
     const t = el('button', 'vera-chip vera-chip-main', key === 'business' ? 'Start: tell me about your business' : 'Your business: tell me in your words');
@@ -280,13 +277,10 @@ function greet() {
   if (!turns) return;
   if (r) { opener(r.key, turns); return; }   // beside a setup step: one line written for that step (seat setup-vera)
   if (!$('.vera-turn', turns)) greeted = '';   // a new conversation: she greets again
-  // ONCE on Getting ready (seat getting-ready-fix-1): not again for each step, nor when the step row is first drawn.
-  // SUPERSEDED 2026-11-12 (seat setup-vera, 1150.4): the one greeting for every step of Getting ready, and its line below.
-  else { const at = b.word + '|' + b.step; if (greeted === at) return; greeted = at; }
+  // SUPERSEDED 2026-11-12 (seat setup-vera, 1150.4): the one greeting for every step of Getting ready (seat getting-ready-fix-1).
+  { const at = b.word + '|' + b.step; if (greeted === at) return; greeted = at; }
   const d = turn();
-  if (r) {
-    d.appendChild(el('p', null, 'I walk you through getting your Tool ready. Interrupt me any time; ask about anything you see. What I am looking at is written just above.'));
-  } else {
+  {
     d.appendChild(el('p', null, 'You are not done with setup, so answers may be incomplete until the Brain says Ready.'));
     d.appendChild(el('p', null, b.step ? 'Where you are: ' + b.step : 'Where you are: ' + (b.word || 'the Brain is still being read')));
     const list = offers();
@@ -552,9 +546,17 @@ function intercept(e) {
   const isGo = e.type === 'click' && e.target.closest && e.target.closest('#panel-send');
   const isEnter = e.type === 'keydown' && e.key === 'Enter' && e.target && e.target.id === 'panel-input';
   if (!isGo && !isEnter) return;
-  if (!talk || talk.inPlace) { fromPanel = Date.now(); emptyAfter(); return; }
   const i = $('#panel-input');
   const v = (i?.value || '').trim();
+  // A SETUP QUESTION IS HERS, FREE (seat setup-vera): beside a step, a question that asks what it costs, how long it takes or
+  // where we are never reaches the box. If it turns out to hold a word that is not about setup, typed() sends it on.
+  if ((!talk || talk.inPlace) && !bypass && v && stepTaps() && askedOf(v).length) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    i.value = ''; grow();
+    typed(v);
+    return;
+  }
+  if (!talk || talk.inPlace) { fromPanel = Date.now(); emptyAfter(); return; }
   e.preventDefault(); e.stopImmediatePropagation();
   if (!v) return;
   i.value = ''; grow();
