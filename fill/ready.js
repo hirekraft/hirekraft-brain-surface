@@ -1354,7 +1354,110 @@ function understandModel(S) {
 // (source_read_approve 'understand_stop'): what is mid-read finishes, nothing more is taken.
 // pressed: a mailbox keeps its groups, a drive has none, and both keep the limit the press gave them (seat understand-drives 2026-11-12)
 const pressedRow = (x) => (Array.isArray(x.groups) && x.groups.length > 0) || (x.ceiling_usd !== null && x.ceiling_usd !== undefined);
-const pressRows = (S) => (S?.uprog ?? []).filter((x) => (x.state === 'reading' || x.state === 'at_ceiling') && pressedRow(x));
+// EVERYTHING HER PRESSES HOLD, DONE OR NOT (seat step4-after 2026-11-12): the top card and each row count from all of it.
+// SUPERSEDED: counting only the sources still reading or stopped at their part of the limit. On HireKraft the morning after
+// the overnight press (17 sources, 28,897 understood) step 4 said "433 of 706" and "Stopped at your limit $4.43": one drive.
+const pressAll = (S) => (S?.uprog ?? []).filter(pressedRow);
+const mailedOf = (x) => { const t = Date.parse(x?.mailed_at); return Number.isFinite(t) ? t : null; };   // the brain's own "this press was told done", where it says it
+// A PRESS IS SETTLED when none of its sources is being read, or the brain says every one was told done (then what is read
+// afterwards, new mail or a second try, is a quiet line and never the headline).
+const pressSettled = (S) => { const a = pressAll(S); return a.length > 0 && (a.every((x) => x.state !== 'reading') || a.every((x) => mailedOf(x) !== null)); };
+const pressRows = (S) => (pressSettled(S) ? [] : pressAll(S).filter((x) => x.state === 'reading' || x.state === 'at_ceiling'));
+const limOf = (rows) => (rows.length && rows.every((x) => x.ceiling_usd !== null && x.ceiling_usd !== undefined && Number.isFinite(Number(x.ceiling_usd))) ? rows.reduce((a, x) => a + Number(x.ceiling_usd), 0) : null);
+const pctOf = (done, total) => (total > 0 ? Math.floor((done / total) * 100) : null);
+const srcWords = (rows) => { const m = rows.filter((x) => String(x.source_key || '').startsWith('gmail:')).length, d = rows.length - m; return [m ? num(m) + (m === 1 ? ' mailbox' : ' mailboxes') : '', d ? num(d) + (d === 1 ? ' drive' : ' drives') : ''].filter(Boolean).join(' and '); };
+// WHAT A PRESS LEFT UNREAD AT A SOURCE'S PART OF HER LIMIT: one quiet line with its own numbers, never the headline and never
+// called her limit (she set one limit; the press shared it out).
+function leftLine(rows, lim) {
+  const a = rows.filter((x) => x.state === 'at_ceiling' && Number(x.waiting) > 0);
+  if (!a.length) return null;
+  const n = a.reduce((s, x) => s + Number(x.waiting), 0), part = limOf(a), sp = a.reduce((s, x) => s + (Number(x.so_far_usd ?? x.spent_usd) || 0), 0);
+  const l = p('gr-small gs-quiet', ''); l.id = 'gs-uleft';
+  l.append('Not read yet: ', K(el('b', null, num(n)), 'ln'), ' in ' + srcWords(a) + '. Your press set aside ' + (part !== null ? usd2(part) : 'a part') + (lim !== null ? ' of your ' + usd2(lim) : ' of your limit') + ' for ' + (a.length === 1 ? 'it' : 'them') + ' and ' + usd2(sp) + ' of that is used, so the reading stopped there. The rest of your limit was not touched. ' + (n === 1 ? 'It is' : 'They are') + ' in the list below for your next press.');
+  return l;
+}
+// ONE COUNT OF WHAT COULD NOT BE READ, opened to where and why (STANDING-CLAUSES: the count, each with its reason).
+const WHY_UNREAD = 'Each was sent to the AI three times and no usable answer came back. They stay searchable, and they are kept with that reason.';
+function nameOfSrc(S, key) {
+  const u = rowsOf(S.usam).find((x) => x.source_key === key) || (S.src?.rows ?? []).find((x) => x.source_key === key);
+  return String(u?.name || (String(key).startsWith('gmail:') ? String(key).slice(6) : 'A drive'));
+}
+function unreadFold(S, rows) {
+  const a = rows.filter((x) => Number(x.could_not_read) > 0), n = a.reduce((s, x) => s + Number(x.could_not_read), 0);
+  if (!n) return null;
+  const d = el('details', 'gs-fold gs-unread'); d.id = 'gs-ucnr'; d.open = cnrOpen; d.addEventListener('toggle', () => { cnrOpen = d.open; });
+  const sm = el('summary'); sm.append(K(el('b', null, num(n)), 'cn'), ' could not be read ' + DOT + ' see where and why'); d.appendChild(sm);
+  for (const x of a.slice().sort((q, r) => Number(r.could_not_read) - Number(q.could_not_read))) {
+    const r = el('div', 'gs-pl'), nm = nameOfSrc(S, x.source_key), v = el('span', 'gs-tval');
+    v.appendChild(el('b', 'gs-pv', num(x.could_not_read)));
+    r.append(el('span', null, nm), v);
+    d.appendChild(r);
+    const why = Array.isArray(x.could_not_read_why) ? x.could_not_read_why : null;   // the brain's own reasons in words, where it gives them
+    if (why) {
+      for (const w of why) d.appendChild(el('small', 'gs-srcnote', num(w.n) + ': ' + dotted(w.words)));
+      const out = el('div', 'gs-each'), b = btn('gr-link', 'See each', async () => {
+        b.disabled = true; out.replaceChildren(p('working no-late gr-small', 'Reading the list'));
+        const { data, error } = await rpc('understand_unread', { p_source: x.source_key, p_identity: null }).then((v2) => v2, (e) => ({ error: e }));
+        if (error || !data || data.ok !== true) { out.replaceChildren(p('gr-small', 'The list could not be read just now: ' + dotted(String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given')))); b.disabled = false; return; }
+        out.replaceChildren(...(data.items ?? []).map((it) => { const li = el('div', 'gs-pl'); li.append(el('span', null, String(it.name || 'No name')), el('small', 'gs-srcnote', String(it.words || ''))); return li; }));
+        if (Number(data.more) > 0) out.appendChild(el('small', 'gs-srcnote', 'and ' + num(data.more) + ' more'));
+        b.remove();
+      });
+      b.setAttribute('aria-label', 'See each one that could not be read in ' + nm);
+      d.append(b, out);
+    }
+  }
+  if (!a.some((x) => Array.isArray(x.could_not_read_why))) d.appendChild(p('gr-small', WHY_UNREAD));
+  return d;
+}
+// STEP 4 AFTER HER PRESS IS DONE TELLS THE PRESS'S STORY FIRST (seat step4-after 2026-11-12; Alex 12:12 PT: "should look like
+// searchable, where it gives you a precise percentage number at the beginning and all the progress"). One percentage of
+// everything she chose, its meter, the one Working line; then the story in one line: done, how many understood, what it cost
+// against her limit, how many could not be read, when she was told. What is still being understood afterwards, and what a
+// source's part of the limit left unread, are quiet lines under it. Then one button: Continue to Ready.
+function afterHero(S, rows) {
+  const sum = (k) => rows.reduce((a, x) => a + (Number(x[k]) || 0), 0);
+  const total = sum('total'), done = sum('done'), cnr = sum('could_not_read');
+  const spent = rows.reduce((a, x) => a + (Number(x.so_far_usd ?? x.spent_usd) || 0), 0), lim = limOf(rows);
+  const stopped = rows.some((x) => x.state === 'stopped'), tail = rows.filter((x) => x.state === 'reading');
+  const pct = pctOf(done, total), drive = rows.some((x) => String(x.source_key || '').startsWith('drive:'));
+  const c = el('section', 'am-step gs-hero gs-after'); c.id = 'gs-uhero';
+  c.appendChild(el('span', 'am-num', 'Step 4 ' + DOT + ' Understand'));
+  const top = el('div', 'gs-herotop'), l = el('div');
+  const say = el('p', 'gr-small'); say.append(K(el('span', null, num(done)), 'pd'), ' of ', K(el('span', null, num(total)), 'pt'), drive ? ' of the mail and files you chose are understood' : ' of the mail you chose is understood');
+  l.append(K(el('div', 'gs-pct', pct === null ? '' : num(pct) + '%'), 'pct'), say);
+  const r = el('div', 'gs-ustate');
+  const w = K(el('div', 'gs-work'), 'work'); w.id = 'gs-uwork'; w.setAttribute('role', 'status'); workInto(w, S);
+  r.append(chip(stopped ? '' : 'ok', stopped ? 'Stopped' : 'Done'), w);
+  top.append(l, r);
+  const bar = el('div', 'gs-bar gs-thick'), i = K(el('i'), 'bar'); i.style.width = (pct || 0) + '%'; bar.appendChild(i);
+  c.append(top, bar);
+  const st = el('p', 'gs-story'); st.id = 'gs-ustory';
+  const priced = rows.every((x) => x.priced_usd !== null && x.priced_usd !== undefined && Number.isFinite(Number(x.priced_usd))) ? rows.reduce((a, x) => a + Number(x.priced_usd), 0) : null;
+  const mt = rows.map(mailedOf).filter((t) => t !== null), mailed = mt.length ? Math.max(...mt) : null;
+  const bits = [[el('b', null, stopped ? 'Stopped' : 'Done')], [K(el('b', null, num(done)), 'sd'), ' understood'],
+    [K(el('b', null, usd2(spent)), 'ss'), ' spent' + (priced !== null ? ' of ' + usd2(priced) + ' priced' : '') + (lim !== null ? (priced !== null ? ' (your limit ' + usd2(lim) + ')' : ', of your limit ' + usd2(lim)) : '')]];
+  if (cnr > 0) bits.push([K(el('b', null, num(cnr)), 'sc'), ' could not be read']);
+  if (mailed !== null) bits.push(['email sent ' + new Date(mailed).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })]);
+  bits.forEach((b, n) => { if (n) st.append(' ' + DOT + ' '); const sp = el('span', 'gs-sbit'); sp.append(...b); st.appendChild(sp); });
+  c.appendChild(st);
+  if (tail.length) {
+    const tn = tail.reduce((a, x) => a + (Number(x.waiting) || 0), 0), to = tail.reduce((a, x) => a + (Number(x.out_in_batches) || 0), 0);
+    const q = p('gr-small gs-quiet', ''); q.id = 'gs-utail';
+    q.append('Still being understood: ', K(el('b', null, num(tn)), 'tn'), ' more in ' + srcWords(tail) + ' (new mail and files, or a second try)', K(el('span', null, to > 0 ? ', ' + num(to) + ' out at the AI maker' : ''), 'to'), '. Inside the same limit. ');
+    const out = el('span', null, ''), sb = btn('gr-link', 'Stop', () => stopAll(R, pressAll(R).filter((x) => x.state === 'reading').map((x) => x.source_key), out, sb)); sb.id = 'gs-tstop';
+    q.append(sb, ' ', out);
+    c.appendChild(q);
+  }
+  const ll = leftLine(rows, lim); if (ll) c.appendChild(ll);
+  const exp = sum('expired');
+  if (exp > 0) c.appendChild(p('gr-small gs-quiet', num(exp) + ' were not read by the AI maker within 24 hours. They were not billed and wait for your next press.'));
+  if (S.uprogErr) c.appendChild(p('gr-small gs-over', NOREAD + ' The count above is the last one seen.'));
+  const uf = unreadFold(S, rows); if (uf) c.appendChild(uf);
+  const g = el('div', 'gr-go'), go = btn('go', 'Continue to Ready', () => { at = 'ready'; draw(); window.scrollTo({ top: 0 }); }); go.id = 'gs-uready';
+  g.appendChild(go); c.appendChild(g);
+  return c;
+}
 // STEP 4 WHILE HER PRESS RUNS: THE TOP CARD IS THE PROGRESS (seat step4-pressed 2026-11-12, decision 1162.1). In large type: done
 // of total; what is out at the AI maker and what waits; the time; what is spent against her limit; Stop. Every number is the
 // brain's (understand_progress); the sign that it is alive is the one shared piece (workInto, mode pulse). What could not be
