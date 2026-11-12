@@ -18,7 +18,7 @@
 // priceWorks, understandQs); Your answers no longer shows what each mailbox is for.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 import { ic, card } from './setup.js?v=2026-11-10-setup-front-door';
-import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep, brainDoor, priceWorks, understandQs } from './ready.js?v=2026-11-12-understand-part';
+import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep, brainDoor, priceWorks, understandQs } from './ready.js?v=2026-11-12-step4-after';
 // SEAT ready-never-spins (2026-11-11): every brain call here goes through ready.js brainDoor (a real promise that cannot throw). The
 // client's own rpc call object has then and no catch: the two presses below that put .catch on it (Mark it old, the guide's name)
 // threw on press.
