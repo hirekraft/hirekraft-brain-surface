@@ -731,13 +731,6 @@ function searchCard(S) {
 // both. The one measured price that exists is for pictures in drives (source_pictures_state, the Scans page's own reading);
 // for pictures, recordings and scans in mail there is no price and no press yet, and the row says how the price will be
 // measured, never a guess. NOT HERE YET, said on the sheet: each held or unreadable item by name (no brain function lists them).
-function findLine(S) {
-  const F = S.road?.findable;
-  if (!F) return null;
-  const d = el('div', 'gs-findline'); d.id = 'gs-findline';
-  d.append(el('b', null, 'Findable: ' + num(F.pct) + '% of what can be read'), btn('gr-link', 'See what is read, and what is not', () => findSheet(S)));
-  return d;
-}
 function tRow(title, sub, value, act) {
   const d = el('div', 'gs-pl gs-trow'); const l = el('span'); l.appendChild(el('b', null, title)); if (sub) l.appendChild(el('small', null, sub));
   const r = el('span', 'gs-tval'); if (value !== null && value !== undefined) r.appendChild(el('b', 'gs-pv', value)); if (act) r.appendChild(act);
@@ -810,19 +803,6 @@ function creditAsk(S, cost, bal) {
   const gw = el('div', 'gr-go gs-two'); gw.append(go, btn('go ghost', 'Other amount', () => topUp(S)));
   d.append(gw, msg);
   return d;
-}
-// THE HEAD OF STEP 3 in the one shape: the price of what is checked (search_plan's), the time from the measured pace, and the
-// reading itself in the same place once it is pressed (liveCard).
-function searchShape(S) {
-  const P = S.splan && S.splan.ok === true ? S.splan : null;
-  const pick = P ? chosenOf(P) : [];
-  const cost = Math.round(pick.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100;
-  const mins = pick.length && pick.every((r) => r.minutes !== null && r.minutes !== undefined) ? Math.max(...pick.map((r) => Number(r.minutes) || 0)) : null;
-  const live = liveCard(S), done = roadSteps(S)[1].state === 'done';
-  return shape('Everything you connected is read once and gets a fingerprint of its meaning. You get search across your whole business, by what things are about.',
-    live && !pick.length ? 'as you agreed when you pressed' : !P ? 'measured before you press' : pick.length ? usd2(cost) + ', one time' : done ? 'nothing more to pay' : 'nothing checked',
-    live ? 'reading now' : mins !== null ? 'about ' + num(mins) + ' minutes' : pick.length ? 'measured once it starts' : done ? 'done' : 'measured before you press',
-    P ? 'Counted from your own mail and files, for free, at the AI companies' + String.fromCharCode(8217) + ' own prices from your AI meter. The pace is measured while it reads.' : 'Counting is free. The price is worked out from the count before you press.', live);
 }
 function understandShape(S) {
   const U = S.usam, live = understandLive(S);
@@ -925,21 +905,17 @@ async function readPlan(S, keepLast) {
   const pl = await planAsk(plan.months);
   if (pl.error) { if (!keepLast) S.splan = null; S.splanErr = pl.error.message; } else { S.splan = pl.data; S.splanErr = null; }
 }
-async function readSearchProgress(S) {
-  const { data, error } = await rpc('search_progress', {});
-  if (!error && data && data.ok === true) { S.sprog = data; S.sprogErr = null; }
-  else { S.sprogErr = String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'); if (S.sprog?.state !== 'reading') S.sprog = null; }   // the last count seen is kept, said as such
-}
-// While it reads, the live card and the progress rows are refreshed every 15 seconds (only on step 3, only while shown).
+// While anything is being read, the Working line at the top of step 3 is refreshed every 15 seconds from source_read_progress
+// (only on step 3, only while shown), in place; the rows and the percentage follow on the page's own re-read every minute.
 let sPoll = null;
 function searchPoll() {
   clearTimeout(sPoll);
-  if (R?.sprog?.state !== 'reading') return;
+  if (!(R?.prog ?? []).some((x) => x.state === 'reading')) return;
   sPoll = setTimeout(async () => {
-    if (C.$('#s-ready')?.hidden || at !== 'search' || C.$('#gr-sheet')) { searchPoll(); return; }
-    await readSearchProgress(R);
-    const live = C.$('#gs-live'), next = liveCard(R);
-    if (live && next) live.replaceWith(next); else if (!next) { mount(C); return; } else if (!live) { mount(C); return; }
+    if (!C.$('#s-ready')?.hidden && at === 'search' && !C.$('#gr-sheet')) {
+      const S = R, { data, error } = await rpc('source_read_progress');
+      if (R === S && !error && Array.isArray(data)) { S.prog = data; const w = C.$('#gs-work'), t = workWords(S); if (w) { w.textContent = t; w.hidden = !t; } }
+    }
     searchPoll();
   }, 15000);
 }
