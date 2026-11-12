@@ -678,53 +678,117 @@ function searchCard(S) {
     seg.appendChild(b);
   }
   c.append(el('b', 'gs-lab', 'How far back'), seg);
-  const list = el('div', 'gs-rows');
-  for (const r of planRows(P)) {
-    const row = el('label', 'gs-row gs-tick');
-    const l = el('span', 'gs-rl');
-    if (r.state === 'to_read') {
-      const box = el('input'); box.type = 'checkbox'; box.checked = !plan.off[r.key]; box.setAttribute('aria-label', String(r.label));
-      box.addEventListener('change', () => { plan.off[r.key] = !box.checked; draw(); });
-      row.appendChild(box);
-    }
-    l.append(el('b', null, String(r.label || r.key)), el('small', null, r.state === 'not_counted' ? String(r.note || 'Not counted yet.') : countLine(r)));
-    row.appendChild(l);
-    if (r.state === 'to_read') row.appendChild(el('b', 'gs-pv', usd2(r.usd) ?? 'not priced'));
-    else if (r.state === 'reading') row.appendChild(el('span', 'gs-chip gs-chip-warn', 'Reading ' + num(r.reading_done) + ' of ' + num(r.reading_total)));   // seat step3-reading-row (ruling G): already in line under her press, so no check box, no price, not in the total or the press (chosenOf takes only 'to_read')
-    else if (r.state === 'searchable') row.appendChild(el('span', 'gs-chip gs-chip-ok', 'Searchable'));
-    else row.appendChild(el('span', 'gs-chip', 'counting'));
-    list.appendChild(row);
-    if (r.kind === 'mail' && r.state !== 'not_counted') list.appendChild(oldRow(r));
-  }
-  c.appendChild(list);
+  const all = planRows(P), nm = names(S, all), own = ownDomain(P);
+  const reading = all.filter((r) => r.state === 'reading');
+  const need = all.filter((r) => r.state === 'to_read' || r.state === 'not_counted');
+  const done = all.filter((r) => r.state === 'searchable');
+  const rest = all.filter((r) => !reading.includes(r) && !need.includes(r) && !done.includes(r));   // a state this page does not know is shown, never dropped
+  if (reading.length) { const g = group('Reading now', 'gs-reading'); for (const r of reading) g.appendChild(srcRow(S, r, nm[r.key], own, 'reading')); c.appendChild(g); }
   const pick = chosenOf(P);
-  const cur = (P.choices ?? []).find((ch) => (ch.months ?? null) === (plan.months ?? null));
-  const complete = !cur || cur.complete !== false;
-  const items = pick.reduce((a, r) => a + (Number(r.to_read) || 0), 0);
-  const cost = Math.round(pick.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100;
-  const tl = el('div', 'gs-pl gs-totalrow');
-  tl.append(el('b', 'gs-total', complete ? 'Total: ' + num(items) + ' items' : 'Total: counting'), el('b', 'gs-pv', complete ? usd2(cost) : 'counting'));
-  c.appendChild(tl);
-  if (P.boundary) c.appendChild(el('p', 'am-small', String(P.boundary)));
-  const bal = Number(P.balance_usd);
-  const known = P.balance_known === true && Number.isFinite(bal);
-  const over = known && cost > bal + 0.000001;
-  if (!known) c.appendChild(p('gr-small', 'Your credit could not be read just now, so nothing can be started. It tries again on its own.'));
-  else if (over) c.appendChild(creditAsk(S, cost, bal));
-  else c.appendChild(p('gr-small', 'From your credit of ' + usd2(bal) + ', leaving ' + usd2(Math.max(0, bal - cost)) + '.'));
-  // Time: the chosen sources run side by side, so the longest one; any unmeasured one makes it "measuring".
-  const mins = pick.length && pick.every((r) => r.minutes !== null && r.minutes !== undefined) ? Math.max(...pick.map((r) => Number(r.minutes) || 0)) : null;
-  c.appendChild(p('gr-small', mins !== null ? 'about ' + num(mins) + ' minutes' : 'Time: measuring'));
-  c.appendChild(p(null, 'Untick anything you do not need. Counted for free; nothing is read until you press.'));
-  const out = p('gr-small', '');
-  if (pick.length) c.appendChild(termsLine(S));   // the yes to the terms, kept once, before the first press that costs
-  const go = btn('go', 'Make it all searchable', () => { if (!agreedNow()) { out.textContent = 'Check the box first: it says you agree to the terms of use.'; C.$('#gs-agree')?.focus(); return; } searchPreview(S, pick, out, go); });
-  go.disabled = !known || over || !complete || !pick.length || S.sprog?.state === 'reading';
-  const gw = el('div', 'gr-go'); gw.appendChild(go);
-  c.append(gw, out);
-  if (S.sprog?.state === 'reading') c.appendChild(p('gr-small', 'It is being made searchable now; the box above shows where it is.'));
+  if (need.length || rest.length) {
+    const g = group('Needs your yes', 'gs-need');
+    for (const r of need.concat(rest)) g.appendChild(srcRow(S, r, nm[r.key], own, 'need'));
+    const cur = (P.choices ?? []).find((ch) => (ch.months ?? null) === (plan.months ?? null));
+    const complete = !cur || cur.complete !== false;
+    const items = pick.reduce((a, r) => a + (Number(r.to_read) || 0), 0);
+    const cost = Math.round(pick.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100;
+    const tl = el('div', 'gs-pl gs-totalrow');
+    tl.append(el('b', 'gs-total', complete ? 'Total: ' + num(items) + ' items' : 'Total: counting'), el('b', 'gs-pv', complete ? usd2(cost) : 'counting'));
+    g.appendChild(tl);
+    if (P.boundary) g.appendChild(el('p', 'am-small', String(P.boundary)));
+    const bal = Number(P.balance_usd);
+    const known = P.balance_known === true && Number.isFinite(bal);
+    const over = known && cost > bal + 0.000001;
+    if (!known) g.appendChild(p('gr-small', 'Your credit could not be read just now, so nothing can be started. It tries again on its own.'));
+    else if (over) g.appendChild(creditAsk(S, cost, bal));
+    else g.appendChild(p('gr-small', 'From your credit of ' + usd2(bal) + ', leaving ' + usd2(Math.max(0, bal - cost)) + '.'));
+    // Time: the chosen sources run side by side, so the longest one; any unmeasured one makes it "measuring".
+    const mins = pick.length && pick.every((r) => r.minutes !== null && r.minutes !== undefined) ? Math.max(...pick.map((r) => Number(r.minutes) || 0)) : null;
+    g.appendChild(p('gr-small', mins !== null ? 'about ' + num(mins) + ' minutes' : 'Time: measuring'));
+    g.appendChild(p(null, 'Uncheck anything you do not need. Counted for free; nothing is read until you press.'));
+    const out = p('gr-small', '');
+    if (pick.length) g.appendChild(termsLine(S));   // the yes to the terms, kept once, before the first press that costs
+    const go = btn('go', 'Make them searchable', () => { if (!agreedNow()) { out.textContent = 'Check the box first: it says you agree to the terms of use.'; C.$('#gs-agree')?.focus(); return; } searchPreview(S, pick, out, go); });
+    go.disabled = !known || over || !complete || !pick.length || S.sprog?.state === 'reading';
+    const gw = el('div', 'gr-go'); gw.appendChild(go);
+    g.append(gw, out);
+    if (S.sprog?.state === 'reading') g.appendChild(p('gr-small', 'Something is being made searchable now; these can be started when it is done.'));
+    c.appendChild(g);
+  } else if (!reading.length) c.appendChild(p('gr-small gs-nothing', all.length ? 'Nothing here needs you: everything you connected is searchable.' : 'Connect something and it is counted here, for free.'));
+  if (done.length) {
+    const d = el('details', 'gs-fold'); d.id = 'gs-fold'; d.open = foldOpen;
+    d.addEventListener('toggle', () => { foldOpen = d.open; });
+    d.appendChild(el('summary', null, num(done.length) + (done.length === 1 ? ' source' : ' sources') + ' already searchable ' + DOT + ' show'));
+    for (const [kind, one, many] of [['mail', 'mailbox', 'mailboxes'], ['drive', 'drive or folder', 'drives and folders']]) {
+      const mine = done.filter((r) => (kind === 'mail') === (r.kind === 'mail'));
+      if (!mine.length) continue;
+      d.appendChild(el('b', 'gs-foldlab', num(mine.length) + ' ' + (mine.length === 1 ? one : many)));
+      for (const r of mine) d.appendChild(srcRow(S, r, nm[r.key], own, 'done'));
+    }
+    c.appendChild(d);
+  }
+  const fl = findLine(S); if (fl) c.appendChild(fl);
   c.appendChild(el('p', 'am-small', 'Connect or upload something more, and it joins the count before you press. Scans and photos are priced on their own.'));
   return c;
+}
+// THE FINDABLE TABLE (seat setup-findable-table; picture Part 2), opened over step 3 as a sheet: what is findable now, what is
+// being read, what waits for her yes, what is not read by her choice with its price, and what is not read and why. Every count
+// is brain_road's (the page reads drive_coverage only through it: that table is the service's). The percentage is the brain's
+// own and counts only what a press can read; a row that puts mail and drives together adds two of the brain's counts and says
+// both. The one measured price that exists is for pictures in drives (source_pictures_state, the Scans page's own reading);
+// for pictures, recordings and scans in mail there is no price and no press yet, and the row says how the price will be
+// measured, never a guess. NOT HERE YET, said on the sheet: each held or unreadable item by name (no brain function lists them).
+function findLine(S) {
+  const F = S.road?.findable;
+  if (!F) return null;
+  const d = el('div', 'gs-findline'); d.id = 'gs-findline';
+  d.append(el('b', null, 'Findable: ' + num(F.pct) + '% of what can be read'), btn('gr-link', 'See what is read, and what is not', () => findSheet(S)));
+  return d;
+}
+function tRow(title, sub, value, act) {
+  const d = el('div', 'gs-pl gs-trow'); const l = el('span'); l.appendChild(el('b', null, title)); if (sub) l.appendChild(el('small', null, sub));
+  const r = el('span', 'gs-tval'); if (value !== null && value !== undefined) r.appendChild(el('b', 'gs-pv', value)); if (act) r.appendChild(act);
+  d.append(l, r); return d;
+}
+const split = (a, b) => 'In mail: ' + num(a) + ' ' + DOT + ' in drives: ' + num(b) + '.';
+function findSheet(S) {
+  const D = S.road, F = D.findable, M = D.mail ?? {}, Fi = D.files ?? {}, NS = F.not_searchable ?? D.ready?.not_searchable ?? {};
+  const n = (v) => Number(v) || 0;
+  const body = el('div', 'gs-table'); body.id = 'gs-table';
+  body.appendChild(p('gr-small', 'The percentage counts only what a press can read. What cannot be read is said below with its reason, never counted as missing.'));
+  body.appendChild(tRow('Findable now', 'Emails, attachments and drive files', num(F.done)));
+  const rd = n(M.attach_reading) + n(Fi.waiting);
+  body.appendChild(tRow('Reading now', rd > 0 ? leftWords(F.minutes_left) : 'Nothing is being read just now', num(rd)));
+  const wy = n(M.attach_waiting) + n(Fi.waiting_yes);
+  body.appendChild(tRow('Waiting for your yes', 'Attachments and drive files a press can read. ' + split(M.attach_waiting, Fi.waiting_yes), num(wy),
+    wy > 0 ? btn('gr-link', 'Yes' + String.fromCharCode(8230), () => { sheet.close(); (C.$('#gs-need') || C.$('#gs-plan'))?.scrollIntoView({ block: 'start' }); }) : null));
+  const HOW = ' No price yet: it is measured on a small sample of your own before you are asked. Not offered yet.';
+  const pics = el('div', 'gs-tpics'); pics.id = 'gs-tpics';
+  const choice = [
+    [n(NS.pictures_and_video), 'Pictures and videos in mail', 'Logos and photos in emails. Reading text in a picture uses AI.' + HOW],
+    [n(NS.recordings), 'Recordings in mail', 'Voice recordings attached to emails. Turning speech into text uses AI.' + HOW],
+    [n(NS.scans), 'Scans in mail', 'Scanned documents attached to emails; they need text recognition, which uses AI.' + HOW],
+  ].filter((x) => x[0] > 0);
+  body.append(el('span', 'gs-oncelab gs-thead', 'Not read, your choice'), pics);
+  for (const [k, t, s] of choice) body.appendChild(tRow(t, s, num(k)));
+  const held = [n(NS.held_by_policy), n(NS.drive_held_by_policy)], cant = [n(NS.could_not_read), n(NS.drive_could_not_read)];
+  body.appendChild(el('span', 'gs-oncelab gs-thead', 'Not read, and why'));
+  body.appendChild(tRow('Held back as private or not business', 'A privacy rule kept them out, so nobody finds them by mistake. ' + split(held[0], held[1]), num(held[0] + held[1])));
+  body.appendChild(tRow('Could not be read', 'The Tool tried and could not open them. ' + split(cant[0], cant[1]), num(cant[0] + cant[1])));
+  if (n(NS.drive_not_read) > 0) body.appendChild(tRow('Read only in part', 'Drive files the Tool did not read to the end. This is ours to fix; there is nothing for you to do.', num(NS.drive_not_read)));
+  body.appendChild(el('p', 'am-small', 'Each of these by name, with where it is and its reason, is not listed here yet.'));
+  const acts = el('div', 'gr-chips'); acts.appendChild(btn('go ghost', 'Close', () => sheet.close())); body.appendChild(acts);
+  sheet.open('Findable: ' + num(F.pct) + '% of what can be read', body);
+  // pictures in drives: the one measured price, read when the table opens (owner only; the brain gives the price to nobody else)
+  pics.appendChild(p('working no-late gr-small', 'Reading the price of pictures in your drives'));
+  rpc('source_pictures_state', { p_source_key: null }).then(({ data, error }) => {
+    if (!pics.isConnected) return;
+    if (error || !data || data.ok !== true) { pics.replaceChildren(p('gr-small', 'Pictures in your drives could not be read just now (' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + ').')); return; }
+    if (!(n(data.waiting) > 0)) { pics.replaceChildren(); if (!choice.length) pics.appendChild(p('gr-small', 'Nothing is left out by choice.')); return; }
+    const price = usd2(data.estimate_usd);
+    pics.replaceChildren(tRow('Pictures in your drives', 'Scanned contracts, photographed receipts and invoices. Reading text in a picture uses AI. ' + (price ? 'The price is ' + String(data.measured || 'measured') + '.' : 'The price is shown to the owner.'),
+      num(data.waiting), btn('gr-link', (price ? price + ' ' + DOT + ' ' : '') + 'Yes' + String.fromCharCode(8230), () => { sheet.close(); brainPanel('scans'); })));
+  });
 }
 // THE AI CREDIT, ASKED WHERE THE FIRST MONEY IS SPENT (decision 1150.2; supersedes the AI credit step). Only when what is checked
 // costs more than the balance: the shortfall plus a quarter as a cushion, in whole dollars, never under the $5 a card payment
@@ -770,10 +834,10 @@ function searchShape(S) {
 function understandShape(S) {
   const U = S.usam, live = understandLive(S);
   const m = !!U && U.ok === true && U.state === 'done' && Number.isFinite(Number(U.predicted_remaining_usd));
-  return shape('Each conversation you choose is read once and the facts in it are noted. You get exact answers: who, how much, when.',
+  return shape('Each conversation you choose, and every file attached to it, is read once and the facts in it are noted. You get exact answers: who, how much, when.',
     live ? 'inside your limit' : m ? usd2(U.predicted_remaining_usd) + ', likely ' + usd2(U.low_usd) + ' to ' + usd2(U.high_usd) : 'measured before you press',
     live ? 'reading now' : 'measured once it starts',
-    m ? 'Measured on a sample of your own mail. Your limit is never passed.' : 'A sample of about $2 measures the price on your own mail first. Your limit is never passed.', live);
+    m ? 'Measured on a sample of your own mail and files. Your limit is never passed.' : 'A small sample, never more than $' + SAMPLE_CAP + ', measures the price on your own mail and files first. Your limit is never passed.', live);
 }
 // OLD, SEARCHABLE ONLY (decision 1140; source_mark_old, seat privacy-check-rules): a mailbox she only wants to search herself is
 // made searchable with no privacy check, so it costs less and nobody else can find what is in it. Her press, with a yes first;
