@@ -1421,7 +1421,7 @@ async function sampleAsk(S, confirm) {
   const r = await C.askBody({ understand_sample: { groups: chosenGroups(S), months: 24, confirm, cap: SAMPLE_CAP } }).catch((e) => ({ ok: false, error: String(e?.message ?? e) }));
   return r && typeof r === 'object' && r.ok === true ? r : { ...(r && typeof r === 'object' ? r : {}), ok: false, note: noteOf(r) };
 }
-async function readSample(S) { S.usam = await sampleAsk(S, false); }
+async function readSample(S) { S.usam = await sampleAsk(S, false); try { window.toolParts = rowsOf(S.usam).some((x) => x.part !== undefined); } catch (_) { /* Vera then leaves the words to the box */ } }   // toolParts: this brain keeps parts (fill/vera.js opens the sheet only then)
 // While the sample or a press reads, step 4 refreshes every 20 seconds (only while it is shown and nothing is typed or open).
 let uT = null;
 function uPoll() {
