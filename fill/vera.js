@@ -34,6 +34,17 @@
 // column too; her column is then for questions about the step, not for answering. (4) Her box grows with what she types
 // (Shift+Enter for a new line) and is empty after sending and when the step changes. (5) Her name is the one chosen
 // ("Call me something else" on the Start step; there is no Settings place for it yet), from body data-guide.
+// SEAT setup-vera (2026-11-12; decision 1150 point 4, picture Cbdma9KRabK6Pb5YFdwkrd Part 4; Alex's screenshots of 2026-11-10):
+// BESIDE EVERY SETUP STEP SHE IS ALREADY LOOKING AT IT: one opener line written for the step, and the step's two real
+// questions (what it costs, how long it takes) as taps. SETUP QUESTIONS ARE FREE AND INSTANT: answered here, with no model
+// and no call to lens-ask, from the step's own card as drawn (its Cost, Time and source line) and, on Make it searchable, from
+// the brain's own progress (search_progress, source_read_progress, read through brainCall as the person). A name close to a
+// connected mailbox ("Stratservice" for stratserv) is that mailbox. A typed question is hers to answer only when every word
+// of it is a setup word or names a connected mailbox; anything else goes to the box as before, which shows its plan and price
+// first. THE ANSWER FILLS HER COLUMN: the last free exchange only, no scroll box inside, at most two follow-ups, and in her
+// column no PDF / Spreadsheet / Slides and no Teach / Save as test (skin.css). SUPERSEDED here, Alex's yes on 1150: the generic
+// chips on a setup step (Call me something else, Where are we?, Is everything connected?, Why does it need my mailbox?) and
+// the one greeting for all steps. Her name is changed from Settings (window.veraRename).
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
 const $ = (s, r) => (r || document).querySelector(s);
@@ -41,7 +52,7 @@ const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
 const DOT = String.fromCharCode(183);
 const AP = String.fromCharCode(39);
 let greeted = '';
-let grGreeted = false;    // she greeted on Getting ready in this conversation
+let bypass = false;       // a typed question she could not answer for free is on its way to the box
 let btn = null;
 let home = null;          // where the panel lives when it is not in her column
 let fromPanel = 0;        // when a question last left her conversation (ms)
@@ -107,7 +118,7 @@ function stepKey(t) {
 // Where she is: the tab, and on the Brain its part and the open side panel.
 function looking() {
   const r = readyNow();
-  if (r) return ['Getting ready', r.step].filter(Boolean).join(', ');
+  if (r) return r.step ? 'step ' + r.step : 'Getting started';
   const tab = document.body.dataset.tab || '';
   if (tab === 'brain' || tab === 'ai') {
     const part = $('#br-tabs .br-tab.on')?.textContent?.trim();
@@ -227,12 +238,18 @@ function drawSug() {
   let box = $('#vera-sug');
   if (!box) { box = el('div', 'vera-sug'); box.id = 'vera-sug'; foot.before(box); }
   const { key, list } = suggestions();
-  const sig = talk && !talk.inPlace ? 'talk|' + talk.stage + '|' + talk.i : key + '|' + list.join('|') + '|' + (readyNow() ? 1 : 0);
+  let taps = !talk || talk.inPlace ? (readyNow() ? stepTaps() || [] : null) : null;   // on Getting started: the step's two questions and nothing else (none where no step card is shown, as for someone who is not the owner)
+  if (taps && $('#dock-turns .vera-free')) taps = [];     // under a free answer its own follow-ups are the taps: two at most on the screen
+  const sig = talk && !talk.inPlace ? 'talk|' + talk.stage + '|' + talk.i : taps ? 'step|' + key + '|' + taps.map((t) => t[0]).join('|') : key + '|' + list.join('|') + '|' + (readyNow() ? 1 : 0);
   if (box.dataset.sig === sig) return;   // unchanged: see drawLook
   box.dataset.sig = sig;
   box.replaceChildren();
   if (talk && !talk.inPlace) { drawTalkActs(box); return; }
-  if (key === 'connect' && readyNow()) {   // seat setup-front-door: Welcome is gone; she first appears on step 3
+  if (taps) {
+    for (const [q, id] of taps) { const c = el('button', 'vera-chip', q); c.type = 'button'; c.addEventListener('click', () => setupAsk(q, [id], null)); box.appendChild(c); }
+    return;
+  }
+  if (false) {   // SUPERSEDED 2026-11-12 (seat setup-vera): Call me something else on step 2; her name is changed from Settings
     const n = el('button', 'vera-chip', 'Call me something else'); n.type = 'button'; n.addEventListener('click', rename); box.appendChild(n);
   }
   // On Getting ready step 3 is answered on the card itself (fill/ready.js); her column keeps only questions about the step.
@@ -261,9 +278,10 @@ function greet() {
   if (!r && (!b || b.ready)) return;
   const turns = $('#dock-turns');
   if (!turns) return;
-  if (!$('.vera-turn', turns)) { greeted = ''; grGreeted = false; }   // a new conversation: she greets again
+  if (r) { opener(r.key, turns); return; }   // beside a setup step: one line written for that step (seat setup-vera)
+  if (!$('.vera-turn', turns)) greeted = '';   // a new conversation: she greets again
   // ONCE on Getting ready (seat getting-ready-fix-1): not again for each step, nor when the step row is first drawn.
-  if (r) { if (grGreeted) return; grGreeted = true; }
+  // SUPERSEDED 2026-11-12 (seat setup-vera, 1150.4): the one greeting for every step of Getting ready, and its line below.
   else { const at = b.word + '|' + b.step; if (greeted === at) return; greeted = at; }
   const d = turn();
   if (r) {
@@ -563,6 +581,7 @@ function placeColumn() {
     document.body.dataset.veraCol = 'on';
     drawLook(); drawSug();
     if (r.step) greet();   // not before the step row is drawn (she greeted twice: once on "Reading", once on the step)
+    if (head()) facts(false);   // the mailboxes' names, ready before she is asked about one
   } else if (!r && inColumn() && home) {
     home.after(p);
     p.classList.remove('in-vera');
@@ -629,6 +648,8 @@ function start() {
       if ($('#vera-look')) drawLook();
       const p = $('#panel');
       if (p && !p.hidden) { greet(); if (!talk || talk.inPlace) drawSug(); }
+      // her column follows the page while it fits the window; taller than the window it is part of the page, so its end is reached
+      const col = $('#gr-vera'); if (col) col.classList.toggle('vera-tall', col.offsetHeight > window.innerHeight - 32);
     });
   };
   new MutationObserver(later).observe(document.body, { attributes: true, attributeFilter: ['data-tab', 'data-panel', 'class'] });
