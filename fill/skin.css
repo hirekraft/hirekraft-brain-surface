@@ -3353,3 +3353,20 @@ body.gr-over .br-leave { display: none; }
 .gr-field.gs-tany { max-width: 260px; margin-bottom: calc(var(--u) * 2); }
 @media (max-width: 720px) { body .gs-pfacts { grid-template-columns: repeat(2, minmax(0, 1fr)); } body .gs-press .gs-work { justify-items: start; text-align: left; } body .gs-cfold > summary, body .gs-tamts .gr-amt, body #gs-pstop { min-height: 44px; } body .gr-field.gs-tany { max-width: none; } }
 @media (max-width: 420px) { body .gs-pfacts { grid-template-columns: minmax(0, 1fr); } }
+/* ONLY PART OF A SOURCE (seat understand-part, 2026-11-12, decision 1163): the quiet link under a row's name, and the sheet's years. Tokens only. No phone rule of its own: the rows wrap, and the link and each year are a full tap high at every width. */
+.gs-urow .gs-partlink { font-size: var(--t-small); font-weight: normal; padding: 0; justify-self: start; }
+.gs-years { display: grid; min-width: 0; }
+.gs-yr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px calc(var(--u) * 3); min-height: var(--tap); padding: 6px 0; border-top: 1px solid var(--line-2); cursor: pointer; min-width: 0; }
+.gs-yr:first-child { border-top: 0; }
+.gs-yr input { width: 20px; height: 20px; flex: none; accent-color: var(--act); }
+.gs-yrl { display: grid; gap: 2px; flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+.gs-yrl small { color: var(--ink-3); font-size: var(--t-small); }
+.gs-yr .gs-pv { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gs-pfiles { flex-wrap: wrap; gap: 6px calc(var(--u) * 3); align-items: center; }
+.gs-pfiles > span { display: grid; gap: 2px; flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.gs-pfiles small { color: var(--ink-3); font-size: var(--t-small); }
+.gs-pfiles .gr-seg { margin: 0; flex-wrap: wrap; }
+.gs-part .gs-pkeep { font-size: var(--t-small); }
+.gs-urow .gs-partlink { min-height: 44px; margin: -12px 0; display: inline-flex; align-items: center; }
+.gs-part .gs-pl > .gs-pv { white-space: nowrap; flex: none; }
+.gs-part .gs-pl > span:first-child { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
