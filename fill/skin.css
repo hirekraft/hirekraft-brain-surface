@@ -1157,6 +1157,18 @@ body { padding-bottom: var(--gap-lg); }
   font-size: var(--t-micro); color: var(--act); background: var(--act-soft); vertical-align: 1px;
 }
 .mailx-why { font-size: var(--t-micro); color: var(--ink-4); }
+/* TRUE MOTION (seat step4-pressed, 2026-11-12, decision 1164): the one sign that work is alive, made by fill/working.js workPulse and used by the header, step 3 and step 4. The Verrandi mark breathes only with the class wk-alive, which working.js gives it only on a live reading of the brain; without it the mark is still and grey. Reduced motion: no animation, the words stay. */
+.wk-pulse { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px calc(var(--u) * 1.5); min-width: 0; max-width: 100%; font-size: var(--t-small); color: var(--ink-3); overflow-wrap: anywhere; }
+.wk-pulse > span { min-width: 0; overflow-wrap: anywhere; }
+.wk-mark { flex: none; width: 16px; height: 16px; color: var(--ink-4); transform-origin: 50% 60%; }
+.wk-mark.wk-alive { color: var(--act); }
+.wk-sign > .wk-mark { margin-right: 2px; }
+.wk-beat .wk-n { font-variant-numeric: tabular-nums; }
+.wk-tick { color: var(--ink-4); }
+@media (prefers-reduced-motion: no-preference) {
+  .wk-mark.wk-alive { animation: wk-breathe 2.6s var(--ease) infinite; }
+  @keyframes wk-breathe { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.22); opacity: .5; } }
+}
 /* SOMEONE PRETENDING TO BE US (seat fraud-watch, 2026-10-27). The warning sits above the open email; in a list the
    first sentence rides on the row. --accent means something needs a person. */
 .mailx-warning { margin: 0 0 var(--gap); padding: calc(var(--u) * 3) calc(var(--u) * 4); border-left: 4px solid var(--accent);
@@ -3319,3 +3331,25 @@ body.gr-over .br-leave { display: none; }
 .gs-ucredit > .gs-tval { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px calc(var(--u) * 3); max-width: none; }
 .gs-sread { display: block; }
 @media (max-width: 720px) { body .gs-sp2 { grid-template-columns: minmax(0, 1fr); } body .gs-ustate { justify-items: start; } body .gs-speed .gs-limit { max-width: none; } body .gs-urow .gr-amt, body .gs-ucredit .gr-link { min-height: 44px; } body .gs-utree .gs-urow > .gs-rl { flex: 1 1 100%; } body .gs-utree .gs-urow > .gs-up { min-width: 0; } }
+/* STEP 4 WHILE A PRESS RUNS (seat step4-pressed, 2026-11-12, decision 1162): the top card is the progress in large type (gs-press: done of total, four facts, Stop), the list she chose is folded and read-only (gs-chose), How fast and its button are one line (gs-nowline). The Yes sheet's counts open to their lists (gs-cfold, decision 1161.2) and the Top up sheet has what is short first and a field for any amount (gs-tamts, gs-tany, decision 1160). Tokens only; phone rules on its own media line. */
+.gs-press .gs-pbig { font-variant-numeric: tabular-nums; }
+.gs-press .gs-pbig small { font-size: var(--t-body); color: var(--ink-3); }
+.gs-pfacts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(var(--u) * 3); min-width: 0; }
+.gs-pf { display: grid; gap: 2px; align-content: start; min-width: 0; padding: calc(var(--u) * 2.5) calc(var(--u) * 3); border: 1px solid var(--line-2); border-radius: var(--radius); overflow-wrap: anywhere; }
+.gs-pf > small { color: var(--ink-3); font-size: var(--t-small); }
+.gs-pf > b { font-family: var(--font-head); font-size: calc(var(--t-body) * 1.4); line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.gs-pf > .gs-pfs:empty { display: none; }
+.gs-press .gs-work { justify-items: end; text-align: right; background: none; padding: 0; color: var(--ink-3); font-weight: normal; }
+.gs-chose > .gs-fold { border-top: 0; padding-top: 0; }
+.gs-chose .gs-urow > .gs-chip { margin-left: auto; }
+.gs-nowline .gs-nowsay { margin: 0; font-size: calc(var(--t-body) * 1.1); overflow-wrap: anywhere; }
+.gs-cnt > .gs-pv { flex: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gs-cfold { border-top: 0; padding: 0 0 calc(var(--u) * 2); gap: 0; }
+.gs-cfold > summary { font-weight: var(--w-mid); font-size: var(--t-small); }
+.gs-cfold > .gs-cl { padding: 4px 0 4px calc(var(--u) * 3); font-size: var(--t-small); }
+.gs-cfold > .gs-cl > b { font-weight: var(--w-mid); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gs-tamts .gr-amt { display: inline-grid; justify-items: center; gap: 0; }
+.gs-tamts .gr-amt small { font-size: var(--t-micro); font-weight: normal; }
+.gr-field.gs-tany { max-width: 260px; margin-bottom: calc(var(--u) * 2); }
+@media (max-width: 720px) { body .gs-pfacts { grid-template-columns: repeat(2, minmax(0, 1fr)); } body .gs-press .gs-work { justify-items: start; text-align: left; } body .gs-cfold > summary, body .gs-tamts .gr-amt, body #gs-pstop { min-height: 44px; } body .gr-field.gs-tany { max-width: none; } }
+@media (max-width: 420px) { body .gs-pfacts { grid-template-columns: minmax(0, 1fr); } }

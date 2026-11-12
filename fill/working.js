@@ -17,6 +17,21 @@
 // The working sign is seat working-sign's (.working, .working-bar), not a second one.
 // The brain is called with then(ok, failed), never with catch on the call itself (STANDING-CLAUSES, decision 1145).
 // No regex literals and no backslashes (STANDING-CLAUSES).
+//
+// TRUE MOTION, ONE SHARED PIECE (seat step4-pressed, 2026-11-12, decision 1164). workPulse(it) is the one sign that work is alive,
+// for every place that shows running work (this chip and its list, step 3, step 4, any later wait; window.toolWorkParts.pulse):
+// 1. THE VERRANDI MARK BREATHES only while the brain's own reading says the work is alive: the brain's verdict (item.alive,
+//    brain file 2026-11-12-step4-pressed-1: a part out at the AI maker within its promised time, or something read or a part
+//    returned within the last minute), and on a brain that does not answer it yet, the brain's own two times (the item's
+//    last_moved against the reading's at: within a minute). A reading that failed, or that is older than a minute on this
+//    screen, is not a live reading: the mark is still. NEVER MOTION WITHOUT A LIVE READING. Still, it says so in words.
+// 2. THE HEARTBEAT: "last activity N seconds ago", from the brain's time of the last activity, ticking up on this screen
+//    between readings (one timer for every heartbeat on the page) and jumping back when the brain reports new activity.
+// 3. THE TICKER: what was just done, BY KIND ONLY (item.recent, kinds the brain names). Only a kind this file knows a word
+//    for is ever shown (KIND), so no name, subject or content can reach the screen through it.
+// Reduced motion: the mark does not animate (skin.css); the words stay.
+// SUPERSEDED 2026-11-12, decision 1164: the turning sign (.working) on the chip whenever something was in the list, moving
+// or not; the chip now carries the mark, which moves only on a live reading.
 
 let C = null;
 let W = null;            // the latest good answer
@@ -27,6 +42,8 @@ let reading = null;
 let seq = 0;
 let host = null, chip = null, list = null;
 let open = false;
+let gotAt = 0;           // this screen's clock when the latest good answer arrived
+let beatT = null;
 let prev = new Map();    // key -> item, from the answer before
 let finished = [];       // { item, at }
 
@@ -92,6 +109,78 @@ export function workBar(it) {
 
 function items() { return (W && Array.isArray(W.items)) ? W.items : []; }
 
+// ---- TRUE MOTION (decision 1164) ----
+const NS = 'http://www.w3.org/2000/svg';
+const LIVE_FOR = 60000;   // a reading older than this on the screen is not a live reading
+const KIND = { invoice: 'an invoice', contract: 'a contract', resume: 'a resume', meeting: 'a meeting note', payment: 'a payment', order: 'an order', rate: 'a rate', request: 'a request', promise: 'a promise', complaint: 'a complaint', conversation: 'a conversation', file: 'a file', picture: 'a picture', agreement: 'an agreement' };
+const ms = (t) => { const x = t ? Date.parse(t) : NaN; return Number.isFinite(x) ? x : null; };
+function mark(alive) {
+  const s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('focusable', 'false');
+  s.setAttribute('class', 'wk-mark' + (alive ? ' wk-alive' : ''));
+  const v = document.createElementNS(NS, 'path'); v.setAttribute('d', 'M5 6l7 12 7-12'); v.setAttribute('fill', 'none'); v.setAttribute('stroke', 'currentColor'); v.setAttribute('stroke-width', '3.2'); v.setAttribute('stroke-linecap', 'round'); v.setAttribute('stroke-linejoin', 'round');
+  s.appendChild(v);
+  return s;
+}
+// the brain's time of the last activity of an item, or null
+function lastAct(it) {
+  const a = ms(it.last_activity); if (a !== null) return a;
+  const m = ms(it.last_moved), s = ms(it.since);
+  return m === null ? s : s === null ? m : Math.max(m, s);
+}
+// ALIVE, BY THE BRAIN'S OWN READING ONLY. No reading, a failed one or an old one: not alive.
+export function workAlive(it) {
+  if (!W || failed || !gotAt || Date.now() - gotAt > LIVE_FOR || !it || it.state === 'stalled') return false;
+  if (typeof it.alive === 'boolean') return it.alive;
+  const at = ms(W.at), m = ms(it.last_moved), s = ms(it.since);
+  return at !== null && m !== null && (s === null || m >= s) && at - m <= 60000;
+}
+function agoWords(sec) {
+  if (sec < 120) return [num(Math.max(0, Math.floor(sec))), sec >= 1 && sec < 2 ? 'second ago' : 'seconds ago'];
+  const m = Math.floor(sec / 60); if (m < 120) return [num(m), 'minutes ago'];
+  return [num(Math.floor(m / 60)), 'hours ago'];
+}
+// one heartbeat's words, from the brain's two times and this screen's clock since the answer arrived
+function beatSay(b) {
+  const at = W ? ms(W.at) : null, a = Number(b.dataset.act);
+  if (at === null || !Number.isFinite(a) || !gotAt) return;
+  const w = agoWords((at - a) / 1000 + (Date.now() - gotAt) / 1000), n = b.querySelector('.wk-n'), u = b.querySelector('.wk-ago');
+  if (n && n.textContent !== w[0]) n.textContent = w[0];
+  if (u && u.textContent !== w[1]) u.textContent = w[1];
+}
+function beat() {
+  for (const b of document.querySelectorAll('.wk-beat')) beatSay(b);
+  // a failed reading, or one that grew old on this screen, stops every mark (the next good answer redraws them)
+  if (failed || (gotAt && Date.now() - gotAt > LIVE_FOR)) for (const m of document.querySelectorAll('.wk-mark.wk-alive')) m.setAttribute('class', 'wk-mark');
+}
+// THE ONE SIGN: the mark, the heartbeat, the ticker. it: one item of the brain's reading.
+export function workPulse(it) {
+  const p = el('span', 'wk-pulse'), alive = workAlive(it), a = lastAct(it);
+  p.appendChild(mark(alive));
+  if (it.state === 'stalled') {
+    const s = el('span', 'wk-stall'); const c = el('span', 'wk-n', num(it.idle_minutes)); c.setAttribute('translate', 'no');
+    s.append(el('span', null, 'Nothing has moved for'), ' ', c, ' ', el('span', null, Number(it.idle_minutes) === 1 ? 'minute' : 'minutes'));
+    p.appendChild(s);
+  } else if (failed) p.appendChild(el('span', 'wk-stall', 'could not be read just now'));
+  else {
+    if (Number(it.out) > 0 && it.alive === true) { const o = el('span', 'wk-out'); const c = el('span', 'wk-n', num(it.out)); c.setAttribute('translate', 'no'); o.append(c, ' ', el('span', null, 'out at the AI maker')); p.append(o, ' ' + DOT + ' '); }
+    if (a !== null) {
+      const b = el('span', 'wk-beat'); b.dataset.act = String(a);
+      const n = el('span', 'wk-n', ''); n.setAttribute('translate', 'no');
+      b.append(el('span', null, 'last activity'), ' ', n, ' ', el('span', 'wk-ago', ''));
+      beatSay(b);
+      p.appendChild(b);
+    } else p.appendChild(el('span', null, 'no activity reported yet'));
+  }
+  const kinds = (Array.isArray(it.recent) ? it.recent : []).map((k) => KIND[String(k)]).filter(Boolean).slice(0, 4);
+  if (kinds.length && it.state !== 'stalled' && !failed) {
+    const t = el('span', 'wk-tick'); t.append(el('span', null, 'just done:'));
+    kinds.forEach((w, i) => { t.append(i ? ' ' + DOT + ' ' : ' ', el('span', null, w)); });
+    p.appendChild(t);
+  }
+  if (!beatT) beatT = setInterval(beat, 1000);
+  return p;
+}
+
 function paint() {
   if (!host) return;
   const now = Date.now();
@@ -105,7 +194,8 @@ function paint() {
 
   chip.replaceChildren();
   chip.classList.toggle('wk-still', n === 0 || stalled === n);
-  const sign = el('span', n > 0 && stalled < n ? 'working no-late wk-sign' : 'wk-sign');
+  const sign = el('span', 'wk-sign');
+  if (n > 0) sign.appendChild(mark(its.some(workAlive)));
   if (failed) sign.append(el('span', null, 'Working:'), ' ', el('span', null, 'could not be read just now'));
   else if (n === 0) sign.append(el('span', null, 'Finished just now'));
   else {
@@ -129,6 +219,7 @@ function paint() {
     li.dataset.key = it.key;
     const t = el('p', 'wk-what'); t.appendChild(workTitle(it));
     li.append(t, workBar(it), workFacts(it));
+    if (it.state !== 'stalled') li.appendChild(workPulse(it));   // a line that is not moving already says so in its facts
     ul.appendChild(li);
   }
   for (const f of finished) {
@@ -172,7 +263,7 @@ function took(data) {
   for (const [k, it] of prev) if (!next.has(k) && !finished.some((f) => f.item.key === k)) finished.push({ item: it, at: now });
   finished = finished.filter((f) => !next.has(f.item.key));
   prev = next;
-  W = data; failed = null; absent = false;
+  W = data; failed = null; absent = false; gotAt = Date.now();
   window.toolWork = data;
   try { document.dispatchEvent(new CustomEvent('tool:work', { detail: data })); } catch (_) { /* a listener's own trouble is not this file's */ }
 }
@@ -214,7 +305,7 @@ function tick(now) {
 export function initWorking(ctx) {
   if (C) return;
   C = ctx;
-  window.toolWorkParts = { facts: workFacts, bar: workBar, title: workTitle };   // one wording of a line of work, for any screen that shows one
+  window.toolWorkParts = { facts: workFacts, bar: workBar, title: workTitle, pulse: workPulse, alive: workAlive };   // one wording of a line of work, for any screen that shows one
   mount();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(true); });
   document.addEventListener('tool:work-refresh', () => { reading = null; seq++; tick(true); });

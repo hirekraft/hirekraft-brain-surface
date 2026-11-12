@@ -70,7 +70,7 @@
 // SEAT step4-fresh (2026-11-12; decision 1158, picture RYtvsKoVGVx2ELoeqN5PNx): step 4 rebuilt as the approved fresh look on step 3's
 // own tree. See STEP 4, THE FRESH LOOK above heroU. The line under the steps names the step that is open (it named the first
 // step not done: "Step 3 of 5" while step 4 was open).
-import { roadSteps } from './brainroom.js?v=2026-11-12-step4-words';
+import { roadSteps } from './brainroom.js?v=2026-11-12-step4-pressed';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
@@ -485,18 +485,41 @@ const PRESS = () => ({ sb: C.sb, el: (t, c) => el(t, c), askBody: C.askBody, she
 // payment is shown, never added to the balance (HQ money rule, 2026-11-07).
 const cardFee = (a) => Math.round((Math.ceil(((a + 0.30) / (1 - 0.029)) * 100) / 100 - a) * 100) / 100;
 function cardOf(S) { return S.ai?.plain?.balance?.card ?? null; }
-function topUp(S) {
+// WHAT IS SHORT COMES FIRST (seat step4-pressed 2026-11-12, decision 1160; Alex needed $123.68 and was offered $25 / $50 /
+// $100 / $250): opened from a shortfall (short, in dollars) the sheet offers that amount rounded up to the whole dollar first,
+// already chosen, then the fixed amounts, and a field for any amount from the smallest card payment up. The fee line follows
+// whatever is chosen. Opened plainly: the fixed amounts and the field.
+const MINPAY = 5;       // the smallest card payment (topup_start's own floor)
+function topUp(S, short) {
+  const need = Number.isFinite(Number(short)) && short !== null && Number(short) > 0 ? Math.max(MINPAY, Math.ceil(Number(Number(short).toFixed(6)))) : null;
   const pay = !!S.marks?.payments;
   const card = cardOf(S);
   const test = !card || card.mode !== 'live';
   const body = el('div');
   body.appendChild(p('gr-small', pay ? "You pay on Stripe's own page; the Tool never sees your card. Your balance goes up when the payment is through." : 'Top up by card is coming. For now your request goes to Verrandi, who adds it to your balance and tells you.'));
   if (pay && test) body.appendChild(p('gr-small gr-test', 'Card payments are in test mode: on Stripe use the test card 4242 4242 4242 4242, any future date, any 3 digits. A test payment is shown here and is never added to your balance.'));
-  let pick = 50;
-  const fee = p('gr-small gr-fee', '');
-  const say = () => { yes.textContent = (pay ? 'Pay $' : 'Ask for $') + pick; if (pay) { const f = cardFee(pick); fee.textContent = 'Top-up $' + pick.toFixed(2) + ' + card fee at cost $' + f.toFixed(2) + ' = $' + (pick + f).toFixed(2) + '. The fee is what the card company charges, passed on exactly.'; } };
-  const seg = el('div', 'gr-seg');
-  for (const a of [25, 50, 100, 250]) { const b = btn('gr-amt' + (a === pick ? ' on' : ''), '$' + a, () => { pick = a; seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); say(); }); seg.appendChild(b); }
+  let pick = need !== null ? need : 50;
+  const fee = p('gr-small gr-fee', ''); fee.id = 'gs-tfee';
+  const amt = (a) => (Number.isInteger(a) ? String(a) : a.toFixed(2));
+  const good = () => Number.isFinite(pick) && pick >= MINPAY;
+  const say = () => {
+    yes.disabled = !good();
+    yes.textContent = (pay ? 'Pay $' : 'Ask for $') + (good() ? amt(pick) : '0');
+    if (!good()) { fee.textContent = 'The smallest card payment is $' + MINPAY + '.'; return; }
+    if (pay) { const f = cardFee(pick); fee.textContent = 'Top-up $' + pick.toFixed(2) + ' + card fee at cost $' + f.toFixed(2) + ' = $' + (pick + f).toFixed(2) + '. The fee is what the card company charges, passed on exactly.'; } else fee.textContent = '';
+  };
+  const seg = el('div', 'gr-seg gs-tamts');
+  const any = el('input'); any.id = 'gs-tany'; any.type = 'number'; any.min = String(MINPAY); any.step = '1'; any.inputMode = 'decimal';
+  const marks = (b) => seg.querySelectorAll('button').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+  for (const a of (need !== null ? [need] : []).concat([25, 50, 100, 250].filter((x) => x !== need))) {
+    const b = btn('gr-amt' + (a === pick ? ' on' : ''), '', () => { pick = a; any.value = ''; marks(b); say(); });
+    b.dataset.amt = String(a); b.setAttribute('aria-pressed', a === pick ? 'true' : 'false');
+    b.appendChild(el('b', null, '$' + a)); if (a === need) b.appendChild(el('small', null, 'what is short'));
+    seg.appendChild(b);
+  }
+  any.addEventListener('input', () => { const v = Number(any.value); pick = any.value === '' ? NaN : Math.round(v * 100) / 100; marks(null); say(); });
+  const anyLab = el('label', 'gr-field gs-tany'); anyLab.append(el('span', null, 'Any amount, $'), any);
+  if (need !== null) body.appendChild(p('gr-small', 'You are ' + usd2(Number(short)) + ' short for what you chose' + (need > Number(short) ? ': $' + need + ' covers it' + (need === MINPAY && Number(short) < MINPAY ? ' ($' + MINPAY + ' is the smallest card payment).' : '.') : '.')));
   const out = p('gr-small', '');
   const yes = btn('go', (pay ? 'Pay $' : 'Ask for $') + pick, async () => {
     yes.disabled = true; no.disabled = true; out.className = 'working no-late gr-small'; out.textContent = pay ? 'Opening the payment page' : 'Sending your request';
@@ -511,9 +534,7 @@ function topUp(S) {
   const no = btn('go ghost', 'Not now', () => sheet.close());
   const acts = el('div', 'gr-chips'); acts.append(yes, no);
   say();
-  body.append(seg);
-  if (pay) body.append(fee);
-  body.append(acts, out);
+  body.append(seg, anyLab, fee, acts, out);
   if (pay) body.append(autoBlock(S));
   sheet.open('Top up your AI balance', body);
 }
@@ -685,13 +706,40 @@ function workWords(S) {
 // THE WORKING LINE IS THE ONE INDICATOR'S (fill/working.js, seat work-indicator, decision 1152.1): the same reading it shows in
 // the header (window.toolWork, kept current by its tool:work event) in its own wording (window.toolWorkParts), one line for
 // each piece of running work. Never a second reading or a second wording of it.
+// EACH STEP'S TOP CARD SHOWS ONLY ITS OWN WORK (seat step4-pressed 2026-11-12, decision 1162.2): step 3 what is being made
+// searchable, step 4 what is being understood. The header's indicator stays the one place for all of it. SUPERSEDED: every
+// running line on both steps (a mailbox being made searchable stood on step 4's card).
+// THE SIGN THAT IT IS ALIVE is the one shared piece (fill/working.js workPulse, decision 1164), never a second one.
+const STEP_WORK = { 'gs-work': ['searchable', 'pictures', 'privacy'], 'gs-uwork': ['understand', 'agreements'] };
 function workInto(w, S) {
   const W = window.toolWork, parts = window.toolWorkParts;
   if (W && Array.isArray(W.items) && parts) {
-    w.replaceChildren(...W.items.map((it) => { const l = el('span', 'gs-workline'); l.append(parts.title(it), ' ' + DOT + ' ', parts.facts(it)); return l; }));
-    w.hidden = !W.items.length; return;
+    const mine = STEP_WORK[w.id], its = W.items.filter((it) => !mine || mine.includes(it.kind));
+    if (w.dataset.mode === 'pulse') {   // step 4 while a press runs: the card's numbers are its own; here only the sign of life
+      const it = its.find((x) => x.kind === 'understand');
+      w.replaceChildren(...(it && parts.pulse ? [parts.pulse(pressItem(it, W, S))] : [])); w.hidden = !w.children.length; return;
+    }
+    w.replaceChildren(...its.map((it) => { const l = el('span', 'gs-workline'); l.append(parts.title(it), ' ' + DOT + ' ', parts.facts(it)); if (parts.pulse && it.state !== 'stalled') l.append(' ', parts.pulse(it)); return l; }));
+    w.hidden = !its.length; return;
   }
+  if (w.id === 'gs-uwork') { w.replaceChildren(); w.hidden = true; return; }   // the older reading below is step 3's work only
   const t = workWords(S); w.textContent = t; w.hidden = !t;
+}
+// NOT MOVING IS COUNTED FROM THE PRESS, AND NEVER SAID OF A PART THAT IS OUT (decision 1162.5). A brain that gives its own
+// verdict (item.alive, brain file 2026-11-12-step4-pressed-1) is taken as it is. One that does not yet counted from the last
+// thing read, which could be an earlier sample's ("Nothing has moved for 312 minutes", seconds after Alex's press), and knew
+// nothing of parts out at the AI maker. For that brain the item is put right here from its own two times (last_moved, since)
+// and from understand_progress (how many are out), and only for this card.
+function pressItem(it, W, S) {
+  if (typeof it.alive === 'boolean') return it;
+  const out = pressRows(S).reduce((a, x) => a + (Number(x.out_in_batches) || 0), 0);
+  const at = Date.parse(W.at), m = Date.parse(it.last_moved), si = Date.parse(it.since);
+  const from = Math.max(Number.isFinite(m) ? m : 0, Number.isFinite(si) ? si : 0);
+  const idle = Number.isFinite(at) && from > 0 ? Math.max(0, Math.floor((at - from) / 60000)) : null;
+  const still = out === 0 && idle !== null && idle >= (Number(it.stall_after) || 6);
+  // parts out, on a press younger than the 24 hours the AI maker promises: every part out is within its promised time, so it is alive
+  const within = out > 0 && !S.uprogErr && Number.isFinite(at) && Number.isFinite(si) && at - si < 24 * 3600000;
+  return { ...it, state: still ? 'stalled' : 'working', idle_minutes: idle === null ? it.idle_minutes : idle, out, alive: within ? true : undefined };
 }
 // THE ANSWER FIRST: one percentage for everything searchable (brain_road: done of what can be read), the Working line, what
 // searchable gets her, a box to try it on what is already searchable (the Tool's own conversation, as a find; her guide's
@@ -956,7 +1004,7 @@ function creditAsk(S, cost, bal) {
     if (error || !data || data.ok !== true || !data.url) { msg.className = 'gr-small'; msg.textContent = 'Not started: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; go.disabled = false; return; }
     location.href = String(data.url);
   });
-  const gw = el('div', 'gr-go gs-two'); gw.append(go, btn('go ghost', 'Other amount', () => topUp(S)));
+  const gw = el('div', 'gr-go gs-two'); gw.append(go, btn('go ghost', 'Other amount', () => topUp(S, gap)));
   d.append(gw, msg);
   return d;
 }
@@ -1202,10 +1250,14 @@ const CARDS = {
   // STEP 4 · UNDERSTAND, THE FRESH LOOK (seat step4-fresh, 2026-11-12, decision 1158): the answer first, the live card while a
   // press reads, What to understand, How fast with the one button. See STEP 4, THE FRESH LOOK above heroU.
   understand(S, st) {
-    const out = [heroU(S)];
-    const live = understandLive(S); if (live) out.push(live);
-    out.push(treeU(S));
-    const sp = speedCard(S); if (sp) out.push(sp);
+    // A STEP CHANGES SHAPE ONCE PRESSED (seat step4-pressed 2026-11-12, decision 1162): while her press runs the step is about
+    // that press: the top card is the progress, what she chose is read-only, and How fast with its button is one line.
+    const pr = pressRows(S), out = pr.length ? [pressHero(S, pr), treeU(S, true), nowLine(pr)] : [heroU(S)];
+    if (!pr.length) {
+      if (S.uprogErr) out.push(progressFailed('gs-ulive', 'Understanding your mail', S.uprogErr));
+      out.push(treeU(S));
+      const sp = speedCard(S); if (sp) out.push(sp);
+    }
     if (st.find((x) => x.k === 'understand')?.done) { const acts = el('div', 'gr-chips'); acts.id = 'gs-ucont'; acts.appendChild(btn('go ghost', 'Continue', () => { at = 'ready'; draw(); window.scrollTo({ top: 0 }); })); out.push(acts); }
     return out;
   },
@@ -1277,45 +1329,66 @@ function understandModel(S) {
 // (source_read_approve 'understand_stop'): what is mid-read finishes, nothing more is taken.
 // pressed: a mailbox keeps its groups, a drive has none, and both keep the limit the press gave them (seat understand-drives 2026-11-12)
 const pressedRow = (x) => (Array.isArray(x.groups) && x.groups.length > 0) || (x.ceiling_usd !== null && x.ceiling_usd !== undefined);
-function understandLive(S) {
-  // a mailbox counts here once it is pressed (its groups are kept); a sample alone is shown in How fast (speedCard)
-  const rows = (S.uprog ?? []).filter((x) => (x.state === 'reading' || x.state === 'at_ceiling') && pressedRow(x));
-  if (!rows.length) return S.uprogErr ? progressFailed('gs-ulive', 'Understanding your mail', S.uprogErr) : null;
-  const total = rows.reduce((a, x) => a + (Number(x.total) || 0), 0), done = rows.reduce((a, x) => a + (Number(x.done) || 0), 0);
+const pressRows = (S) => (S?.uprog ?? []).filter((x) => (x.state === 'reading' || x.state === 'at_ceiling') && pressedRow(x));
+// STEP 4 WHILE HER PRESS RUNS: THE TOP CARD IS THE PROGRESS (seat step4-pressed 2026-11-12, decision 1162.1). In large type: done
+// of total; what is out at the AI maker and what waits; the time; what is spent against her limit; Stop. Every number is the
+// brain's (understand_progress); the sign that it is alive is the one shared piece (workInto, mode pulse). What could not be
+// read is counted beside it (STANDING-CLAUSES). SUPERSEDED: a percentage card with a small amber line, and under it a second
+// card (understandLive) carrying the same press.
+function pressHero(S, rows) {
+  const sum = (k) => rows.reduce((a, x) => a + (Number(x[k]) || 0), 0);
+  const total = sum('total'), done = sum('done'), cnr = sum('could_not_read');
   const spent = rows.reduce((a, x) => a + (Number(x.so_far_usd ?? x.spent_usd) || 0), 0);
   const lim = rows.every((x) => Number.isFinite(Number(x.ceiling_usd)) && x.ceiling_usd !== null) ? rows.reduce((a, x) => a + Number(x.ceiling_usd), 0) : null;
-  const c = el('section', 'am-step gs-live'); c.id = 'gs-ulive';
-  c.appendChild(el('span', 'am-num', rows.some((x) => String(x.source_key || '').startsWith('drive:')) ? 'Understanding your mail and files' : 'Understanding your mail'));
-  c.appendChild(el('div', 'gs-big', num(done) + ' of ' + num(total)));
-  const bar = el('div', 'gs-bar gs-thick'); const i = el('i'); i.style.width = (total ? Math.min(100, Math.round((done / total) * 100)) : 0) + '%'; bar.appendChild(i); c.appendChild(bar);
-  // minutes left only when every reading mailbox has its pace measured (understand_progress pace_measured); on track only when
-  // every one has a measured total (on_track_usd), otherwise said plainly
-  const fastRows = rows.filter((x) => x.door !== 'overnight');
+  const drive = rows.some((x) => String(x.source_key || '').startsWith('drive:')), atc = rows.every((x) => x.state === 'at_ceiling');
+  const c = el('section', 'am-step gs-hero gs-press'); c.id = 'gs-uhero';
+  c.appendChild(el('span', 'am-num', 'Step 4 ' + DOT + ' Understand'));
+  const top = el('div', 'gs-herotop'), l = el('div'), big = el('div', 'gs-big gs-pbig');
+  big.append(K(el('span', null, num(done)), 'pd'), ' ', el('small', null, 'of'), ' ', K(el('span', null, num(total)), 'pt'));
+  l.append(big, el('p', 'gr-small', drive ? 'of the mail and files you chose are understood' : 'of the mail you chose is understood'));
+  const r = el('div', 'gs-ustate');
+  const w = K(el('div', 'gs-work'), 'work'); w.id = 'gs-uwork'; w.dataset.mode = 'pulse'; w.setAttribute('role', 'status'); workInto(w, S);
+  r.append(chip(atc ? '' : 'warn', atc ? 'Stopped at your limit' : 'Understanding'), w);
+  top.append(l, r);
+  const bar = el('div', 'gs-bar gs-thick'), i = K(el('i'), 'bar'); i.style.width = (total ? Math.min(100, Math.round((done / total) * 100)) : 0) + '%'; bar.appendChild(i);
+  c.append(top, bar);
+  // minutes left only when every source read as fast as possible has its pace measured; on track only when every one has a
+  // measured total (understand_progress pace_measured, on_track_usd); otherwise said plainly. Overnight results come back a
+  // whole part at a time, so no minute count is given for it, and that is said (seat overnight-batch).
+  const night = rows.filter((x) => x.door === 'overnight'), fastRows = rows.filter((x) => x.door !== 'overnight');
   const mins = fastRows.length && fastRows.every((x) => x.pace_measured === true && x.minutes_left !== null && x.minutes_left !== undefined) ? Math.max(...fastRows.map((x) => Number(x.minutes_left) || 0)) : null;
-  // WHICH DOOR (seat overnight-batch 2026-11-12): understand_progress says the door of each pressed source and how many items are out at
-  // the AI maker; overnight results arrive a whole part at a time, so no minute count is shown for it, and that is said.
-  const night = rows.filter((x) => x.door === 'overnight'), outN = night.reduce((a, x) => a + (Number(x.out_in_batches) || 0), 0), waitN = night.reduce((a, x) => a + (Number(x.waiting) || 0), 0);
-  if (night.length) {
-    c.appendChild(p('gr-small', (night.length === rows.length ? 'Overnight' : 'Overnight for ' + num(night.length) + ' of ' + num(rows.length)) + ': ' + num(outN) + ' out at the AI maker now, ' + num(Math.max(0, waitN - outN)) + ' waiting to be sent.'));
-    c.appendChild(p('gr-small', 'Results come back a whole part at a time, ' + OVERNIGHT_WHEN + ' after each part is sent, so the count above moves in jumps.'));
-  }
-  if (!rows.some((x) => typeof x.door === 'string')) c.appendChild(p('gr-small', mins === null ? 'Time: measuring the pace' : 'about ' + num(mins) + ' minutes left'));   // a brain without the second door: as it was
-  else if (night.length < rows.length) c.appendChild(p('gr-small', (night.length ? 'The rest, as fast as possible: ' : 'As fast as possible: ') + (mins === null ? 'measuring the pace' : 'about ' + num(mins) + ' minutes left')));
+  const outN = night.reduce((a, x) => a + (Number(x.out_in_batches) || 0), 0), waitN = Math.max(0, night.reduce((a, x) => a + (Number(x.waiting) || 0), 0) - outN);
   const track = rows.every((x) => x.on_track_usd !== null && x.on_track_usd !== undefined && Number.isFinite(Number(x.on_track_usd))) ? rows.reduce((a, x) => a + Number(x.on_track_usd), 0) : null;
-  c.appendChild(p(null, 'So far ' + usd2(spent) + (track !== null ? ', on track for ' + usd2(track) : ', on track for: measuring') + (lim !== null ? ' ' + DOT + ' your limit ' + usd2(lim) : '') + '.'));
+  const cell = (k, label, val, sub) => { const d = el('div', 'gs-pf'); d.append(el('small', null, label), K(el('b', null, val), k), K(el('small', 'gs-pfs', sub || ''), k + 's')); return d; };
+  const facts = el('div', 'gs-pfacts');
+  if (night.length) facts.appendChild(cell('o', night.length === rows.length ? 'Out at the AI maker now' : 'Overnight, out at the AI maker now', num(outN), num(waitN) + ' waiting to be sent'));
+  facts.appendChild(cell('t', 'Time left',
+    !fastRows.length ? 'Overnight' : mins === null ? 'measuring the pace' : 'about ' + num(mins) + ' minutes',
+    night.length ? (fastRows.length ? 'for what is read as fast as possible; overnight parts come back ' : 'each part comes back ') + 'usually within a few hours of being sent, at the latest in 24 hours' : ''));
+  facts.appendChild(cell('s', 'Spent so far', usd2(spent), lim !== null ? 'of your limit ' + usd2(lim) + ', never passed' : 'your limit could not be read'));
+  facts.appendChild(cell('k', 'On track for', track !== null ? usd2(track) : 'measuring', track !== null ? '' : 'a total is given once enough is read'));
+  c.appendChild(facts);
+  c.appendChild(K(p('gr-small gs-over', cnr > 0 ? num(cnr) + ' could not be read after three tries. ' + (cnr === 1 ? 'It is' : 'They are') + ' kept with the reason.' : ''), 'cn'));
+  c.lastChild.hidden = !(cnr > 0);
   if (S.uprogErr) c.appendChild(p('gr-small gs-over', NOREAD + ' It keeps going. The count above is the last one seen.'));
   if (rows.some((x) => x.state === 'at_ceiling')) c.appendChild(p('gr-small', 'It stopped before your limit. What is left is not read; you can raise the limit and press again.'));
   const exp = (S.uprog ?? []).reduce((a, x) => a + (Number(x.expired) || 0), 0);
   if (exp > 0) c.appendChild(p('gr-small gs-over', num(exp) + ' were not read by the AI maker within 24 hours. They were not billed and wait for your next press.'));
-  const out = p('gr-small', '');
-  const stop = btn('go ghost', 'Stop', async () => {
-    stop.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Stopping';
-    const res = await Promise.all(rows.map((x) => rpc('source_read_approve', { p_source_key: x.source_key, p_mode: 'understand_stop', p_months: null, p_confirm: true }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) }))));
-    out.className = 'gr-small'; out.textContent = res.map((r) => String(r?.note ?? r?.reason ?? 'no reason was given')).join(' ');
-    setTimeout(() => mount(C), 2500);
-  });
+  const out = p('gr-small', ''); out.id = 'gs-pout';
+  const stop = btn('go ghost', 'Stop', () => stopAll(R, pressRows(R).map((x) => x.source_key), out, stop)); stop.id = 'gs-pstop';
   const g = el('div', 'gr-go'); g.appendChild(stop); c.append(g, out);
-  c.appendChild(p('gr-small', 'It keeps going while you work, and you get one short email when it is done.'));
+  return c;
+}
+// HOW FAST AND THE BUTTON, WHILE HER PRESS RUNS, ARE ONE LINE (decision 1162.4): what is running, up to what, and that she is told.
+function nowLine(rows) {
+  const night = rows.filter((x) => x.door === 'overnight').length;
+  const lim = rows.every((x) => Number.isFinite(Number(x.ceiling_usd)) && x.ceiling_usd !== null) ? rows.reduce((a, x) => a + Number(x.ceiling_usd), 0) : null;
+  const c = el('section', 'am-step gs-nowline'); c.id = 'gs-unow';
+  const line = el('p', 'gs-nowsay');
+  line.append(el('b', null, night === rows.length ? 'Understanding overnight' : night === 0 ? 'Understanding as fast as possible' : 'Understanding, part of it overnight'));
+  if (lim !== null) line.append(' ' + DOT + ' ', el('span', null, 'up to'), ' ', K(el('b', null, usd2(lim)), 'lim'));
+  line.append(' ' + DOT + ' ', el('span', null, 'you get an email when it is done'));
+  c.append(line, p('gr-small', 'It keeps going while you work or close this page. Stop works any time and you pay only for what was read. How fast and your limit open again for your next press.'));
   return c;
 }
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1405,6 +1478,9 @@ function movedBlock(S) {
 // there is none yet, the one button starts the sample and says so; carrying her limit across the sample so that she is not
 // asked a second time is the brain's to do and is NOT BUILT (named in the seat's report), so the words do not promise it.
 // A re-read lands in place (draw, inPlace): every figure that can change is marked (K).
+// WHILE HER PRESS RUNS THE STEP HAS ANOTHER SHAPE (seat step4-pressed 2026-11-12, decision 1162): pressHero (the progress as the
+// top card), treeU read-only ("What you chose"), nowLine (How fast and the button as one line). heroU, treeU and speedCard as
+// described above are the step before a press and after it.
 // SUPERSEDED 2026-11-12, Alex's yes on 1158: the per-mailbox purpose buttons (MAILBOX_FOR), the four group check boxes with
 // mail_groups' estimate (groupsCard, readGroups, uOff), the Cost and Time card (understandShape), "Three quick questions" as
 // a card, the separate How fast rows (doorChoice), "Read a sample of those drives too" (sampleAgain: a second sample button
@@ -1416,7 +1492,7 @@ function movedBlock(S) {
 // only as the button words (seat step4-fresh).
 const CHOICES = [['understood', 'Understand'], ['findable', 'Keep searchable only']];
 let uPick = {};         // her taps not yet answered by the brain: { source_key: 'understood' | 'findable' }
-let uLimit = null, uDoor = null, inOpen = false, howOpen = false;
+let uLimit = null, uDoor = null, inOpen = false, howOpen = false, choseOpen = false, uGap = null;
 const LQ = String.fromCharCode(8220), RQ = String.fromCharCode(8221);
 const howLong = (m) => { const x = Number(m); if (m === null || m === undefined || !Number.isFinite(x)) return 'time not measured'; if (x < 1) return 'under a minute'; if (x < 90) return 'about ' + num(Math.round(x)) + ' minutes'; if (x < 48 * 60) return 'about ' + num(Math.round(x / 60)) + ' hours'; return 'about ' + num(Math.round(x / 1440)) + ' days'; };
 const rowsOf = (U) => (Array.isArray(U?.rows) ? U.rows : []);
@@ -1504,7 +1580,7 @@ function heroU(S) {
   c.appendChild(el('span', 'am-num', 'Step 4 ' + DOT + ' Understand'));
   const U = S.usam, ok = !!U && U.ok === true && rowsOf(U).length > 0, T = ok ? uTotals(U) : null;
   const pct = T && T.all > 0 ? Math.floor((T.done / T.all) * 100) : null;
-  const live = (S.uprog ?? []).some((x) => x.state === 'reading' && pressedRow(x));
+  const live = false;   // while a press runs the top card is pressHero (decision 1162.1)
   const top = el('div', 'gs-herotop'), l = el('div');
   l.append(K(el('div', 'gs-pct', pct === null ? '' : num(pct) + '%'), 'pct'),
     K(el('p', 'gr-small', pct !== null ? 'of the mail and files you chose are understood' : !U ? 'Counting what you chose' : ok ? 'Nothing is chosen to be understood yet.' : 'The count could not be read just now, so the percentage is not shown.'), 'pl'));
@@ -1519,17 +1595,18 @@ function heroU(S) {
   return c;
 }
 // ONE ROW of What to understand: the name, what is left to read, her one choice, her price for it at the speed she chose.
-function uRow(r, nm, q, mul, priced) {
+function uRow(r, nm, q, mul, priced, ro) {
   const on = pickOf(r) === 'understood', left = leftOf(r), box = r.kind === 'mailbox';
   const cv = Number(r.conversations_left) || 0, fl = Number(r.files_left) || 0;
   const notes = [left === 0 ? 'already understood' : [cv ? num(cv) + (cv === 1 ? ' conversation' : ' conversations') : '', fl ? num(fl) + (box ? (fl === 1 ? ' attached file' : ' attached files') : (fl === 1 ? ' file' : ' files')) : ''].filter(Boolean).join(' ' + DOT + ' ')];
-  if (q && q.state === 'reading') notes.push('still being made searchable: priced for what is searchable now');
-  if (priced && !box && fl > 0 && !(Number(r.sampled) > 0)) notes.push('priced at the rate of your other files');
+  if (!ro && q && q.state === 'reading') notes.push('still being made searchable: priced for what is searchable now');
+  if (!ro && priced && !box && fl > 0 && !(Number(r.sampled) > 0)) notes.push('priced at the rate of your other files');   // read-only rows show no price, so nothing about pricing
   if (box && r.by_default === true && r.choice === 'findable') notes.push('marked old');
   const row = el('div', 'gs-row gs-urow' + (on || left === 0 ? '' : ' off')), l = el('span', 'gs-rl');
   row.dataset.src = r.source_key;
   l.append(el('b', null, nm), K(el('small', null, notes.join(' ' + DOT + ' ')), 'm'));
   row.appendChild(l);
+  if (ro) { row.appendChild(left === 0 && allOf(r) > 0 ? chip('ok', 'Understood') : on ? chip('warn', 'Being understood') : chip('', 'Searchable only')); return row; }   // while her press runs: what she chose, no buttons, no price to act on
   if (left > 0) row.appendChild(seg(CHOICES, pickOf(r), (v) => pick(r.source_key, v), nm)); else row.appendChild(chip('ok', 'Understood'));
   // HER PRICE FOR THIS ROW (decision 1159.2): chosen, what it costs at her speed; kept searchable only, $0.00, and small beside
   // it what it would be. SUPERSEDED: the full price left standing, only greyed, on a row she had taken out (seat step4-fresh).
@@ -1539,12 +1616,19 @@ function uRow(r, nm, q, mul, priced) {
   row.appendChild(pc);
   return row;
 }
-function treeU(S) {
-  const c = el('section', 'am-step gs-tree gs-utree'); c.id = 'gs-utree';
-  const hd = el('div', 'gs-treehd'); hd.append(el('h2', 'am-h2', 'What to understand'), el('small', 'gs-srcnote', 'the same list as step 3 ' + DOT + ' choose for each one'));
+// ro (decision 1162.3): while her press runs the same list is "What you chose", folded, read-only, with the way to change it.
+// EVERY ROW THE BRAIN PRICED IS DRAWN (decision 1161.3). The list is the one reading of sources (sources_view), the prices
+// and the press are the brain's own choice list (understand_choice). A mailbox or drive that is in the second and not in the
+// first was priced, counted in the Yes sheet and pressed, and stood on no row (HireKraft 2026-11-11: one drive with 492
+// files; the sheet said 15,876 drive files, the rows added to 15,384). Such a row is now drawn with the others, so what is
+// counted is always on the page.
+function treeU(S, ro) {
+  const c = el('section', 'am-step gs-tree gs-utree' + (ro ? ' gs-chose' : '')); c.id = ro ? 'gs-uchose' : 'gs-utree';
+  const hd = el('div', 'gs-treehd'); hd.append(el('h2', 'am-h2', ro ? 'What you chose' : 'What to understand'), el('small', 'gs-srcnote', ro ? 'as you pressed it ' + DOT + ' change for your next press' : 'the same list as step 3 ' + DOT + ' choose for each one'));
   c.appendChild(hd);
   const U = S.usam, ok = !!U && U.ok === true, rows = ok ? rowsOf(U) : [], priced = ok && U.state === 'done', mul = doorMul(S);
-  const src = S.src?.rows ?? [], P = S.splan && S.splan.ok === true ? planRows(S.splan) : [];
+  const listed = S.src?.rows ?? [], P = S.splan && S.splan.ok === true ? planRows(S.splan) : [];
+  const src = listed.concat(rows.filter((u) => allOf(u) > 0 && !listed.some((r) => r.source_key === u.source_key)).map((u) => ({ source_key: u.source_key, name: u.name, group: u.kind === 'mailbox' ? 'email' : 'drives', place: 'folder' })));
   // EMPTY IS NOT DENIED: a refused answer says its reason here, and the list below is still her own sources
   if (!U) c.appendChild(p('working no-late gr-small', 'Counting what there is to understand, for free'));
   else if (!ok) { const w = p('gr-small gs-over', 'Your choices and prices could not be read just now: ' + dotted(noteOf(U)) + ' It tries again on its own.'); w.id = 'gs-uwhy'; w.setAttribute('role', 'status'); c.appendChild(w); }
@@ -1553,7 +1637,7 @@ function treeU(S) {
   const none = (r) => { const u = ur(r); return !!u && leftOf(u) === 0 && allOf(u) === 0; };
   const line = (r) => {
     const u = ur(r);
-    if (u) return uRow(u, nm[r.source_key], P.find((q) => q.key === r.source_key), mul, priced);
+    if (u) return uRow(u, nm[r.source_key], P.find((q) => q.key === r.source_key), mul, priced, ro);
     const d = el('div', 'gs-row gs-urow'), l = el('span', 'gs-rl'); l.append(el('b', null, nm[r.source_key]), K(el('small', null, ok ? 'not counted for understanding yet' : ''), 'm')); d.appendChild(l); return d;
   };
   const tree = el('div', 'gs-groups');
@@ -1569,7 +1653,10 @@ function treeU(S) {
   const sys = src.filter((r) => r.group === 'systems'), sn = sys.map((r) => String(r.name || '')).filter(Boolean);
   if (sys.length) tree.appendChild(g4('sys', 'systems', 'Your systems', sn.length > 3 ? sn.slice(0, 3).join(', ') + ' and ' + num(sn.length - 3) + ' more' : sn.join(', '), 'Already understood ' + DOT + ' free', 'ok',
     [el('small', 'gs-srcnote', 'Your systems already keep their facts in order (invoices, records, contacts), so there is nothing to read. They count as understood from the moment they are connected.')]));
-  c.append(tree, insideFold(S));
+  if (!ro) { c.append(tree, insideFold(S)); return c; }
+  const f = el('details', 'gs-fold'); f.id = 'gs-chosefold'; f.open = choseOpen; f.addEventListener('toggle', () => { choseOpen = f.open; });
+  f.append(el('summary', null, ok && rows.length ? 'See the ' + (chosenWords(U) || 'mailboxes and drives') + ' being understood' : 'See your mailboxes and drives'), tree);
+  c.append(f, p('gr-small', 'These cannot be changed while this press runs. When it is done, or after Stop, the choices open again here for your next press.'));
   return c;
 }
 // INSIDE EACH MAILBOX, WHAT IS READ (1158), folded. The three lines are the brain's own sorting (understand_population reads the
@@ -1637,6 +1724,7 @@ function limitSay() {
   const L = Number(inp.value), bal = balanceLeft(S), card0 = cardOf(S);
   uLimit = inp.value !== '' && Number.isFinite(L) && L !== sugOf(S, U) ? L : null;
   const gap = bal === null ? null : Math.round((L - bal) * 100) / 100, short = gap !== null && gap > 0;
+  uGap = short ? gap : null;   // what add by card offers first (decision 1160)
   const over = C.$('#gs-uover'), test = C.$('#gs-utest');
   if (over) { over.textContent = short ? 'This is more than your credit: add ' + usd2(gap) + ' first, or lower your limit.' : bal === null ? 'Your credit could not be read just now, so nothing can be started. It tries again on its own.' : ''; over.hidden = !over.textContent; }
   if (test) test.hidden = !short || !!(card0 && card0.mode === 'live');
@@ -1661,7 +1749,7 @@ function speedCard(S) {
     c.appendChild(sp);
     if (doorBusy) c.appendChild(p('working no-late gr-small', 'Keeping your choice'));
   } else c.appendChild(p('gr-small', 'As fast as possible' + fastTime + '.'));
-  const credit = () => { const r = el('div', 'gs-pl gs-ucredit'), v = el('span', 'gs-tval'); v.append(K(el('b', 'gs-pv', bal === null ? 'not read' : usd2(bal)), 'bal'), btn('gr-link', 'add by card', () => topUp(R))); r.append(el('span', null, 'Your credit'), v); return r; };
+  const credit = () => { const r = el('div', 'gs-pl gs-ucredit'), v = el('span', 'gs-tval'); v.append(K(el('b', 'gs-pv', bal === null ? 'not read' : usd2(bal)), 'bal'), btn('gr-link', 'add by card', () => topUp(R, uGap))); r.append(el('span', null, 'Your credit'), v); return r; };
   const expired = (S.uprog ?? []).reduce((a, x) => a + (Number(x.expired) || 0), 0);   // overnight items the AI maker did not run in 24 hours (seat overnight-batch)
   if (expired > 0) c.appendChild(p('gr-small gs-over', num(expired) + ' were not read by the AI maker within 24 hours. They were not billed and wait for your next press.'));
   if (U.state === 'reading') {
@@ -1754,13 +1842,39 @@ async function understandPress() {
   out.className = 'gr-small'; out.textContent = ''; limitSay();
   if (!pv || pv.ok !== true) { out.textContent = 'Not started: ' + noteOf(pv) + '.'; return; }
   const body = el('div'), night = doorOf(S) === 'overnight', mul = doorMul(S);
-  body.append(priceRow('Conversations to understand', num((Number(U.conversations) || 0) - (Number(U.already_read) || 0)), 'in the mailboxes you chose, last 2 years'),
-    ...(al > 0 ? [priceRow('Attached files to understand', num(al), 'every file attached to the mail of the mailboxes you chose')] : []),
-    ...(dl > 0 ? [priceRow('Drive files to understand', num(dl), 'every file in the drives you chose')] : []),
-    priceRow(night ? 'Measured price, overnight' : 'Measured price', usd2((uPrice(S) || {}).usd), 'likely between ' + usd2(Number(U.low_usd) * mul) + ' and ' + usd2(Number(U.high_usd) * mul)),
+  // EVERY COUNT IS THE SUM OF THE ROWS SHE CHOSE AND OPENS TO THEM (seat step4-pressed 2026-11-12, decision 1161.2 and .3): each
+  // count is added from the chosen rows of the page (the brain's rows), and under it the list it counts, by mailbox or drive.
+  // SUPERSEDED: the brain's totals printed beside rows that did not all stand on the page (15,876 against 15,384).
+  const cr = hasRows ? chosenRows(U) : [], rn = hasRows ? names(S, cr.map((r) => ({ key: r.source_key, label: r.name, kind: r.kind === 'mailbox' ? 'mail' : 'drive' }))) : {};
+  const count = (id, title, small, list, k, n0) => {
+    const rows = list.filter((r) => Number(r[k]) > 0), n = hasRows ? rows.reduce((a, r) => a + Number(r[k]), 0) : n0;
+    if (!(n > 0)) return [];
+    const out = [priceRow(title, num(n), small)]; out[0].id = id; out[0].classList.add('gs-cnt');
+    if (rows.length) {
+      const d = el('details', 'gs-fold gs-cfold'); d.id = id + '-by';
+      d.appendChild(el('summary', null, 'See them by ' + (list.every((r) => r.kind === 'mailbox') ? 'mailbox' : 'drive')));
+      for (const r of rows) { const l = el('div', 'gs-pl gs-cl'); const nmb = el('span', null, rn[r.source_key]); nmb.setAttribute('translate', 'no'); l.append(nmb, el('b', 'gs-pv', num(r[k]))); d.appendChild(l); }
+      out.push(d);
+    }
+    return out;
+  };
+  const boxes = cr.filter((r) => r.kind === 'mailbox'), drives = cr.filter((r) => r.kind !== 'mailbox');
+  // ONE SUGGESTED LIMIT, FROM ONE PLACE (decision 1161.1): the figure the page's limit starts at (sugOf), at her speed. The
+  // brain's own sentence about this press (understand_go 'note') compared her limit with the full-speed figure whatever the
+  // speed ("below the suggested $431.10" for an overnight limit of $340 on a page suggesting $217.45), so it is not shown;
+  // what it says is said here from the same numbers the page shows. A limit is warned about only when it is under that one
+  // suggested figure and under the top of the measured range, and the warning says what then happens.
+  const price = (uPrice(S) || {}).usd, hi = Number(U.high_usd) * mul, sug = sugOf(S, U), np = (Number(pv.mailboxes_pressed) || 0), nd = (Number(pv.drives_pressed) || 0);
+  body.append(...count('gs-cc', 'Conversations to understand', 'in the mailboxes you chose, last 2 years', boxes, 'conversations_left', (Number(U.conversations) || 0) - (Number(U.already_read) || 0)),
+    ...count('gs-ca', 'Attached files to understand', 'every file attached to the mail of the mailboxes you chose', boxes, 'files_left', al),
+    ...count('gs-cd', 'Drive files to understand', 'every file in the drives you chose', drives, 'files_left', dl),
+    priceRow(night ? 'Measured price, overnight' : 'Measured price', usd2(price), 'likely between ' + usd2(Number(U.low_usd) * mul) + ' and ' + usd2(hi)),
     ...(doorF(S) !== null ? [priceRow('How fast', night ? 'Overnight' : 'As fast as possible', night ? OVERNIGHT_WHEN + '; sent in parts that fit your limit' : (U.time && U.time.measured === true ? howLong(U.time.minutes) + ', measured on your sample' : 'time not measured yet'))] : []),
-    priceRow('Your limit, never passed', usd2(Number.isFinite(Number(pv.limit_usd)) ? pv.limit_usd : L)));
-  if (pv.note) body.appendChild(p('gr-small', String(pv.note)));
+    priceRow('Your limit, never passed', usd2(Number.isFinite(Number(pv.limit_usd)) ? pv.limit_usd : L), Math.abs(L - sug) < 0.005 ? 'the suggested limit' : 'suggested: ' + usd2(sug)));
+  if (np + nd > 0) body.appendChild(p('gr-small', 'Your limit is shared over ' + [np ? num(np) + (np === 1 ? ' mailbox' : ' mailboxes') : '', nd ? num(nd) + (nd === 1 ? ' drive' : ' drives') : ''].filter(Boolean).join(' and ') + ' by what each is measured to need. Nothing is read until you say yes.'));
+  if (L < sug - 0.005 && (!Number.isFinite(hi) || L < hi)) { const w = p('gr-small gs-over', Number.isFinite(price) && L < price
+    ? 'Your limit is below the measured price of ' + usd2(price) + '. Reading stops when your limit is reached, so part of what you chose will stay searchable only until you press again.'
+    : 'Your limit is below the suggested ' + usd2(sug) + '. If your mail and files cost more than your limit, reading stops there and what is left stays searchable only until you press again.'); w.id = 'gs-lwarn'; body.appendChild(w); }
   body.appendChild(p('gr-small', (night ? 'Stop works any time: what has not been read yet is called back and not billed; you pay only for what was read.' : 'Stop works any time; you pay only for what was read.') + ' You get one short email when it is done.'));
   const said = p('gr-small', '');
   const yes = btn('go', 'Yes, ' + goWords(S).charAt(0).toLowerCase() + goWords(S).slice(1) + ' ' + DOT + ' up to ' + usd2(L), async () => {
