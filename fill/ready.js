@@ -61,7 +61,11 @@
 // SUPERSEDED HERE, 2026-11-11, Alex's yes on 1150: the separate AI credit step and its card (1131, 1138.1, 1142.6: creditDone,
 // creditSeen, fundedBefore, stepNeed), no Vera before credit (1132), See everything in your brain (the way onto the Brain page),
 // and brainPanel going to the Brain page.
-import { roadSteps } from './brainroom.js?v=2026-11-11-setup-one-path';
+// SEAT setup-findable-table (2026-11-12; decision 1150, picture Parts 1 to 3; brief studio-walkers briefs/seat-setup-findable-table.md).
+// STEP 3 SHOWS ONLY WHAT NEEDS HER (searchCard): reading now, needs your yes, the rest folded; plain names. THE FINDABLE TABLE
+// opens over step 3 (findSheet). AN OLD MAILBOX is offered only behind the More button of a mailbox not on the business's own
+// address (oldLine, markOld). STEP 4's words name the attached files and the sample's limit (seat understand-files' report).
+import { roadSteps } from './brainroom.js?v=2026-11-12-setup-findable-table';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
@@ -540,8 +544,6 @@ function paidReturn(S) {
 // ---------------------------------------------------------------------------------------------------------------------
 // THE STEPS
 // STEP 3's PARTS. Every count is source_read_progress's (the progress function, per source); every name the one reading's.
-const nameOf = (rows, key) => String(rows.find((r) => r.source_key === key)?.name || key);
-const totalOf = (x) => (Number(x.done) || 0) + (Number(x.waiting) || 0) + (Number(x.waiting_for_owner) || 0) + (Number(x.files_waiting_for_owner) || 0);
 function tileBtn(icon, title, line1, word, on, fn) {
   const b = btn('gs-tile' + (on ? ' gs-on' : ''), '', fn);
   const t = el('span', 'gs-tt'); t.append(ic(icon), el('b', null, title));
@@ -581,26 +583,89 @@ function liveCard(S) {
   return c;
 }
 // MAKE EVERYTHING SEARCHABLE (spec step 3; seat setup-screens-2 over seat searchable-plan's search_plan and search_go).
-// How far back (2 years, 4 years, Everything), a check box per source with its counts and exact price, the total, what is
-// left of the credit or how much to add, the time from the measured pace or "measuring", and the one press: a preview
-// first (search_go without confirm), then Yes (search_go with confirm). Every number is the brain's; the boundary line
-// under the total says what it counts. SEAT setup-wire (ruling 1141.5): the plan and the press go through lens-ask
-// {search_plan} / {search_go}, which reads the balance from the AI meter itself; the screen sends no balance (it used to pass
-// read_estimate's, which a page could change). On each mailbox row: Old, searchable only (source_mark_old, her press; undo).
+// How far back (2 years, 4 years, Everything), then ONLY WHAT NEEDS HER (seat setup-findable-table, 2026-11-12; decision 1150,
+// picture Cbdma9KRabK6Pb5YFdwkrd Part 1): what is being read now, each source in its own row with its meter; what needs her yes,
+// each with its counted price, the total, the credit and the one press; and everything already searchable folded into one line
+// she can open. ONE LIST: every source is in exactly one of the three places. A source is called by its name, never by its key,
+// and two with the same name say whose (names). Every number is the brain's (search_plan through lens-ask, which reads the
+// balance from the AI meter itself; the pace is source_read_progress's). The press is a preview first (search_go without
+// confirm), then Yes. SUPERSEDED 2026-11-12, Alex's yes on 1150: one row per source whatever its state (about 40 rows on
+// HireKraft), the separate Progress card that listed every source a second time with a second meter (progressCard), and
+// "Old, searchable only" under every mailbox (oldRow; see oldLine).
 let plan = { months: 24, off: {} };
+let foldOpen = false;
 function planRows(P) { return (P?.sources ?? []).filter((r) => r.state !== 'not_connected'); }
 function chosenOf(P) { return planRows(P).filter((r) => r.state === 'to_read' && !plan.off[r.key]); }
 function countLine(r) {
   if (r.kind === 'mail') { const a = (Number(r.attachments) || 0) + (Number(r.attachments_estimated) || 0); return num(r.emails) + ' emails in the mailbox ' + DOT + ' ' + num(a) + ' attachments' + (Number(r.attachments_estimated) ? ' (some estimated)' : ''); }   // the mailbox's own count; step 4 counts what was kept (seat audit-fix-screen, C3)
   return num(r.files) + ' files';
 }
+// PLAIN NAMES. The plan's own label; where that is missing or is a key, the name the one reading of sources gives it
+// (sources_view); never the key. Two sources with the same name say whose, in sources_view's own words ("Shared drive",
+// "Folder in Erin's My Drive").
+const isKey = (t, r) => !t || t === r.key || t.startsWith('drive:') || t.startsWith('gmail:');
+function names(S, rows) {
+  const src = S.src?.rows ?? [];
+  const sv = (r) => src.find((x) => x.source_key === r.key);
+  const base = rows.map((r) => { const a = String(r.label || '').trim(); if (!isKey(a, r)) return a; const b = String(sv(r)?.name || '').trim(); if (!isKey(b, r)) return b; return r.kind === 'mail' ? 'A mailbox' : 'A drive or folder'; });
+  const out = {};
+  rows.forEach((r, i) => { const twice = base.filter((n) => n.toLowerCase() === base[i].toLowerCase()).length > 1; const whose = String(sv(r)?.what || '').trim(); out[r.key] = twice && whose ? base[i] + ' ' + DOT + ' ' + whose : base[i]; });
+  return out;
+}
+// THE BUSINESS'S OWN ADDRESS: the one most of its connected mailboxes are on (HireKraft: hirekraft.ai). One mailbox: its own.
+// A tie: not known, and then no mailbox is offered Old. The brain keeps no such field; this is the screen's reading of the
+// plan's own rows, named for HQ in the seat's report.
+const domOf = (r) => { const a = String(r.label || r.key || ''); const i = a.lastIndexOf('@'); return i >= 0 ? a.slice(i + 1).toLowerCase() : null; };
+function ownDomain(P) {
+  const c = {};
+  for (const r of planRows(P)) if (r.kind === 'mail') { const d = domOf(r); if (d) c[d] = (c[d] || 0) + 1; }
+  const top = Object.entries(c).sort((a, b) => b[1] - a[1]);
+  if (!top.length || (top.length > 1 && top[0][1] === top[1][1])) return null;
+  return top[0][0];
+}
+// ONE ROW OF A SOURCE, in the place its state puts it: 'need' (a check box and its price, or counting), 'reading' (its own
+// meter, done of total and the measured pace) or 'done' (Searchable).
+function srcRow(S, r, nm, own, mode) {
+  const w = el('div', 'gs-src'); w.dataset.src = mode;
+  const line = el('div', 'gs-srcline');
+  const tick = mode === 'need' && r.state === 'to_read';
+  const row = el(tick ? 'label' : 'div', 'gs-row' + (tick ? ' gs-tick' : ''));
+  if (tick) {
+    const box = el('input'); box.type = 'checkbox'; box.checked = !plan.off[r.key]; box.setAttribute('aria-label', nm);
+    box.addEventListener('change', () => { plan.off[r.key] = !box.checked; draw(); });
+    row.appendChild(box);
+  }
+  const l = el('span', 'gs-rl');
+  l.append(el('b', null, nm), el('small', null, r.state === 'not_counted' ? String(r.note || 'Not counted yet.') : countLine(r)));
+  row.appendChild(l);
+  if (tick) row.appendChild(el('b', 'gs-pv', usd2(r.usd) ?? 'not priced'));
+  else if (mode === 'reading') row.appendChild(el('span', 'gs-chip gs-chip-warn', 'Reading'));
+  else if (mode === 'done') row.appendChild(el('span', 'gs-chip gs-chip-ok', 'Searchable'));
+  else row.appendChild(el('span', 'gs-chip', 'counting'));
+  line.appendChild(row);
+  const dom = r.kind === 'mail' ? domOf(r) : null;
+  const offer = r.kind === 'mail' && r.state !== 'not_counted' && r.old_searchable_only !== true && !!own && !!dom && dom !== own;
+  if (offer) { const m = btn('gs-dots', String.fromCharCode(8943), () => markOld(r, true, nm, own)); m.setAttribute('aria-label', 'More for ' + nm); m.title = 'More'; line.appendChild(m); }
+  w.appendChild(line);
+  if (mode === 'reading') {   // seat step3-reading-row (ruling G): in line under her press, so no check box, no price, not in the total or the press
+    const all = Number(r.reading_total) || 0, done = Number(r.reading_done) || 0;
+    const bar = el('div', 'gs-bar'); const i = el('i'); i.style.width = (all ? Math.min(100, Math.round((done / all) * 100)) : 0) + '%'; bar.appendChild(i);
+    const pm = Number((S.prog ?? []).find((x) => x.source === r.key)?.per_minute) || 0;
+    w.append(bar, el('small', 'gs-srcnote', num(done) + ' of ' + num(all) + ' done ' + DOT + ' ' + (pm > 0 ? num(Math.round(pm)) + ' a minute, measured' : 'pace: measuring') + '. You can close this page.'));
+  }
+  if (r.kind === 'mail' && r.old_searchable_only === true) w.appendChild(oldLine(r, nm));
+  else if (offer) w.appendChild(el('small', 'gs-srcnote', 'Not on your company' + String.fromCharCode(8217) + 's address (' + own + ')'));
+  return w;
+}
+function group(title, id) { const g = el('div', 'gs-once'); if (id) g.id = id; g.appendChild(el('span', 'gs-oncelab', title)); return g; }
 function searchCard(S) {
-  const c = card('eye', 'What is read, and its price', null);
+  const c = card('eye', 'What needs you', null);
   c.classList.add('gs-plan'); c.id = 'gs-plan';
   const P = S.splan;
   if (!P || P.ok !== true) {
     c.appendChild(S.splanErr || S.late?.has('plan') ? p('gr-small', 'What is counted could not be read just now' + (S.splanErr ? ': ' + String(S.splanErr) : '') + '. It tries again on its own.')
       : !S.moneyIn && S.owner ? p('working', 'Counting what there is to read, for free') : p('gr-small', 'Connect something and it is counted here, for free.'));
+    const fl0 = findLine(S); if (fl0) c.appendChild(fl0);
     return c;
   }
   // How far back: the three choices, each with its own total, or "counting" while a choice is not complete.
