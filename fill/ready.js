@@ -70,7 +70,7 @@
 // SEAT step4-fresh (2026-11-12; decision 1158, picture RYtvsKoVGVx2ELoeqN5PNx): step 4 rebuilt as the approved fresh look on step 3's
 // own tree. See STEP 4, THE FRESH LOOK above heroU. The line under the steps names the step that is open (it named the first
 // step not done: "Step 3 of 5" while step 4 was open).
-import { roadSteps } from './brainroom.js?v=2026-11-12-step4-words';
+import { roadSteps } from './brainroom.js?v=2026-11-12-step4-pressed';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
@@ -485,18 +485,41 @@ const PRESS = () => ({ sb: C.sb, el: (t, c) => el(t, c), askBody: C.askBody, she
 // payment is shown, never added to the balance (HQ money rule, 2026-11-07).
 const cardFee = (a) => Math.round((Math.ceil(((a + 0.30) / (1 - 0.029)) * 100) / 100 - a) * 100) / 100;
 function cardOf(S) { return S.ai?.plain?.balance?.card ?? null; }
-function topUp(S) {
+// WHAT IS SHORT COMES FIRST (seat step4-pressed 2026-11-12, decision 1160; Alex needed $123.68 and was offered $25 / $50 /
+// $100 / $250): opened from a shortfall (short, in dollars) the sheet offers that amount rounded up to the whole dollar first,
+// already chosen, then the fixed amounts, and a field for any amount from the smallest card payment up. The fee line follows
+// whatever is chosen. Opened plainly: the fixed amounts and the field.
+const MINPAY = 5;       // the smallest card payment (topup_start's own floor)
+function topUp(S, short) {
+  const need = Number.isFinite(Number(short)) && short !== null && Number(short) > 0 ? Math.max(MINPAY, Math.ceil(Number(Number(short).toFixed(6)))) : null;
   const pay = !!S.marks?.payments;
   const card = cardOf(S);
   const test = !card || card.mode !== 'live';
   const body = el('div');
   body.appendChild(p('gr-small', pay ? "You pay on Stripe's own page; the Tool never sees your card. Your balance goes up when the payment is through." : 'Top up by card is coming. For now your request goes to Verrandi, who adds it to your balance and tells you.'));
   if (pay && test) body.appendChild(p('gr-small gr-test', 'Card payments are in test mode: on Stripe use the test card 4242 4242 4242 4242, any future date, any 3 digits. A test payment is shown here and is never added to your balance.'));
-  let pick = 50;
-  const fee = p('gr-small gr-fee', '');
-  const say = () => { yes.textContent = (pay ? 'Pay $' : 'Ask for $') + pick; if (pay) { const f = cardFee(pick); fee.textContent = 'Top-up $' + pick.toFixed(2) + ' + card fee at cost $' + f.toFixed(2) + ' = $' + (pick + f).toFixed(2) + '. The fee is what the card company charges, passed on exactly.'; } };
-  const seg = el('div', 'gr-seg');
-  for (const a of [25, 50, 100, 250]) { const b = btn('gr-amt' + (a === pick ? ' on' : ''), '$' + a, () => { pick = a; seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); say(); }); seg.appendChild(b); }
+  let pick = need !== null ? need : 50;
+  const fee = p('gr-small gr-fee', ''); fee.id = 'gs-tfee';
+  const amt = (a) => (Number.isInteger(a) ? String(a) : a.toFixed(2));
+  const good = () => Number.isFinite(pick) && pick >= MINPAY;
+  const say = () => {
+    yes.disabled = !good();
+    yes.textContent = (pay ? 'Pay $' : 'Ask for $') + (good() ? amt(pick) : '0');
+    if (!good()) { fee.textContent = 'The smallest card payment is $' + MINPAY + '.'; return; }
+    if (pay) { const f = cardFee(pick); fee.textContent = 'Top-up $' + pick.toFixed(2) + ' + card fee at cost $' + f.toFixed(2) + ' = $' + (pick + f).toFixed(2) + '. The fee is what the card company charges, passed on exactly.'; } else fee.textContent = '';
+  };
+  const seg = el('div', 'gr-seg gs-tamts');
+  const any = el('input'); any.id = 'gs-tany'; any.type = 'number'; any.min = String(MINPAY); any.step = '1'; any.inputMode = 'decimal';
+  const marks = (b) => seg.querySelectorAll('button').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+  for (const a of (need !== null ? [need] : []).concat([25, 50, 100, 250].filter((x) => x !== need))) {
+    const b = btn('gr-amt' + (a === pick ? ' on' : ''), '', () => { pick = a; any.value = ''; marks(b); say(); });
+    b.dataset.amt = String(a); b.setAttribute('aria-pressed', a === pick ? 'true' : 'false');
+    b.appendChild(el('b', null, '$' + a)); if (a === need) b.appendChild(el('small', null, 'what is short'));
+    seg.appendChild(b);
+  }
+  any.addEventListener('input', () => { const v = Number(any.value); pick = any.value === '' ? NaN : Math.round(v * 100) / 100; marks(null); say(); });
+  const anyLab = el('label', 'gr-field gs-tany'); anyLab.append(el('span', null, 'Any amount, $'), any);
+  if (need !== null) body.appendChild(p('gr-small', 'You are ' + usd2(Number(short)) + ' short for what you chose' + (need > Number(short) ? ': $' + need + ' covers it' + (need === MINPAY && Number(short) < MINPAY ? ' ($' + MINPAY + ' is the smallest card payment).' : '.') : '.')));
   const out = p('gr-small', '');
   const yes = btn('go', (pay ? 'Pay $' : 'Ask for $') + pick, async () => {
     yes.disabled = true; no.disabled = true; out.className = 'working no-late gr-small'; out.textContent = pay ? 'Opening the payment page' : 'Sending your request';
@@ -511,9 +534,7 @@ function topUp(S) {
   const no = btn('go ghost', 'Not now', () => sheet.close());
   const acts = el('div', 'gr-chips'); acts.append(yes, no);
   say();
-  body.append(seg);
-  if (pay) body.append(fee);
-  body.append(acts, out);
+  body.append(seg, anyLab, fee, acts, out);
   if (pay) body.append(autoBlock(S));
   sheet.open('Top up your AI balance', body);
 }
@@ -685,13 +706,40 @@ function workWords(S) {
 // THE WORKING LINE IS THE ONE INDICATOR'S (fill/working.js, seat work-indicator, decision 1152.1): the same reading it shows in
 // the header (window.toolWork, kept current by its tool:work event) in its own wording (window.toolWorkParts), one line for
 // each piece of running work. Never a second reading or a second wording of it.
+// EACH STEP'S TOP CARD SHOWS ONLY ITS OWN WORK (seat step4-pressed 2026-11-12, decision 1162.2): step 3 what is being made
+// searchable, step 4 what is being understood. The header's indicator stays the one place for all of it. SUPERSEDED: every
+// running line on both steps (a mailbox being made searchable stood on step 4's card).
+// THE SIGN THAT IT IS ALIVE is the one shared piece (fill/working.js workPulse, decision 1164), never a second one.
+const STEP_WORK = { 'gs-work': ['searchable', 'pictures', 'privacy'], 'gs-uwork': ['understand', 'agreements'] };
 function workInto(w, S) {
   const W = window.toolWork, parts = window.toolWorkParts;
   if (W && Array.isArray(W.items) && parts) {
-    w.replaceChildren(...W.items.map((it) => { const l = el('span', 'gs-workline'); l.append(parts.title(it), ' ' + DOT + ' ', parts.facts(it)); return l; }));
-    w.hidden = !W.items.length; return;
+    const mine = STEP_WORK[w.id], its = W.items.filter((it) => !mine || mine.includes(it.kind));
+    if (w.dataset.mode === 'pulse') {   // step 4 while a press runs: the card's numbers are its own; here only the sign of life
+      const it = its.find((x) => x.kind === 'understand');
+      w.replaceChildren(...(it && parts.pulse ? [parts.pulse(pressItem(it, W, S))] : [])); w.hidden = !w.children.length; return;
+    }
+    w.replaceChildren(...its.map((it) => { const l = el('span', 'gs-workline'); l.append(parts.title(it), ' ' + DOT + ' ', parts.facts(it)); if (parts.pulse && it.state !== 'stalled') l.append(' ', parts.pulse(it)); return l; }));
+    w.hidden = !its.length; return;
   }
+  if (w.id === 'gs-uwork') { w.replaceChildren(); w.hidden = true; return; }   // the older reading below is step 3's work only
   const t = workWords(S); w.textContent = t; w.hidden = !t;
+}
+// NOT MOVING IS COUNTED FROM THE PRESS, AND NEVER SAID OF A PART THAT IS OUT (decision 1162.5). A brain that gives its own
+// verdict (item.alive, brain file 2026-11-12-step4-pressed-1) is taken as it is. One that does not yet counted from the last
+// thing read, which could be an earlier sample's ("Nothing has moved for 312 minutes", seconds after Alex's press), and knew
+// nothing of parts out at the AI maker. For that brain the item is put right here from its own two times (last_moved, since)
+// and from understand_progress (how many are out), and only for this card.
+function pressItem(it, W, S) {
+  if (typeof it.alive === 'boolean') return it;
+  const out = pressRows(S).reduce((a, x) => a + (Number(x.out_in_batches) || 0), 0);
+  const at = Date.parse(W.at), m = Date.parse(it.last_moved), si = Date.parse(it.since);
+  const from = Math.max(Number.isFinite(m) ? m : 0, Number.isFinite(si) ? si : 0);
+  const idle = Number.isFinite(at) && from > 0 ? Math.max(0, Math.floor((at - from) / 60000)) : null;
+  const still = out === 0 && idle !== null && idle >= (Number(it.stall_after) || 6);
+  // parts out, on a press younger than the 24 hours the AI maker promises: every part out is within its promised time, so it is alive
+  const within = out > 0 && !S.uprogErr && Number.isFinite(at) && Number.isFinite(si) && at - si < 24 * 3600000;
+  return { ...it, state: still ? 'stalled' : 'working', idle_minutes: idle === null ? it.idle_minutes : idle, out, alive: within ? true : undefined };
 }
 // THE ANSWER FIRST: one percentage for everything searchable (brain_road: done of what can be read), the Working line, what
 // searchable gets her, a box to try it on what is already searchable (the Tool's own conversation, as a find; her guide's
@@ -956,7 +1004,7 @@ function creditAsk(S, cost, bal) {
     if (error || !data || data.ok !== true || !data.url) { msg.className = 'gr-small'; msg.textContent = 'Not started: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; go.disabled = false; return; }
     location.href = String(data.url);
   });
-  const gw = el('div', 'gr-go gs-two'); gw.append(go, btn('go ghost', 'Other amount', () => topUp(S)));
+  const gw = el('div', 'gr-go gs-two'); gw.append(go, btn('go ghost', 'Other amount', () => topUp(S, gap)));
   d.append(gw, msg);
   return d;
 }
@@ -1202,10 +1250,14 @@ const CARDS = {
   // STEP 4 · UNDERSTAND, THE FRESH LOOK (seat step4-fresh, 2026-11-12, decision 1158): the answer first, the live card while a
   // press reads, What to understand, How fast with the one button. See STEP 4, THE FRESH LOOK above heroU.
   understand(S, st) {
-    const out = [heroU(S)];
-    const live = understandLive(S); if (live) out.push(live);
-    out.push(treeU(S));
-    const sp = speedCard(S); if (sp) out.push(sp);
+    // A STEP CHANGES SHAPE ONCE PRESSED (seat step4-pressed 2026-11-12, decision 1162): while her press runs the step is about
+    // that press: the top card is the progress, what she chose is read-only, and How fast with its button is one line.
+    const pr = pressRows(S), out = pr.length ? [pressHero(S, pr), treeU(S, true), nowLine(pr)] : [heroU(S)];
+    if (!pr.length) {
+      if (S.uprogErr) out.push(progressFailed('gs-ulive', 'Understanding your mail', S.uprogErr));
+      out.push(treeU(S));
+      const sp = speedCard(S); if (sp) out.push(sp);
+    }
     if (st.find((x) => x.k === 'understand')?.done) { const acts = el('div', 'gr-chips'); acts.id = 'gs-ucont'; acts.appendChild(btn('go ghost', 'Continue', () => { at = 'ready'; draw(); window.scrollTo({ top: 0 }); })); out.push(acts); }
     return out;
   },
