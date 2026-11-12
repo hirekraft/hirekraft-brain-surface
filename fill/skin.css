@@ -2637,7 +2637,7 @@ body.br-panel-open { overflow: hidden; }
   body .vera-btn .vera-dot { position: absolute; top: 10px; right: 12px; }
   .vera-acts .go { flex: 1 1 100%; }
   /* seat vera-guide: in Getting ready's column on a phone she sits under the step, not over it. */
-  .panel.in-vera { min-height: 460px; max-height: 82vh; }
+  .panel.in-vera { min-height: 0; max-height: none; }   /* seat setup-vera 2026-11-12: was 460px to 82vh, a scroll box under the step */
   .vera-sug { padding-left: calc(var(--u) * 3); padding-right: calc(var(--u) * 3); }
   /* The conversation and its "put away" tab sit over the bar, never under it. */
   .panel-tab { top: auto; bottom: calc(64px + 96px + env(safe-area-inset-bottom)); transform: none; }
@@ -2930,7 +2930,7 @@ body.br-panel-open .panel { z-index: 63; }
 /* VERA IN THE RIGHT COLUMN OF GETTING READY (seat vera-guide, 2026-11-07, decision 1124): the one panel element moved into
    the column the screen gives her ([data-vera-column]), static and always open there; Put away and Full screen do not apply.
    Her suggested questions sit above the box; her business conversation's summary is her words, section by section. */
-.panel.in-vera { position: static; width: auto; max-width: none; height: 100%; min-height: 480px; max-height: calc(100vh - 190px);
+.panel.in-vera { position: static; width: auto; max-width: none; height: auto; min-height: 0; max-height: none;   /* seat setup-vera 2026-11-12 (1150.4): no fixed height, so no scroll box inside her column */
   border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: none; z-index: auto; }
 .panel.in-vera .panel-handle, .panel.in-vera #panel-away, .panel.in-vera #panel-full { display: none; }
 body[data-vera-col] .vera-btn { display: none; }
@@ -3205,4 +3205,4 @@ body.gr-pending #tabs .tab[data-tab=brain] { display: none; }
 .gr-sheet .am-pts { margin: 0; }
 body.gr-over .br-leave { display: none; }
 @media (max-width: 720px) { body .gs-once { padding: calc(var(--u) * 3); } body .gs-fold > summary, body .gs-tval .gr-link, body .gs-findline .gr-link, body .gs-src .gr-link { min-height: 44px; }
-  body .gs-trow .gs-tval .gs-pv { white-space: nowrap; max-width: none; overflow-wrap: normal; } }
+  body .gs-trow .gs-tval .gs-pv { white-space: nowrap; max-width: none; overflow-wrap: normal; } } /* ── VERA BESIDE EVERY SETUP STEP (seat setup-vera, 2026-11-12; decision 1150 point 4, picture Cbdma9KRabK6Pb5YFdwkrd Part 4; fill/vera.js). The answer fills her column: the conversation is as tall as what is in it and the page scrolls, never a box inside the column. In her column an answer carries no PDF / Spreadsheet / Slides and no Teach / Save as test. Her follow-ups sit under the answer, two at most. Taller than the window, the column stops following the page so its end can be reached. ── */ .panel.in-vera .panel-body { flex: none; overflow: visible; } .panel.in-vera .out-row, .panel.in-vera .out-said, .panel.in-vera .ans-actions { display: none; } .vera-follow { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1.5); min-width: 0; } .gr-vera.vera-tall { position: static; } @media (max-width: 720px) { body .vera-follow .vera-chip { min-height: 44px; } }
