@@ -1475,6 +1475,127 @@ async function doorKeep(S) {
   if (S.udoor.chosen !== false && S.udoor.door === doorOf(S)) return { ok: true };
   return doorSet(S, doorOf(S));
 }
+// THE ANSWER FIRST: understood of what she chose, as the brain counts it (each chosen row's conversations and files, less what
+// is left to read). A percentage is shown only when the rows are read; otherwise its place says why.
+function uTotals(U) {
+  const c = rowsOf(U).filter((r) => pickOf(r) === 'understood');
+  const all = c.reduce((a, r) => a + allOf(r), 0), left = c.reduce((a, r) => a + leftOf(r), 0);
+  return { all, done: Math.max(0, all - left) };
+}
+function heroU(S) {
+  const c = el('section', 'am-step gs-hero'); c.id = 'gs-uhero';
+  c.appendChild(el('span', 'am-num', 'Step 4 ' + DOT + ' Understand'));
+  const U = S.usam, ok = !!U && U.ok === true && rowsOf(U).length > 0, T = ok ? uTotals(U) : null;
+  const pct = T && T.all > 0 ? Math.floor((T.done / T.all) * 100) : null;
+  const live = (S.uprog ?? []).some((x) => x.state === 'reading' && pressedRow(x));
+  const top = el('div', 'gs-herotop'), l = el('div');
+  l.append(K(el('div', 'gs-pct', pct === null ? '' : num(pct) + '%'), 'pct'),
+    K(el('p', 'gr-small', pct !== null ? 'of the mail and files you chose are understood' : !U ? 'Counting what you chose' : ok ? 'Nothing is chosen to be understood yet.' : 'The count could not be read just now, so the percentage is not shown.'), 'pl'));
+  const r = el('div', 'gs-ustate');
+  const w = K(el('div', 'gs-work'), 'work'); w.id = 'gs-uwork'; w.setAttribute('role', 'status'); workInto(w, S);
+  r.append(K(chip(live ? 'warn' : '', live ? 'Understanding' : pct === 100 ? 'Understood' : pct ? 'Started' : 'Not started'), 'st'), w);
+  top.append(l, r);
+  const bar = el('div', 'gs-bar gs-thick'), i = K(el('i'), 'bar'); i.style.width = (pct || 0) + '%'; bar.appendChild(i);
+  c.append(top, bar,
+    p(null, el('b', null, 'Understood'), ' goes one step beyond searchable. Each email and file is read once and its facts are noted: who, how much, when, what was agreed. Then you get exact answers: ' + LQ + 'how much did we bill each client this year' + RQ + ', ' + LQ + 'which agreements end in March' + RQ + '.'),
+    p('gr-small', el('b', null, 'Searchable only'), ' stays searchable: you find it by what it is about, but its facts are not noted and no totals come from it. You can make any of it understood later.'));
+  return c;
+}
+// ONE ROW of What to understand: the name, what is left to read, her one choice, the price at the speed she chose.
+function uRow(r, nm, q, mul, priced) {
+  const on = pickOf(r) === 'understood', left = leftOf(r), box = r.kind === 'mailbox';
+  const cv = Number(r.conversations_left) || 0, fl = Number(r.files_left) || 0;
+  const notes = [left === 0 ? 'already understood' : [cv ? num(cv) + (cv === 1 ? ' conversation' : ' conversations') : '', fl ? num(fl) + (box ? (fl === 1 ? ' attached file' : ' attached files') : (fl === 1 ? ' file' : ' files')) : ''].filter(Boolean).join(' ' + DOT + ' ')];
+  if (q && q.state === 'reading') notes.push('still being made searchable: priced for what is searchable now');
+  if (priced && !box && fl > 0 && !(Number(r.sampled) > 0)) notes.push('priced at the rate of your other files');
+  if (box && r.by_default === true && r.choice === 'findable') notes.push('marked old');
+  const row = el('div', 'gs-row gs-urow' + (on || left === 0 ? '' : ' off')), l = el('span', 'gs-rl');
+  row.dataset.src = r.source_key;
+  l.append(el('b', null, nm), K(el('small', null, notes.join(' ' + DOT + ' ')), 'm'));
+  row.appendChild(l);
+  if (left > 0) row.appendChild(seg(CHOICES, pickOf(r), (v) => pick(r.source_key, v), nm)); else row.appendChild(chip('ok', 'Understood'));
+  row.appendChild(K(el('b', 'gs-pv gs-up', left === 0 || !priced ? '' : r.usd === null || r.usd === undefined ? 'not measured' : usd2(Number(r.usd) * mul)), 'p'));
+  return row;
+}
+function treeU(S) {
+  const c = el('section', 'am-step gs-tree gs-utree'); c.id = 'gs-utree';
+  const hd = el('div', 'gs-treehd'); hd.append(el('h2', 'am-h2', 'What to understand'), el('small', 'gs-srcnote', 'the same list as step 3 ' + DOT + ' choose for each one'));
+  c.appendChild(hd);
+  const U = S.usam, ok = !!U && U.ok === true, rows = ok ? rowsOf(U) : [], priced = ok && U.state === 'done', mul = doorMul(S);
+  const src = S.src?.rows ?? [], P = S.splan && S.splan.ok === true ? planRows(S.splan) : [];
+  // EMPTY IS NOT DENIED: a refused answer says its reason here, and the list below is still her own sources
+  if (!U) c.appendChild(p('working no-late gr-small', 'Counting what there is to understand, for free'));
+  else if (!ok) { const w = p('gr-small gs-over', 'Your choices and prices could not be read just now: ' + dotted(noteOf(U)) + ' It tries again on its own.'); w.id = 'gs-uwhy'; w.setAttribute('role', 'status'); c.appendChild(w); }
+  const ur = (r) => rows.find((x) => x.source_key === r.source_key);
+  const nm = names(S, src.map((r) => ({ key: r.source_key, label: ur(r)?.name ?? r.name, kind: r.group === 'email' ? 'mail' : 'drive' })));
+  const none = (r) => { const u = ur(r); return !!u && leftOf(u) === 0 && allOf(u) === 0; };
+  const line = (r) => {
+    const u = ur(r);
+    if (u) return uRow(u, nm[r.source_key], P.find((q) => q.key === r.source_key), mul, priced);
+    const d = el('div', 'gs-row gs-urow'), l = el('span', 'gs-rl'); l.append(el('b', null, nm[r.source_key]), K(el('small', null, ok ? 'not counted for understanding yet' : ''), 'm')); d.appendChild(l); return d;
+  };
+  const tree = el('div', 'gs-groups');
+  const g4 = (key, ...a) => grp('u' + key, ...a);   // step 3's own folding group; its folds are kept apart from step 3's
+  const mail = src.filter((r) => r.group === 'email');
+  tree.appendChild(g4('mail', 'mail', 'Gmail', mail.length ? num(mail.length) + (mail.length === 1 ? ' mailbox' : ' mailboxes') + ' ' + DOT + ' their attachments included' : 'none connected yet', '', '', mail.map(line)));
+  const dr = src.filter((r) => r.group === 'drives'), full = dr.filter((r) => !none(r)), { shared, meet, rest } = driveParts(full);
+  const part = (title, list) => (list.length ? [el('span', 'gs-oncelab', title)].concat(list.map(line)) : []);
+  const kids = part('Shared drives', shared).concat(part('Meetings', meet), part('Folders shared with the Tool', rest));
+  const empty = dr.length - full.length;
+  if (empty > 0) kids.push(el('small', 'gs-srcnote', num(empty) + (empty === 1 ? ' more has nothing in it to read.' : ' more have nothing in them to read.')));
+  tree.appendChild(g4('drive', 'folder', 'Google Drive', [shared.length ? num(shared.length) + (shared.length === 1 ? ' shared drive' : ' shared drives') : '', meet.length ? 'meetings' : '', rest.length ? num(rest.length) + (rest.length === 1 ? ' folder' : ' folders') : ''].filter(Boolean).join(' ' + DOT + ' ') || (dr.length ? 'nothing in them to read' : 'none connected yet'), '', '', kids));
+  const sys = src.filter((r) => r.group === 'systems'), sn = sys.map((r) => String(r.name || '')).filter(Boolean);
+  if (sys.length) tree.appendChild(g4('sys', 'systems', 'Your systems', sn.length > 3 ? sn.slice(0, 3).join(', ') + ' and ' + num(sn.length - 3) + ' more' : sn.join(', '), 'Already understood ' + DOT + ' free', 'ok',
+    [el('small', 'gs-srcnote', 'Your systems already keep their facts in order (invoices, records, contacts), so there is nothing to read. They count as understood from the moment they are connected.')]));
+  c.append(tree, insideFold(S));
+  return c;
+}
+// INSIDE EACH MAILBOX, WHAT IS READ (1158), folded. The three lines are the brain's own sorting (understand_population reads the
+// groups people and money; automated mail and the rest stay searchable). Under them her words for money paperwork and who she
+// works with, pre-filled from counts (understand_answers_suggest), kept by understand_answers_set, with what moved.
+function insideFold(S) {
+  const d = el('details', 'gs-fold'); d.id = 'gs-inside'; d.open = inOpen;
+  d.addEventListener('toggle', () => { inOpen = d.open; });
+  d.appendChild(el('summary', null, 'Inside each mailbox, what is read'));
+  d.append(priceRow('Conversations with clients and people you work with', 'read'), priceRow('Money mail: invoices, receipts, payment notices', 'always read'), priceRow('Newsletters, notifications, no-reply mail', 'searchable only'));
+  const A = S.uans;
+  if (!A) { d.appendChild(p('working no-late gr-small', 'Filling in your words from what was counted')); return d; }
+  if (A.ok !== true) { d.appendChild(p('gr-small', 'Your words could not be read just now: ' + dotted(noteOf(A)) + ' The standard sorting is used.')); return d; }
+  if (!ua) ua = answersFrom(A);
+  const q3 = el('div', 'gs-q'); q3.appendChild(el('b', null, 'Your words for money paperwork'));
+  const words = el('div', 'gr-seg'); words.setAttribute('role', 'group'); words.setAttribute('aria-label', 'Your words for money paperwork');
+  const listed = (A.money_words ?? []).map((w) => w.word);
+  const own = ua.money_words.filter((w) => !listed.includes(w));
+  for (const w of [...(A.money_words ?? []).map((x) => [x.word, x.conversations]), ...own.map((x) => [x, null])]) {
+    const on = ua.money_words.includes(w[0]);
+    const b = btn('gr-amt' + (on ? ' on' : ''), w[0].slice(0, 1).toUpperCase() + w[0].slice(1) + (w[1] ? ' ' + DOT + ' ' + num(w[1]) : ''), () => { ua.money_words = on ? ua.money_words.filter((x) => x !== w[0]) : [...ua.money_words, w[0]]; draw(); });
+    b.setAttribute('aria-pressed', on ? 'true' : 'false'); words.appendChild(b);
+  }
+  q3.appendChild(words);
+  const add = el('div', 'gs-wordadd'); const inp = el('input'); inp.id = 'gs-word-in'; inp.type = 'text'; inp.maxLength = 40; inp.placeholder = 'Your own word'; inp.setAttribute('aria-label', 'Your own word for money paperwork');
+  const addIt = () => { const v = inp.value.trim().toLowerCase(); if (!v) return; if (!ua.money_words.includes(v)) ua.money_words = [...ua.money_words, v]; inp.value = ''; draw(); };
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') addIt(); });
+  add.append(inp, btn('go ghost', '+ Add', addIt)); q3.append(add, el('p', 'am-small', 'The numbers are conversations in your last 2 years whose subject uses that word.'));
+  const q2 = el('div', 'gs-q'); q2.append(el('b', null, 'Who you work with'), seg(WORK_WITH, ua.work_with, (v) => { ua.work_with = v; draw(); }, 'Who you work with'));
+  q2.appendChild(el('p', 'am-small', 'Anyone you have ever written to always counts as someone you work with.'));
+  d.append(q3, q2);
+  const kept = A.answers && typeof A.answers === 'object';
+  const changed = !same(answersFrom(A), ua);
+  const out = p('gr-small', '');
+  const keep = btn('go ghost', 'Keep my changes', async () => {
+    keep.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Keeping your words and sorting again';
+    const { data, error } = await rpc('understand_answers_set', { p_answers: ua, p_identity: null });
+    if (error || !data || data.ok !== true) { out.className = 'gr-small'; out.textContent = 'Not kept: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; keep.disabled = false; return; }
+    toast(String(data.note || 'Kept. Your mail is sorted again with your words.'));
+    R.uans = null; ua = null; R.gLoad = false; R.usam = null;
+    draw();
+  });
+  keep.disabled = !changed;
+  const g = el('div', 'gr-go'); g.appendChild(keep); d.append(g, out);
+  if (!changed) d.appendChild(p('gr-small', kept ? 'Kept. Change any tap and press Keep my changes.' : 'Filled in from what was counted. Change any tap and press Keep my changes.'));
+  d.appendChild(movedBlock(S));
+  return d;
+}
 async function stopAll(S, keys, out, b) {
   b.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Stopping';
   const res = await Promise.all(keys.map((k) => rpc('source_read_approve', { p_source_key: k, p_mode: 'understand_stop', p_months: null, p_confirm: true }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) }))));
