@@ -781,17 +781,41 @@ function treeCard(S) {
   c.appendChild(tree);
   return c;
 }
-function searchCard(S) {
-  const c = card('eye', 'What needs you', null);
-  c.classList.add('gs-plan'); c.id = 'gs-plan';
-  const P = S.splan;
-  if (!P || P.ok !== true) {
-    c.appendChild(S.splanErr || S.late?.has('plan') ? p('gr-small', 'What is counted could not be read just now' + (S.splanErr ? ': ' + String(S.splanErr) : '') + '. It tries again on its own.')
-      : !S.moneyIn && S.owner ? p('working', 'Counting what there is to read, for free') : p('gr-small', 'Connect something and it is counted here, for free.'));
-    const fl0 = findLine(S); if (fl0) c.appendChild(fl0);
-    return c;
+// THE ONE BOX THAT ASKS, only when something needs her yes (search_plan's to_read): how many items and what they are, the
+// price and the time in one sentence, See the list (each source with its check box, how far back, the boundary), then one
+// button with the money in one line beside it. The terms line is drawn only until she has agreed; the credit is asked here
+// only when what is checked costs more than her balance (creditAsk). The press is a preview first (search_go without confirm),
+// then Yes (searchPreview). The button reads what is checked at the moment of the press, never what was checked when it was drawn.
+// A PRESS WHILE ANOTHER READS (seat press-while-reading, 2026-11-12): the button is live while another source is being read;
+// the brain leaves alone only what is already pressed and reading (search_go, per source).
+function yesCard(S) {
+  const P = S.splan && S.splan.ok === true ? S.splan : null;
+  if (!P) return null;
+  const all = planRows(P), need = all.filter((r) => r.state === 'to_read');
+  if (!need.length) return null;
+  const nm = names(S, all), pick = chosenOf(P);
+  const c = el('section', 'am-step gs-yes'); c.id = 'gs-need';
+  c.appendChild(el('h2', 'am-h2', 'One thing needs your yes'));
+  const sum = (rows) => rows.reduce((a, r) => a + (Number(r.to_read) || 0), 0);
+  const cost = Math.round(pick.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100;
+  const cur = (P.choices ?? []).find((ch) => (ch.months ?? null) === (plan.months ?? null)), complete = !cur || cur.complete !== false;
+  const part = (rows, one, many, where) => (rows.length ? num(sum(rows)) + ' ' + (sum(rows) === 1 ? one : many) + ' in ' + (rows.length === 1 ? nm[rows[0].key] : num(rows.length) + ' ' + where) : '');
+  const what = [part(pick.filter((r) => r.kind === 'mail'), 'attachment', 'attachments', 'mailboxes'), part(pick.filter((r) => r.kind !== 'mail'), 'older file', 'older files', 'drives or folders')].filter(Boolean).join(' and ');
+  const mins = pick.length && pick.every((r) => r.minutes !== null && r.minutes !== undefined) ? Math.max(...pick.map((r) => Number(r.minutes) || 0)) : null;
+  const say = el('p', 'gs-say');
+  say.append(K(el('span', null, pick.length ? num(sum(pick)) + (sum(pick) === 1 ? ' item: ' : ' items: ') + what + '. ' : 'Nothing is checked. '), 'what'),
+    K(el('b', null, !pick.length ? '' : complete ? usd2(cost) : 'counting'), 'usd'), K(el('span', null, !pick.length ? '' : mins !== null ? ', about ' + num(mins) + ' minutes.' : ', time measured as it reads.'), 'mins'));
+  c.appendChild(say);
+  const d = el('details', 'gs-fold'); d.id = 'gs-list'; d.open = listOpen;
+  d.addEventListener('toggle', () => { listOpen = d.open; });
+  d.appendChild(el('summary', null, 'See the list'));
+  for (const r of need) {
+    const lab = el('label', 'gs-row gs-tick'), box = el('input'); box.type = 'checkbox'; box.checked = !plan.off[r.key]; box.setAttribute('aria-label', nm[r.key]);
+    box.addEventListener('change', () => { plan.off[r.key] = !box.checked; draw(); });
+    const l = el('span', 'gs-rl'); l.append(el('b', null, nm[r.key]), K(el('small', null, num(r.to_read) + (r.kind === 'mail' ? ' attachments wait' : ' older files wait')), 'n'));
+    lab.append(box, l); d.appendChild(lab);
   }
-  // How far back: the three choices, each with its own total, or "counting" while a choice is not complete.
+  // How far back: the three choices; the count is made again for the one she picks.
   const seg = el('div', 'gr-seg gs-back'); seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'How far back');
   for (const ch of (P.choices ?? [])) {
     const m = ch.months === null || ch.months === undefined ? null : Number(ch.months);
@@ -800,62 +824,37 @@ function searchCard(S) {
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
     seg.appendChild(b);
   }
-  c.append(el('b', 'gs-lab', 'How far back'), seg);
-  const all = planRows(P), nm = names(S, all), own = ownDomain(P);
-  const reading = all.filter((r) => r.state === 'reading');
-  const need = all.filter((r) => r.state === 'to_read' || r.state === 'not_counted');
-  const done = all.filter((r) => r.state === 'searchable');
-  const rest = all.filter((r) => !reading.includes(r) && !need.includes(r) && !done.includes(r));   // a state this page does not know is shown, never dropped
-  if (reading.length) { const g = group('Reading now', 'gs-reading'); for (const r of reading) g.appendChild(srcRow(S, r, nm[r.key], own, 'reading')); c.appendChild(g); }
-  const pick = chosenOf(P);
-  if (need.length || rest.length) {
-    const g = group('Needs your yes', 'gs-need');
-    for (const r of need.concat(rest)) g.appendChild(srcRow(S, r, nm[r.key], own, 'need'));
-    const cur = (P.choices ?? []).find((ch) => (ch.months ?? null) === (plan.months ?? null));
-    const complete = !cur || cur.complete !== false;
-    const items = pick.reduce((a, r) => a + (Number(r.to_read) || 0), 0);
-    const cost = Math.round(pick.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100;
-    const tl = el('div', 'gs-pl gs-totalrow');
-    tl.append(el('b', 'gs-total', complete ? 'Total: ' + num(items) + ' items' : 'Total: counting'), el('b', 'gs-pv', complete ? usd2(cost) : 'counting'));
-    g.appendChild(tl);
-    if (P.boundary) g.appendChild(el('p', 'am-small', String(P.boundary)));
-    const bal = Number(P.balance_usd);
-    const known = P.balance_known === true && Number.isFinite(bal);
-    const over = known && cost > bal + 0.000001;
-    if (!known) g.appendChild(p('gr-small', 'Your credit could not be read just now, so nothing can be started. It tries again on its own.'));
-    else if (over) g.appendChild(creditAsk(S, cost, bal));
-    else g.appendChild(p('gr-small', 'From your credit of ' + usd2(bal) + ', leaving ' + usd2(Math.max(0, bal - cost)) + '.'));
-    // Time: the chosen sources run side by side, so the longest one; any unmeasured one makes it "measuring".
-    const mins = pick.length && pick.every((r) => r.minutes !== null && r.minutes !== undefined) ? Math.max(...pick.map((r) => Number(r.minutes) || 0)) : null;
-    g.appendChild(p('gr-small', mins !== null ? 'about ' + num(mins) + ' minutes' : 'Time: measuring'));
-    g.appendChild(p(null, 'Uncheck anything you do not need. Counted for free; nothing is read until you press.'));
-    const out = p('gr-small', '');
-    if (pick.length) g.appendChild(termsLine(S));   // the yes to the terms, kept once, before the first press that costs
-    const go = btn('go', 'Make them searchable', () => { if (!agreedNow()) { out.textContent = 'Check the box first: it says you agree to the terms of use.'; C.$('#gs-agree')?.focus(); return; } searchPreview(S, pick, out, go); });
-    // A PRESS WHILE ANOTHER READS (seat press-while-reading, 2026-11-12, HQ's brief after Alex's press of 20:32 PT was held): the
-    // button is live for what needs her yes while the row above keeps its meter. The brain leaves alone only what is already
-    // pressed and reading (search_go, per source). SUPERSEDED: the button greyed while anything was being read, with the line
-    // saying these can be started when it is done (seats findable-fix-2 and setup-findable-table, when one press at a time was the rule).
-    go.disabled = !known || over || !complete || !pick.length;
-    const gw = el('div', 'gr-go'); gw.appendChild(go);
-    g.append(gw, out);
-    if (reading.length && pick.length) g.appendChild(p('gr-small gs-also', 'You can start these now. What is already being read keeps going.'));
-    c.appendChild(g);
-  } else if (!reading.length) c.appendChild(p('gr-small gs-nothing', all.length ? 'Nothing here needs you: everything you connected is searchable.' : 'Connect something and it is counted here, for free.'));
-  if (done.length) {
-    const d = el('details', 'gs-fold'); d.id = 'gs-fold'; d.open = foldOpen;
-    d.addEventListener('toggle', () => { foldOpen = d.open; });
-    d.appendChild(el('summary', null, num(done.length) + (done.length === 1 ? ' source' : ' sources') + ' already searchable ' + DOT + ' show'));
-    for (const [kind, one, many] of [['mail', 'mailbox', 'mailboxes'], ['drive', 'drive or folder', 'drives and folders']]) {
-      const mine = done.filter((r) => (kind === 'mail') === (r.kind === 'mail'));
-      if (!mine.length) continue;
-      d.appendChild(el('b', 'gs-foldlab', num(mine.length) + ' ' + (mine.length === 1 ? one : many)));
-      for (const r of mine) d.appendChild(srcRow(S, r, nm[r.key], own, 'done'));
-    }
-    c.appendChild(d);
-  }
-  const fl = findLine(S); if (fl) c.appendChild(fl);
-  c.appendChild(el('p', 'am-small', 'Connect or upload something more, and it joins the count before you press. Scans and photos are priced on their own.'));
+  d.append(el('b', 'gs-lab', 'How far back'), seg);
+  if (P.boundary) d.appendChild(el('p', 'am-small', String(P.boundary)));
+  d.appendChild(el('p', 'am-small', 'Uncheck anything you do not need. Counted for free; nothing is read until you press.'));
+  c.appendChild(d);
+  const bal = Number(P.balance_usd), known = P.balance_known === true && Number.isFinite(bal), over = known && cost > bal + 0.000001;
+  if (pick.length && !mark(S, 'agreed')) c.appendChild(termsLine(S));   // the yes to the terms, kept once, before the first press that costs
+  if (over) c.appendChild(creditAsk(S, cost, bal));
+  const out = p('gr-small', ''); out.id = 'gs-out';
+  const go = K(btn('go', 'Make them searchable' + (complete && pick.length ? ' ' + DOT + ' ' + usd2(cost) : ''), () => {
+    if (!agreedNow()) { out.textContent = 'Check the box first: it says you agree to the terms of use.'; C.$('#gs-agree')?.focus(); return; }
+    searchPreview(R, chosenOf(R.splan), out, go);
+  }), 'go');
+  go.id = 'gs-go'; go.disabled = !known || over || !complete || !pick.length;
+  const act = el('div', 'gs-act');
+  act.append(go, K(el('small', 'gs-srcnote', !known ? 'Your credit could not be read just now, so nothing can be started. It tries again on its own.' : over ? 'Add the credit above first.' : 'Paid from your credit (' + usd2(bal) + ' left)'), 'bal'));
+  c.append(act, out);
+  return c;
+}
+// WHAT IS NOT SEARCHABLE, AND WHY, folded at the foot (decision 1156.5). The table is drawn when she opens the fold, from the
+// reading on the page at that moment (notBody), and again each time she opens it.
+function notCard(S) {
+  const c = el('section', 'am-step gs-not'); c.id = 'gs-not';
+  const d = el('details', 'gs-fold'); d.id = 'gs-notfold';
+  const b = K(el('div', 'gs-notbody'), 'b');
+  d.append(el('summary', null, 'What is not searchable, and why'), b);
+  d.addEventListener('toggle', () => {
+    if (!d.open) return;
+    b.replaceChildren();
+    if (R?.road?.findable) notBody(R, b); else b.appendChild(p('gr-small', 'Your brain could not be read just now. It tries again on its own.'));
+  });
+  c.appendChild(d);
   return c;
 }
 // WHAT IS NOT SEARCHABLE, AND WHY (the table of seat setup-findable-table; since seat step3-fresh 2026-11-12, decision 1156.5,
