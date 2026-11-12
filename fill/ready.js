@@ -839,33 +839,39 @@ function understandShape(S) {
     live ? 'reading now' : 'measured once it starts',
     m ? 'Measured on a sample of your own mail and files. Your limit is never passed.' : 'A small sample, never more than $' + SAMPLE_CAP + ', measures the price on your own mail and files first. Your limit is never passed.', live);
 }
-// OLD, SEARCHABLE ONLY (decision 1140; source_mark_old, seat privacy-check-rules): a mailbox she only wants to search herself is
-// made searchable with no privacy check, so it costs less and nobody else can find what is in it. Her press, with a yes first;
-// pressed again, it is undone. The row's price is the brain's after the change (the plan is read again).
-function oldRow(r) {
-  const on = r.old_searchable_only === true;
+// AN OLD MAILBOX (decision 1140; source_mark_old, seat privacy-check-rules; arranged by seat setup-findable-table 2026-11-12 on
+// decision 1150, picture Part 3). Offered only behind the row's own More button, and only for a mailbox that is not on the
+// business's own address (ownDomain); the live mailboxes do not offer it. Both sides of the trade in four lines, then her yes.
+// After, the row says "Old: only you search it" with Undo. A mailbox already marked old always shows that line and its Undo,
+// whatever address it is on. SUPERSEDED 2026-11-12, Alex's yes on 1150: "Old, searchable only" under every mailbox (oldRow).
+function oldLine(r, nm) {
   const d = el('div', 'gs-oldrow');
-  d.append(el('small', null, on ? 'Old, searchable only: you can search it, nobody else can, and it gets no privacy check.' : 'Only you need to search this one? Mark it old: it costs less and nobody else can find it.'),
-    btn('gr-link', on ? 'Undo: not old' : 'Old, searchable only', () => markOld(r, !on)));
-  if (on) d.appendChild(el('small', 'gs-oldnote', 'For an old mailbox kept for finding people, Everything under How far back is usually right.'));   // seat audit-fix-screen, brief item 5
+  d.append(el('small', null, 'Old: only you search it'), btn('gr-link', 'Undo', () => markOld(r, false, nm, null)));
   return d;
 }
-function markOld(r, old) {
+function markOld(r, old, nm, own) {
   const body = el('div');
-  body.appendChild(p(null, old ? 'You can still search everything in it. Nobody else in your business can find what is in it, and it gets no privacy check, so it costs less. Press Undo on its row any time.'
-    : 'Its emails and attachments then get the privacy check, within the daily limit, and your team can find what they are allowed to see.'));
+  if (old) {
+    if (own) body.appendChild(p('gr-small', nm + ' is not on your company' + String.fromCharCode(8217) + 's address (' + own + ').'));
+    body.appendChild(points([
+      ['eye', ['You', true], ' can still search everything in it.'],
+      ['lock', ['Nobody else', true], ' in your company can find what is in it.'],
+      ['brain', ['The Tool will not understand it', true], ', so nothing in it counts when you ask about the business.'],
+      ['coin', ['It costs less:', true], ' no privacy check, no understanding.'],
+    ]));
+  } else body.appendChild(p(null, 'Its emails and attachments then get the privacy check, within the daily limit, your team can find what they are allowed to see, and it can be understood like your other mailboxes.'));
   const said = p('gr-small', '');
   const yes = btn('go', old ? 'Yes, mark it old' : 'Yes, undo', async () => {
     yes.disabled = true; no.disabled = true; said.className = 'working no-late gr-small'; said.textContent = old ? 'Marking it old' : 'Undoing';
     const { data, error } = await rpc('source_mark_old', { p_source_key: r.key, p_old: old, p_identity: null });
     if (error || !data || data.ok !== true) { said.className = 'gr-small'; said.textContent = 'Not changed: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; yes.disabled = false; no.disabled = false; return; }
-    sheet.close(); toast(String(data.note || 'Changed.'));
+    sheet.close(); toast(old ? 'Marked old: only you search it.' : 'No longer old.');
     await rePlan();
   });
   const no = btn('go ghost', 'Not now', () => sheet.close());
   const acts = el('div', 'gr-chips'); acts.append(yes, no);
   body.append(acts, said);
-  sheet.open((old ? 'Mark ' : 'Undo old for ') + String(r.label || r.key) + (old ? ' old, searchable only?' : '?'), body);
+  sheet.open(old ? 'Mark this mailbox old?' : 'Undo old for ' + nm + '?', body);
 }
 async function rePlan() {
   const card0 = C.$('#gs-plan'); if (card0) card0.replaceChildren(p('working no-late', 'Counting, for free'));
@@ -895,7 +901,7 @@ async function searchPreview(S, pick, out, go) {
   const no = btn('go ghost', 'Not now', () => sheet.close());
   const acts = el('div', 'gr-chips'); acts.append(yes, no);
   body.append(acts, said);
-  sheet.open('Make it all searchable?', body);
+  sheet.open('Make them searchable?', body);
 }
 // THE METER'S READ ESTIMATE (lens-ask read_estimate), kept for five minutes: step 4 and step 5's monthly figure and price per
 // email (S.est). Step 3's plan no longer uses its balance (lens-ask reads the meter itself).
@@ -940,24 +946,6 @@ function searchPoll() {
     if (live && next) live.replaceWith(next); else if (!next) { mount(C); return; } else if (!live) { mount(C); return; }
     searchPoll();
   }, 15000);
-}
-// PROGRESS: one row per source with its own meter and chip (Reading amber, Waiting grey, Searchable green).
-function progressCard(S, rows, prog) {
-  const bal = balanceLeft(S);
-  const c = card('steps', 'Progress' + (bal !== null ? ' ' + DOT + ' your credit ' + usd2(bal) + ' left' : ''), null);
-  const list = el('div', 'gs-rows');
-  for (const x of prog) {
-    const all = totalOf(x), done = Number(x.done) || 0;
-    const st = x.state === 'reading' ? ['Reading', 'gs-chip gs-chip-warn'] : x.state === 'up_to_date' ? ['Searchable', 'gs-chip gs-chip-ok'] : ['Waiting', 'gs-chip'];
-    const r = el('div', 'gs-row');
-    const bar = el('div', 'gs-bar'); const i = el('i'); i.style.width = (all ? Math.round((done / all) * 100) : 0) + '%'; bar.appendChild(i);
-    const l = el('span', 'gs-rl'); l.append(el('b', null, nameOf(rows, x.source)), bar);
-    r.append(l, el('span', st[1], st[0]));
-    list.appendChild(r);
-  }
-  if (!prog.length) list.appendChild(p('gr-small', S.progErr ? 'Progress could not be read just now (' + String(S.progErr) + ').' : 'Nothing is being read yet.'));
-  c.appendChild(list);
-  return c;
 }
 // QUESTIONS (steps 1 to 3): details that open in place, the approved questions and answers.
 function questions(list) {
@@ -1065,7 +1053,6 @@ const CARDS = {
     const prog = S.prog ?? [];
     const out = [H('Make everything searchable.'), searchShape(S)];
     out.push(searchCard(S));
-    out.push(progressCard(S, rows, prog));
     const stop = card('check', 'You could stop here', null, p(null, 'Once everything is green, you already have a working tool: search across your whole business, by meaning, in a second. If that is all you need, the ', el('b', null, 'Search'), ' plan is $40 a month (founding price $20). Understanding comes next, if you want it.'));
     stop.classList.add('gs-green'); out.push(stop);
     const green = rows.length > 0 && prog.length > 0 && prog.every((r) => r.state === 'up_to_date');
@@ -1104,7 +1091,7 @@ const CARDS = {
     const M = monthlyOf(S);
     const how = card('coin', 'How your price works', null);
     const ol = el('ol', 'gs-num3');
-    for (const [n, t] of [['1', 'A small sample first, about $2. 100 of your conversations are read, and you see the price measured on your own mail.'], ['2', 'You set the limit. It starts at that price, it is never passed, and Stop works any time: you pay only for what was read.'], ['3', 'Then only new mail, ' + (M === null ? 'its monthly price measured' : 'about ' + usd2(M) + ' a month') + ', shown measured after your first month, in Settings.']]) { const li = el('li'); li.append(el('span', 'gs-n', n), el('span', null, t)); ol.appendChild(li); }
+    for (const [n, t] of [['1', 'A small sample first, never more than $' + SAMPLE_CAP + '. About 100 of your conversations and some of their attached files are read, and you see the price measured on your own mail and files.'], ['2', 'You set the limit. It starts at that price, it is never passed, and Stop works any time: you pay only for what was read.'], ['3', 'Then only new mail, ' + (M === null ? 'its monthly price measured' : 'about ' + usd2(M) + ' a month') + ', shown measured after your first month, in Settings.']]) { const li = el('li'); li.append(el('span', 'gs-n', n), el('span', null, t)); ol.appendChild(li); }
     how.appendChild(ol);
     if (M !== null) how.appendChild(el('p', 'am-small', 'The monthly figure is an estimate from your own mail' + String.fromCharCode(8217) + 's pace, from the AI meter.'));
     out.push(how);
@@ -1291,7 +1278,7 @@ function understandLive(S) {
 const GROUP_TITLE = { people: 'Your conversations', money: 'Money mail', automated: 'Automated mail', rest: 'Everything else' };
 const MAILBOX_FOR = [['everything', 'Everything'], ['sales', 'Sales'], ['accounting', 'Accounting'], ['hiring', 'Hiring'], ['old', 'Old, searchable only']];
 const WORK_WITH = [['businesses', 'Businesses'], ['people', 'People'], ['both', 'Both']];
-const SAMPLE_CAP = 3;   // the sample's own limit, never passed (understand_sample p_cap_usd); about $2 is what 100 conversations cost
+const SAMPLE_CAP = 5;   // the sample's own limit, never passed (understand_sample p_cap_usd, the brain's own default). SUPERSEDED 2026-11-12 (seat setup-findable-table on seat understand-files' report): 3 and the words "about $2"; the sample now reads attached files too and costs more, so the honest words are its limit
 let ua = null;          // her three answers as she taps them: { mailboxes: {key: for}, work_with, money_words: [] }
 const fmtShort = (k) => String(k || '').split(':').pop();
 function chosenGroups(S) { const G = S.mgroups; if (!G || G.err || !G.groups) return ['money', 'people'].filter((g) => g === 'money' || !uOff[g]); return G.groups.filter((g) => g.always || !uOff[g.group]).map((g) => g.group); }
@@ -1419,7 +1406,7 @@ function sampleBlock(S) {
     d.appendChild(p('gr-small', 'Nothing beyond the sample is read until you set your limit.'));
     const short = bal === null || bal < SAMPLE_CAP;
     if (short) d.appendChild(p('gr-small gs-over', 'The sample needs ' + usd2(SAMPLE_CAP) + ' of credit' + (bal === null ? '; your balance could not be read.' : '; your balance is ' + usd2(bal) + '.')));
-    const go = btn('go', 'Read the sample ' + DOT + ' about $2', () => samplePress(S, U));
+    const go = btn('go', 'Read the sample ' + DOT + ' never more than ' + capWords(U), () => samplePress(S, U));
     go.disabled = short || !(Number(U.conversations) > 0);
     const gw = el('div', 'gr-go'); gw.appendChild(go); if (short) gw.appendChild(btn('go ghost', 'Top up', () => topUp(S)));
     d.append(gw, el('p', 'am-small', String(U.note || '')));
@@ -1435,7 +1422,7 @@ function sampleBlock(S) {
   }
   // done: the price measured on her mail, her limit, and the press
   const rem = Number(U.predicted_remaining_usd), lo = Number(U.low_usd), hi = Number(U.high_usd);
-  d.appendChild(priceRow('Measured on your own mail, for the rest', usd2(rem), 'Likely between ' + usd2(lo) + ' and ' + usd2(hi) + '. The sample cost ' + usd2(U.sample_spent_usd) + ' (' + num(U.read) + ' read' + (Number(U.could_not_read) ? ', ' + num(U.could_not_read) + ' could not be read' : '') + ').'));
+  d.appendChild(priceRow('Measured on your own mail and files, for the rest', usd2(rem), partsWords(U) + 'Likely between ' + usd2(lo) + ' and ' + usd2(hi) + '. The sample cost ' + usd2(U.sample_spent_usd) + ' (' + num(U.read) + ' read' + (Number(U.could_not_read) ? ', ' + num(U.could_not_read) + ' could not be read' : '') + ').'));
   d.appendChild(el('p', 'am-small', String(U.basis || '')));
   if (Array.isArray(U.groups_not_sampled) && U.groups_not_sampled.length) d.appendChild(el('p', 'am-small', 'Not in the sample: ' + U.groups_not_sampled.map((g) => GROUP_TITLE[g] || g).join(', ') + '. They are priced at the rate measured on the rest.'));
   const boxes = (U.by_mailbox ?? []).filter((x) => Number(x.conversations) > 0);
@@ -1472,11 +1459,16 @@ function sampleBlock(S) {
   return d;
 }
 let uLimit = null;
+// mail and attached files, each part of the measured price as the brain gives it (understand_sample 'mail' and 'attached_files')
+const partsWords = (U) => { const m = Number(U?.mail?.predicted_remaining_usd), f = Number(U?.attached_files?.predicted_remaining_usd); return Number.isFinite(m) && Number.isFinite(f) && Number(U?.attached_files?.left) > 0 ? usd2(m) + ' mail, ' + usd2(f) + ' attached files. ' : ''; };
 // RETIRED (seat audit-fix-screen, ruling 1142.4): shares(), the page's own split of her limit over mailboxes; understand_go shares it.
+const capWords = (U) => { const c = Number(U?.cap_usd); const v = Number.isFinite(c) && c > 0 ? c : SAMPLE_CAP; return Number.isInteger(v) ? '$' + v : usd2(v); };
 function samplePress(S, U) {
   const body = el('div');
-  body.append(priceRow('Conversations read first', num(U.size), 'chosen across your mailboxes and lengths'), priceRow('Never more than', usd2(U.cap_usd), 'usually about $2'),
-    p('gr-small', 'Then you see the price measured on your own mail, and set your limit. Nothing else is read until then.'));
+  body.append(priceRow('Conversations read first', num(U.size), 'chosen across your mailboxes and lengths'));
+  if (Number(U.files_size) > 0) body.appendChild(priceRow('Attached files read first', num(U.files_size), 'of your ' + num(U.files) + ' attached files; an agreement among them is read for its terms too'));
+  body.append(priceRow('Never more than', usd2(Number(U.cap_usd) || SAMPLE_CAP)),
+    p('gr-small', 'Then you see the price measured on your own mail and files, and set your limit. Nothing else is read until then.'));
   const said = p('gr-small', '');
   const yes = btn('go', 'Yes, read the sample', async () => {
     yes.disabled = true; no.disabled = true; said.className = 'working no-late gr-small'; said.textContent = 'Starting the sample';
@@ -1497,6 +1489,7 @@ async function understandPress(S, U, L, boxes, out, go) {
   if (!pv || pv.ok !== true) { out.textContent = 'Not started: ' + noteOf(pv) + '.'; return; }
   const body = el('div');
   body.append(priceRow('Conversations to understand', num((Number(U.conversations) || 0) - (Number(U.already_read) || 0)), groups.map((g) => GROUP_TITLE[g] || g).join(', ') + ', last 2 years'),
+    ...(Number(U.attached_files?.left) > 0 ? [priceRow('Attached files to understand', num(U.attached_files.left), 'every file attached to the mail of the mailboxes you chose')] : []),
     priceRow('Measured price', usd2(U.predicted_remaining_usd), 'likely between ' + usd2(U.low_usd) + ' and ' + usd2(U.high_usd)), priceRow('Your limit, never passed', usd2(Number.isFinite(Number(pv.limit_usd)) ? pv.limit_usd : L)));
   if (pv.note) body.appendChild(p('gr-small', String(pv.note)));
   body.appendChild(p('gr-small', 'Stop works any time; you pay only for what was read. You get one short email when it is done.'));
