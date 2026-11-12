@@ -265,6 +265,7 @@ function wayBack() {
   if (wired) return;
   wired = true;
   window.addEventListener('gr-refresh', () => { if (C && !C.$('#s-ready')?.hidden) mount(C); });
+  document.addEventListener('tool:work', () => { const w = C?.$('#gs-work'); if (w && R) workInto(w, R); });   // the one indicator's reading moved (fill/working.js): step 3's Working line follows, in place
   // the Brain's page closed (brainroom.js closePage): back to the step and the spot she was on, unless another page opened in its place
   window.addEventListener('br-closed', () => setTimeout(() => { const pg = C?.$('#br-page'); if (!pg || pg.hidden) closeOver(true); }, 0));
   window.addEventListener('fd-start', () => { at = 'db'; if (C && R && !C.$('#s-ready')?.hidden) { draw(); window.scrollTo({ top: 0 }); } });
@@ -350,6 +351,7 @@ function draw() {
   if (at === 'search' && box.dataset.step === 'search') inPlace(box, kids);
   else { box.replaceChildren(...kids); if (at === 'search') for (const n of kids) n.dataset.sig = sigOf(n); }
   box.dataset.step = at;
+  if (at === 'search') { const w = C.$('#gs-work'); if (w) workInto(w, S); }   // a kept top card: its Working line is redrawn, not copied
   if (at === 'understand' && S.owner && !S.gLoad) { S.gLoad = true; Promise.all([S.mgroups ? null : readGroups(S), S.uans ? null : readAnswers(S)]).then(() => readSample(S)).then(() => { if (R === S && at === 'understand' && !typing() && !C.$('#gr-sheet')) draw(); }); }   // step 4's groups, answers and sample, read when she is on it
   uPoll();
   if (at === 'understand' || at === 'ready') needEst(S);   // the monthly figure and the price per email, asked where they are shown
@@ -577,8 +579,8 @@ function progressFailed(id, title, why) {
 // folding, each with + Add that opens the one connect sheet over the step), the one box that asks (yesCard, only when
 // something needs her yes; money in one line at the button; the terms only until she has agreed) and what is not searchable
 // and why, folded (notCard). Every number is the brain's: the percentage is brain_road's (done of what can be read), the counts
-// and states search_plan's, the names and each system's line sources_view's, the Working line source_read_progress's (the one
-// indicator of seat work-indicator had not landed; when it has, it goes where workWords is). A RE-READ CHANGES NUMBERS IN
+// and states search_plan's, the names and each system's line sources_view's, the Working line the one indicator's (fill/working.js,
+// seat work-indicator: its reading and its wording; source_read_progress's where a brain does not carry it). A RE-READ CHANGES NUMBERS IN
 // PLACE (inPlace): a card whose shape is the same keeps its place and only the marked numbers (K) change.
 // NOT SHOWN, because the brain does not hold or send it (said in the seat's report): a drive's own top folder names, and when
 // a system's copy was last refreshed. MEETINGS are told by the drive's own name (Meet, meeting): the screen's reading.
@@ -660,14 +662,26 @@ const WORD = { searchable: ['Searchable', 'ok'], reading: ['Reading', 'warn'], t
 const SV = { needs_you: ['Needs you', 'warn'], reading: ['Reading', 'warn'], up_to_date: ['Connected', 'ok'] };   // sources_view's states
 const MEET = [' meet ', ' meeting ', ' meetings '];
 const FINDS = ['find', 'search', 'show', 'where'];
-// THE WORKING LINE: everything being read now, done of total, and the time left at the measured pace (source_read_progress;
-// never a guessed time: measuring is said). Empty when nothing is being read.
+// THE WORKING LINE WHERE THE BRAIN DOES NOT CARRY THE ONE INDICATOR'S READING (work_running): everything being read now, done of
+// total, and the time left at the measured pace (source_read_progress; never a guessed time: measuring is said). Empty when
+// nothing is being read.
 function workWords(S) {
   const rd = (S.prog ?? []).filter((x) => x.state === 'reading');
   if (!rd.length) return '';
   const done = rd.reduce((a, x) => a + (Number(x.line_done) || 0), 0), all = rd.reduce((a, x) => a + (Number(x.line_total) || 0), 0);
   const left = rd.every((x) => x.minutes_left !== null && x.minutes_left !== undefined) ? Math.max(...rd.map((x) => Number(x.minutes_left) || 0)) : null;
   return 'Working ' + DOT + ' ' + num(done) + ' of ' + num(all) + ' ' + DOT + ' ' + leftWords(left);
+}
+// THE WORKING LINE IS THE ONE INDICATOR'S (fill/working.js, seat work-indicator, decision 1152.1): the same reading it shows in
+// the header (window.toolWork, kept current by its tool:work event) in its own wording (window.toolWorkParts), one line for
+// each piece of running work. Never a second reading or a second wording of it.
+function workInto(w, S) {
+  const W = window.toolWork, parts = window.toolWorkParts;
+  if (W && Array.isArray(W.items) && parts) {
+    w.replaceChildren(...W.items.map((it) => { const l = el('span', 'gs-workline'); l.append(parts.title(it), ' ' + DOT + ' ', parts.facts(it)); return l; }));
+    w.hidden = !W.items.length; return;
+  }
+  const t = workWords(S); w.textContent = t; w.hidden = !t;
 }
 // THE ANSWER FIRST: one percentage for everything searchable (brain_road: done of what can be read), the Working line, what
 // searchable gets her, a box to try it on what is already searchable (the Tool's own conversation, as a find; her guide's
@@ -678,7 +692,7 @@ function heroCard(S) {
   c.appendChild(el('span', 'am-num', 'Step 3 ' + DOT + ' Make it searchable'));
   const top = el('div', 'gs-herotop'), l = el('div');
   l.append(K(el('div', 'gs-pct', F ? num(F.pct) + '%' : ''), 'pct'), el('p', 'gr-small', F ? 'of your mail and files are searchable' : 'Your brain could not be read just now, so the percentage is not shown. It tries again on its own.'));
-  const w = K(chip('warn', workWords(S)), 'work'); w.id = 'gs-work'; w.hidden = !w.textContent; w.setAttribute('role', 'status');
+  const w = K(el('div', 'gs-work'), 'work'); w.id = 'gs-work'; w.setAttribute('role', 'status'); workInto(w, S);
   top.append(l, w);
   const bar = el('div', 'gs-bar gs-thick'), i = K(el('i'), 'bar'); i.style.width = (F ? Math.min(100, Number(F.pct) || 0) : 0) + '%'; bar.appendChild(i);
   const inp = el('input'); inp.id = 'gs-try-in'; inp.type = 'search'; inp.placeholder = 'Try it: search what is already searchable'; inp.setAttribute('aria-label', 'Search what is already searchable');
@@ -1048,7 +1062,7 @@ function searchPoll() {
   sPoll = setTimeout(async () => {
     if (!C.$('#s-ready')?.hidden && at === 'search' && !C.$('#gr-sheet')) {
       const S = R, { data, error } = await rpc('source_read_progress');
-      if (R === S && !error && Array.isArray(data)) { S.prog = data; const w = C.$('#gs-work'), t = workWords(S); if (w) { w.textContent = t; w.hidden = !t; } }
+      if (R === S && !error && Array.isArray(data)) { S.prog = data; const w = C.$('#gs-work'); if (w) workInto(w, S); }
     }
     searchPoll();
   }, 15000);
