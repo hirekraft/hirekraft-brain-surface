@@ -751,10 +751,10 @@ function treeCard(S) {
     mail.map((r) => row(r, (q) => num(q.emails) + ' emails')).concat([add('a mailbox')])));
   // GOOGLE DRIVE: shared drives, meetings, folders shared with the Tool, each by its own name with its files. A drive with
   // nothing in it is not a row: it is said in one plain line.
-  const dr = src.filter((r) => r.group === 'drives'), dt = tally(dr);
+  const dr = src.filter((r) => r.group === 'drives');
   const none = (r) => { const q = by(r); return !!q && q.state === 'searchable' && !(Number(q.files) > 0); };
   const isMeet = (r) => MEET.some((m) => (' ' + String(r.name || '').toLowerCase() + ' ').includes(m));
-  const full = dr.filter((r) => !none(r)), meet = full.filter(isMeet);
+  const full = dr.filter((r) => !none(r)), meet = full.filter(isMeet), dt = tally(full);
   const shared = full.filter((r) => r.place === 'shared' && !isMeet(r)), rest = full.filter((r) => r.place !== 'shared' && !isMeet(r));
   const files = (q) => num(q.files) + ' files' + (q.state === 'to_read' ? ' ' + DOT + ' ' + num(q.to_read) + (Number(q.to_read) === 1 ? ' older one waits' : ' older ones wait') : '');
   const part = (title, rows) => (rows.length ? [el('span', 'gs-oncelab', title)].concat(rows.map((r) => row(r, files))) : []);
