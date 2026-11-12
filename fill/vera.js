@@ -817,7 +817,7 @@ function partSay(q, pa) {
 }
 async function typed(q) {
   const f = await facts(false);
-  const pa = partAsk(q, f && f.rows);
+  const pa = window.toolParts === true ? partAsk(q, f && f.rows) : null;   // only on a brain that keeps parts (fill/ready.js says so once step 4 is read)
   if (pa) { partSay(q, pa); return; }
   const r = route(q, f);
   if (r) { setupAsk(q, r.ids, r.about); return; }
