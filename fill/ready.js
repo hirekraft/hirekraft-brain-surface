@@ -67,6 +67,9 @@
 // address (oldLine, markOld). STEP 4's words name the attached files and the sample's limit (seat understand-files' report).
 // SEAT step3-fresh (2026-11-12; decision 1156, picture 8d4DD3SsnG4ouQHp3j5PgT): step 3 rebuilt as the approved fresh look. See
 // STEP 3, THE FRESH LOOK above heroCard for what it shows, where each number comes from and what it supersedes.
+// SEAT step4-fresh (2026-11-12; decision 1158, picture RYtvsKoVGVx2ELoeqN5PNx): step 4 rebuilt as the approved fresh look on step 3's
+// own tree. See STEP 4, THE FRESH LOOK above heroU. The line under the steps names the step that is open (it named the first
+// step not done: "Step 3 of 5" while step 4 was open).
 import { roadSteps } from './brainroom.js?v=2026-11-12-overnight-batch';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
@@ -206,7 +209,7 @@ export async function mount(c) {
   if (!R) C.$('#gr-left').replaceChildren(p('working', 'Reading where your Tool stands'));
   const was = R, S = read(true);
   await S.core;   // the brain's own readings, each inside its limit: this cannot wait longer than WAIT_MS and cannot reject
-  if (was?.mgroups && !was.mgroups.err && Date.now() - gAt < 300000) S.mgroups = was.mgroups;   // the groups are counted once per five minutes, not on every refresh
+  if (was?.usam && was.usam.ok === true) S.usam = was.usam;   // step 4's last answer stays on the page until the new one lands in its place (seat step4-fresh)
   if (was?.uans && was.uans.ok === true) S.uans = was.uans;   // the three answers' suggestions: counted once per visit
   if (S.progErr && was?.prog) S.prog = was.prog;   // a failed progress reading keeps the last count seen (C5)
   if (S.uprogErr && was?.uprog) S.uprog = was.uprog;
@@ -266,7 +269,7 @@ function wayBack() {
   if (wired) return;
   wired = true;
   window.addEventListener('gr-refresh', () => { if (C && !C.$('#s-ready')?.hidden) mount(C); });
-  document.addEventListener('tool:work', () => { const w = C?.$('#gs-work'); if (w && R) workInto(w, R); });   // the one indicator's reading moved (fill/working.js): step 3's Working line follows, in place
+  document.addEventListener('tool:work', () => { for (const q of ['#gs-work', '#gs-uwork']) { const w = C?.$(q); if (w && R) workInto(w, R); } });   // the one indicator's reading moved (fill/working.js): the Working lines of steps 3 and 4 follow, in place
   // the Brain's page closed (brainroom.js closePage): back to the step and the spot she was on, unless another page opened in its place
   window.addEventListener('br-closed', () => setTimeout(() => { const pg = C?.$('#br-page'); if (!pg || pg.hidden) closeOver(true); }, 0));
   window.addEventListener('fd-start', () => { at = 'db'; if (C && R && !C.$('#s-ready')?.hidden) { draw(); window.scrollTo({ top: 0 }); } });
@@ -349,11 +352,13 @@ function draw() {
   kids.push(more());
   // STEP 3 RE-READS WITHOUT JUMPING (seat step3-fresh, decision 1156): while step 3 stays the open step, a card whose shape did
   // not change keeps its place and only its marked numbers change (inPlace); any other draw replaces the step as before.
-  if (at === 'search' && box.dataset.step === 'search') inPlace(box, kids);
-  else { box.replaceChildren(...kids); if (at === 'search') for (const n of kids) n.dataset.sig = sigOf(n); }
+  const still = at === 'search' || at === 'understand';   // step 4 lands the same way (seat step4-fresh, decision 1158)
+  if (still && box.dataset.step === at) inPlace(box, kids);
+  else { box.replaceChildren(...kids); if (still) for (const n of kids) n.dataset.sig = sigOf(n); }
   box.dataset.step = at;
-  if (at === 'search') { const w = C.$('#gs-work'); if (w) workInto(w, S); }   // a kept top card: its Working line is redrawn, not copied
-  if (at === 'understand' && S.owner && !S.gLoad) { S.gLoad = true; Promise.all([S.mgroups ? null : readGroups(S), S.uans ? null : readAnswers(S)]).then(() => readSample(S)).then(() => { if (R === S && at === 'understand' && !typing() && !C.$('#gr-sheet')) draw(); }); }   // step 4's groups, answers and sample, read when she is on it
+  if (still) { const w = C.$(at === 'search' ? '#gs-work' : '#gs-uwork'); if (w) workInto(w, S); }   // a kept top card: its Working line is redrawn, not copied
+  if (at === 'understand') { const li = C.$('#gs-limit'); if (li && uLimit === null && S.usam?.ok === true && S.usam.state === 'done' && document.activeElement !== li) li.value = String(sugOf(S, S.usam)); limitSay(); }   // a kept card: the limit she has not typed follows the price; the button follows the limit
+  if (at === 'understand' && S.owner && !S.gLoad) { S.gLoad = true; Promise.all([S.uans ? null : readAnswers(S), readSample(S)]).then(() => { if (R === S && at === 'understand' && !typing() && !C.$('#gr-sheet')) draw(); }); }   // step 4's answer (rows, prices) and her words, read when she is on it
   uPoll();
   if (at === 'understand' || at === 'ready') needEst(S);   // the monthly figure and the price per email, asked where they are shown
   if (nov) C.$('#gr-meter')?.remove(); else meter(S);
@@ -365,7 +370,7 @@ let doorShown = false, autoAt = false;
 function fillBar(st) {
   const f = C.$('#gs-fill'); if (!f) return;
   const done = st.filter((s) => s.done).length;
-  const cur = st.find((s) => s.state === 'now');
+  const cur = st.find((s) => s.k === at) || st.find((s) => s.state === 'now');   // the step that is open (seat step4-fresh)
   const n = cur ? Number(cur.n) : st.length;
   const bar = el('div', 'gs-bar'); bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(st.length)); bar.setAttribute('aria-valuenow', String(done));
   const i = el('i'); i.style.width = Math.round((done / st.length) * 100) + '%'; bar.appendChild(i);
@@ -376,7 +381,8 @@ function more() {
   const d = el('div', 'gr-more');
   d.id = 'gr-more';
   // step 3 does not say it (decision 1156.6): its Working line at the top says the reading keeps going
-  if (at !== 'search') d.appendChild(el('span', null, 'You can close this page. It goes on by itself, and this screen shows where it stands when you come back.'));
+  // step 4 does not say it either (seat step4-fresh, decision 1158): its live card says the reading keeps going
+  if (at !== 'search' && at !== 'understand') d.appendChild(el('span', null, 'You can close this page. It goes on by itself, and this screen shows where it stands when you come back.'));
   d.append(
     el('span', 'gs-set', 'You can come back to this in Settings.'));
   return d;
@@ -425,7 +431,7 @@ const leftWords = (m) => { const x = Number(m); if (m === null || m === undefine
 function stepPrice(S, k) {
   if (k === 'search') { if (!S.splan) return { counting: true }; const pk = chosenOf(S.splan); return { exact: Math.round(pk.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100 }; }   // search_plan's price for what is checked
   if (k === 'understand' && S.usam?.ok === true && S.usam.state === 'done' && Number.isFinite(Number(S.usam.predicted_remaining_usd))) return { usd: Number(S.usam.predicted_remaining_usd) };   // measured on her own mail
-  if (k === 'understand') { const G = S.mgroups; if (!G || G.err || !G.priced) return { counting: true }; return { usd: G.groups.filter((g) => g.always || !uOff[g.group]).reduce((a, g) => a + (g.usd || 0), 0) }; }   // mail_groups' estimate for what is checked
+  if (k === 'understand') return { counting: true };   // no price before her own sample (mail_groups' estimate is no longer shown: seat step4-fresh)
   return { free: true };
 }
 function soFar(S) {
@@ -663,6 +669,9 @@ const WORD = { searchable: ['Searchable', 'ok'], reading: ['Reading', 'warn'], t
 const SV = { needs_you: ['Needs you', 'warn'], reading: ['Reading', 'warn'], up_to_date: ['Connected', 'ok'] };   // sources_view's states
 const MEET = [' meet ', ' meeting ', ' meetings '];
 const FINDS = ['find', 'search', 'show', 'where'];
+// GOOGLE DRIVE IN THREE PARTS, for steps 3 and 4 alike: shared drives, meetings (told by the drive's own name), folders shared with the Tool.
+const isMeet = (r) => MEET.some((m) => (' ' + String(r.name || '').toLowerCase() + ' ').includes(m));
+const driveParts = (full) => ({ meet: full.filter(isMeet), shared: full.filter((r) => r.place === 'shared' && !isMeet(r)), rest: full.filter((r) => r.place !== 'shared' && !isMeet(r)) });
 // THE WORKING LINE WHERE THE BRAIN DOES NOT CARRY THE ONE INDICATOR'S READING (work_running): everything being read now, done of
 // total, and the time left at the measured pace (source_read_progress; never a guessed time: measuring is said). Empty when
 // nothing is being read.
@@ -768,9 +777,7 @@ function treeCard(S) {
   // nothing in it is not a row: it is said in one plain line.
   const dr = src.filter((r) => r.group === 'drives');
   const none = (r) => { const q = by(r); return !!q && q.state === 'searchable' && !(Number(q.files) > 0); };
-  const isMeet = (r) => MEET.some((m) => (' ' + String(r.name || '').toLowerCase() + ' ').includes(m));
-  const full = dr.filter((r) => !none(r)), meet = full.filter(isMeet), dt = tally(full);
-  const shared = full.filter((r) => r.place === 'shared' && !isMeet(r)), rest = full.filter((r) => r.place !== 'shared' && !isMeet(r));
+  const full = dr.filter((r) => !none(r)), dt = tally(full), { shared, meet, rest } = driveParts(full);
   const files = (q) => num(q.files) + ' files' + (q.state === 'to_read' ? ' ' + DOT + ' ' + num(q.to_read) + (Number(q.to_read) === 1 ? ' older one waits' : ' older ones wait') : '');
   const part = (title, rows) => (rows.length ? [el('span', 'gs-oncelab', title)].concat(rows.map((r) => row(r, files))) : []);
   const kids = part('Shared drives', shared).concat(part('Meetings', meet), part('Folders shared with the Tool', rest));
@@ -952,15 +959,6 @@ function creditAsk(S, cost, bal) {
   const gw = el('div', 'gr-go gs-two'); gw.append(go, btn('go ghost', 'Other amount', () => topUp(S)));
   d.append(gw, msg);
   return d;
-}
-function understandShape(S) {
-  const U = S.usam, live = understandLive(S);
-  const m = !!U && U.ok === true && U.state === 'done' && Number.isFinite(Number(U.predicted_remaining_usd));
-  // drives beside the mailboxes, and the time from the sample's own pace (seat understand-drives 2026-11-12, decisions 1153, 1152)
-  return shape('Each conversation you choose, every file attached to it and every file in the drives you choose is read once and the facts in it are noted. You get exact answers: who, how much, when.',
-    live ? 'inside your limit' : m ? usd2(U.predicted_remaining_usd) + ', likely ' + usd2(U.low_usd) + ' to ' + usd2(U.high_usd) : 'measured before you press',
-    live ? 'reading now' : m && U.time && U.time.measured === true ? howLong(U.time.minutes) : 'measured once it starts',
-    m ? 'Measured on a sample of your own mail and files. Your limit is never passed.' : 'A small sample, never more than $' + SAMPLE_CAP + ', measures the price on your own mail and files first. Your limit is never passed.', live);
 }
 // AN OLD MAILBOX (decision 1140; source_mark_old, seat privacy-check-rules; arranged by seat setup-findable-table 2026-11-12 on
 // decision 1150, picture Part 3). Offered only behind the row's own More button, and only for a mailbox that is not on the
