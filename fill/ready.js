@@ -1199,38 +1199,14 @@ const CARDS = {
       ['Is everything made searchable, even junk mail?', 'Yes: everything you connect, so nothing is missed. Pictures and recordings are separate choices. Sorting out what matters comes at the next step.'],
       ['Can I disconnect something later?', 'Yes, any time, in Settings. You see every connection there.'],
     ]),
-  // STEP 4 · UNDERSTAND (spec part 2, approved 2026-11-09). Every number is the brain's: the groups, counts and prices are
-  // mail_groups' (per mailbox, summed), priced with the meter's measured price of one email (read_estimate per_message_usd), each
-  // estimate with its range (1137). SEAT setup-wire wired what seat understand-step landed: the three questions (answersCard), the
-  // sample and its measured price, her limit and Understand my mail (sampleBlock), and the live card through its owner door.
+  // STEP 4 · UNDERSTAND, THE FRESH LOOK (seat step4-fresh, 2026-11-12, decision 1158): the answer first, the live card while a
+  // press reads, What to understand, How fast with the one button. See STEP 4, THE FRESH LOOK above heroU.
   understand(S, st) {
-    const out = [H('Understand what matters.'), understandShape(S)];
-    out.push(answersCard(S));
-    out.push(groupsCard(S));
-    const M = monthlyOf(S);
-    const how = card('coin', 'How your price works', null);
-    const ol = el('ol', 'gs-num3');
-    for (const [n, t] of [['1', 'A small sample first, never more than $' + SAMPLE_CAP + '. About 100 of your conversations and some of your files (attached to mail and in the drives you chose) are read, and you see the price measured on your own mail and files.'], ['2', 'You set the limit. It starts at that price, it is never passed, and Stop works any time: you pay only for what was read.'], ['3', 'Then only new mail, ' + (M === null ? 'its monthly price measured' : 'about ' + usd2(M) + ' a month') + ', shown measured after your first month, in Settings.']]) { const li = el('li'); li.append(el('span', 'gs-n', n), el('span', null, t)); ol.appendChild(li); }
-    how.appendChild(ol);
-    if (M !== null) how.appendChild(el('p', 'am-small', 'The monthly figure is an estimate from your own mail' + String.fromCharCode(8217) + 's pace, from the AI meter.'));
-    out.push(how);
-    const model = understandModel(S);
-    const ai = card('ai', 'The AI that does the work', null);
-    const row = el('div', 'gs-pl'); const l = el('span'); l.append(el('b', null, model || 'Claude, by Anthropic'), el('small', null, 'Best score on our test of real business questions. You can change it in Settings.'));
-    row.append(l, el('span', 'gs-rec', 'Recommended')); ai.appendChild(row);
-    out.push(ai);
-    const done = st.find((x) => x.k === 'understand')?.done;
-    const acts = el('div', 'gr-chips');
-    const cont = btn('go', 'Continue', () => { at = 'ready'; draw(); window.scrollTo({ top: 0 }); }); cont.disabled = !done;
-    acts.append(cont);
-    out.push(acts);
-    out.push(questions([
-      ['Is this one time?', 'Yes. This reads your past mail once. After that, only new mail in the same groups is read as it arrives, ' + (M === null ? 'its monthly price measured' : 'about ' + usd2(M) + ' a month') + ' at your pace, plus about 1 cent for each question you ask.'],
-      ['Why a sample first?', 'Every business' + String.fromCharCode(8217) + 's mail is different. The sample measures what your own mail costs to understand, so the price you agree to is yours, not an average.'],
-      ['Can it cost more than I agreed?', 'No. It stops before your limit. If something is left, it tells you how much and what it would cost, and you decide.'],
-      ['What happens to the mail I do not choose?', 'It stays searchable. If a question needs it later, that piece is read then, with its price shown.'],
-      ['Will I know when it is done?', 'Yes, one short email from your own mailbox to you. You can close the page in the meantime.'],
-    ]));
+    const out = [heroU(S)];
+    const live = understandLive(S); if (live) out.push(live);
+    out.push(treeU(S));
+    const sp = speedCard(S); if (sp) out.push(sp);
+    if (st.find((x) => x.k === 'understand')?.done) { const acts = el('div', 'gr-chips'); acts.id = 'gs-ucont'; acts.appendChild(btn('go ghost', 'Continue', () => { at = 'ready'; draw(); window.scrollTo({ top: 0 }); })); out.push(acts); }
     return out;
   },
   // STEP 5 · READY (spec part 2). The brain's rows from the same readings the Brain shows (brain_road, the one reading of
@@ -1297,69 +1273,6 @@ function understandModel(S) {
   const st = (S.ai?.steps ?? []).find((x) => String(x.title || '').toLowerCase().includes('understand'));
   return st ? String(st.model_name || '') + (st.maker ? ', by ' + String(st.maker) : '') : null;
 }
-// UNDERSTAND YOUR PAST MAIL · ONE TIME: mail_groups per mailbox, summed by group. Money mail is always chosen; automated and
-// everything else are off by default and stay searchable. Under the groups, the sample and the limit (sampleBlock).
-let uOff = { automated: true, rest: true }, gAt = 0;
-function groupsCard(S) {
-  const c = card('brain', 'Understand your past mail and files ' + DOT + ' one time', null);
-  c.classList.add('gs-plan'); c.id = 'gs-under';
-  const G = S.mgroups;
-  if (!G) { c.appendChild(p('working no-late gr-small', 'Sorting your mail into groups, for free')); return c; }
-  if (G.err) { c.appendChild(p('gr-small', 'The groups could not be read just now: ' + String(G.err) + '. It tries again on its own.')); return c; }
-  c.appendChild(el('p', 'am-small', 'Sorted for free with your answers. Untick anything you do not need.'));
-  const list = el('div', 'gs-rows');
-  const priced = G.priced;
-  for (const g of G.groups) {
-    const row = el('label', 'gs-row gs-tick' + (g.always ? ' gs-fixed' : ''));
-    const box = el('input'); box.type = 'checkbox'; box.checked = g.always || !uOff[g.group]; box.disabled = !!g.always; box.setAttribute('aria-label', g.title);
-    box.addEventListener('change', async () => { uOff[g.group] = !box.checked; uLimit = null; draw(); await readSample(R); if (at === 'understand' && !C.$('#gr-sheet')) draw(); });   // the sample's prediction follows her choice
-    const l = el('span', 'gs-rl');
-    const keep = g.group === 'automated' || g.group === 'rest' ? '; stays searchable' : '';
-    l.append(el('b', null, g.title + (g.always ? ' (always)' : '')), el('small', null, g.what + ' ' + DOT + ' ' + num(g.to_read) + ' conversations' + keep));
-    row.append(box, l, el('b', 'gs-pv', priced && Number.isFinite(g.usd) ? usd2(g.usd) : 'measuring'));
-    list.appendChild(row);
-  }
-  c.appendChild(list);
-  const pick = G.groups.filter((g) => g.always || !uOff[g.group]);
-  const convs = pick.reduce((a, g) => a + g.to_read, 0);
-  const tot = Math.round(pick.reduce((a, g) => a + (g.usd || 0), 0) * 100) / 100;
-  const lo = Math.round(pick.reduce((a, g) => a + (g.low || 0), 0)), hi = Math.round(pick.reduce((a, g) => a + (g.high || 0), 0));
-  const tl = el('div', 'gs-pl gs-totalrow'); tl.append(el('b', 'gs-total', 'Total: ' + num(convs) + ' conversations ' + DOT + ' one time'), el('b', 'gs-pv', priced ? usd2(tot) : 'measuring'));
-  c.appendChild(tl);
-  if (priced) c.appendChild(p(null, 'Likely between $' + num(lo) + ' and $' + num(hi) + '. A small sample of your own mail turns this into your real price before the rest is read.'));
-  c.appendChild(el('p', 'am-small', priced ? 'The measured price of one email of average length on your own meter, times each conversation' + String.fromCharCode(8217) + 's length; the range runs from your cheapest to your dearest mailbox.' : 'What understanding costs has not been measured on your mail yet, so no price is given.'));
-  // OVERNIGHT AT HALF PRICE is not built (seat understand-step: it needs a second way of reading), so it is not shown. Time is
-  // given once the reading has started and its pace is measured (the live card), never guessed here.
-  c.appendChild(sampleBlock(S));
-  return c;
-}
-// mail_groups for every mailbox (2 years), summed by group; kept for the visit. Owner only (the brain refuses anyone else).
-async function readGroups(S) {
-  const boxes = (S.src?.rows ?? []).filter((r) => r.group === 'email').map((r) => r.source_key);
-  if (!boxes.length) { S.mgroups = { groups: [], byBox: [], priced: false }; return; }
-  if (!S.est) { await meterBalance(); S.est = estV; }
-  const E = S.est;
-  const per = Number(E?.estimate?.per_message_usd);
-  const rates = Number.isFinite(per) && per > 0 ? { items: { understand_mail: { usd: per } } } : null;
-  const all = await Promise.all(boxes.map((k) => rpc('mail_groups', { p_source_key: k, p_months: 24, p_rates: rates }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: e?.message ?? String(e) }))));
-  const bad = all.find((x) => !x || x.ok !== true);
-  if (bad && all.every((x) => !x || x.ok !== true)) { S.mgroups = { err: String(bad?.note ?? bad?.reason ?? 'no reason was given') }; return; }
-  const by = {}; const byBox = [];
-  for (const r of all) {
-    if (!r || r.ok !== true) continue;
-    const bx = {};
-    for (const g of r.groups ?? []) {
-      const k = String(g.group);
-      const o = by[k] || (by[k] = { group: k, title: String(g.title || k), what: String(g.what || ''), always: !!g.always, to_read: 0, usd: 0, low: 0, high: 0, hours: 0 });
-      o.to_read += Number(g.to_read) || 0; o.usd += Number(g.usd) || 0; o.low += Number(g.low_usd) || 0; o.high += Number(g.high_usd) || 0;
-      if (Number.isFinite(Number(g.hours))) { o.hours += Number(g.hours); bx[k] = Number(g.hours); } else o.hours = NaN;
-    }
-    byBox.push(bx);
-  }
-  gAt = Date.now();
-  const order = ['people', 'money', 'automated', 'rest'];
-  S.mgroups = { groups: order.filter((k) => by[k]).map((k) => by[k]).concat(Object.keys(by).filter((k) => !order.includes(k)).map((k) => by[k])), byBox, priced: !!rates, held: all.filter((x) => !x || x.ok !== true).length };
-}
 // WHILE IT IS UNDERSTOOD: understand_progress (counts, spent, the limit, minutes left), and Stop through the one press
 // (source_read_approve 'understand_stop'): what is mid-read finishes, nothing more is taken.
 // pressed: a mailbox keeps its groups, a drive has none, and both keep the limit the press gave them (seat understand-drives 2026-11-12)
@@ -1402,18 +1315,20 @@ function understandLive(S) {
     setTimeout(() => mount(C), 2500);
   });
   const g = el('div', 'gr-go'); g.appendChild(stop); c.append(g, out);
-  c.appendChild(p('gr-small', 'You can close this page or keep working. It keeps going, and you get one short email when it is done.'));
+  c.appendChild(p('gr-small', 'It keeps going while you work, and you get one short email when it is done.'));
   return c;
 }
 // ---------------------------------------------------------------------------------------------------------------------
 // STEP 4, WIRED (seat setup-wire over seat understand-step's brain side). All owner only: the brain refuses anyone else.
 const GROUP_TITLE = { people: 'Your conversations', money: 'Money mail', automated: 'Automated mail', rest: 'Everything else' };
-const MAILBOX_FOR = [['everything', 'Everything'], ['sales', 'Sales'], ['accounting', 'Accounting'], ['hiring', 'Hiring'], ['old', 'Old, searchable only']];
 const WORK_WITH = [['businesses', 'Businesses'], ['people', 'People'], ['both', 'Both']];
 const SAMPLE_CAP = 5;   // the sample's own limit, never passed (understand_sample p_cap_usd, the brain's own default). SUPERSEDED 2026-11-12 (seat setup-findable-table on seat understand-files' report): 3 and the words "about $2"; the sample now reads attached files too and costs more, so the honest words are its limit
-let ua = null;          // her three answers as she taps them: { mailboxes: {key: for}, work_with, money_words: [] }
+let ua = null;          // her answers as she taps them (what each mailbox is for is passed back as kept, no longer asked: seat step4-fresh): { mailboxes: {key: for}, work_with, money_words: [] }
 const fmtShort = (k) => String(k || '').split(':').pop();
-function chosenGroups(S) { const G = S.mgroups; if (!G || G.err || !G.groups) return ['money', 'people'].filter((g) => g === 'money' || !uOff[g]); return G.groups.filter((g) => g.always || !uOff[g.group]).map((g) => g.group); }
+// WHAT IS READ INSIDE A MAILBOX: her conversations and money mail; automated mail and the rest stay searchable (decision 1158: no
+// longer a choice of four boxes; the brain's sample, price and press are asked for these two groups).
+function chosenGroups() { return ['money', 'people']; }
+const dotted = (t) => { const x = String(t || '').trim(); return x.endsWith('.') ? x : x + '.'; };
 async function readAnswers(S) {
   const [a, m] = await Promise.all([
     rpc('understand_answers_suggest', { p_identity: null }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) })),
@@ -1458,57 +1373,6 @@ function seg(list, now, fn, label) {
   const d = el('div', 'gr-seg'); d.setAttribute('role', 'group'); if (label) d.setAttribute('aria-label', label);
   for (const [v, t] of list) { const b = btn('gr-amt' + (v === now ? ' on' : ''), t, () => fn(v)); b.setAttribute('aria-pressed', v === now ? 'true' : 'false'); d.appendChild(b); }
   return d;
-}
-// THREE QUICK QUESTIONS (1136): pre-filled, tap what is not right, Keep my answers (understand_answers_set), then what moved
-// (understand_answers_moved: the conversations per group before and now, only counts that changed).
-function answersCard(S) {
-  const c = card('chat', 'Three quick questions ' + DOT + ' free', null, el('p', 'am-small', 'Already filled in from what was counted. Tap anything that is not right.'));
-  c.id = 'gs-answers';
-  const A = S.uans;
-  if (!A) { c.appendChild(p('working no-late gr-small', 'Filling in your answers from what was counted')); return c; }
-  if (A.ok !== true) { c.appendChild(p('gr-small', 'Your answers could not be read just now: ' + String(A.note ?? A.reason ?? 'no reason was given') + '. The standard sorting is used: your conversations and money mail.')); return c; }
-  if (!ua) ua = answersFrom(A);
-  const q1 = el('div', 'gs-q'); q1.appendChild(el('b', null, 'What is each mailbox for?'));
-  for (const m of A.mailboxes ?? []) {
-    const r = el('div', 'gs-qrow'); const l = el('span', 'gs-rl');
-    l.append(el('b', null, fmtShort(m.mailbox || m.source_key)), el('small', null, num(m.emails_2y) + ' emails kept in 2 years (junk left out)'));
-    r.append(l, seg(MAILBOX_FOR, ua.mailboxes[m.source_key] || 'everything', (v) => { ua.mailboxes[m.source_key] = v; draw(); }, 'What ' + fmtShort(m.mailbox || m.source_key) + ' is for'));
-    q1.appendChild(r);
-  }
-  q1.appendChild(el('p', 'am-small', 'Old, searchable only: it stays searchable and is not read for understanding.'));
-  const q2 = el('div', 'gs-q'); q2.append(el('b', null, 'Who do you work with?'), seg(WORK_WITH, ua.work_with, (v) => { ua.work_with = v; draw(); }, 'Who you work with'));
-  q2.appendChild(el('p', 'am-small', 'Anyone you have ever written to always counts as someone you work with.'));
-  const q3 = el('div', 'gs-q'); q3.appendChild(el('b', null, 'What do you call the money paperwork?'));
-  const words = el('div', 'gr-seg'); words.setAttribute('role', 'group'); words.setAttribute('aria-label', 'Your money paperwork');
-  const listed = (A.money_words ?? []).map((w) => w.word);
-  const own = ua.money_words.filter((w) => !listed.includes(w));
-  for (const w of [...(A.money_words ?? []).map((x) => [x.word, x.conversations]), ...own.map((x) => [x, null])]) {
-    const on = ua.money_words.includes(w[0]);
-    const b = btn('gr-amt' + (on ? ' on' : ''), w[0].slice(0, 1).toUpperCase() + w[0].slice(1) + (w[1] ? ' ' + DOT + ' ' + num(w[1]) : ''), () => { ua.money_words = on ? ua.money_words.filter((x) => x !== w[0]) : [...ua.money_words, w[0]]; draw(); });
-    b.setAttribute('aria-pressed', on ? 'true' : 'false'); words.appendChild(b);
-  }
-  q3.appendChild(words);
-  const add = el('div', 'gs-wordadd'); const inp = el('input'); inp.id = 'gs-word-in'; inp.type = 'text'; inp.maxLength = 40; inp.placeholder = 'Your own word'; inp.setAttribute('aria-label', 'Your own word for money paperwork');
-  const addIt = () => { const v = inp.value.trim().toLowerCase(); if (!v) return; if (!ua.money_words.includes(v)) ua.money_words = [...ua.money_words, v]; inp.value = ''; draw(); };
-  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') addIt(); });
-  add.append(inp, btn('go ghost', '+ Add', addIt)); q3.append(add, el('p', 'am-small', 'The numbers are conversations in your last 2 years whose subject uses that word.'));
-  c.append(q1, q2, q3);
-  const kept = A.answers && typeof A.answers === 'object';
-  const changed = !kept || !same(answersFrom(A), ua);
-  const out = p('gr-small', '');
-  const keep = btn('go ghost', kept ? 'Keep my changes' : 'Keep my answers', async () => {
-    keep.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Keeping your answers and sorting again';
-    const { data, error } = await rpc('understand_answers_set', { p_answers: ua, p_identity: null });
-    if (error || !data || data.ok !== true) { out.className = 'gr-small'; out.textContent = 'Not kept: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '.'; keep.disabled = false; return; }
-    toast(String(data.note || 'Kept. Your mail is sorted again with your answers.'));
-    R.uans = null; R.mgroups = null; gAt = 0; ua = null; R.gLoad = false; R.usam = null;
-    draw();
-  });
-  keep.disabled = !changed;
-  const g = el('div', 'gr-go'); g.appendChild(keep); c.append(g, out);
-  if (!changed) c.appendChild(p('gr-small', 'Kept. Change any tap and press Keep my changes.'));
-  c.appendChild(movedBlock(S));
-  return c;
 }
 // WHAT MOVED: real counts only, the groups that changed, from understand_answers_moved.
 function movedBlock(S) {
