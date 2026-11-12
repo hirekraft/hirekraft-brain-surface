@@ -3191,7 +3191,7 @@ body.gr-pending #tabs .tab[data-tab=brain] { display: none; }
 .gs-once { display: grid; gap: calc(var(--u) * 2); min-width: 0; padding: calc(var(--u) * 3.5); border: 1px solid var(--line); border-radius: var(--radius); }
 .gs-oncelab { font-size: var(--t-micro); font-weight: var(--w-strong); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); overflow-wrap: anywhere; }
 .gs-src { display: grid; gap: 6px; min-width: 0; padding: 4px 0; border-top: 1px solid var(--line-2); }
-.gs-oncelab + .gs-src, .gs-foldlab + .gs-src { border-top: 0; }
+.gs-oncelab + .gs-src { border-top: 0; }
 .gs-srcline { display: flex; align-items: center; gap: calc(var(--u) * 2); min-width: 0; }
 .gs-srcline > .gs-row { flex: 1 1 0; min-width: 0; border-top: 0; padding: 6px 0; }
 /* the price is a b straight in the row, and .gs-row > b takes 200px: at phone width that left the name 22px (seat step3-reading-row's finding, older than this seat). The price keeps its own width. */
@@ -3202,9 +3202,6 @@ body.gr-pending #tabs .tab[data-tab=brain] { display: none; }
 .gs-dots { flex: none; width: var(--tap); min-width: 44px; height: var(--tap); min-height: 44px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--ink); font-weight: var(--w-strong); cursor: pointer; }
 .gs-fold { display: grid; gap: calc(var(--u) * 2); min-width: 0; border-top: 1px solid var(--line); padding-top: calc(var(--u) * 2); }
 .gs-fold > summary { cursor: pointer; font-weight: var(--w-strong); color: var(--room); min-height: var(--tap); display: flex; align-items: center; overflow-wrap: anywhere; }
-.gs-foldlab { display: block; margin-top: calc(var(--u) * 2); overflow-wrap: anywhere; }
-.gs-findline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px calc(var(--u) * 3); min-width: 0; border-top: 1px solid var(--line); padding-top: calc(var(--u) * 2); }
-.gs-findline > b { min-width: 0; overflow-wrap: anywhere; }
 .gs-table { display: grid; gap: calc(var(--u) * 1.5); min-width: 0; }
 .gs-trow > span:first-child { flex: 1 1 0; min-width: 0; }
 .gs-trow > .gs-tval { display: grid; justify-items: end; gap: 2px; flex: 0 0 auto; max-width: 45%; min-width: 0; text-align: right; overflow-wrap: normal; }
@@ -3214,5 +3211,45 @@ body.gr-pending #tabs .tab[data-tab=brain] { display: none; }
 .gs-tpics { min-width: 0; } .gs-tpics:empty { display: none; }
 .gr-sheet .am-pts { margin: 0; }
 body.gr-over .br-leave { display: none; }
-@media (max-width: 720px) { body .gs-once { padding: calc(var(--u) * 3); } body .gs-fold > summary, body .gs-tval .gr-link, body .gs-findline .gr-link, body .gs-src .gr-link { min-height: 44px; }
+/* STEP 3, THE FRESH LOOK (seat step3-fresh, 2026-11-12, decision 1156; picture 8d4DD3SsnG4ouQHp3j5PgT). Four cards: the answer
+   first (one large percentage, the Working line, a box to try a search, You can stop here), her sources in three folding
+   groups (a row is a name with its count in small words and one status word; a reading row carries its meter), the one box
+   that asks (outlined, the money in one line beside its button) and what is not searchable, folded. Tokens only. Its phone
+   rules are on its own media line below, as the two blocks before it did. */
+.gs-hero, .gs-tree, .gs-yes, .gs-not { display: grid; gap: calc(var(--u) * 3); min-width: 0; }
+.gs-herotop { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: calc(var(--u) * 2) calc(var(--u) * 4); min-width: 0; }
+.gs-herotop > div { min-width: 0; }
+.gs-pct { font-family: var(--font-head); font-size: var(--t-hero); line-height: 1; font-variant-numeric: tabular-nums; }
+.gs-herotop .gs-chip { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+.gs-try { display: flex; align-items: center; gap: calc(var(--u) * 2); min-width: 0; border: 1px solid var(--line); border-radius: 999px; padding: 4px 6px 4px calc(var(--u) * 3); background: var(--paper); }
+.gs-try:focus-within { border-color: var(--room); }
+.gs-try input { flex: 1 1 0; min-width: 0; border: 0; background: none; color: var(--ink); font: inherit; min-height: var(--tap); outline: none; }
+.gs-try .go { margin: 0; flex: none; min-height: 44px; }
+.gs-stop { background: var(--money-soft); border-radius: var(--radius); padding: calc(var(--u) * 3.5); overflow-wrap: anywhere; }
+.gs-treehd { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px calc(var(--u) * 3); min-width: 0; }
+.gs-treehd > * { margin: 0; min-width: 0; }
+.gs-groups { display: grid; min-width: 0; }
+.gs-grp { border-top: 1px solid var(--line); padding: calc(var(--u) * 2) 0; min-width: 0; }
+.gs-grp > summary { display: flex; align-items: center; gap: calc(var(--u) * 3); min-height: var(--tap); cursor: pointer; list-style: none; min-width: 0; }
+.gs-grp > summary::-webkit-details-marker { display: none; }
+.gs-grp > summary::after { content: ''; flex: none; width: 8px; height: 8px; margin: 0 4px 4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+.gs-grp:not([open]) > summary::after { transform: rotate(-45deg); margin-bottom: 0; }
+.gs-rn { display: grid; gap: 2px; flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
+.gs-rn > small { color: var(--ink-3); font-size: var(--t-small); }
+.gs-sub { display: grid; gap: 2px; min-width: 0; padding: calc(var(--u) * 2) 0 0 calc(var(--u) * 9); }
+.gs-sub > .gs-oncelab { margin-top: calc(var(--u) * 2); }
+.gs-sub > .gs-src { border-top: 0; }
+.gs-r { display: flex; align-items: center; gap: calc(var(--u) * 3); flex: 1 1 0; min-width: 0; padding: 6px 0; }
+.gs-r > .gs-chip, .gs-grp > summary > .gs-chip { flex: none; }
+.gs-r .gs-chip-ok, .gs-grp > summary > .gs-chip-ok { background: var(--money-soft); }
+.gs-add { justify-self: start; }
+.gs-empty { display: grid; gap: 6px; min-width: 0; padding: 6px 0; }
+.gs-yes { border: 2px solid var(--ink); }
+.gs-yes > .gs-say { margin: 0; overflow-wrap: anywhere; }
+.gs-act { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 2) calc(var(--u) * 3); min-width: 0; }
+.gs-act .go { margin: 0; }
+.gs-not > .gs-fold { border-top: 0; padding-top: 0; }
+.gs-notbody { min-width: 0; } .gs-notbody:empty { display: none; }
+@media (max-width: 720px) { body .gs-sub { padding-left: 0; } body .gs-grp > summary, body .gs-r { flex-wrap: wrap; } body .gs-r > .gs-rn, body .gs-grp > summary > .gs-rn { flex: 1 1 140px; } body .gs-add, body .gs-try input { min-height: 44px; } }
+@media (max-width: 720px) { body .gs-once { padding: calc(var(--u) * 3); } body .gs-fold > summary, body .gs-tval .gr-link, body .gs-src .gr-link { min-height: 44px; }
   body .gs-trow .gs-tval .gs-pv { white-space: nowrap; max-width: none; overflow-wrap: normal; } } /* ── VERA BESIDE EVERY SETUP STEP (seat setup-vera, 2026-11-12; decision 1150 point 4, picture Cbdma9KRabK6Pb5YFdwkrd Part 4; fill/vera.js). The answer fills her column: the conversation is as tall as what is in it and the page scrolls, never a box inside the column. In her column an answer carries no PDF / Spreadsheet / Slides and no Teach / Save as test. Her follow-ups sit under the answer, two at most. Taller than the window, the column stops following the page so its end can be reached. ── */ .panel.in-vera .panel-body { flex: none; overflow: visible; } .panel.in-vera .out-row, .panel.in-vera .out-said, .panel.in-vera .ans-actions { display: none; } .vera-follow { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1.5); min-width: 0; } .gr-vera.vera-tall { position: static; } @media (max-width: 720px) { body .vera-follow .vera-chip { min-height: 44px; } }
