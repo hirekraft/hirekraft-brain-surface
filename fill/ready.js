@@ -716,7 +716,10 @@ const STEP_WORK = { 'gs-work': ['searchable', 'pictures', 'privacy'], 'gs-uwork'
 function workInto(w, S) {
   const W = window.toolWork, parts = window.toolWorkParts;
   if (W && Array.isArray(W.items) && parts) {
-    const mine = STEP_WORK[w.id], its = W.items.filter((it) => !mine || mine.includes(it.kind));
+    // after her press is done (mode after) a line of understanding is shown only while a source is being read by the brain's own
+    // count (understand_progress): what a source's part of the limit left unread is not work that stands still (seat step4-after)
+    const mine = STEP_WORK[w.id], quiet = w.dataset.mode === 'after' && !pressAll(S).some((x) => x.state === 'reading');
+    const its = W.items.filter((it) => (!mine || mine.includes(it.kind)) && !(quiet && it.kind === 'understand'));
     if (w.dataset.mode === 'pulse') {   // step 4 while a press runs: the card's numbers are its own; here only the sign of life
       const it = its.find((x) => x.kind === 'understand');
       w.replaceChildren(...(it && parts.pulse ? [parts.pulse(pressItem(it, W, S))] : [])); w.hidden = !w.children.length; return;
@@ -1427,7 +1430,7 @@ function afterHero(S, rows) {
   const say = el('p', 'gr-small'); say.append(K(el('span', null, num(done)), 'pd'), ' of ', K(el('span', null, num(total)), 'pt'), drive ? ' of the mail and files you chose are understood' : ' of the mail you chose is understood');
   l.append(K(el('div', 'gs-pct', pct === null ? '' : num(pct) + '%'), 'pct'), say);
   const r = el('div', 'gs-ustate');
-  const w = K(el('div', 'gs-work'), 'work'); w.id = 'gs-uwork'; w.setAttribute('role', 'status'); workInto(w, S);
+  const w = K(el('div', 'gs-work'), 'work'); w.id = 'gs-uwork'; w.dataset.mode = 'after'; w.setAttribute('role', 'status'); workInto(w, S);
   r.append(chip(stopped ? '' : 'ok', stopped ? 'Stopped' : 'Done'), w);
   top.append(l, r);
   const bar = el('div', 'gs-bar gs-thick'), i = K(el('i'), 'bar'); i.style.width = (pct || 0) + '%'; bar.appendChild(i);
