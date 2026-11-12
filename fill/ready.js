@@ -65,7 +65,9 @@
 // STEP 3 SHOWS ONLY WHAT NEEDS HER (searchCard): reading now, needs your yes, the rest folded; plain names. THE FINDABLE TABLE
 // opens over step 3 (findSheet). AN OLD MAILBOX is offered only behind the More button of a mailbox not on the business's own
 // address (oldLine, markOld). STEP 4's words name the attached files and the sample's limit (seat understand-files' report).
-import { roadSteps } from './brainroom.js?v=2026-11-12-press-while-reading';
+// SEAT step3-fresh (2026-11-12; decision 1156, picture 8d4DD3SsnG4ouQHp3j5PgT): step 3 rebuilt as the approved fresh look. See
+// STEP 3, THE FRESH LOOK above heroCard for what it shows, where each number comes from and what it supersedes.
+import { roadSteps } from './brainroom.js?v=2026-11-12-step3-fresh';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
@@ -124,7 +126,7 @@ function read(fresh) {
     capped(S, 'connections', () => rpc('connector_status').then(({ data, error }) => { if (!error) S.conn = data; })),
     capped(S, 'marks', () => rpc('getting_ready_marks').then(({ data, error }) => { if (!error && data && data.ok === true) S.marks = data; else S.marksErr = error?.message ?? data?.reason ?? 'no reason was given'; })),
   ];
-  if (S.owner) core.push(capped(S, 'search progress', () => readSearchProgress(S)));   // step 3's live line (seat setup-screens-2)
+  // search_progress is no longer read by this page (seat step3-fresh): step 3's Working line is source_read_progress's, read above
   // step 4's live card: understand_progress through its owner door (seat setup-wire: understand_progress itself is the service's only,
   // so the call this replaced always failed, silently, and the card could never show)
   if (S.owner) core.push(capped(S, 'understand progress', () => rpc('understand_progress_mine').then(({ data, error }) => { if (!error && data && data.ok === true) S.uprog = data.sources ?? []; else S.uprogErr = String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given'); })));
@@ -205,7 +207,7 @@ export async function mount(c) {
   await S.core;   // the brain's own readings, each inside its limit: this cannot wait longer than WAIT_MS and cannot reject
   if (was?.mgroups && !was.mgroups.err && Date.now() - gAt < 300000) S.mgroups = was.mgroups;   // the groups are counted once per five minutes, not on every refresh
   if (was?.uans && was.uans.ok === true) S.uans = was.uans;   // the three answers' suggestions: counted once per visit
-  if (S.sprogErr && was?.sprog?.state === 'reading') S.sprog = was.sprog;   // a failed progress reading keeps the last count seen (C5)
+  if (S.progErr && was?.prog) S.prog = was.prog;   // a failed progress reading keeps the last count seen (C5)
   if (S.uprogErr && was?.uprog) S.uprog = was.uprog;
   for (const k of ['ai', 'est', 'splan']) if (S[k] === undefined && was && was[k]) S[k] = was[k];   // the last prices seen stay until the new ones land
   if (was && !S.road && was.road) S.road = was.road;   // a refresh whose brain reading failed keeps the last one, said by netLine
@@ -218,7 +220,7 @@ export async function mount(c) {
   S.money.then(() => { if (R !== S) return; reopen(S); paint(); paidReturn(S); settle(S); });
   clearTimeout(poll);
   searchPoll();
-  if ((Number(R.road?.findable?.reading) || 0) > 0 || (Number(R.road?.understanding?.waiting) || 0) > 0 || R.sprogErr || R.uprogErr) poll = setTimeout(() => { if (!C.$('#s-ready')?.hidden && !C.$('#gr-sheet')) mount(C); }, 60000);
+  if ((Number(R.road?.findable?.reading) || 0) > 0 || (Number(R.road?.understanding?.waiting) || 0) > 0 || R.uprogErr) poll = setTimeout(() => { if (!C.$('#s-ready')?.hidden && !C.$('#gr-sheet')) mount(C); }, 60000);
 }
 // THE DRAW, GUARDED (rule 4): a draw that throws says so in words and is tried again; the screen is never left on a working line.
 function paint() {
@@ -254,7 +256,7 @@ export function unmount() {
   }
 }
 // She is typing an answer on the card: a reading that comes back must not redraw it away.
-function typing() { for (const q of ['#gs-word-in', '#gs-limit']) { const t = C?.$(q); if (t && document.activeElement === t) return true; } const w = C?.$('#gs-word-in'); return !!w && w.value.trim().length > 0; }
+function typing() { for (const q of ['#gs-word-in', '#gs-limit', '#gs-try-in']) { const t = C?.$(q); if (t && document.activeElement === t) return true; } const w = C?.$('#gs-word-in'); return !!w && w.value.trim().length > 0; }
 // THE WAY BACK (Alex 16:43 PT: he left setup and did not know how to return). While not Ready, the masthead Brain button,
 // the Brain line under the tabs and every tab lead back to Getting ready, at the step she left (at is kept). Capture phase,
 // so the press never reaches the tab it was on. The Brain itself stays one press away under See everything in your brain.
@@ -340,9 +342,14 @@ function draw() {
   }));
   fillBar(st);
   const box = C.$('#gr-left');
-  box.replaceChildren(...(CARDS[at] || CARDS.ready)(S, st));
-  const nl = netLine(S); if (nl) box.prepend(nl);
-  box.appendChild(more());
+  const kids = (CARDS[at] || CARDS.ready)(S, st);
+  const nl = netLine(S); if (nl) kids.unshift(nl);
+  kids.push(more());
+  // STEP 3 RE-READS WITHOUT JUMPING (seat step3-fresh, decision 1156): while step 3 stays the open step, a card whose shape did
+  // not change keeps its place and only its marked numbers change (inPlace); any other draw replaces the step as before.
+  if (at === 'search' && box.dataset.step === 'search') inPlace(box, kids);
+  else { box.replaceChildren(...kids); if (at === 'search') for (const n of kids) n.dataset.sig = sigOf(n); }
+  box.dataset.step = at;
   if (at === 'understand' && S.owner && !S.gLoad) { S.gLoad = true; Promise.all([S.mgroups ? null : readGroups(S), S.uans ? null : readAnswers(S)]).then(() => readSample(S)).then(() => { if (R === S && at === 'understand' && !typing() && !C.$('#gr-sheet')) draw(); }); }   // step 4's groups, answers and sample, read when she is on it
   uPoll();
   if (at === 'understand' || at === 'ready') needEst(S);   // the monthly figure and the price per email, asked where they are shown
@@ -364,7 +371,10 @@ function fillBar(st) {
 
 function more() {
   const d = el('div', 'gr-more');
-  d.append(el('span', null, 'You can close this page. It goes on by itself, and this screen shows where it stands when you come back.'),
+  d.id = 'gr-more';
+  // step 3 does not say it (decision 1156.6): its Working line at the top says the reading keeps going
+  if (at !== 'search') d.appendChild(el('span', null, 'You can close this page. It goes on by itself, and this screen shows where it stands when you come back.'));
+  d.append(
     el('span', 'gs-set', 'You can come back to this in Settings.'));
   return d;
 }
@@ -736,7 +746,8 @@ function searchCard(S) {
   c.appendChild(el('p', 'am-small', 'Connect or upload something more, and it joins the count before you press. Scans and photos are priced on their own.'));
   return c;
 }
-// THE FINDABLE TABLE (seat setup-findable-table; picture Part 2), opened over step 3 as a sheet: what is findable now, what is
+// WHAT IS NOT SEARCHABLE, AND WHY (the table of seat setup-findable-table; since seat step3-fresh 2026-11-12, decision 1156.5,
+// folded at the foot of step 3 and drawn by notBody into the fold when she opens it; word searchable, decision 1155): what is searchable now, what is
 // being read, what waits for her yes, what is not read by her choice with its price, and what is not read and why. Every count
 // is brain_road's (the page reads drive_coverage only through it: that table is the service's). The percentage is the brain's
 // own and counts only what a press can read; a row that puts mail and drives together adds two of the brain's counts and says
@@ -756,17 +767,17 @@ function tRow(title, sub, value, act) {
   d.append(l, r); return d;
 }
 const split = (a, b) => 'In mail: ' + num(a) + ' ' + DOT + ' in drives: ' + num(b) + '.';
-function findSheet(S) {
+function notBody(S, host) {
   const D = S.road, F = D.findable, M = D.mail ?? {}, Fi = D.files ?? {}, NS = F.not_searchable ?? D.ready?.not_searchable ?? {};
   const n = (v) => Number(v) || 0;
   const body = el('div', 'gs-table'); body.id = 'gs-table';
   body.appendChild(p('gr-small', 'The percentage counts only what a press can read. What cannot be read is said below with its reason, never counted as missing.'));
-  body.appendChild(tRow('Findable now', 'Emails, attachments and drive files', num(F.done)));
+  body.appendChild(tRow('Searchable now', 'Emails, attachments and drive files', num(F.done)));
   const rd = n(M.attach_reading) + n(Fi.waiting);
   body.appendChild(tRow('Reading now', rd > 0 ? leftWords(F.minutes_left) : 'Nothing is being read just now', num(rd)));
   const wy = n(M.attach_waiting) + n(Fi.waiting_yes);
   body.appendChild(tRow('Waiting for your yes', 'Attachments and drive files a press can read. ' + split(M.attach_waiting, Fi.waiting_yes), num(wy),
-    wy > 0 ? btn('gr-link', 'Yes' + String.fromCharCode(8230), () => { sheet.close(); (C.$('#gs-need') || C.$('#gs-plan'))?.scrollIntoView({ block: 'start' }); }) : null));
+    wy > 0 ? btn('gr-link', 'Yes' + String.fromCharCode(8230), () => C.$('#gs-need')?.scrollIntoView({ block: 'start' })) : null));
   const HOW = ' No price yet: it is measured on a small sample of your own before you are asked. Not offered yet.';
   const pics = el('div', 'gs-tpics'); pics.id = 'gs-tpics';
   const choice = [
@@ -782,8 +793,8 @@ function findSheet(S) {
   body.appendChild(tRow('Could not be read', 'The Tool tried and could not open them. ' + split(cant[0], cant[1]), num(cant[0] + cant[1])));
   if (n(NS.drive_not_read) > 0) body.appendChild(tRow('Read only in part', 'Drive files the Tool did not read to the end. This is ours to fix; there is nothing for you to do.', num(NS.drive_not_read)));
   body.appendChild(el('p', 'am-small', 'Each of these by name, with where it is and its reason, is not listed here yet.'));
-  const acts = el('div', 'gr-chips'); acts.appendChild(btn('go ghost', 'Close', () => sheet.close())); body.appendChild(acts);
-  sheet.open('Findable: ' + num(F.pct) + '% of what can be read', body);
+  host.appendChild(body);
+  // pictures in your drives are read each time the fold is opened (notCard)
   // pictures in drives: the one measured price, read when the table opens (owner only; the brain gives the price to nobody else)
   pics.appendChild(p('working no-late gr-small', 'Reading the price of pictures in your drives'));
   rpc('source_pictures_state', { p_source_key: null }).then(({ data, error }) => {
@@ -792,7 +803,7 @@ function findSheet(S) {
     if (!(n(data.waiting) > 0)) { pics.replaceChildren(); if (!choice.length) pics.appendChild(p('gr-small', 'Nothing is left out by choice.')); return; }
     const price = usd2(data.estimate_usd);
     pics.replaceChildren(tRow('Pictures in your drives', 'Scanned contracts, photographed receipts and invoices. Reading text in a picture uses AI. ' + (price ? 'The price is ' + String(data.measured || 'measured') + '.' : 'The price is shown to the owner.'),
-      num(data.waiting), btn('gr-link', (price ? price + ' ' + DOT + ' ' : '') + 'Yes' + String.fromCharCode(8230), () => { sheet.close(); brainPanel('scans'); })));
+      num(data.waiting), btn('gr-link', (price ? price + ' ' + DOT + ' ' : '') + 'Yes' + String.fromCharCode(8230), () => brainPanel('scans'))));
   });
 }
 // THE AI CREDIT, ASKED WHERE THE FIRST MONEY IS SPENT (decision 1150.2; supersedes the AI credit step). Only when what is checked
@@ -805,7 +816,7 @@ function creditAsk(S, cost, bal) {
   const f = cardFee(add);
   const d = el('div', 'gs-credit'); d.id = 'gs-credit';
   d.append(el('b', null, 'Add AI credit first ' + DOT + ' ' + usd2(add)),
-    p('gr-small', 'What is checked costs ' + usd2(cost) + ' and your credit is ' + (bal < 0 ? usd2(-bal) + ' under zero' : usd2(bal)) + '. ' + usd2(add) + ' covers the ' + usd2(gap) + ' this step needs, with a cushion so it cannot stop halfway. What is left stays in your balance for the next step. Or untick something.'),
+    p('gr-small', 'What is checked costs ' + usd2(cost) + ' and your credit is ' + (bal < 0 ? usd2(-bal) + ' under zero' : usd2(bal)) + '. ' + usd2(add) + ' covers the ' + usd2(gap) + ' this step needs, with a cushion so it cannot stop halfway. What is left stays in your balance for the next step. Or uncheck something in the list.'),
     priceRow('AI credit', usd2(add)), priceRow('Card fee, at the card company' + String.fromCharCode(8217) + 's price', usd2(f)), priceRow('Total, one time', usd2(add + f)),
     el('p', 'am-small', 'From the count above and your AI meter' + String.fromCharCode(8217) + 's balance. The credit goes to the AI companies at their own price; Verrandi adds nothing. You type your card on Stripe' + String.fromCharCode(8217) + 's own page.' + (add === 5 && gap * 1.25 < 5 ? ' $5 is the smallest card payment.' : '')));
   const pay = !!S.marks?.payments, card0 = cardOf(S);
@@ -880,7 +891,7 @@ function markOld(r, old, nm, own) {
   sheet.open(old ? 'Mark this mailbox old?' : 'Undo old for ' + nm + '?', body);
 }
 async function rePlan() {
-  const card0 = C.$('#gs-plan'); if (card0) card0.replaceChildren(p('working no-late', 'Counting, for free'));
+  const card0 = C.$('#gs-need'); if (card0) { card0.replaceChildren(p('working no-late', 'Counting, for free')); card0.dataset.sig = ''; }
   await readPlan(R);
   draw();
 }
@@ -995,7 +1006,7 @@ function termsLine(S) {
   w.append(lab, fold('Read the terms (2 minutes)', p(null, TERMS), p('gr-small', 'These are the plain words. The full user agreement follows them.')), said);
   return w;
 }
-const agreedNow = () => !!C.$('#gs-agree')?.checked;
+const agreedNow = () => !!(R && mark(R, 'agreed')) || !!C.$('#gs-agree')?.checked;   // once agreed, the terms line is not drawn again (decision 1156.4)
 const H = (t) => el('h1', 'gr-h', t);
 const CARDS = {
   db(S) {
