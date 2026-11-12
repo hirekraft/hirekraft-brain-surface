@@ -3370,3 +3370,14 @@ body.gr-over .br-leave { display: none; }
 .gs-urow .gs-partlink { min-height: 44px; margin: -12px 0; display: inline-flex; align-items: center; }
 .gs-part .gs-pl > .gs-pv { white-space: nowrap; flex: none; }
 .gs-part .gs-pl > span:first-child { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
+/* STEP 4 AFTER A PRESS IS DONE, AND EACH ROW'S OWN STANDING (seat step4-after, 2026-11-12; Alex 12:12 PT: step 4 reads like step 3). The top card is one percentage of everything chosen with its meter (gs-after reuses gs-hero and gs-pct), then the press's story on one line (gs-story), quiet lines for what is still being understood or was left unread (gs-quiet), and the one count of what could not be read, opened to where and why (gs-unread). Each row carries a small meter under its own percentage (gs-rmeter). Tokens only, so every look holds. */
+.gs-rmeter { display: block; height: 4px; max-width: 240px; margin-top: 2px; }
+.gs-story { margin: 0; line-height: 1.7; overflow-wrap: anywhere; }
+.gs-story b, .gs-unread b { font-variant-numeric: tabular-nums; }
+.gs-story .gs-sbit { display: inline-block; max-width: 100%; }
+.gs-quiet { color: var(--ink-3); }
+.gs-unread > summary { cursor: pointer; padding: 10px 0; line-height: 24px; }
+.gs-unread .gs-pl, #gs-open .gs-pl { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px calc(var(--u) * 3); min-width: 0; padding: 4px 0; }
+.gs-unread .gs-pl > span:first-child, #gs-open .gs-pl > span:first-child { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
+.gs-each { display: grid; gap: 2px; min-width: 0; }
+.gs-after .gr-link, .gs-unread .gr-link, #gs-open .gr-link { min-height: 44px; display: inline-flex; align-items: center; }
