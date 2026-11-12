@@ -563,34 +563,11 @@ function tileBtn(icon, title, line1, word, on, fn) {
   b.setAttribute('aria-label', title + (line1 ? ', ' + line1 : '') + ': ' + word);
   return b;
 }
-// THE LIVE CARD, once Make it all searchable is pressed (seat setup-screens-2): search_progress (seat searchable-plan),
-// polled every 15 seconds while it reads. The start time, the count, the bar, minutes left from the measured pace (or
-// "measuring"), and what is being read now ('<mailbox>: <year>' or a drive's name; never a subject or a person).
-const hm = (iso) => { const d = new Date(iso); return Number.isFinite(d.getTime()) ? d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null; };
-// SEAT audit-fix-screen (C5): when search_progress is refused or fails, the card says so in words, with the last count seen if
-// there was one; it used to be left out, with no words.
+// SEAT audit-fix-screen (C5): when a progress reading is refused or fails, the card says so in words (progressFailed, step 4's live card).
 const NOREAD = 'Could not read the progress just now.';
 function progressFailed(id, title, why) {
   const c = el('section', 'am-step gs-live'); c.id = id;
   c.append(el('span', 'am-num', title), p(null, NOREAD + ' Anything you started keeps going.'), el('p', 'am-small', 'Why: ' + String(why) + '. It tries again on its own.'));
-  return c;
-}
-function liveCard(S) {
-  const g = S.sprog;
-  if (S.sprogErr && !(g && g.ok === true && g.state === 'reading')) return progressFailed('gs-live', 'Making it searchable', S.sprogErr);
-  if (!g || g.ok !== true || g.state !== 'reading') return null;
-  const all = Number(g.items_total) || 0, done = Number(g.items_done) || 0;
-  const c = el('section', 'am-step gs-live'); c.id = 'gs-live';
-  const t = hm(g.started_at);
-  c.appendChild(el('span', 'am-num', 'Making it searchable' + (t ? ' ' + DOT + ' started ' + t : '')));
-  c.appendChild(el('div', 'gs-big', num(done) + ' of ' + num(all) + ' items'));
-  const bar = el('div', 'gs-bar gs-thick'); const i = el('i'); i.style.width = (all ? Math.min(100, Math.round((done / all) * 100)) : 0) + '%'; bar.appendChild(i); c.appendChild(bar);
-  const ml = g.minutes_left;
-  const pm = (S.prog ?? []).reduce((a, x) => a + (Number(x.per_minute) || 0), 0);   // source_read_progress's measured pace, summed over what is reading
-  c.appendChild(p('gr-small', (pm > 0 ? num(Math.round(pm)) + ' a minute, measured' : 'pace: measuring') + ' ' + DOT + ' ' + leftWords(ml)));
-  if (Number(g.presses) > 1) c.appendChild(p('gr-small gs-presses', 'This counts everything you started: ' + num(g.presses) + ' presses.'));   // search_progress answers for every open press (seat press-while-reading)
-  if (g.now_reading) { const d = el('p', 'gs-now'); d.append(el('i', 'gs-pulse'), document.createTextNode('Reading ' + String(g.now_reading))); c.appendChild(d); }
-  if (S.sprogErr) c.appendChild(p('gr-small gs-over', NOREAD + ' It keeps going. The count above is the last one seen.'));
   return c;
 }
 // MAKE EVERYTHING SEARCHABLE (spec step 3; seat setup-screens-2 over seat searchable-plan's search_plan and search_go).
