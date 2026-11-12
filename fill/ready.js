@@ -70,7 +70,7 @@
 // SEAT step4-fresh (2026-11-12; decision 1158, picture RYtvsKoVGVx2ELoeqN5PNx): step 4 rebuilt as the approved fresh look on step 3's
 // own tree. See STEP 4, THE FRESH LOOK above heroU. The line under the steps names the step that is open (it named the first
 // step not done: "Step 3 of 5" while step 4 was open).
-import { roadSteps } from './brainroom.js?v=2026-11-12-step4-pressed';
+import { roadSteps } from './brainroom.js?v=2026-11-12-understand-part';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
@@ -269,6 +269,8 @@ function wayBack() {
   if (wired) return;
   wired = true;
   window.addEventListener('gr-refresh', () => { if (C && !C.$('#s-ready')?.hidden) mount(C); });
+  // VERA TAKES IT IN WORDS (decision 1163): "understand <mailbox>, only <year>" opens step 4 and that source's sheet with the year checked, for the owner to confirm (fill/vera.js partAsk)
+  document.addEventListener('tool:understand-part', (e) => { const d = e.detail || {}; if (C && R && R.owner && d.source) partOpen(String(d.source), Array.isArray(d.years) ? d.years : []); });
   document.addEventListener('tool:work', () => { for (const q of ['#gs-work', '#gs-uwork']) { const w = C?.$(q); if (w && R) workInto(w, R); } });   // the one indicator's reading moved (fill/working.js): the Working lines of steps 3 and 4 follow, in place
   // the Brain's page closed (brainroom.js closePage): back to the step and the spot she was on, unless another page opened in its place
   window.addEventListener('br-closed', () => setTimeout(() => { const pg = C?.$('#br-page'); if (!pg || pg.hidden) closeOver(true); }, 0));
@@ -1419,7 +1421,7 @@ async function sampleAsk(S, confirm) {
   const r = await C.askBody({ understand_sample: { groups: chosenGroups(S), months: 24, confirm, cap: SAMPLE_CAP } }).catch((e) => ({ ok: false, error: String(e?.message ?? e) }));
   return r && typeof r === 'object' && r.ok === true ? r : { ...(r && typeof r === 'object' ? r : {}), ok: false, note: noteOf(r) };
 }
-async function readSample(S) { S.usam = await sampleAsk(S, false); }
+async function readSample(S) { S.usam = await sampleAsk(S, false); try { window.toolParts = rowsOf(S.usam).some((x) => x.part !== undefined); } catch (_) { /* Vera then leaves the words to the box */ } }   // toolParts: this brain keeps parts (fill/vera.js opens the sheet only then)
 // While the sample or a press reads, step 4 refreshes every 20 seconds (only while it is shown and nothing is typed or open).
 let uT = null;
 function uPoll() {
@@ -1594,6 +1596,119 @@ function heroU(S) {
     p('gr-small', el('b', null, 'Searchable only'), ' stays searchable: you find it by what it is about, but its facts are not noted and no totals come from it. You can make any of it understood later.'));
   return c;
 }
+// ---- ONLY PART OF A SOURCE (seat understand-part 2026-11-12, decision 1163 REFINED) ----
+// The part is the brain's (understand_choice 'part': years, and for a mailbox whether its attached files stay searchable only),
+// kept by understand_choice_set beside the choice; the row's price follows it because the brain prices the part. The sheet lists
+// that source's own years with what each holds and its measured price (understand_years), checked to choose. While a press runs,
+// a source that is not in it can be pressed from the sheet as its own small press (understand_go with that one source: the
+// running press keeps its limit). Nothing here works a price out except adding the checked years.
+const ELL = String.fromCharCode(8230);
+function partWords(part) {
+  if (!part || typeof part !== 'object') return '';
+  const ys = Array.isArray(part.years) ? part.years.map(Number).filter(Number.isFinite).sort((a, b) => a - b) : [];
+  const y = ys.length ? (ys.length > 2 ? ys.slice(0, -1).join(', ') + ' and ' + ys[ys.length - 1] : ys.join(' and ')) + ' only' : '';
+  return [y, part.files === 'findable' ? 'attached files searchable only' : ''].filter(Boolean).join(' ' + DOT + ' ');
+}
+// Vera's way in: step 4, then the sheet once the rows are read (asked every half second, ten seconds at most).
+function partOpen(key, years) {
+  at = 'understand';
+  if (C.$('#s-ready')?.hidden) C.goto('s-ready'); else if (!C.$('#gr-sheet')) draw();
+  let n = 0;
+  const go = () => { if (rowsOf(R?.usam).some((x) => x.source_key === key)) { partSheet(key, years); return; } if (++n < 20) setTimeout(go, 500); else toast('That mailbox or drive is not on step 4 yet, so its years could not be opened.'); };
+  go();
+}
+async function partSheet(key, preset) {
+  const S = R, r = rowsOf(S?.usam).find((x) => x.source_key === key);
+  if (!S || !r) return;
+  const box = r.kind === 'mailbox', nm = names(S, [{ key, label: r.name, kind: box ? 'mail' : 'drive' }])[key];
+  const body = el('div', 'gs-part'); body.id = 'gs-part';
+  const wait = p('working no-late gr-small', 'Counting what each year holds, for free');
+  const said = p('gr-small', ''); said.id = 'gs-psaid'; said.setAttribute('role', 'status');
+  const no = btn('go ghost', 'Not now', () => sheet.close());
+  const acts = el('div', 'gr-chips'); acts.appendChild(no);
+  body.append(wait, acts, said);
+  sheet.open('Only part of ' + nm, body);
+  const Y = await rpc('understand_years', { p_source: key, p_groups: chosenGroups(S), p_identity: null }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) }));
+  if (!body.isConnected) return;
+  wait.remove();
+  if (!Y || Y.ok !== true || !Array.isArray(Y.years)) { const w = p('gr-small gs-over', 'The years could not be read just now: ' + dotted(noteOf(Y))); w.id = 'gs-pwhy'; body.insertBefore(w, acts); return; }
+  const mul = doorMul(S), night = doorOf(S) === 'overnight';
+  const dated = Y.years.filter((y) => y.year !== null && y.year !== undefined);
+  const sel = new Set((Array.isArray(preset) && preset.length ? dated.filter((y) => preset.map(Number).includes(Number(y.year))) : dated.filter((y) => y.chosen !== false)).map((y) => Number(y.year)));
+  let files = Y.files_choice === 'findable' ? 'findable' : 'understood', busy = false;
+  const withFiles = () => !box || files === 'understood';
+  // one year's price at her speed: its conversations, and its files unless she keeps them searchable only; null when not measured
+  const yUsd = (y) => { const a = y.usd, f = withFiles() ? y.files_usd : 0; return a === null || a === undefined || f === null || f === undefined ? null : (Number(a) + Number(f)) * mul; };
+  const holds = (y) => { const cv = Number(y.conversations_left) || 0, fl = withFiles() ? Number(y.files_left) || 0 : 0;
+    return [cv ? num(cv) + (cv === 1 ? ' conversation' : ' conversations') : '', fl ? num(fl) + (box ? (fl === 1 ? ' attached file' : ' attached files') : (fl === 1 ? ' file' : ' files')) : ''].filter(Boolean).join(' ' + DOT + ' ') || 'nothing left to read'; };
+  const list = el('div', 'gs-years'); list.id = 'gs-years'; list.setAttribute('role', 'group'); list.setAttribute('aria-label', 'Years');
+  const fileLine = el('div', 'gs-pl gs-pfiles'); fileLine.id = 'gs-pfiles';
+  const total = priceRow(night ? 'This part, overnight' : 'This part', '', ''); total.id = 'gs-ptotal';
+  const keep = btn('go', 'Keep', () => doKeep(true)); keep.id = 'gs-pkeep';
+  const now = Y.press_running === true && Y.running !== true ? btn('go', 'Understand this part now', () => doNow()) : null; if (now) { now.id = 'gs-pnow'; keep.className = 'gr-link gs-pkeep'; }   // not a second ghost button: the scrim presses the first one, which must stay Not now
+  const all = () => dated.length > 0 && dated.every((y) => sel.has(Number(y.year)));
+  const words = () => (all() && withFiles() ? 'everything' : partWords({ years: all() ? [] : [...sel], files: withFiles() ? null : 'findable' }));
+  const paintS = () => {
+    list.replaceChildren(...Y.years.map((y) => {
+      const d = y.year !== null && y.year !== undefined, lab = el('label', 'gs-yr'), cb = el('input'), u = yUsd(y), tx = el('span', 'gs-yrl');
+      cb.type = 'checkbox'; cb.checked = d ? sel.has(Number(y.year)) : all(); cb.disabled = !d || busy; if (d) cb.dataset.year = String(y.year);
+      cb.addEventListener('change', () => { if (cb.checked) sel.add(Number(y.year)); else sel.delete(Number(y.year)); paintS(); });
+      tx.append(el('b', null, d ? String(y.year) : 'No date'), el('small', null, holds(y) + (d ? '' : ' ' + DOT + ' only with every year')));
+      lab.append(cb, tx, el('b', 'gs-pv', u === null ? 'not measured' : usd2(u)));
+      return lab;
+    }));
+    if (box) { const l = el('span'); l.append(el('b', null, 'Attached files of these years'), el('small', null, files === 'understood' ? 'read and understood with their email' : 'stay searchable only: you find them, their facts are not noted'));
+      fileLine.replaceChildren(l, seg(CHOICES, files, (v) => { if (busy) return; files = v; paintS(); }, 'Attached files of these years')); }
+    const pick = Y.years.filter((y) => (y.year === null || y.year === undefined ? all() : sel.has(Number(y.year)))), us = pick.map(yUsd);
+    total.querySelector('.gs-pv').textContent = !pick.length ? usd2(0) : us.some((x) => x === null) ? 'not measured' : usd2(us.reduce((a, x) => a + x, 0));
+    total.querySelector('small')?.remove(); if (pick.length) total.firstChild.appendChild(el('small', null, words()));
+    keep.textContent = now ? 'Keep for my next press' : 'Keep ' + DOT + ' ' + (sel.size ? words() : 'choose a year');
+    keep.disabled = busy || sel.size === 0; if (now) now.disabled = busy || sel.size === 0;
+  };
+  // kept by the brain beside the choice; every year checked with its files is the whole source again (no part)
+  const doKeep = async (close) => {
+    busy = true; paintS(); said.className = 'working no-late gr-small'; said.textContent = 'Keeping your choice';
+    const v = { choice: 'understood', years: all() ? [] : [...sel].sort((a, b) => a - b) }; if (box) v.files = files;
+    const { data, error } = await rpc('understand_choice_set', { p_choice: { [key]: v }, p_identity: null });
+    if (error || !data || data.ok !== true) { busy = false; paintS(); said.className = 'gr-small'; said.textContent = 'Not kept: ' + dotted(String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given')); return false; }
+    uLimit = null; await readSample(R);
+    if (close) { sheet.close(); toast('Kept: ' + nm + ', ' + words() + '. Nothing is read until you press.'); if (at === 'understand') draw(); }
+    return true;
+  };
+  // ITS OWN SMALL PRESS beside the press that runs: the brain's own limit for this row (its measured price plus room for its
+  // longest item) at her speed, checked against her credit by the Tool's server, asked once more before anything is read.
+  const doNow = async () => {
+    if (!(await doKeep(false))) return;
+    const r2 = rowsOf(R?.usam).find((x) => x.source_key === key), lim = Number(r2?.limit_usd);
+    if (!r2 || !Number.isFinite(lim) || !(lim > 0)) { busy = false; paintS(); said.className = 'gr-small'; said.textContent = leftOf(r2 || {}) === 0 ? 'Nothing is left to read in this part.' : 'This part has no measured price yet, so it cannot be pressed on its own. It is kept for your next press.'; return; }
+    const L = Math.ceil(Number((lim * mul * 100).toFixed(6))) / 100, q = { groups: chosenGroups(S), months: 24, limit: L, sources: [key] };
+    said.textContent = 'Checking your limit against your credit';
+    const dk = await doorKeep(S);
+    const pv = dk.ok ? await C.askBody({ understand_go: { ...q, confirm: false } }).catch((e) => ({ ok: false, error: String(e?.message ?? e) })) : { ok: false, note: 'your choice of speed could not be kept (' + dk.note + ')' };
+    if (!body.isConnected) return;
+    if (!pv || pv.ok !== true) { busy = false; paintS(); said.className = 'gr-small'; said.textContent = 'Not started: ' + dotted(noteOf(pv)) + ' Your choice is kept.'; return; }
+    said.className = 'gr-small'; said.textContent = '';
+    const lr = priceRow('Your limit for this part, never passed', usd2(L), 'its measured price plus room for its longest ' + (box ? 'conversation or file' : 'file')); lr.id = 'gs-plimit';
+    const yes = btn('go', 'Yes, understand ' + words() + ' ' + DOT + ' up to ' + usd2(L), async () => {
+      yes.disabled = true; no.disabled = true; said.className = 'working no-late gr-small'; said.textContent = 'Starting';
+      const g = await C.askBody({ understand_go: { ...q, confirm: true } }).catch((e) => ({ ok: false, error: String(e?.message ?? e) }));
+      if (!g || g.ok !== true) { said.className = 'gr-small'; said.textContent = 'Not started: ' + dotted(noteOf(g)); yes.disabled = false; no.disabled = false; return; }
+      sheet.close(); toast('Started: ' + nm + ', ' + words() + ', is being understood. It stops before ' + usd2(L) + '. You get one short email when it is done.');
+      try { document.dispatchEvent(new CustomEvent('tool:work-refresh')); } catch (_) { /* the indicator reads again on its own */ }
+      uPick = {}; uLimit = null; mount(C);
+    }); yes.id = 'gs-pyes';
+    keep.remove(); now.remove();
+    body.insertBefore(lr, acts);
+    body.insertBefore(p('gr-small', 'It runs beside the press that is running, which keeps its own limit. ' + (night ? 'Overnight: ' + OVERNIGHT_WHEN + '. ' : '') + 'Stop works any time; you pay only for what was read.'), acts);
+    acts.insertBefore(yes, no); yes.focus();
+  };
+  const foot = p('gr-small', (Y.measured && Y.measured.mail === false ? 'No price yet: your sample has not been read. ' : 'Each price is for what is not read yet, at the rate measured on your own sample' + (night ? ', overnight' : '') + '. ')
+    + (box ? 'A conversation counts in the year of its newest email; an attached file in the year of its email.' : 'A file counts in the year of its own date.') + (Y.running === true ? ' This one is being understood now, so a change here counts from your next press.' : ''));
+  body.insertBefore(list, acts); if (box) body.insertBefore(fileLine, acts); body.insertBefore(total, acts); body.insertBefore(foot, acts);
+  acts.insertBefore(keep, no); if (now) acts.insertBefore(now, keep);
+  paintS();
+  (now || keep).focus();
+}
 // ONE ROW of What to understand: the name, what is left to read, her one choice, her price for it at the speed she chose.
 function uRow(r, nm, q, mul, priced, ro) {
   const on = pickOf(r) === 'understood', left = leftOf(r), box = r.kind === 'mailbox';
@@ -1602,9 +1717,17 @@ function uRow(r, nm, q, mul, priced, ro) {
   if (!ro && q && q.state === 'reading') notes.push('still being made searchable: priced for what is searchable now');
   if (!ro && priced && !box && fl > 0 && !(Number(r.sampled) > 0)) notes.push('priced at the rate of your other files');   // read-only rows show no price, so nothing about pricing
   if (box && r.by_default === true && r.choice === 'findable') notes.push('marked old');
+  const pw = partWords(r.part); if (pw) notes.unshift(pw);   // the row reads "2024 only" first (decision 1163)
   const row = el('div', 'gs-row gs-urow' + (on || left === 0 ? '' : ' off')), l = el('span', 'gs-rl');
   row.dataset.src = r.source_key;
   l.append(el('b', null, nm), K(el('small', null, notes.join(' ' + DOT + ' ')), 'm'));
+  // ONLY PART (seat understand-part 2026-11-12, decision 1163 REFINED): one quiet link per row, nothing else on the row. Shown
+  // when the brain keeps parts (its row carries the key part, null for the whole); while a press runs, only on what is not in it.
+  if (r.part !== undefined && !(ro && pressRows(R).some((x) => x.source_key === r.source_key))) {
+    const a = K(btn('gr-link gs-partlink', (r.part ? 'Change part' : 'Only part') + ELL, () => partSheet(r.source_key)), 'pl');
+    a.setAttribute('aria-label', (r.part ? 'Change the part of ' : 'Understand only part of ') + nm);
+    l.appendChild(a);
+  }
   row.appendChild(l);
   if (ro) { row.appendChild(left === 0 && allOf(r) > 0 ? chip('ok', 'Understood') : on ? chip('warn', 'Being understood') : chip('', 'Searchable only')); return row; }   // while her press runs: what she chose, no buttons, no price to act on
   if (left > 0) row.appendChild(seg(CHOICES, pickOf(r), (v) => pick(r.source_key, v), nm)); else row.appendChild(chip('ok', 'Understood'));
@@ -1656,7 +1779,7 @@ function treeU(S, ro) {
   if (!ro) { c.append(tree, insideFold(S)); return c; }
   const f = el('details', 'gs-fold'); f.id = 'gs-chosefold'; f.open = choseOpen; f.addEventListener('toggle', () => { choseOpen = f.open; });
   f.append(el('summary', null, ok && rows.length ? 'See the ' + (chosenWords(U) || 'mailboxes and drives') + ' being understood' : 'See your mailboxes and drives'), tree);
-  c.append(f, p('gr-small', 'These cannot be changed while this press runs. When it is done, or after Stop, the choices open again here for your next press.'));
+  c.append(f, p('gr-small', 'These cannot be changed while this press runs. When it is done, or after Stop, the choices open again here for your next press.' + (rows.some((u) => u.part !== undefined) ? ' A mailbox or drive that is not in this press can be understood in part beside it: Only part' + ELL + ' on its row.' : '')));
   return c;
 }
 // INSIDE EACH MAILBOX, WHAT IS READ (1158), folded. The three lines are the brain's own sorting (understand_population reads the

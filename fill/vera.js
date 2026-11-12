@@ -550,7 +550,7 @@ function intercept(e) {
   const v = (i?.value || '').trim();
   // A SETUP QUESTION IS HERS, FREE (seat setup-vera): beside a step, a question that asks what it costs, how long it takes or
   // where we are never reaches the box. If it turns out to hold a word that is not about setup, typed() sends it on.
-  if ((!talk || talk.inPlace) && !bypass && v && stepTaps() && askedOf(v).length) {
+  if ((!talk || talk.inPlace) && !bypass && v && stepTaps() && (askedOf(v).length || partish(v))) {   // partish: "understand <mailbox>, only <year>" is hers too (seat understand-part)
     e.preventDefault(); e.stopImmediatePropagation();
     i.value = ''; grow();
     typed(v);
@@ -783,8 +783,42 @@ async function setupAsk(q, ids, about) {
   m.scrollIntoView?.({ block: 'nearest' });
 }
 // A question typed beside a step that asks about cost, time or where we are: hers when every word is setup's or a mailbox's.
+// "UNDERSTAND <MAILBOX>, ONLY <YEAR>" (seat understand-part 2026-11-12, decision 1163): the words understand and only, one or
+// more years, and exactly one connected mailbox by a close name (named, above). No model is asked: step 4 opens that
+// mailbox's years with those checked (fill/ready.js, event tool:understand-part) and she confirms there. A drive is not
+// matched by its name here, and a sentence with any other word goes on to the usual routes.
+const PART_WORDS = ['please', 'year', 'years', 'part', 'just', 'and'];
+function partish(q) { const all = toks(q); return all.includes('only') && all.some((t) => t.startsWith('underst')) && all.some((t) => t.length === 4 && Number(t) >= 1990 && Number(t) <= new Date().getFullYear()); }
+export function partAsk(q, rows) {
+  const all = toks(q), now = new Date().getFullYear();
+  if (!all.some((t) => t === 'understand' || t === 'understanding' || t === 'understood') || !all.includes('only')) return null;
+  const isYear = (t) => t.length === 4 && [...t].every((ch) => '0123456789'.includes(ch)) && Number(t) >= 1990 && Number(t) <= now;
+  const years = [...new Set(all.filter(isYear).map(Number))];
+  if (!years.length) return null;
+  let hit = [];
+  for (const tok of all) {
+    if (KNOWN.includes(tok) || PART_WORDS.includes(tok) || isYear(tok)) continue;
+    const h = named(tok, rows || [], true);
+    if (!h.length) return null;
+    hit = hit.concat(h.filter((r) => !hit.includes(r)));
+  }
+  return hit.length === 1 ? { source: hit[0].source, name: mailOf(hit[0]), years } : null;
+}
+function partSay(q, pa) {
+  const turns = $('#dock-turns');
+  const t = 'I opened the years of ' + pa.name + ' with ' + pa.years.join(' and ') + ' checked. Each year shows what it holds and its price. Nothing is read until you say yes there.';
+  if (turns) {
+    $$('.vera-free', turns).forEach((x) => x.remove());
+    const m = el('div', 'vera-mine vera-free'); m.appendChild(el('p', null, q)); turns.appendChild(m);
+    const d = el('div', 'vera-turn vera-free'); d.append(el('p', 'vera-who', NAME()), el('p', null, t), el('p', 'vera-small', 'Free: no AI was asked.')); turns.appendChild(d);
+    speak(t);
+  }
+  document.dispatchEvent(new CustomEvent('tool:understand-part', { detail: { source: pa.source, years: pa.years } }));
+}
 async function typed(q) {
   const f = await facts(false);
+  const pa = window.toolParts === true ? partAsk(q, f && f.rows) : null;   // only on a brain that keeps parts (fill/ready.js says so once step 4 is read)
+  if (pa) { partSay(q, pa); return; }
   const r = route(q, f);
   if (r) { setupAsk(q, r.ids, r.about); return; }
   const i = $('#panel-input'), s = $('#panel-send');
