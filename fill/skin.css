@@ -3220,7 +3220,9 @@ body.gr-over .br-leave { display: none; }
 .gs-herotop { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: calc(var(--u) * 2) calc(var(--u) * 4); min-width: 0; }
 .gs-herotop > div { min-width: 0; }
 .gs-pct { font-family: var(--font-head); font-size: var(--t-hero); line-height: 1; font-variant-numeric: tabular-nums; }
-.gs-herotop .gs-chip { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+.gs-work { display: grid; gap: 2px; min-width: 0; max-width: 100%; padding: 6px 12px; border-radius: var(--radius); background: var(--warn-soft); color: var(--warn); font-size: var(--t-small); font-weight: var(--w-mid); overflow-wrap: anywhere; }
+.gs-work[hidden] { display: none; }
+.gs-work .wk-facts { color: inherit; font-weight: var(--w-reg, 400); }
 .gs-try { display: flex; align-items: center; gap: calc(var(--u) * 2); min-width: 0; border: 1px solid var(--line); border-radius: 999px; padding: 4px 6px 4px calc(var(--u) * 3); background: var(--paper); }
 .gs-try:focus-within { border-color: var(--room); }
 .gs-try input { flex: 1 1 0; min-width: 0; border: 0; background: none; color: var(--ink); font: inherit; min-height: var(--tap); outline: none; }
