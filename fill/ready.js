@@ -70,7 +70,7 @@
 // SEAT step4-fresh (2026-11-12; decision 1158, picture RYtvsKoVGVx2ELoeqN5PNx): step 4 rebuilt as the approved fresh look on step 3's
 // own tree. See STEP 4, THE FRESH LOOK above heroU. The line under the steps names the step that is open (it named the first
 // step not done: "Step 3 of 5" while step 4 was open).
-import { roadSteps } from './brainroom.js?v=2026-11-12-understand-part';
+import { roadSteps } from './brainroom.js?v=2026-11-12-step4-after';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
@@ -1254,13 +1254,15 @@ const CARDS = {
   understand(S, st) {
     // A STEP CHANGES SHAPE ONCE PRESSED (seat step4-pressed 2026-11-12, decision 1162): while her press runs the step is about
     // that press: the top card is the progress, what she chose is read-only, and How fast with its button is one line.
-    const pr = pressRows(S), out = pr.length ? [pressHero(S, pr), treeU(S, true), nowLine(pr)] : [heroU(S)];
+    // ONCE IT IS DONE the step tells that press's story first, and the choices open again under it (seat step4-after 2026-11-12).
+    const pr = pressRows(S), all = pressAll(S), after = !pr.length && pressSettled(S);
+    const out = pr.length ? [pressHero(S, all), treeU(S, true), nowLine(all)] : [after ? afterHero(S, all) : heroU(S)];
     if (!pr.length) {
       if (S.uprogErr) out.push(progressFailed('gs-ulive', 'Understanding your mail', S.uprogErr));
       out.push(treeU(S));
       const sp = speedCard(S); if (sp) out.push(sp);
     }
-    if (st.find((x) => x.k === 'understand')?.done) { const acts = el('div', 'gr-chips'); acts.id = 'gs-ucont'; acts.appendChild(btn('go ghost', 'Continue', () => { at = 'ready'; draw(); window.scrollTo({ top: 0 }); })); out.push(acts); }
+    if (!after && st.find((x) => x.k === 'understand')?.done) { const acts = el('div', 'gr-chips'); acts.id = 'gs-ucont'; acts.appendChild(btn('go ghost', 'Continue', () => { at = 'ready'; draw(); window.scrollTo({ top: 0 }); })); out.push(acts); }
     return out;
   },
   // STEP 5 · READY (spec part 2). The brain's rows from the same readings the Brain shows (brain_road, the one reading of
@@ -1270,6 +1272,7 @@ const CARDS = {
     const ok = st[st.length - 1].done;
     const out = [H(ok ? 'Your brain is ready.' : 'Your brain is not ready yet.'), shape('Mail, Drives and the rest of the Tool open, and your brain keeps up by itself.', 'your monthly costs, below', ok ? 'now' : 'when steps 1 to 4 are done', 'Each monthly figure below says where it comes from.')];
     out.push(ok ? (() => { const d = okMark('Everything is connected and searchable, and what matters is understood. It keeps up by itself.'); return d; })() : p('gr-lead', 'When steps 1 to 4 are done, this turns green and you are told. From then on it keeps up by itself.'));
+    if (!ok) { const so = stillOpen(S); if (so) out.push(so); }
     out.push(brainCard(S));
     const M = monthlyOf(S);
     const db = S.ai?.cost?.database;
@@ -1295,6 +1298,26 @@ const CARDS = {
     return out;
   },
 };
+// WHAT IS STILL OPEN BEFORE READY (seat step4-after 2026-11-12, Alex: "What can I work with?"): the brain's own reasons
+// (brain_road 'ready'), each in words with the step that settles it. Never a second rule: only what the brain answered.
+function stillOpen(S) {
+  const RD = S.road?.ready;
+  if (!RD || typeof RD !== 'object') return null;
+  const rows = [], add = (t, k, n) => rows.push([t, k, n]);
+  if (RD.searchable === false) add(Number(RD.to_read) > 0 ? num(RD.to_read) + ' emails and files are still to be made searchable' : Number(RD.not_counted) > 0 ? num(RD.not_counted) + (Number(RD.not_counted) === 1 ? ' mailbox or drive is' : ' mailboxes or drives are') + ' not counted yet' : 'Not everything is searchable yet', 'search', '3');
+  if (RD.understood === false) {
+    const miss = Number(RD.mailboxes_to_choose) - Number(RD.mailboxes_chosen);
+    if (miss > 0) add(num(miss) + (miss === 1 ? ' mailbox has' : ' mailboxes have') + ' no Understand press yet', 'understand', '4');
+    if (Number(RD.stopped) > 0) add(num(RD.stopped) + (Number(RD.stopped) === 1 ? ' mailbox was' : ' mailboxes were') + ' stopped while being understood', 'understand', '4');
+    if (Number(RD.waiting) > 0) add(num(RD.waiting) + (Number(RD.waiting) === 1 ? ' is' : ' are') + ' waiting to be understood', 'understand', '4');
+  }
+  if (RD.keeping_up === false) add(num(RD.refresh_errors) + (Number(RD.refresh_errors) === 1 ? ' connection' : ' connections') + ' could not refresh', 'connect', '2');
+  if (!rows.length) return null;
+  const c = card('hand', 'What is still open', null); c.id = 'gs-open';
+  for (const [t, k, n] of rows) { const r = el('div', 'gs-pl'), b = btn('gr-link', 'Open step ' + n, () => { at = k; autoAt = false; draw(); window.scrollTo({ top: 0 }); }); r.append(el('span', null, t), b); c.appendChild(r); }
+  c.appendChild(p('gr-small', 'Mail, Drives and the rest open when these are settled.'));
+  return c;
+}
 // THE BRAIN, ONE ROW PER KIND (step 5): counts from brain_road and the one reading of sources; Understood only where the
 // brain counts understood items of that kind, otherwise Searchable.
 function brainCard(S) {
