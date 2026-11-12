@@ -14,9 +14,11 @@
 // shows the three answers as kept (understand_answers_suggest) with Change opening step 4; New mail says "Understood as it
 // arrives" only for mailboxes with a pressed group (understand_progress_mine), otherwise "Not understood yet" (ruling 1141.4).
 // A COLLEAGUE sees only her own language and emails (spec): no prices, no money rows, no presses on the business.
+// SEAT step4-fresh (2026-11-12, decision 1158): How your price works and step 4's questions moved here from step 4 (ready.js
+// priceWorks, understandQs); Your answers no longer shows what each mailbox is for.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 import { ic, card } from './setup.js?v=2026-11-10-setup-front-door';
-import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep, brainDoor } from './ready.js?v=2026-11-12-overnight-batch';
+import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep, brainDoor, priceWorks, understandQs } from './ready.js?v=2026-11-12-step4-fresh';
 // SEAT ready-never-spins (2026-11-11): every brain call here goes through ready.js brainDoor (a real promise that cannot throw). The
 // client's own rpc call object has then and no catch: the two presses below that put .catch on it (Mark it old, the guide's name)
 // threw on press.
@@ -212,6 +214,9 @@ function underCard() {
   if (!S.uprog && S.uprogErr) c.appendChild(el('p', 'am-small', 'What is understood as it arrives could not be read just now (' + String(S.uprogErr) + ').'));
   const m = understandModel({ ai: S.ai });
   c.appendChild(row('The AI that does the work', m || 'not read', link('Change', () => C.goTab('ai'))));
+  if (!m || m.toLowerCase().includes('claude')) c.appendChild(el('p', 'am-small', 'Claude, by Anthropic, is the recommended one: the best score on our test of real business questions.'));
+  // HOW YOUR PRICE WORKS, moved here from step 4 (seat step4-fresh 2026-11-12, decision 1158); the words are ready.js priceWorks
+  c.appendChild(fold('How your price works', priceWorks({ est: S.est }).map((t, i) => (i + 1) + '. ' + t).join(' ')));
   return c;
 }
 // YOUR ANSWERS: the three answers of step 4 as kept (understand_answers_suggest answers); Change opens step 4 (one path).
@@ -223,7 +228,7 @@ function answersCard() {
   const ch = () => link('Change', () => openStep(C, 'understand'));
   if (S.uans && S.uans.ok !== true) c.appendChild(p('gr-small', 'Your answers could not be read just now (' + String(S.uans.note ?? S.uans.reason ?? 'no reason was given') + ').'));
   const mb = A?.mailboxes && typeof A.mailboxes === 'object' ? Object.entries(A.mailboxes).map(([k, v]) => k.split(':').pop() + ' ' + (FOR[v] || v)).join(', ') : '';
-  c.appendChild(row('What each mailbox is for', mb || 'Not answered yet', ch()));
+  c.appendChild(row('Each mailbox and drive', 'Understood or searchable only', ch()));   // what each mailbox is for is no longer asked (seat step4-fresh, decision 1158): one choice per row on step 4
   c.appendChild(row('Who you work with', A?.work_with ? (WITH[A.work_with] || A.work_with) : 'Not answered yet', ch()));
   c.appendChild(row('Your money paperwork', Array.isArray(A?.money_words) && A.money_words.length ? A.money_words.join(', ') : 'Not answered yet', ch()));
   c.appendChild(el('p', 'am-small', guide() + ' uses these to sort what is worth reading.'));
@@ -251,7 +256,8 @@ function questions() {
   d.append(el('h2', 'am-h2', 'Questions'),
     fold('Does a change cost anything?', 'Only if it reads more. Then you see the price first, and nothing is read until you say yes.'),
     fold('Where do I see how things are running?', 'On the Brain: green, yellow and red, always with words.'),
-    fold('Can my team change settings?', 'Only the owner changes money, connections and what is understood. Everyone can change their own language and emails.'));
+    fold('Can my team change settings?', 'Only the owner changes money, connections and what is understood. Everyone can change their own language and emails.'),
+    ...understandQs({ est: S.est }).map(([q, a]) => fold(q, a)));   // step 4's questions, moved here (seat step4-fresh, decision 1158)
   return d;
 }
 
