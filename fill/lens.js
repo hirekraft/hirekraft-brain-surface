@@ -79,6 +79,7 @@ import { onBrainChange } from "../doorbell.js";
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-05-work-tab";
 import { initWords } from "./words.js?v=2026-10-29-thinkrooms-3"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initLooks } from "./looks.js?v=2026-10-29-looks"; // the Look switch beside the language switch (seat looks, decision 1036)
+import { initWorking } from "./working.js?v=2026-11-12-work-indicator"; // all running work, one small indicator in the header (seat work-indicator, decision 1152 point 1)
 import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-29-thinkrooms-b";
 import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-10-30-rulings-small"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
@@ -399,6 +400,7 @@ function renderWho() {
   $("#whoami").innerHTML = `<b translate="no">${escape(v.name)}</b><br><span translate="no">${escape(v.role ?? "")}</span>`;
   initWords({ sb, url: SUPABASE_URL, key: PUBLISHABLE_KEY });   // the language switch beside her name (seat language-and-nudge)
   initLooks({ sb });   // the Look switch beside it, her look from the brain (seat looks)
+  initWorking({ sb });   // "Working: 2 things" in the header on every screen, from the one reading work_running (seat work-indicator)
   // seat brain-status-2: the heading "What is in it." left with the retired #brain-old.
   // The one-line count under the heading: what the reading itself lists, never recounted here.
   // seat brain-and-drives 2026-10-28: the count line is written by drawBrain from sources_view (one count everywhere, decision 1030).
