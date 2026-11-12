@@ -1504,7 +1504,7 @@ function heroU(S) {
   c.appendChild(el('span', 'am-num', 'Step 4 ' + DOT + ' Understand'));
   const U = S.usam, ok = !!U && U.ok === true && rowsOf(U).length > 0, T = ok ? uTotals(U) : null;
   const pct = T && T.all > 0 ? Math.floor((T.done / T.all) * 100) : null;
-  const live = (S.uprog ?? []).some((x) => x.state === 'reading' && pressedRow(x));
+  const live = false;   // while a press runs the top card is pressHero (decision 1162.1)
   const top = el('div', 'gs-herotop'), l = el('div');
   l.append(K(el('div', 'gs-pct', pct === null ? '' : num(pct) + '%'), 'pct'),
     K(el('p', 'gr-small', pct !== null ? 'of the mail and files you chose are understood' : !U ? 'Counting what you chose' : ok ? 'Nothing is chosen to be understood yet.' : 'The count could not be read just now, so the percentage is not shown.'), 'pl'));
@@ -1519,17 +1519,18 @@ function heroU(S) {
   return c;
 }
 // ONE ROW of What to understand: the name, what is left to read, her one choice, her price for it at the speed she chose.
-function uRow(r, nm, q, mul, priced) {
+function uRow(r, nm, q, mul, priced, ro) {
   const on = pickOf(r) === 'understood', left = leftOf(r), box = r.kind === 'mailbox';
   const cv = Number(r.conversations_left) || 0, fl = Number(r.files_left) || 0;
   const notes = [left === 0 ? 'already understood' : [cv ? num(cv) + (cv === 1 ? ' conversation' : ' conversations') : '', fl ? num(fl) + (box ? (fl === 1 ? ' attached file' : ' attached files') : (fl === 1 ? ' file' : ' files')) : ''].filter(Boolean).join(' ' + DOT + ' ')];
-  if (q && q.state === 'reading') notes.push('still being made searchable: priced for what is searchable now');
-  if (priced && !box && fl > 0 && !(Number(r.sampled) > 0)) notes.push('priced at the rate of your other files');
+  if (!ro && q && q.state === 'reading') notes.push('still being made searchable: priced for what is searchable now');
+  if (!ro && priced && !box && fl > 0 && !(Number(r.sampled) > 0)) notes.push('priced at the rate of your other files');   // read-only rows show no price, so nothing about pricing
   if (box && r.by_default === true && r.choice === 'findable') notes.push('marked old');
   const row = el('div', 'gs-row gs-urow' + (on || left === 0 ? '' : ' off')), l = el('span', 'gs-rl');
   row.dataset.src = r.source_key;
   l.append(el('b', null, nm), K(el('small', null, notes.join(' ' + DOT + ' ')), 'm'));
   row.appendChild(l);
+  if (ro) { row.appendChild(left === 0 && allOf(r) > 0 ? chip('ok', 'Understood') : on ? chip('warn', 'Being understood') : chip('', 'Searchable only')); return row; }   // while her press runs: what she chose, no buttons, no price to act on
   if (left > 0) row.appendChild(seg(CHOICES, pickOf(r), (v) => pick(r.source_key, v), nm)); else row.appendChild(chip('ok', 'Understood'));
   // HER PRICE FOR THIS ROW (decision 1159.2): chosen, what it costs at her speed; kept searchable only, $0.00, and small beside
   // it what it would be. SUPERSEDED: the full price left standing, only greyed, on a row she had taken out (seat step4-fresh).
@@ -1539,12 +1540,19 @@ function uRow(r, nm, q, mul, priced) {
   row.appendChild(pc);
   return row;
 }
-function treeU(S) {
-  const c = el('section', 'am-step gs-tree gs-utree'); c.id = 'gs-utree';
-  const hd = el('div', 'gs-treehd'); hd.append(el('h2', 'am-h2', 'What to understand'), el('small', 'gs-srcnote', 'the same list as step 3 ' + DOT + ' choose for each one'));
+// ro (decision 1162.3): while her press runs the same list is "What you chose", folded, read-only, with the way to change it.
+// EVERY ROW THE BRAIN PRICED IS DRAWN (decision 1161.3). The list is the one reading of sources (sources_view), the prices
+// and the press are the brain's own choice list (understand_choice). A mailbox or drive that is in the second and not in the
+// first was priced, counted in the Yes sheet and pressed, and stood on no row (HireKraft 2026-11-11: one drive with 492
+// files; the sheet said 15,876 drive files, the rows added to 15,384). Such a row is now drawn with the others, so what is
+// counted is always on the page.
+function treeU(S, ro) {
+  const c = el('section', 'am-step gs-tree gs-utree' + (ro ? ' gs-chose' : '')); c.id = ro ? 'gs-uchose' : 'gs-utree';
+  const hd = el('div', 'gs-treehd'); hd.append(el('h2', 'am-h2', ro ? 'What you chose' : 'What to understand'), el('small', 'gs-srcnote', ro ? 'as you pressed it ' + DOT + ' change for your next press' : 'the same list as step 3 ' + DOT + ' choose for each one'));
   c.appendChild(hd);
   const U = S.usam, ok = !!U && U.ok === true, rows = ok ? rowsOf(U) : [], priced = ok && U.state === 'done', mul = doorMul(S);
-  const src = S.src?.rows ?? [], P = S.splan && S.splan.ok === true ? planRows(S.splan) : [];
+  const listed = S.src?.rows ?? [], P = S.splan && S.splan.ok === true ? planRows(S.splan) : [];
+  const src = listed.concat(rows.filter((u) => allOf(u) > 0 && !listed.some((r) => r.source_key === u.source_key)).map((u) => ({ source_key: u.source_key, name: u.name, group: u.kind === 'mailbox' ? 'email' : 'drives', place: 'folder' })));
   // EMPTY IS NOT DENIED: a refused answer says its reason here, and the list below is still her own sources
   if (!U) c.appendChild(p('working no-late gr-small', 'Counting what there is to understand, for free'));
   else if (!ok) { const w = p('gr-small gs-over', 'Your choices and prices could not be read just now: ' + dotted(noteOf(U)) + ' It tries again on its own.'); w.id = 'gs-uwhy'; w.setAttribute('role', 'status'); c.appendChild(w); }
@@ -1553,7 +1561,7 @@ function treeU(S) {
   const none = (r) => { const u = ur(r); return !!u && leftOf(u) === 0 && allOf(u) === 0; };
   const line = (r) => {
     const u = ur(r);
-    if (u) return uRow(u, nm[r.source_key], P.find((q) => q.key === r.source_key), mul, priced);
+    if (u) return uRow(u, nm[r.source_key], P.find((q) => q.key === r.source_key), mul, priced, ro);
     const d = el('div', 'gs-row gs-urow'), l = el('span', 'gs-rl'); l.append(el('b', null, nm[r.source_key]), K(el('small', null, ok ? 'not counted for understanding yet' : ''), 'm')); d.appendChild(l); return d;
   };
   const tree = el('div', 'gs-groups');
@@ -1569,7 +1577,10 @@ function treeU(S) {
   const sys = src.filter((r) => r.group === 'systems'), sn = sys.map((r) => String(r.name || '')).filter(Boolean);
   if (sys.length) tree.appendChild(g4('sys', 'systems', 'Your systems', sn.length > 3 ? sn.slice(0, 3).join(', ') + ' and ' + num(sn.length - 3) + ' more' : sn.join(', '), 'Already understood ' + DOT + ' free', 'ok',
     [el('small', 'gs-srcnote', 'Your systems already keep their facts in order (invoices, records, contacts), so there is nothing to read. They count as understood from the moment they are connected.')]));
-  c.append(tree, insideFold(S));
+  if (!ro) { c.append(tree, insideFold(S)); return c; }
+  const f = el('details', 'gs-fold'); f.id = 'gs-chosefold'; f.open = choseOpen; f.addEventListener('toggle', () => { choseOpen = f.open; });
+  f.append(el('summary', null, ok && rows.length ? 'See the ' + (chosenWords(U) || 'mailboxes and drives') + ' being understood' : 'See your mailboxes and drives'), tree);
+  c.append(f, p('gr-small', 'These cannot be changed while this press runs. When it is done, or after Stop, the choices open again here for your next press.'));
   return c;
 }
 // INSIDE EACH MAILBOX, WHAT IS READ (1158), folded. The three lines are the brain's own sorting (understand_population reads the
@@ -1637,6 +1648,7 @@ function limitSay() {
   const L = Number(inp.value), bal = balanceLeft(S), card0 = cardOf(S);
   uLimit = inp.value !== '' && Number.isFinite(L) && L !== sugOf(S, U) ? L : null;
   const gap = bal === null ? null : Math.round((L - bal) * 100) / 100, short = gap !== null && gap > 0;
+  uGap = short ? gap : null;   // what add by card offers first (decision 1160)
   const over = C.$('#gs-uover'), test = C.$('#gs-utest');
   if (over) { over.textContent = short ? 'This is more than your credit: add ' + usd2(gap) + ' first, or lower your limit.' : bal === null ? 'Your credit could not be read just now, so nothing can be started. It tries again on its own.' : ''; over.hidden = !over.textContent; }
   if (test) test.hidden = !short || !!(card0 && card0.mode === 'live');
@@ -1661,7 +1673,7 @@ function speedCard(S) {
     c.appendChild(sp);
     if (doorBusy) c.appendChild(p('working no-late gr-small', 'Keeping your choice'));
   } else c.appendChild(p('gr-small', 'As fast as possible' + fastTime + '.'));
-  const credit = () => { const r = el('div', 'gs-pl gs-ucredit'), v = el('span', 'gs-tval'); v.append(K(el('b', 'gs-pv', bal === null ? 'not read' : usd2(bal)), 'bal'), btn('gr-link', 'add by card', () => topUp(R))); r.append(el('span', null, 'Your credit'), v); return r; };
+  const credit = () => { const r = el('div', 'gs-pl gs-ucredit'), v = el('span', 'gs-tval'); v.append(K(el('b', 'gs-pv', bal === null ? 'not read' : usd2(bal)), 'bal'), btn('gr-link', 'add by card', () => topUp(R, uGap))); r.append(el('span', null, 'Your credit'), v); return r; };
   const expired = (S.uprog ?? []).reduce((a, x) => a + (Number(x.expired) || 0), 0);   // overnight items the AI maker did not run in 24 hours (seat overnight-batch)
   if (expired > 0) c.appendChild(p('gr-small gs-over', num(expired) + ' were not read by the AI maker within 24 hours. They were not billed and wait for your next press.'));
   if (U.state === 'reading') {
@@ -1754,13 +1766,39 @@ async function understandPress() {
   out.className = 'gr-small'; out.textContent = ''; limitSay();
   if (!pv || pv.ok !== true) { out.textContent = 'Not started: ' + noteOf(pv) + '.'; return; }
   const body = el('div'), night = doorOf(S) === 'overnight', mul = doorMul(S);
-  body.append(priceRow('Conversations to understand', num((Number(U.conversations) || 0) - (Number(U.already_read) || 0)), 'in the mailboxes you chose, last 2 years'),
-    ...(al > 0 ? [priceRow('Attached files to understand', num(al), 'every file attached to the mail of the mailboxes you chose')] : []),
-    ...(dl > 0 ? [priceRow('Drive files to understand', num(dl), 'every file in the drives you chose')] : []),
-    priceRow(night ? 'Measured price, overnight' : 'Measured price', usd2((uPrice(S) || {}).usd), 'likely between ' + usd2(Number(U.low_usd) * mul) + ' and ' + usd2(Number(U.high_usd) * mul)),
+  // EVERY COUNT IS THE SUM OF THE ROWS SHE CHOSE AND OPENS TO THEM (seat step4-pressed 2026-11-12, decision 1161.2 and .3): each
+  // count is added from the chosen rows of the page (the brain's rows), and under it the list it counts, by mailbox or drive.
+  // SUPERSEDED: the brain's totals printed beside rows that did not all stand on the page (15,876 against 15,384).
+  const cr = hasRows ? chosenRows(U) : [], rn = hasRows ? names(S, cr.map((r) => ({ key: r.source_key, label: r.name, kind: r.kind === 'mailbox' ? 'mail' : 'drive' }))) : {};
+  const count = (id, title, small, list, k, n0) => {
+    const rows = list.filter((r) => Number(r[k]) > 0), n = hasRows ? rows.reduce((a, r) => a + Number(r[k]), 0) : n0;
+    if (!(n > 0)) return [];
+    const out = [priceRow(title, num(n), small)]; out[0].id = id; out[0].classList.add('gs-cnt');
+    if (rows.length) {
+      const d = el('details', 'gs-fold gs-cfold'); d.id = id + '-by';
+      d.appendChild(el('summary', null, 'See them by ' + (list.every((r) => r.kind === 'mailbox') ? 'mailbox' : 'drive')));
+      for (const r of rows) { const l = el('div', 'gs-pl gs-cl'); const nmb = el('span', null, rn[r.source_key]); nmb.setAttribute('translate', 'no'); l.append(nmb, el('b', 'gs-pv', num(r[k]))); d.appendChild(l); }
+      out.push(d);
+    }
+    return out;
+  };
+  const boxes = cr.filter((r) => r.kind === 'mailbox'), drives = cr.filter((r) => r.kind !== 'mailbox');
+  // ONE SUGGESTED LIMIT, FROM ONE PLACE (decision 1161.1): the figure the page's limit starts at (sugOf), at her speed. The
+  // brain's own sentence about this press (understand_go 'note') compared her limit with the full-speed figure whatever the
+  // speed ("below the suggested $431.10" for an overnight limit of $340 on a page suggesting $217.45), so it is not shown;
+  // what it says is said here from the same numbers the page shows. A limit is warned about only when it is under that one
+  // suggested figure and under the top of the measured range, and the warning says what then happens.
+  const price = (uPrice(S) || {}).usd, hi = Number(U.high_usd) * mul, sug = sugOf(S, U), np = (Number(pv.mailboxes_pressed) || 0), nd = (Number(pv.drives_pressed) || 0);
+  body.append(...count('gs-cc', 'Conversations to understand', 'in the mailboxes you chose, last 2 years', boxes, 'conversations_left', (Number(U.conversations) || 0) - (Number(U.already_read) || 0)),
+    ...count('gs-ca', 'Attached files to understand', 'every file attached to the mail of the mailboxes you chose', boxes, 'files_left', al),
+    ...count('gs-cd', 'Drive files to understand', 'every file in the drives you chose', drives, 'files_left', dl),
+    priceRow(night ? 'Measured price, overnight' : 'Measured price', usd2(price), 'likely between ' + usd2(Number(U.low_usd) * mul) + ' and ' + usd2(hi)),
     ...(doorF(S) !== null ? [priceRow('How fast', night ? 'Overnight' : 'As fast as possible', night ? OVERNIGHT_WHEN + '; sent in parts that fit your limit' : (U.time && U.time.measured === true ? howLong(U.time.minutes) + ', measured on your sample' : 'time not measured yet'))] : []),
-    priceRow('Your limit, never passed', usd2(Number.isFinite(Number(pv.limit_usd)) ? pv.limit_usd : L)));
-  if (pv.note) body.appendChild(p('gr-small', String(pv.note)));
+    priceRow('Your limit, never passed', usd2(Number.isFinite(Number(pv.limit_usd)) ? pv.limit_usd : L), Math.abs(L - sug) < 0.005 ? 'the suggested limit' : 'suggested: ' + usd2(sug)));
+  if (np + nd > 0) body.appendChild(p('gr-small', 'Your limit is shared over ' + [np ? num(np) + (np === 1 ? ' mailbox' : ' mailboxes') : '', nd ? num(nd) + (nd === 1 ? ' drive' : ' drives') : ''].filter(Boolean).join(' and ') + ' by what each is measured to need. Nothing is read until you say yes.'));
+  if (L < sug - 0.005 && (!Number.isFinite(hi) || L < hi)) { const w = p('gr-small gs-over', Number.isFinite(price) && L < price
+    ? 'Your limit is below the measured price of ' + usd2(price) + '. Reading stops when your limit is reached, so part of what you chose will stay searchable only until you press again.'
+    : 'Your limit is below the suggested ' + usd2(sug) + '. If your mail and files cost more than your limit, reading stops there and what is left stays searchable only until you press again.'); w.id = 'gs-lwarn'; body.appendChild(w); }
   body.appendChild(p('gr-small', (night ? 'Stop works any time: what has not been read yet is called back and not billed; you pay only for what was read.' : 'Stop works any time; you pay only for what was read.') + ' You get one short email when it is done.'));
   const said = p('gr-small', '');
   const yes = btn('go', 'Yes, ' + goWords(S).charAt(0).toLowerCase() + goWords(S).slice(1) + ' ' + DOT + ' up to ' + usd2(L), async () => {
