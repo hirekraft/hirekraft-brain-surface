@@ -65,7 +65,7 @@
 // STEP 3 SHOWS ONLY WHAT NEEDS HER (searchCard): reading now, needs your yes, the rest folded; plain names. THE FINDABLE TABLE
 // opens over step 3 (findSheet). AN OLD MAILBOX is offered only behind the More button of a mailbox not on the business's own
 // address (oldLine, markOld). STEP 4's words name the attached files and the sample's limit (seat understand-files' report).
-import { roadSteps } from './brainroom.js?v=2026-11-12-understand-drives';
+import { roadSteps } from './brainroom.js?v=2026-11-12-press-while-reading';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
@@ -578,6 +578,7 @@ function liveCard(S) {
   const ml = g.minutes_left;
   const pm = (S.prog ?? []).reduce((a, x) => a + (Number(x.per_minute) || 0), 0);   // source_read_progress's measured pace, summed over what is reading
   c.appendChild(p('gr-small', (pm > 0 ? num(Math.round(pm)) + ' a minute, measured' : 'pace: measuring') + ' ' + DOT + ' ' + leftWords(ml)));
+  if (Number(g.presses) > 1) c.appendChild(p('gr-small gs-presses', 'This counts everything you started: ' + num(g.presses) + ' presses.'));   // search_progress answers for every open press (seat press-while-reading)
   if (g.now_reading) { const d = el('p', 'gs-now'); d.append(el('i', 'gs-pulse'), document.createTextNode('Reading ' + String(g.now_reading))); c.appendChild(d); }
   if (S.sprogErr) c.appendChild(p('gr-small gs-over', NOREAD + ' It keeps going. The count above is the last one seen.'));
   return c;
@@ -709,10 +710,14 @@ function searchCard(S) {
     const out = p('gr-small', '');
     if (pick.length) g.appendChild(termsLine(S));   // the yes to the terms, kept once, before the first press that costs
     const go = btn('go', 'Make them searchable', () => { if (!agreedNow()) { out.textContent = 'Check the box first: it says you agree to the terms of use.'; C.$('#gs-agree')?.focus(); return; } searchPreview(S, pick, out, go); });
-    go.disabled = !known || over || !complete || !pick.length || S.sprog?.state === 'reading';
+    // A PRESS WHILE ANOTHER READS (seat press-while-reading, 2026-11-12, HQ's brief after Alex's press of 20:32 PT was held): the
+    // button is live for what needs her yes while the row above keeps its meter. The brain leaves alone only what is already
+    // pressed and reading (search_go, per source). SUPERSEDED: the button greyed while anything was being read, with the line
+    // saying these can be started when it is done (seats findable-fix-2 and setup-findable-table, when one press at a time was the rule).
+    go.disabled = !known || over || !complete || !pick.length;
     const gw = el('div', 'gr-go'); gw.appendChild(go);
     g.append(gw, out);
-    if (S.sprog?.state === 'reading') g.appendChild(p('gr-small', 'Something is being made searchable now; these can be started when it is done.'));
+    if (reading.length && pick.length) g.appendChild(p('gr-small gs-also', 'You can start these now. What is already being read keeps going.'));
     c.appendChild(g);
   } else if (!reading.length) c.appendChild(p('gr-small gs-nothing', all.length ? 'Nothing here needs you: everything you connected is searchable.' : 'Connect something and it is counted here, for free.'));
   if (done.length) {
@@ -891,6 +896,8 @@ async function searchPreview(S, pick, out, go) {
   body.append(priceRow('Items to make searchable', num(data.total_items)), priceRow('Price, one time', usd2(data.total_usd)),
     p('gr-small', data.minutes === null || data.minutes === undefined ? 'Time: measuring' : 'about ' + num(data.minutes) + ' minutes'));
   if (data.note) body.appendChild(p('gr-small', String(data.note)));
+  const busy = Array.isArray(data.already_reading) ? data.already_reading.length : 0;   // chosen, but already pressed and reading: left to that press, not in this price
+  if (busy) body.appendChild(p('gr-small gs-busy', busy === 1 ? 'One source you chose is already being read. It is left as it is and is not in this price.' : num(busy) + ' sources you chose are already being read. They are left as they are and are not in this price.'));
   const said = p('gr-small', '');
   const yes = btn('go', 'Yes, make it searchable ' + DOT + ' ' + usd2(data.total_usd), async () => {
     yes.disabled = true; no.disabled = true; said.className = 'working no-late gr-small'; said.textContent = 'Starting';
