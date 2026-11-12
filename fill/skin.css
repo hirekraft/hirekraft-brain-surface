@@ -786,6 +786,37 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .clock-zone:hover { color: var(--ink); }
 #clock-pick { font: inherit; font-size: var(--t-micro); max-width: 16rem; }
 
+/* ── ALL RUNNING WORK, ONE SMALL INDICATOR (seat work-indicator, 2026-11-12, decision 1152 point 1): a quiet chip in the
+   header on every screen, "Working: 2 things"; it opens the list under it, each line with done of total, the measured pace
+   and the time left, and says plainly when nothing has moved. The sign and the bar are seat working-sign's (.working,
+   .working-bar). The Scans and photos sheet's drive rows (.sc-) show the same line. Tokens only; phone rules in A PHONE IS
+   A FIRST-CLASS SIZE. ── */
+.wk { position: relative; flex: none; align-self: center; min-width: 0; }
+.wk[hidden], .wk-list[hidden] { display: none; }
+.wk-chip { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0 calc(var(--u) * 1); padding: 4px 12px; min-height: 30px; max-width: min(24rem, 60vw); border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink-2); font-size: var(--t-small); text-align: left; overflow-wrap: anywhere; }
+.wk-chip:hover, .wk-chip[aria-expanded='true'] { border-color: var(--act); color: var(--ink); }
+.wk-sign { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0 calc(var(--u) * 1.5); color: inherit; }
+.wk-sign.working { gap: 0 calc(var(--u) * 1.5); }
+.wk-sign > span { overflow-wrap: anywhere; min-width: 0; }
+.wk-n { font-variant-numeric: tabular-nums; }
+.wk-stall { color: var(--warn); font-weight: var(--w-mid); }
+.wk-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; width: min(28rem, calc(100vw - 32px)); max-height: 70vh; overflow-y: auto; background: var(--paper); color: var(--ink-2); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px var(--shadow-c); padding: calc(var(--u) * 4); font-size: var(--t-small); text-align: left; }
+.wk-head { margin: 0 0 calc(var(--u) * 3); color: var(--ink); font-weight: var(--w-mid); }
+.wk-items { list-style: none; margin: 0; padding: 0; display: grid; gap: calc(var(--u) * 3.5); }
+.wk-item { display: grid; gap: calc(var(--u) * 1.5); min-width: 0; overflow-wrap: anywhere; }
+.wk-what { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.wk-name { font-weight: var(--w-mid); }
+.wk-facts { color: var(--ink-3); overflow-wrap: anywhere; }
+.wk-bar { display: block; }
+.wk-item-still .wk-bar > span { background: var(--warn); }
+.wk-item-done .wk-what { color: var(--ink-3); }
+.wk-note { margin: calc(var(--u) * 3) 0 0; font-size: var(--t-micro); color: var(--ink-4); }
+.sc-drive { display: grid; gap: calc(var(--u) * 1); padding-block: calc(var(--u) * 1); border-bottom: 1px solid var(--line-2); min-width: 0; }
+.sc-drive > .br-line, .sc-new > .br-line { border-bottom: 0; }
+.sc-prog { display: grid; gap: calc(var(--u) * 1.5); margin-top: calc(var(--u) * 1.5); max-width: 34rem; }
+.sc-out, .sc-note { margin: 0 0 calc(var(--u) * 1.5); }
+.sc-price:empty { display: none; }
+
 /* THE TOOL'S HEALTH IN THE HEADER (seat tool-health, 2026-10-13). Reuses the Systems badge colors above; no new
    color values. The panel opens under the word; on a phone it spans the screen below the header. */
 .health { position: relative; flex: none; align-self: center; }
@@ -2547,6 +2578,10 @@ body.br-panel-open { overflow: hidden; }
    Everything she taps is at least 44px. At desktop width More and Ask do not exist. ── */
 .tab-more, .tab-ask { display: none; }
 @media (max-width: 720px) {
+  /* seat work-indicator: the chip keeps to the header's one line; its list spans the screen under the header; taps 44px */
+  body .masthead .wk { order: 0; flex: 0 1 auto; margin: 0; }
+  body .wk-chip { min-height: 44px; max-width: 44vw; padding: 4px 10px; }
+  body .wk-list { position: fixed; left: 16px; right: 16px; top: 56px; width: auto; max-height: 70vh; }
   /* seat getting-ready-screen: one column; Vera's column under the step; pairs stacked; the spend line on its own row.
      Each rule carries body so it outweighs the GETTING READY block, which sits later in this file. */
   body .gr-grid, body .gr-row2, body .gr-row3, body .gr-layers, body .gr-promise, body .gr-conn, body .gr-bills { grid-template-columns: minmax(0, 1fr); }
