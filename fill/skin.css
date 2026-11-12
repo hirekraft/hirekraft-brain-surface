@@ -3173,3 +3173,36 @@ body.gr-pending #tabs .tab[data-tab=brain] { display: none; }
 .gr-more .gs-set { flex: 1 1 100%; }
 #gr-left .go:disabled:not(.ghost) { background: none; color: var(--ink-3); border: 1px solid var(--line); box-shadow: none; }
 @media (max-width: 720px) { body .gs-ct { grid-template-columns: minmax(0, 1fr); } body .gs-credit { padding: calc(var(--u) * 3); } }
+/* ── STEP 3 SHOWS ONLY WHAT NEEDS YOU, THE FINDABLE TABLE, AN OLD MAILBOX (seat setup-findable-table, 2026-11-12, decision 1150;
+   picture Cbdma9KRabK6Pb5YFdwkrd Parts 1 to 3). Three places for a source on step 3: reading now (its own meter), needs your yes
+   (check box and price), and the rest folded into one line. A source row is a line (the row, and its More button where it has
+   one) with its meter or note under it. The table is a sheet of price rows whose value may carry a link. A LEAVING BUTTON in one
+   of the Brain's pages is hidden while that page is shown over a setup step (setup-one-path finding B). Tokens only. ── */
+.gs-once { display: grid; gap: calc(var(--u) * 2); min-width: 0; padding: calc(var(--u) * 3.5); border: 1px solid var(--line); border-radius: var(--radius); }
+.gs-oncelab { font-size: var(--t-micro); font-weight: var(--w-strong); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); overflow-wrap: anywhere; }
+.gs-src { display: grid; gap: 6px; min-width: 0; padding: 4px 0; border-top: 1px solid var(--line-2); }
+.gs-oncelab + .gs-src, .gs-foldlab + .gs-src { border-top: 0; }
+.gs-srcline { display: flex; align-items: center; gap: calc(var(--u) * 2); min-width: 0; }
+.gs-srcline > .gs-row { flex: 1 1 0; min-width: 0; border-top: 0; padding: 6px 0; }
+/* the price is a b straight in the row, and .gs-row > b takes 200px: at phone width that left the name 22px (seat step3-reading-row's finding, older than this seat). The price keeps its own width. */
+.gs-src .gs-row > .gs-pv { flex: 0 0 auto; }
+.gs-src > .gs-oldrow { padding: 0; border-bottom: 0; justify-content: flex-start; }
+.gs-src > .gs-oldrow > small { flex: 0 1 auto; }
+.gs-srcnote { color: var(--ink-3); font-size: var(--t-small); overflow-wrap: anywhere; }
+.gs-dots { flex: none; width: var(--tap); min-width: 44px; height: var(--tap); min-height: 44px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--ink); font-weight: var(--w-strong); cursor: pointer; }
+.gs-fold { display: grid; gap: calc(var(--u) * 2); min-width: 0; border-top: 1px solid var(--line); padding-top: calc(var(--u) * 2); }
+.gs-fold > summary { cursor: pointer; font-weight: var(--w-strong); color: var(--room); min-height: var(--tap); display: flex; align-items: center; overflow-wrap: anywhere; }
+.gs-foldlab { display: block; margin-top: calc(var(--u) * 2); overflow-wrap: anywhere; }
+.gs-findline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px calc(var(--u) * 3); min-width: 0; border-top: 1px solid var(--line); padding-top: calc(var(--u) * 2); }
+.gs-findline > b { min-width: 0; overflow-wrap: anywhere; }
+.gs-table { display: grid; gap: calc(var(--u) * 1.5); min-width: 0; }
+.gs-trow > span:first-child { flex: 1 1 0; min-width: 0; }
+.gs-trow > .gs-tval { display: grid; justify-items: end; gap: 2px; flex: 0 0 auto; max-width: 45%; min-width: 0; text-align: right; overflow-wrap: normal; }
+.gs-tval .gs-pv { white-space: nowrap; }
+.gs-tval .gr-link { text-align: right; padding: 0; }
+.gs-thead { display: block; margin-top: calc(var(--u) * 3); padding-top: calc(var(--u) * 2); border-top: 2px solid var(--ink); }
+.gs-tpics { min-width: 0; } .gs-tpics:empty { display: none; }
+.gr-sheet .am-pts { margin: 0; }
+body.gr-over .br-leave { display: none; }
+@media (max-width: 720px) { body .gs-once { padding: calc(var(--u) * 3); } body .gs-fold > summary, body .gs-tval .gr-link, body .gs-findline .gr-link, body .gs-src .gr-link { min-height: 44px; }
+  body .gs-trow .gs-tval .gs-pv { white-space: nowrap; max-width: none; overflow-wrap: normal; } }
