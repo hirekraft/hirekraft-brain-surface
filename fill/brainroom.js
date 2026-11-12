@@ -19,7 +19,7 @@
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
 import { filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-11-findable-fix-1';   // the files press and the reading's progress (seat brain-status-2; understandBlock retired here by seat audit-fix-screen)
-const READY_FOR_STEP = './ready.js?v=2026-11-11-setup-one-path';   // the same module instance lens.js loads (step 4 opens there)
+const READY_FOR_STEP = './ready.js?v=2026-11-12-setup-findable-table';   // the same module instance lens.js loads (step 4 opens there)
 
 let C = null;   // { sb, el, $, askBody, isOwner, viewDeps, readSources, drawGroup, aiBlocks, door, goto, openAdd, closeAdd, connectSystem, me }
 let reading = null;   // the latest set of readings, so a page opens on what the room shows
@@ -615,6 +615,9 @@ export function openPage(key, arg) {
   if (P) P(body, arg); else body.appendChild(txt('p', 'quiet', 'This page is not there.'));
   page.querySelector('.br-back')?.focus({ preventScroll: true });
 }
+// LEAVING BUTTONS (seat setup-findable-table 2026-11-12, setup-one-path finding B): a button in a page that leads to another tab
+// carries br-leave; while Getting started shows this page over a step (body.gr-over, before Ready) skin.css hides it, because the
+// router would hold it and it would read as a dead button.
 export function closePage() {
   const view = C.$('#br-view'), page = C.$('#br-page');
   if (!view || !page || page.hidden) return;
@@ -691,7 +694,7 @@ const PAGES = {
       note(body, 'Everything else is findable or sorted (what kind it is, who may see it), not understood. Understanding the rest is your choice, priced first, on AI and costs.');
       const pr = understandProgress(C, reading);
       if (pr) body.appendChild(pr);
-      if (reading?.owner) { const b = C.el('button', 'go'); b.type = 'button'; b.textContent = 'Choose and see the price'; b.addEventListener('click', () => { closePage(); showTab('ai'); C.$('#br-und')?.scrollIntoView({ block: 'start' }); }); body.appendChild(b); }
+      if (reading?.owner) { const b = C.el('button', 'go'); b.type = 'button'; b.textContent = 'Choose and see the price'; b.classList.add('br-leave'); b.addEventListener('click', () => { closePage(); showTab('ai'); C.$('#br-und')?.scrollIntoView({ block: 'start' }); }); body.appendChild(b); }
     }
     if (k === 'c') { const b = C.el('button', 'go ghost'); b.type = 'button'; b.textContent = 'Add a source'; b.addEventListener('click', () => openPage('add')); body.appendChild(b); }
   },
@@ -725,7 +728,7 @@ const PAGES = {
     else q.appendChild(txt('p', 'quiet', 'The three parts do not add up to this month' + String.fromCharCode(8217) + 's total (' + (usd(p.check_usd) ?? 'unknown') + ' on the meter), so they are not shown. This is being looked at.'));
     if (p.sentence) q.appendChild(txt('p', 'br-small', String(p.sentence)));
     if (ai.limit) body.appendChild(C.aiBlocks.limitBlock(ai.limit, { el: C.el, askBody: C.askBody }, () => drawRoom(true).then(() => openPage('month'))));
-    const more = C.el('button', 'go ghost'); more.type = 'button'; more.textContent = 'Month by month, day by day, and which AI does what';
+    const more = C.el('button', 'go ghost'); more.type = 'button'; more.textContent = 'Month by month, day by day, and which AI does what'; more.classList.add('br-leave');
     more.addEventListener('click', () => C.door('ai'));
     body.appendChild(more);
   },
@@ -761,7 +764,7 @@ const PAGES = {
   drives(body) {
     title(body, 'Drives', rowsOf(reading).some((r) => r.group === 'drives') ? stateOf(rowsOf(reading).filter((r) => r.group === 'drives')) : 'none');
     const top = C.el('div', 'br-chips');
-    const open = C.el('button', 'go ghost'); open.type = 'button'; open.textContent = 'Open the Drive tab'; open.addEventListener('click', () => { closePage(); C.door('drives'); });
+    const open = C.el('button', 'go ghost'); open.type = 'button'; open.textContent = 'Open the Drive tab'; open.classList.add('br-leave'); open.addEventListener('click', () => { closePage(); C.door('drives'); });
     top.appendChild(open);
     body.append(txt('p', 'br-lede', 'Here: how well the Tool knows your drives. The Drive tab is where you browse them.'), top);
     const tabs = C.el('div', 'br-ptabs'); tabs.setAttribute('role', 'tablist');
@@ -780,7 +783,7 @@ const PAGES = {
     const c = reading?.conn;
     title(body, 'Chats');
     body.appendChild(txt('p', 'br-lede', c?.ok ? (c.saves ? num(c.saves) + ' conversations and documents saved from your own AI, findable. ' : 'Nothing saved from your own AI yet. ') + 'You can also bring in an export of your chats.' : 'Saved AI chats and imports.'));
-    const b = C.el('button', 'go ghost'); b.type = 'button'; b.textContent = 'Open Chats'; b.addEventListener('click', () => { closePage(); C.door('chats'); });
+    const b = C.el('button', 'go ghost'); b.type = 'button'; b.textContent = 'Open Chats'; b.classList.add('br-leave'); b.addEventListener('click', () => { closePage(); C.door('chats'); });
     body.appendChild(b);
   },
   loose(body) {
@@ -814,7 +817,7 @@ const PAGES = {
     const g = C.el('details', 'br-fold'); const gs = C.el('summary'); gs.textContent = 'Your Google sign-in'; g.appendChild(gs);
     const gb = C.el('div'); g.appendChild(gb); body.appendChild(g);
     g.addEventListener('toggle', () => { if (g.open && !gb.dataset.drawn && C.googleSignin) { gb.dataset.drawn = '1'; C.googleSignin(gb); } });
-    const all = C.el('button', 'go ghost'); all.type = 'button'; all.textContent = 'Systems in full';
+    const all = C.el('button', 'go ghost'); all.type = 'button'; all.textContent = 'Systems in full'; all.classList.add('br-leave');
     all.addEventListener('click', () => { closePage(); C.door('systems'); });
     body.appendChild(all);
   },
