@@ -1596,6 +1596,119 @@ function heroU(S) {
     p('gr-small', el('b', null, 'Searchable only'), ' stays searchable: you find it by what it is about, but its facts are not noted and no totals come from it. You can make any of it understood later.'));
   return c;
 }
+// ---- ONLY PART OF A SOURCE (seat understand-part 2026-11-12, decision 1163 REFINED) ----
+// The part is the brain's (understand_choice 'part': years, and for a mailbox whether its attached files stay searchable only),
+// kept by understand_choice_set beside the choice; the row's price follows it because the brain prices the part. The sheet lists
+// that source's own years with what each holds and its measured price (understand_years), checked to choose. While a press runs,
+// a source that is not in it can be pressed from the sheet as its own small press (understand_go with that one source: the
+// running press keeps its limit). Nothing here works a price out except adding the checked years.
+const ELL = String.fromCharCode(8230);
+function partWords(part) {
+  if (!part || typeof part !== 'object') return '';
+  const ys = Array.isArray(part.years) ? part.years.map(Number).filter(Number.isFinite).sort((a, b) => a - b) : [];
+  const y = ys.length ? (ys.length > 2 ? ys.slice(0, -1).join(', ') + ' and ' + ys[ys.length - 1] : ys.join(' and ')) + ' only' : '';
+  return [y, part.files === 'findable' ? 'attached files searchable only' : ''].filter(Boolean).join(' ' + DOT + ' ');
+}
+// Vera's way in: step 4, then the sheet once the rows are read (asked every half second, ten seconds at most).
+function partOpen(key, years) {
+  at = 'understand';
+  if (C.$('#s-ready')?.hidden) C.goto('s-ready'); else if (!C.$('#gr-sheet')) draw();
+  let n = 0;
+  const go = () => { if (rowsOf(R?.usam).some((x) => x.source_key === key)) { partSheet(key, years); return; } if (++n < 20) setTimeout(go, 500); else toast('That mailbox or drive is not on step 4 yet, so its years could not be opened.'); };
+  go();
+}
+async function partSheet(key, preset) {
+  const S = R, r = rowsOf(S?.usam).find((x) => x.source_key === key);
+  if (!S || !r) return;
+  const box = r.kind === 'mailbox', nm = names(S, [{ key, label: r.name, kind: box ? 'mail' : 'drive' }])[key];
+  const body = el('div', 'gs-part'); body.id = 'gs-part';
+  const wait = p('working no-late gr-small', 'Counting what each year holds, for free');
+  const said = p('gr-small', ''); said.id = 'gs-psaid'; said.setAttribute('role', 'status');
+  const no = btn('go ghost', 'Not now', () => sheet.close());
+  const acts = el('div', 'gr-chips'); acts.appendChild(no);
+  body.append(wait, acts, said);
+  sheet.open('Only part of ' + nm, body);
+  const Y = await rpc('understand_years', { p_source: key, p_groups: chosenGroups(S), p_identity: null }).then(({ data, error }) => (error ? { ok: false, note: error.message } : data), (e) => ({ ok: false, note: String(e?.message ?? e) }));
+  if (!body.isConnected) return;
+  wait.remove();
+  if (!Y || Y.ok !== true || !Array.isArray(Y.years)) { const w = p('gr-small gs-over', 'The years could not be read just now: ' + dotted(noteOf(Y))); w.id = 'gs-pwhy'; body.insertBefore(w, acts); return; }
+  const mul = doorMul(S), night = doorOf(S) === 'overnight';
+  const dated = Y.years.filter((y) => y.year !== null && y.year !== undefined);
+  const sel = new Set((Array.isArray(preset) && preset.length ? dated.filter((y) => preset.map(Number).includes(Number(y.year))) : dated.filter((y) => y.chosen !== false)).map((y) => Number(y.year)));
+  let files = Y.files_choice === 'findable' ? 'findable' : 'understood', busy = false;
+  const withFiles = () => !box || files === 'understood';
+  // one year's price at her speed: its conversations, and its files unless she keeps them searchable only; null when not measured
+  const yUsd = (y) => { const a = y.usd, f = withFiles() ? y.files_usd : 0; return a === null || a === undefined || f === null || f === undefined ? null : (Number(a) + Number(f)) * mul; };
+  const holds = (y) => { const cv = Number(y.conversations_left) || 0, fl = withFiles() ? Number(y.files_left) || 0 : 0;
+    return [cv ? num(cv) + (cv === 1 ? ' conversation' : ' conversations') : '', fl ? num(fl) + (box ? (fl === 1 ? ' attached file' : ' attached files') : (fl === 1 ? ' file' : ' files')) : ''].filter(Boolean).join(' ' + DOT + ' ') || 'nothing left to read'; };
+  const list = el('div', 'gs-years'); list.id = 'gs-years'; list.setAttribute('role', 'group'); list.setAttribute('aria-label', 'Years');
+  const fileLine = el('div', 'gs-pl gs-pfiles'); fileLine.id = 'gs-pfiles';
+  const total = priceRow(night ? 'This part, overnight' : 'This part', '', ''); total.id = 'gs-ptotal';
+  const keep = btn('go', 'Keep', () => doKeep(true)); keep.id = 'gs-pkeep';
+  const now = Y.press_running === true && Y.running !== true ? btn('go', 'Understand this part now', () => doNow()) : null; if (now) { now.id = 'gs-pnow'; keep.className = 'gr-link gs-pkeep'; }   // not a second ghost button: the scrim presses the first one, which must stay Not now
+  const all = () => dated.length > 0 && dated.every((y) => sel.has(Number(y.year)));
+  const words = () => (all() && withFiles() ? 'everything' : partWords({ years: all() ? [] : [...sel], files: withFiles() ? null : 'findable' }));
+  const paintS = () => {
+    list.replaceChildren(...Y.years.map((y) => {
+      const d = y.year !== null && y.year !== undefined, lab = el('label', 'gs-yr'), cb = el('input'), u = yUsd(y), tx = el('span', 'gs-yrl');
+      cb.type = 'checkbox'; cb.checked = d ? sel.has(Number(y.year)) : all(); cb.disabled = !d || busy; if (d) cb.dataset.year = String(y.year);
+      cb.addEventListener('change', () => { if (cb.checked) sel.add(Number(y.year)); else sel.delete(Number(y.year)); paintS(); });
+      tx.append(el('b', null, d ? String(y.year) : 'No date'), el('small', null, holds(y) + (d ? '' : ' ' + DOT + ' only with every year')));
+      lab.append(cb, tx, el('b', 'gs-pv', u === null ? 'not measured' : usd2(u)));
+      return lab;
+    }));
+    if (box) { const l = el('span'); l.append(el('b', null, 'Attached files of these years'), el('small', null, files === 'understood' ? 'read and understood with their email' : 'stay searchable only: you find them, their facts are not noted'));
+      fileLine.replaceChildren(l, seg(CHOICES, files, (v) => { if (busy) return; files = v; paintS(); }, 'Attached files of these years')); }
+    const pick = Y.years.filter((y) => (y.year === null || y.year === undefined ? all() : sel.has(Number(y.year)))), us = pick.map(yUsd);
+    total.querySelector('.gs-pv').textContent = !pick.length ? usd2(0) : us.some((x) => x === null) ? 'not measured' : usd2(us.reduce((a, x) => a + x, 0));
+    total.querySelector('small')?.remove(); if (pick.length) total.firstChild.appendChild(el('small', null, words()));
+    keep.textContent = now ? 'Keep for my next press' : 'Keep ' + DOT + ' ' + (sel.size ? words() : 'choose a year');
+    keep.disabled = busy || sel.size === 0; if (now) now.disabled = busy || sel.size === 0;
+  };
+  // kept by the brain beside the choice; every year checked with its files is the whole source again (no part)
+  const doKeep = async (close) => {
+    busy = true; paintS(); said.className = 'working no-late gr-small'; said.textContent = 'Keeping your choice';
+    const v = { choice: 'understood', years: all() ? [] : [...sel].sort((a, b) => a - b) }; if (box) v.files = files;
+    const { data, error } = await rpc('understand_choice_set', { p_choice: { [key]: v }, p_identity: null });
+    if (error || !data || data.ok !== true) { busy = false; paintS(); said.className = 'gr-small'; said.textContent = 'Not kept: ' + dotted(String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given')); return false; }
+    uLimit = null; await readSample(R);
+    if (close) { sheet.close(); toast('Kept: ' + nm + ', ' + words() + '. Nothing is read until you press.'); if (at === 'understand') draw(); }
+    return true;
+  };
+  // ITS OWN SMALL PRESS beside the press that runs: the brain's own limit for this row (its measured price plus room for its
+  // longest item) at her speed, checked against her credit by the Tool's server, asked once more before anything is read.
+  const doNow = async () => {
+    if (!(await doKeep(false))) return;
+    const r2 = rowsOf(R?.usam).find((x) => x.source_key === key), lim = Number(r2?.limit_usd);
+    if (!r2 || !Number.isFinite(lim) || !(lim > 0)) { busy = false; paintS(); said.className = 'gr-small'; said.textContent = leftOf(r2 || {}) === 0 ? 'Nothing is left to read in this part.' : 'This part has no measured price yet, so it cannot be pressed on its own. It is kept for your next press.'; return; }
+    const L = Math.ceil(Number((lim * mul * 100).toFixed(6))) / 100, q = { groups: chosenGroups(S), months: 24, limit: L, sources: [key] };
+    said.textContent = 'Checking your limit against your credit';
+    const dk = await doorKeep(S);
+    const pv = dk.ok ? await C.askBody({ understand_go: { ...q, confirm: false } }).catch((e) => ({ ok: false, error: String(e?.message ?? e) })) : { ok: false, note: 'your choice of speed could not be kept (' + dk.note + ')' };
+    if (!body.isConnected) return;
+    if (!pv || pv.ok !== true) { busy = false; paintS(); said.className = 'gr-small'; said.textContent = 'Not started: ' + dotted(noteOf(pv)) + ' Your choice is kept.'; return; }
+    said.className = 'gr-small'; said.textContent = '';
+    const lr = priceRow('Your limit for this part, never passed', usd2(L), 'its measured price plus room for its longest ' + (box ? 'conversation or file' : 'file')); lr.id = 'gs-plimit';
+    const yes = btn('go', 'Yes, understand ' + words() + ' ' + DOT + ' up to ' + usd2(L), async () => {
+      yes.disabled = true; no.disabled = true; said.className = 'working no-late gr-small'; said.textContent = 'Starting';
+      const g = await C.askBody({ understand_go: { ...q, confirm: true } }).catch((e) => ({ ok: false, error: String(e?.message ?? e) }));
+      if (!g || g.ok !== true) { said.className = 'gr-small'; said.textContent = 'Not started: ' + dotted(noteOf(g)); yes.disabled = false; no.disabled = false; return; }
+      sheet.close(); toast('Started: ' + nm + ', ' + words() + ', is being understood. It stops before ' + usd2(L) + '. You get one short email when it is done.');
+      try { document.dispatchEvent(new CustomEvent('tool:work-refresh')); } catch (_) { /* the indicator reads again on its own */ }
+      uPick = {}; uLimit = null; mount(C);
+    }); yes.id = 'gs-pyes';
+    keep.remove(); now.remove();
+    body.insertBefore(lr, acts);
+    body.insertBefore(p('gr-small', 'It runs beside the press that is running, which keeps its own limit. ' + (night ? 'Overnight: ' + OVERNIGHT_WHEN + '. ' : '') + 'Stop works any time; you pay only for what was read.'), acts);
+    acts.insertBefore(yes, no); yes.focus();
+  };
+  const foot = p('gr-small', (Y.measured && Y.measured.mail === false ? 'No price yet: your sample has not been read. ' : 'Each price is for what is not read yet, at the rate measured on your own sample' + (night ? ', overnight' : '') + '. ')
+    + (box ? 'A conversation counts in the year of its newest email; an attached file in the year of its email.' : 'A file counts in the year of its own date.') + (Y.running === true ? ' This one is being understood now, so a change here counts from your next press.' : ''));
+  body.insertBefore(list, acts); if (box) body.insertBefore(fileLine, acts); body.insertBefore(total, acts); body.insertBefore(foot, acts);
+  acts.insertBefore(keep, no); if (now) acts.insertBefore(now, keep);
+  paintS();
+  (now || keep).focus();
+}
 // ONE ROW of What to understand: the name, what is left to read, her one choice, her price for it at the speed she chose.
 function uRow(r, nm, q, mul, priced, ro) {
   const on = pickOf(r) === 'understood', left = leftOf(r), box = r.kind === 'mailbox';
