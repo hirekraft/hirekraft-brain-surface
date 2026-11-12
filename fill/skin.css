@@ -3143,6 +3143,16 @@ body.fd-open .vera-btn, body.gr-novera .vera-btn { display: none; }
 .gs-moved { display: grid; gap: calc(var(--u) * 1.5); padding-top: 10px; border-top: 1px solid var(--line-2); min-width: 0; }
 .gs-sample { display: grid; gap: calc(var(--u) * 2.5); padding-top: 10px; min-width: 0; }
 .gs-sample .gs-limit { max-width: 260px; }
+/* STEP 4, EACH MAILBOX AND DRIVE A ROW WITH ITS CHOICE (seat understand-drives 2026-11-12, decision 1153): name and counts, Understood or Findable only, its measured price and time. One layout for every width: the three parts wrap under each other on a phone. */
+.gs-urows { display: grid; gap: 0; min-width: 0; }
+.gs-uh { display: block; margin-top: calc(var(--u) * 3); color: var(--ink-3); font-size: var(--t-small); font-weight: var(--w-strong); }
+.gs-urow { align-items: center; gap: 8px calc(var(--u) * 3); }
+.gs-uh + .gs-urow { border-top: 0; }
+.gs-urow > .gs-rl { flex: 1 1 220px; gap: 2px; }
+.gs-urow > .gr-seg { margin: 0; flex: 0 1 auto; flex-wrap: wrap; }
+.gs-urow > .gs-up { flex: 0 0 auto; min-width: 96px; margin-left: auto; text-align: right; white-space: normal; }
+.gs-urow > .gs-up small { display: block; font-weight: normal; }
+.gs-urow.off > .gs-rl b, .gs-urow.off > .gs-up { color: var(--ink-3); font-weight: normal; }
 .gs-live.gs-inline { display: grid; gap: calc(var(--u) * 2); padding: calc(var(--u) * 3); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
 .gs-sample .gr-go { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); align-items: center; }
 .gs-sample .gr-go .go { margin: 0; }
