@@ -570,7 +570,24 @@ function progressFailed(id, title, why) {
   c.append(el('span', 'am-num', title), p(null, NOREAD + ' Anything you started keeps going.'), el('p', 'am-small', 'Why: ' + String(why) + '. It tries again on its own.'));
   return c;
 }
-// MAKE EVERYTHING SEARCHABLE (spec step 3; seat setup-screens-2 over seat searchable-plan's search_plan and search_go).
+// STEP 3, THE FRESH LOOK (seat step3-fresh, 2026-11-12; decision 1156, picture 8d4DD3SsnG4ouQHp3j5PgT; Alex 20:41 PT: the page
+// was an airplane cockpit, and every user knows what she has, so it should just show it). FOUR PARTS, each a card with its own
+// id: the answer first (heroCard: one percentage for everything, the Working line, what searchable gets her, a box to try it,
+// and that she can stop here), her sources as she knows them in Google (treeCard: Gmail, Google Drive, Your systems, each
+// folding, each with + Add that opens the one connect sheet over the step), the one box that asks (yesCard, only when
+// something needs her yes; money in one line at the button; the terms only until she has agreed) and what is not searchable
+// and why, folded (notCard). Every number is the brain's: the percentage is brain_road's (done of what can be read), the counts
+// and states search_plan's, the names and each system's line sources_view's, the Working line source_read_progress's (the one
+// indicator of seat work-indicator had not landed; when it has, it goes where workWords is). A RE-READ CHANGES NUMBERS IN
+// PLACE (inPlace): a card whose shape is the same keeps its place and only the marked numbers (K) change.
+// NOT SHOWN, because the brain does not hold or send it (said in the seat's report): a drive's own top folder names, and when
+// a system's copy was last refreshed. MEETINGS are told by the drive's own name (Meet, meeting): the screen's reading.
+// SUPERSEDED 2026-11-12, Alex's yes on 1156: the three places of seat setup-findable-table (Reading now, Needs your yes with
+// a price per row, N sources already searchable), the head card with the press's count as the page's headline (liveCard,
+// searchShape; with it the line of seat press-while-reading saying it counts several presses), the Findable line and its
+// sheet (findLine, findSheet: now notCard, word searchable, decision 1155), You could stop here at the foot, and You can
+// close this page. The paragraph below is kept only as the record of what this replaced.
+// BEFORE 1156: MAKE EVERYTHING SEARCHABLE (spec step 3; seat setup-screens-2 over seat searchable-plan's search_plan and search_go).
 // How far back (2 years, 4 years, Everything), then ONLY WHAT NEEDS HER (seat setup-findable-table, 2026-11-12; decision 1150,
 // picture Cbdma9KRabK6Pb5YFdwkrd Part 1): what is being read now, each source in its own row with its meter; what needs her yes,
 // each with its counted price, the total, the credit and the one press; and everything already searchable folded into one line
@@ -581,13 +598,9 @@ function progressFailed(id, title, why) {
 // HireKraft), the separate Progress card that listed every source a second time with a second meter (progressCard), and
 // "Old, searchable only" under every mailbox (oldRow; see oldLine).
 let plan = { months: 24, off: {} };
-let foldOpen = false;
+let open3 = {}, listOpen = false;
 function planRows(P) { return (P?.sources ?? []).filter((r) => r.state !== 'not_connected'); }
 function chosenOf(P) { return planRows(P).filter((r) => r.state === 'to_read' && !plan.off[r.key]); }
-function countLine(r) {
-  if (r.kind === 'mail') { const a = (Number(r.attachments) || 0) + (Number(r.attachments_estimated) || 0); return num(r.emails) + ' emails in the mailbox ' + DOT + ' ' + num(a) + ' attachments' + (Number(r.attachments_estimated) ? ' (some estimated)' : ''); }   // the mailbox's own count; step 4 counts what was kept (seat audit-fix-screen, C3)
-  return num(r.files) + ' files';
-}
 // PLAIN NAMES. The plan's own label; where that is missing or is a key, the name the one reading of sources gives it
 // (sources_view); never the key. Two sources with the same name say whose, in sources_view's own words ("Shared drive",
 // "Folder in Erin's My Drive").
@@ -611,41 +624,163 @@ function ownDomain(P) {
   if (!top.length || (top.length > 1 && top[0][1] === top[1][1])) return null;
   return top[0][0];
 }
-// ONE ROW OF A SOURCE, in the place its state puts it: 'need' (a check box and its price, or counting), 'reading' (its own
-// meter, done of total and the measured pace) or 'done' (Searchable).
-function srcRow(S, r, nm, own, mode) {
-  const w = el('div', 'gs-src'); w.dataset.src = mode;
-  const line = el('div', 'gs-srcline');
-  const tick = mode === 'need' && r.state === 'to_read';
-  const row = el(tick ? 'label' : 'div', 'gs-row' + (tick ? ' gs-tick' : ''));
-  if (tick) {
-    const box = el('input'); box.type = 'checkbox'; box.checked = !plan.off[r.key]; box.setAttribute('aria-label', nm);
-    box.addEventListener('change', () => { plan.off[r.key] = !box.checked; draw(); });
-    row.appendChild(box);
+// A NUMBER THAT CHANGES IN PLACE (K), and the two ways a re-read lands (draw): sigOf is a card's shape with its marked numbers
+// blanked; inPlace keeps every card whose shape did not change and copies only the marked numbers into it, replaces a card
+// whose shape changed where it stands, and removes what is gone. A marked part she filled by opening it (the fold) is left as it is.
+const K = (e, k) => { e.dataset.k = k; return e; };
+function sigOf(n) {
+  const c = n.cloneNode(true);
+  for (const e of c.querySelectorAll('[data-k]')) { e.textContent = ''; e.removeAttribute('style'); e.removeAttribute('hidden'); e.removeAttribute('disabled'); }
+  for (const d of c.querySelectorAll('details')) d.removeAttribute('open');
+  return c.outerHTML;
+}
+function inPlace(box, fresh) {
+  const keep = new Set();
+  let prev = null;
+  for (const n of fresh) {
+    const o = n.id ? [...box.children].find((x) => x.id === n.id) : null, sg = sigOf(n);
+    if (o && o.dataset.sig === sg) {
+      const a = o.querySelectorAll('[data-k]');
+      n.querySelectorAll('[data-k]').forEach((x, i) => {
+        const y = a[i]; if (!y) return;
+        if (!x.children.length && !y.children.length && y.textContent !== x.textContent) y.textContent = x.textContent;
+        if (x.style.width) y.style.width = x.style.width;
+        y.hidden = x.hidden; if ('disabled' in x) y.disabled = x.disabled;
+      });
+      keep.add(o); prev = o; continue;
+    }
+    n.dataset.sig = sg;
+    if (o) o.replaceWith(n); else if (prev) prev.after(n); else box.prepend(n);
+    keep.add(n); prev = n;
   }
-  const l = el('span', 'gs-rl');
-  l.append(el('b', null, nm), el('small', null, r.state === 'not_counted' ? String(r.note || 'Not counted yet.') : countLine(r)));
-  row.appendChild(l);
-  if (tick) row.appendChild(el('b', 'gs-pv', usd2(r.usd) ?? 'not priced'));
-  else if (mode === 'reading') row.appendChild(el('span', 'gs-chip gs-chip-warn', 'Reading'));
-  else if (mode === 'done') row.appendChild(el('span', 'gs-chip gs-chip-ok', 'Searchable'));
-  else row.appendChild(el('span', 'gs-chip', 'counting'));
-  line.appendChild(row);
-  const dom = r.kind === 'mail' ? domOf(r) : null;
-  const offer = r.kind === 'mail' && r.state !== 'not_counted' && r.old_searchable_only !== true && !!own && !!dom && dom !== own;
-  if (offer) { const m = btn('gs-dots', String.fromCharCode(8943), () => markOld(r, true, nm, own)); m.setAttribute('aria-label', 'More for ' + nm); m.title = 'More'; line.appendChild(m); }
+  for (const x of [...box.children]) if (!keep.has(x)) x.remove();
+}
+const chip = (tone, text) => el('span', 'gs-chip' + (tone ? ' gs-chip-' + tone : ''), text);
+const WORD = { searchable: ['Searchable', 'ok'], reading: ['Reading', 'warn'], to_read: ['Needs your yes', 'warn'], not_counted: ['Counting', ''] };   // search_plan's states
+const SV = { needs_you: ['Needs you', 'warn'], reading: ['Reading', 'warn'], up_to_date: ['Connected', 'ok'] };   // sources_view's states
+const MEET = [' meet ', ' meeting ', ' meetings '];
+const FINDS = ['find', 'search', 'show', 'where'];
+// THE WORKING LINE: everything being read now, done of total, and the time left at the measured pace (source_read_progress;
+// never a guessed time: measuring is said). Empty when nothing is being read.
+function workWords(S) {
+  const rd = (S.prog ?? []).filter((x) => x.state === 'reading');
+  if (!rd.length) return '';
+  const done = rd.reduce((a, x) => a + (Number(x.line_done) || 0), 0), all = rd.reduce((a, x) => a + (Number(x.line_total) || 0), 0);
+  const left = rd.every((x) => x.minutes_left !== null && x.minutes_left !== undefined) ? Math.max(...rd.map((x) => Number(x.minutes_left) || 0)) : null;
+  return 'Working ' + DOT + ' ' + num(done) + ' of ' + num(all) + ' ' + DOT + ' ' + leftWords(left);
+}
+// THE ANSWER FIRST: one percentage for everything searchable (brain_road: done of what can be read), the Working line, what
+// searchable gets her, a box to try it on what is already searchable (the Tool's own conversation, as a find; her guide's
+// column shows what it found), and that she can stop here.
+function heroCard(S) {
+  const c = el('section', 'am-step gs-hero'); c.id = 'gs-hero';
+  const F = S.road?.findable;
+  c.appendChild(el('span', 'am-num', 'Step 3 ' + DOT + ' Make it searchable'));
+  const top = el('div', 'gs-herotop'), l = el('div');
+  l.append(K(el('div', 'gs-pct', F ? num(F.pct) + '%' : ''), 'pct'), el('p', 'gr-small', F ? 'of your mail and files are searchable' : 'Your brain could not be read just now, so the percentage is not shown. It tries again on its own.'));
+  const w = K(chip('warn', workWords(S)), 'work'); w.id = 'gs-work'; w.hidden = !w.textContent; w.setAttribute('role', 'status');
+  top.append(l, w);
+  const bar = el('div', 'gs-bar gs-thick'), i = K(el('i'), 'bar'); i.style.width = (F ? Math.min(100, Number(F.pct) || 0) : 0) + '%'; bar.appendChild(i);
+  const inp = el('input'); inp.id = 'gs-try-in'; inp.type = 'search'; inp.placeholder = 'Try it: search what is already searchable'; inp.setAttribute('aria-label', 'Search what is already searchable');
+  const go = () => { const q = inp.value.trim(); if (!q) { inp.focus(); return; } inp.value = ''; C.ask(FINDS.includes(q.split(' ')[0].toLowerCase()) ? q : 'Find ' + q); };
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+  const f = el('div', 'gs-try'); f.id = 'gs-try'; f.append(ic('eye'), inp, btn('go ghost', 'Search', go));
+  const stop = el('div', 'gs-stop'); stop.id = 'gs-stop';
+  stop.append(el('b', null, 'You can stop after this step.'), document.createTextNode(' Searching everything by meaning is already the Search plan ($40 a month, founding price $20). Step 4 adds understanding: totals, who owes what, what each agreement says.'));
+  c.append(top, bar, p(null, el('b', null, 'Searchable'), ' means you can find anything across all your mail and files ', el('b', null, 'by what it is about'), ', not only by the exact words. Ask for the rate you agreed with a client and it finds the email, even if it never says the word rate.'),
+    f, el('small', 'gs-srcnote', 'What it finds opens with ' + guideName() + ', beside this step.'), stop);
+  return c;
+}
+// ONE ROW: the name with its count in small words and one status word. A source's row adds, under it, its own meter while it
+// is being read (the press's own done of total, search_plan's; the time left at source_read_progress's measured pace), the
+// Old line of a mailbox marked old, and the More button of a mailbox that is not on the business's own address (oldLine, markOld).
+function leaf(name, mini, word, tone) {
+  const r = el('div', 'gs-r'), l = el('span', 'gs-rn');
+  l.appendChild(el('b', null, name)); if (mini) l.appendChild(K(el('small', null, mini), 'm'));
+  r.appendChild(l); if (word) r.appendChild(chip(tone, word));
+  return r;
+}
+function srcLeaf(S, q, nm, own, mini, word, tone) {
+  const w = el('div', 'gs-src'), line = el('div', 'gs-srcline');
+  line.appendChild(leaf(nm, mini, word, tone));
+  const dom = q && q.kind === 'mail' ? domOf(q) : null;
+  if (dom && own && dom !== own && q.state !== 'not_counted' && q.old_searchable_only !== true) { const m = btn('gs-dots', String.fromCharCode(8943), () => markOld(q, true, nm, own)); m.setAttribute('aria-label', 'More for ' + nm); m.title = 'More'; line.appendChild(m); }
   w.appendChild(line);
-  if (mode === 'reading') {   // seat step3-reading-row (ruling G): in line under her press, so no check box, no price, not in the total or the press
-    const all = Number(r.reading_total) || 0, done = Number(r.reading_done) || 0;
-    const bar = el('div', 'gs-bar'); const i = el('i'); i.style.width = (all ? Math.min(100, Math.round((done / all) * 100)) : 0) + '%'; bar.appendChild(i);
-    const pm = Number((S.prog ?? []).find((x) => x.source === r.key)?.per_minute) || 0;
-    w.append(bar, el('small', 'gs-srcnote', num(done) + ' of ' + num(all) + ' done ' + DOT + ' ' + (pm > 0 ? num(Math.round(pm)) + ' a minute, measured' : 'pace: measuring') + '. You can close this page.'));
+  if (q && q.state === 'reading') {
+    const all = Number(q.reading_total) || 0, done = Number(q.reading_done) || 0, pg = (S.prog ?? []).find((x) => x.source === q.key);
+    const bar = el('div', 'gs-bar'), i = K(el('i'), 'w'); i.style.width = (all ? Math.min(100, Math.round((done / all) * 100)) : 0) + '%'; bar.appendChild(i);
+    w.append(bar, K(el('small', 'gs-srcnote', num(done) + ' of ' + num(all) + ' done ' + DOT + ' ' + leftWords(pg ? pg.minutes_left : null)), 'n'));
   }
-  if (r.kind === 'mail' && r.old_searchable_only === true) w.appendChild(oldLine(r, nm));
-  else if (offer) w.appendChild(el('small', 'gs-srcnote', 'Not on your company' + String.fromCharCode(8217) + 's address (' + own + ')'));
+  if (q && q.kind === 'mail' && q.old_searchable_only === true) w.appendChild(oldLine(q, nm));
   return w;
 }
-function group(title, id) { const g = el('div', 'gs-once'); if (id) g.id = id; g.appendChild(el('span', 'gs-oncelab', title)); return g; }
+// ONE FOLDING GROUP: its name, one line of what is in it, a summary word, then its rows; open unless she folded it.
+function grp(key, icon, title, sub, word, tone, kids) {
+  const d = el('details', 'gs-grp'); d.id = 'gs-g-' + key; d.open = open3[key] !== false;
+  d.addEventListener('toggle', () => { open3[key] = d.open; });
+  const s = el('summary'), t = el('span', 'gs-rn');
+  t.append(el('b', null, title), K(el('small', null, sub), 's'));
+  s.append(ic(icon), t); if (word) s.appendChild(K(chip(tone, word), 'c'));
+  const b = el('div', 'gs-sub'); b.append(...kids);
+  d.append(s, b);
+  return d;
+}
+// YOUR MAIL AND FILES, as she knows them in Google. The rows are the one reading of sources (sources_view), so the list is
+// there before any price is; the counts and the status words are search_plan's and land when it does.
+function treeCard(S) {
+  const c = el('section', 'am-step gs-tree'); c.id = 'gs-tree';
+  const hd = el('div', 'gs-treehd'); hd.append(el('h2', 'am-h2', 'Your mail and files'), el('small', 'gs-srcnote', 'as they are in Google ' + DOT + ' tap a group to fold it'));
+  c.appendChild(hd);
+  const src = S.src?.rows ?? [], P = S.splan && S.splan.ok === true ? S.splan : null, pr = P ? planRows(P) : [];
+  const by = (r) => pr.find((q) => q.key === r.source_key), nm = names(S, pr), own = P ? ownDomain(P) : null;
+  if (!P) c.appendChild(S.splanErr || S.late?.has('plan') ? p('gr-small', 'The counts could not be read just now' + (S.splanErr ? ': ' + String(S.splanErr) : '') + '. It tries again on its own.') : p('working gr-small', 'Counting what there is to read, for free'));
+  const show = (r) => { const q = by(r); return q ? nm[q.key] : isKey(String(r.name || ''), { key: r.source_key }) ? String(r.what || 'Drive') : String(r.name); };
+  const row = (r, mini) => { const q = by(r), w = q ? (WORD[q.state] || [String(q.state), '']) : (SV[r.state] || ['', '']); return srcLeaf(S, q, show(r), own, !q ? '' : q.state === 'not_counted' ? String(q.note || 'Not counted yet') : mini(q), w[0], w[1]); };
+  const tally = (rows) => {
+    const qs = rows.map(by).filter(Boolean), n = (s) => qs.filter((q) => q.state === s).length;
+    const t = [[n('to_read'), n('to_read') === 1 ? ' needs your yes' : ' need your yes'], [n('reading'), ' reading'], [n('not_counted'), ' counting']].filter((x) => x[0]).map((x) => num(x[0]) + x[1]);
+    if (t.length) return [(n('searchable') ? [num(n('searchable')) + ' searchable'] : []).concat(t).join(' ' + DOT + ' '), 'warn'];
+    return qs.length ? ['Searchable', 'ok'] : ['', ''];
+  };
+  const add = (t) => btn('gr-link gs-add', '+ Add ' + t, () => brainPanel('add'));
+  const tree = el('div', 'gs-groups');
+  // GMAIL: each mailbox by its address, its emails, one status word.
+  const mail = src.filter((r) => r.group === 'email'), mt = tally(mail);
+  const emails = mail.map(by).filter(Boolean).reduce((a, q) => a + (Number(q.emails) || 0), 0);
+  tree.appendChild(grp('mail', 'mail', 'Gmail', mail.length ? num(mail.length) + (mail.length === 1 ? ' mailbox' : ' mailboxes') + (P ? ' ' + DOT + ' ' + num(emails) + ' emails' : '') : 'none connected yet', mt[0], mt[1],
+    mail.map((r) => row(r, (q) => num(q.emails) + ' emails')).concat([add('a mailbox')])));
+  // GOOGLE DRIVE: shared drives, meetings, folders shared with the Tool, each by its own name with its files. A drive with
+  // nothing in it is not a row: it is said in one plain line.
+  const dr = src.filter((r) => r.group === 'drives'), dt = tally(dr);
+  const none = (r) => { const q = by(r); return !!q && q.state === 'searchable' && !(Number(q.files) > 0); };
+  const isMeet = (r) => MEET.some((m) => (' ' + String(r.name || '').toLowerCase() + ' ').includes(m));
+  const full = dr.filter((r) => !none(r)), meet = full.filter(isMeet);
+  const shared = full.filter((r) => r.place === 'shared' && !isMeet(r)), rest = full.filter((r) => r.place !== 'shared' && !isMeet(r));
+  const files = (q) => num(q.files) + ' files' + (q.state === 'to_read' ? ' ' + DOT + ' ' + num(q.to_read) + (Number(q.to_read) === 1 ? ' older one waits' : ' older ones wait') : '');
+  const part = (title, rows) => (rows.length ? [el('span', 'gs-oncelab', title)].concat(rows.map((r) => row(r, files))) : []);
+  const kids = part('Shared drives', shared).concat(part('Meetings', meet), part('Folders shared with the Tool', rest));
+  const empty = dr.filter(none);
+  if (empty.length) {
+    const who = empty.map((r) => { const a = String(r.source_key).split(':')[2] || '', n = a.split('@')[0]; return r.what === 'Drive' && a.includes('@') && n ? n[0].toUpperCase() + n.slice(1) + String.fromCharCode(8217) + 's' : null; });
+    const mine = who.every(Boolean), e = el('div', 'gs-empty'); e.id = 'gs-empty';
+    e.append(el('small', 'gs-srcnote', mine ? (who.length > 1 ? who.slice(0, -1).join(', ') + ' and ' + who[who.length - 1] : who[0]) + ' own My Drive: only the folders shared with the Tool are read'
+      : num(empty.length) + (empty.length === 1 ? ' more has nothing in it yet: ' : ' more have nothing in them yet: ') + empty.map(show).join(', ')),
+      fold('What does this mean?', p(null, mine ? 'A person' + String.fromCharCode(8217) + 's own My Drive is private to them. The Tool reads only the drives and folders that were shared with it, each shown above by its own name. Nothing else in a My Drive is read. To share another folder, add a drive or folder below.'
+        : 'They are connected and there is nothing in them to read. They fill in on their own when something is put there.')));
+    kids.push(e);
+  }
+  tree.appendChild(grp('drive', 'folder', 'Google Drive', [shared.length ? num(shared.length) + (shared.length === 1 ? ' shared drive' : ' shared drives') : '', meet.length ? 'meetings' : '', rest.length ? num(rest.length) + (rest.length === 1 ? ' folder' : ' folders') : ''].filter(Boolean).join(' ' + DOT + ' ') || (dr.length ? 'nothing in them yet' : 'none connected yet'),
+    dt[0], dt[1], kids.concat([add('a drive or folder')])));
+  // YOUR SYSTEMS (with calendar and contacts): each by its name with the brain's own line of what it keeps, cut to its first part.
+  const sys = src.filter((r) => ['systems', 'calendar', 'contacts'].includes(r.group));
+  const holds = (r) => { let t = String(r.line || ''); const a = t.indexOf(': '); if (t.startsWith('Up to date') && a > 0) t = t.slice(a + 2); for (const cut of [';', '. ']) { const i = t.indexOf(cut); if (i > 0) t = t.slice(0, i); } return t.endsWith('.') ? t.slice(0, -1) : t; };
+  const bad = sys.filter((r) => r.state === 'needs_you').length;
+  const sk = sys.map((r) => { const w = SV[r.state] || ['', ''], d = el('div', 'gs-src'); d.appendChild(leaf(String(r.name), holds(r), w[0], w[1])); return d; });
+  if (sys.length) sk.push(el('small', 'gs-srcnote', 'The Tool keeps a copy of each system so answers come in a second, refreshed on its own; when an answer depends on the very latest, it checks the system live and says so.'));
+  tree.appendChild(grp('sys', 'systems', 'Your systems', sys.length ? num(sys.length) + ' connected' : 'none connected yet', !sys.length ? '' : bad ? num(bad) + (bad === 1 ? ' needs you' : ' need you') : 'Connected', bad ? 'warn' : 'ok', sk.concat([add('a system')])));
+  c.appendChild(tree);
+  return c;
+}
 function searchCard(S) {
   const c = card('eye', 'What needs you', null);
   c.classList.add('gs-plan'); c.id = 'gs-plan';
