@@ -1055,7 +1055,7 @@ function searchPoll() {
 }
 // QUESTIONS (steps 1 to 3): details that open in place, the approved questions and answers.
 function questions(list) {
-  const d = el('div', 'gs-qs');
+  const d = el('div', 'gs-qs'); d.id = 'gs-qs';
   d.append(el('h2', 'am-h2', 'Questions'), ...list.map(([q, a]) => fold(q, p(null, a))));
   return d;
 }
@@ -1153,17 +1153,17 @@ const CARDS = {
     return out;
   },
   // STEP 3 · MAKE IT SEARCHABLE (decision 1150.2): the count and its price, the AI credit asked here when it is short, the one
-  // press, and its progress in the head.
+  // press. SINCE DECISION 1156 (seat step3-fresh, 2026-11-12): the answer first, her sources as she knows them, the one box that
+  // asks, and what is not searchable; each card has its id, so a re-read changes numbers in place (draw, inPlace).
   search(S) {
     const rows = S.src?.rows ?? [];
     const prog = S.prog ?? [];
-    const out = [H('Make everything searchable.'), searchShape(S)];
-    out.push(searchCard(S));
-    const stop = card('check', 'You could stop here', null, p(null, 'Once everything is green, you already have a working tool: search across your whole business, by meaning, in a second. If that is all you need, the ', el('b', null, 'Search'), ' plan is $40 a month (founding price $20). Understanding comes next, if you want it.'));
-    stop.classList.add('gs-green'); out.push(stop);
+    const out = [heroCard(S), treeCard(S)];
+    const yes = yesCard(S); if (yes) out.push(yes);
+    out.push(notCard(S));
     const green = rows.length > 0 && prog.length > 0 && prog.every((r) => r.state === 'up_to_date');
-    const acts = el('div', 'gr-chips');
-    const cont = btn('go', 'Continue', () => { at = 'understand'; draw(); window.scrollTo({ top: 0 }); }); cont.disabled = !(green || roadSteps(S)[1].state === 'done');   // the brain's searchable rule (1142.1), or every row green
+    const acts = el('div', 'gr-chips'); acts.id = 'gs-cont';
+    const cont = K(btn('go', 'Continue', () => { at = 'understand'; draw(); window.scrollTo({ top: 0 }); }), 'c'); cont.disabled = !(green || roadSteps(S)[1].state === 'done');   // the brain's searchable rule (1142.1), or every row green
     acts.append(cont);
     out.push(acts);
     out.push(questions(CARDS.connectQs().filter((q, i) => i >= 4 && i < 7).concat([
