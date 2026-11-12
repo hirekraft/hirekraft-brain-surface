@@ -70,7 +70,7 @@
 // SEAT step4-fresh (2026-11-12; decision 1158, picture RYtvsKoVGVx2ELoeqN5PNx): step 4 rebuilt as the approved fresh look on step 3's
 // own tree. See STEP 4, THE FRESH LOOK above heroU. The line under the steps names the step that is open (it named the first
 // step not done: "Step 3 of 5" while step 4 was open).
-import { roadSteps } from './brainroom.js?v=2026-11-12-step4-fresh';
+import { roadSteps } from './brainroom.js?v=2026-11-12-step4-words';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
@@ -430,7 +430,7 @@ const leftWords = (m) => { const x = Number(m); if (m === null || m === undefine
 // balance (seat getting-ready-fix-1: $14.52 spent read as "$15" beside a $15.03 balance).
 function stepPrice(S, k) {
   if (k === 'search') { if (!S.splan) return { counting: true }; const pk = chosenOf(S.splan); return { exact: Math.round(pk.reduce((a, r) => a + (Number(r.usd) || 0), 0) * 100) / 100 }; }   // search_plan's price for what is checked
-  if (k === 'understand' && S.usam?.ok === true && S.usam.state === 'done' && Number.isFinite(Number(S.usam.predicted_remaining_usd))) return { usd: Number(S.usam.predicted_remaining_usd) };   // measured on her own mail
+  if (k === 'understand') { const P = uPrice(S); if (P && P.usd !== undefined) return { usd: P.usd }; }   // step 4's one price: her choices at her speed (uPrice; seat step4-words, decision 1159.3)
   if (k === 'understand') return { counting: true };   // no price before her own sample (mail_groups' estimate is no longer shown: seat step4-fresh)
   return { free: true };
 }
@@ -446,7 +446,7 @@ async function meter(S) {
   let m = C.$('#gr-meter');
   if (!m) { m = btn('gr-meter', ''); m.id = 'gr-meter'; head.appendChild(m); }
   const sf = soFar(S), pr = stepPrice(S, at);
-  const step = pr.free ? 'free' : pr.counting ? 'counting' : pr.exact !== undefined ? usd2(pr.exact) : pr.usd !== undefined ? 'about ' + usd(pr.usd) : null;
+  const step = pr.free ? 'free' : pr.counting ? 'counting' : pr.exact !== undefined ? usd2(pr.exact) : pr.usd !== undefined ? 'about ' + usd2(pr.usd) : null;
   const spent = sf === null ? (S.moneyIn ? 'not read' : 'reading') : usd2(sf);
   const a = el('span', null, 'Setup so far '); a.append(el('b', null, spent));
   const b = el('span', null, 'This step '); b.append(el('b', null, step));
@@ -1393,8 +1393,8 @@ function movedBlock(S) {
 // 1. heroU: one percentage (understood of what she chose; the brain's own rows, understand_sample 'rows'), one status word, the
 //    one Working indicator's lines (workInto), what Understood means and what Searchable only means.
 // 2. treeU, "What to understand": step 3's three folding groups (grp, driveParts, names: one tree, not a second). Each mailbox
-//    and drive: its name, what is left to read, ONE choice (Understood / Searchable only, kept by understand_choice_set) and
-//    its price at the speed she chose. Your systems: already understood, free. The rows come from the one reading of sources,
+//    and drive: its name, what is left to read, ONE choice (Understand / Keep searchable only, kept by understand_choice_set) and
+//    its price at the speed she chose; a row kept searchable only costs $0.00 and says small what it would be (1159.2). Your systems: already understood, free. The rows come from the one reading of sources,
 //    so the list is there even when the prices could not be read, and then the reason is said in its place.
 //    Folded under them, insideFold: what is read inside a mailbox, her words for money paperwork and who she works with
 //    (understand_answers_set, unchanged: what each mailbox is for is no longer asked, the kept answers are passed back as kept).
@@ -1410,7 +1410,11 @@ function movedBlock(S) {
 // a card, the separate How fast rows (doorChoice), "Read a sample of those drives too" (sampleAgain: a second sample button
 // that could fail alone; drives not in the sample are priced at the rate of her other files and that is said), and on this
 // step the cards How your price works, The AI that does the work and Questions (now in Settings and the guide).
-const CHOICES = [['understood', 'Understood'], ['findable', 'Searchable only']];
+// A CHOICE IS A VERB, NOT A STATE (seat step4-words 2026-11-12, decision 1159.1, Alex: "shouldn't you say understand instead of
+// understood? It seems to me that's already done"): the two buttons read Understand and Keep searchable only. "Understood" is
+// said only of what is done (the top card's word, a row with nothing left, the live card). SUPERSEDED: Understood / Searchable
+// only as the button words (seat step4-fresh).
+const CHOICES = [['understood', 'Understand'], ['findable', 'Keep searchable only']];
 let uPick = {};         // her taps not yet answered by the brain: { source_key: 'understood' | 'findable' }
 let uLimit = null, uDoor = null, inOpen = false, howOpen = false;
 const LQ = String.fromCharCode(8220), RQ = String.fromCharCode(8221);
@@ -1476,6 +1480,18 @@ async function doorKeep(S) {
   if (S.udoor.chosen !== false && S.udoor.door === doorOf(S)) return { ok: true };
   return doorSet(S, doorOf(S));
 }
+// THE ONE PRICE OF STEP 4 (seat step4-words 2026-11-12, decision 1159.3): what she would pay for what is chosen, at the speed
+// chosen. Your price, the header's "This step" (stepPrice) and the sheet of the press all read this, so they cannot differ
+// (the header said about $602, the full-speed price of everything, beside about $300.86 overnight). While a tap is being kept
+// it is the sum of the chosen rows (wait); otherwise the brain's own figure for her kept choice. usd is absent when not known.
+function uPrice(S) {
+  const U = S?.usam;
+  if (!U || U.ok !== true || U.state !== 'done') return null;
+  const mul = doorMul(S);
+  if (picking()) { const cr = chosenRows(U); return cr.every((r) => r.usd !== null && r.usd !== undefined) ? { wait: true, usd: cr.reduce((a, r) => a + Number(r.usd), 0) * mul } : { wait: true }; }
+  const rem = Number(U.predicted_remaining_usd);
+  return Number.isFinite(rem) ? { usd: rem * mul } : {};
+}
 // THE ANSWER FIRST: understood of what she chose, as the brain counts it (each chosen row's conversations and files, less what
 // is left to read). A percentage is shown only when the rows are read; otherwise its place says why.
 function uTotals(U) {
@@ -1502,7 +1518,7 @@ function heroU(S) {
     p('gr-small', el('b', null, 'Searchable only'), ' stays searchable: you find it by what it is about, but its facts are not noted and no totals come from it. You can make any of it understood later.'));
   return c;
 }
-// ONE ROW of What to understand: the name, what is left to read, her one choice, the price at the speed she chose.
+// ONE ROW of What to understand: the name, what is left to read, her one choice, her price for it at the speed she chose.
 function uRow(r, nm, q, mul, priced) {
   const on = pickOf(r) === 'understood', left = leftOf(r), box = r.kind === 'mailbox';
   const cv = Number(r.conversations_left) || 0, fl = Number(r.files_left) || 0;
@@ -1515,7 +1531,12 @@ function uRow(r, nm, q, mul, priced) {
   l.append(el('b', null, nm), K(el('small', null, notes.join(' ' + DOT + ' ')), 'm'));
   row.appendChild(l);
   if (left > 0) row.appendChild(seg(CHOICES, pickOf(r), (v) => pick(r.source_key, v), nm)); else row.appendChild(chip('ok', 'Understood'));
-  row.appendChild(K(el('b', 'gs-pv gs-up', left === 0 || !priced ? '' : r.usd === null || r.usd === undefined ? 'not measured' : usd2(Number(r.usd) * mul)), 'p'));
+  // HER PRICE FOR THIS ROW (decision 1159.2): chosen, what it costs at her speed; kept searchable only, $0.00, and small beside
+  // it what it would be. SUPERSEDED: the full price left standing, only greyed, on a row she had taken out (seat step4-fresh).
+  const full = r.usd === null || r.usd === undefined ? null : usd2(Number(r.usd) * mul), shown = left > 0 && priced;
+  const pc = el('span', 'gs-pv gs-up');
+  pc.append(K(el('b', null, !shown ? '' : !on ? usd2(0) : full === null ? 'not measured' : full), 'p'), K(el('small', 'gs-would', shown && !on && full !== null ? 'would be ' + full : ''), 'w'));
+  row.appendChild(pc);
   return row;
 }
 function treeU(S) {
@@ -1663,14 +1684,13 @@ function speedCard(S) {
     return c;
   }
   // done: the price measured on her own mail and files
-  const rem = Number(U.predicted_remaining_usd), lo = Number(U.low_usd), hi = Number(U.high_usd), wait = picking();
+  const lo = Number(U.low_usd), hi = Number(U.high_usd), wait = picking(), P = uPrice(S) || {};
   const tl = el('div', 'gs-pl gs-totalrow'); tl.id = 'gs-uprice';
   if (wait) {
-    const cr = chosenRows(U), known = cr.every((r) => r.usd !== null && r.usd !== undefined);
-    tl.append(el('b', 'gs-total', 'Your price'), K(el('b', 'gs-pv', known ? 'about ' + usd2(cr.reduce((a, r) => a + Number(r.usd), 0) * mul) : 'measuring'), 'tot'));
+    tl.append(el('b', 'gs-total', 'Your price'), K(el('b', 'gs-pv', P.usd !== undefined ? 'about ' + usd2(P.usd) : 'measuring'), 'tot'));
     c.append(tl, p('working no-late gr-small', 'Working out the exact price and range for your choice'));
   } else {
-    tl.append(el('b', 'gs-total', 'Your price'), K(el('b', 'gs-pv', 'about ' + usd2(rem * mul)), 'tot'));
+    tl.append(el('b', 'gs-total', 'Your price'), K(el('b', 'gs-pv', P.usd !== undefined ? 'about ' + usd2(P.usd) : 'not measured'), 'tot'));
     c.append(tl, K(p('gr-small', 'Likely between ' + usd2(lo * mul) + ' and ' + usd2(hi * mul) + '.' + partsWords(U, mul) + ' One time, measured on a sample of your own mail and files.'), 'rng'));
   }
   const how = el('details', 'gs-fold'); how.id = 'gs-how'; how.open = howOpen; how.addEventListener('toggle', () => { howOpen = how.open; });
@@ -1737,7 +1757,7 @@ async function understandPress() {
   body.append(priceRow('Conversations to understand', num((Number(U.conversations) || 0) - (Number(U.already_read) || 0)), 'in the mailboxes you chose, last 2 years'),
     ...(al > 0 ? [priceRow('Attached files to understand', num(al), 'every file attached to the mail of the mailboxes you chose')] : []),
     ...(dl > 0 ? [priceRow('Drive files to understand', num(dl), 'every file in the drives you chose')] : []),
-    priceRow(night ? 'Measured price, overnight' : 'Measured price', usd2(Number(U.predicted_remaining_usd) * mul), 'likely between ' + usd2(Number(U.low_usd) * mul) + ' and ' + usd2(Number(U.high_usd) * mul)),
+    priceRow(night ? 'Measured price, overnight' : 'Measured price', usd2((uPrice(S) || {}).usd), 'likely between ' + usd2(Number(U.low_usd) * mul) + ' and ' + usd2(Number(U.high_usd) * mul)),
     ...(doorF(S) !== null ? [priceRow('How fast', night ? 'Overnight' : 'As fast as possible', night ? OVERNIGHT_WHEN + '; sent in parts that fit your limit' : (U.time && U.time.measured === true ? howLong(U.time.minutes) + ', measured on your sample' : 'time not measured yet'))] : []),
     priceRow('Your limit, never passed', usd2(Number.isFinite(Number(pv.limit_usd)) ? pv.limit_usd : L)));
   if (pv.note) body.appendChild(p('gr-small', String(pv.note)));

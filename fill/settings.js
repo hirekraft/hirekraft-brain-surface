@@ -18,7 +18,7 @@
 // priceWorks, understandQs); Your answers no longer shows what each mailbox is for.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 import { ic, card } from './setup.js?v=2026-11-10-setup-front-door';
-import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep, brainDoor, priceWorks, understandQs } from './ready.js?v=2026-11-12-step4-fresh';
+import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep, brainDoor, priceWorks, understandQs } from './ready.js?v=2026-11-12-step4-words';
 // SEAT ready-never-spins (2026-11-11): every brain call here goes through ready.js brainDoor (a real promise that cannot throw). The
 // client's own rpc call object has then and no catch: the two presses below that put .catch on it (Mark it old, the guide's name)
 // threw on press.
@@ -228,7 +228,7 @@ function answersCard() {
   const ch = () => link('Change', () => openStep(C, 'understand'));
   if (S.uans && S.uans.ok !== true) c.appendChild(p('gr-small', 'Your answers could not be read just now (' + String(S.uans.note ?? S.uans.reason ?? 'no reason was given') + ').'));
   const mb = A?.mailboxes && typeof A.mailboxes === 'object' ? Object.entries(A.mailboxes).map(([k, v]) => k.split(':').pop() + ' ' + (FOR[v] || v)).join(', ') : '';
-  c.appendChild(row('Each mailbox and drive', 'Understood or searchable only', ch()));   // what each mailbox is for is no longer asked (seat step4-fresh, decision 1158): one choice per row on step 4
+  c.appendChild(row('Each mailbox and drive', 'Understand or keep searchable only', ch()));   // what each mailbox is for is no longer asked (seat step4-fresh, decision 1158): one choice per row on step 4
   c.appendChild(row('Who you work with', A?.work_with ? (WITH[A.work_with] || A.work_with) : 'Not answered yet', ch()));
   c.appendChild(row('Your money paperwork', Array.isArray(A?.money_words) && A.money_words.length ? A.money_words.join(', ') : 'Not answered yet', ch()));
   c.appendChild(el('p', 'am-small', guide() + ' uses these to sort what is worth reading.'));

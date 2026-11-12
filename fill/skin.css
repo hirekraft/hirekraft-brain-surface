@@ -3302,6 +3302,11 @@ body.gr-over .br-leave { display: none; }
 .gs-utree .gs-urow > .gs-rl small { color: var(--ink-3); font-size: var(--t-small); }
 .gs-utree .gs-urow > .gs-up { min-width: 72px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .gs-utree .gs-urow > .gs-chip { flex: none; }
+/* seat step4-words, decision 1159.2: a row kept searchable only shows $0.00, not bold, and small under it what it would be */
+.gs-utree .gs-urow > .gs-up { display: grid; justify-items: end; gap: 0; }
+.gs-utree .gs-urow.off > .gs-up b { font-weight: normal; }
+.gs-utree .gs-urow > .gs-up .gs-would { color: var(--ink-3); font-size: var(--t-micro); white-space: nowrap; }
+.gs-utree .gs-urow > .gs-up .gs-would:empty { display: none; }
 .gs-utree > .gs-fold .gs-q { display: grid; gap: 6px; padding-top: calc(var(--u) * 3); min-width: 0; }
 .gs-sp2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(var(--u) * 2.5); min-width: 0; }
 .gs-sp { display: grid; gap: 2px; align-content: start; text-align: left; min-height: var(--tap); min-width: 0; padding: calc(var(--u) * 3) calc(var(--u) * 3.5); border: 2px solid var(--line); border-radius: var(--radius); background: var(--paper); color: var(--ink); font: inherit; cursor: pointer; overflow-wrap: anywhere; }
