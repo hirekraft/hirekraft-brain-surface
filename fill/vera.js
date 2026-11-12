@@ -563,6 +563,237 @@ function intercept(e) {
   heard(v);
 }
 
+// ---- BESIDE A SETUP STEP: HER OPENER, THE STEP'S TWO QUESTIONS, AND FREE ANSWERS (seat setup-vera, decision 1150.4) ----
+// Every figure she says is the step card's own (head) or the brain's own progress (facts); she works nothing out but a sum
+// over the mailboxes a name matched. What could not be read is said with its reason, never as nothing.
+const OPEN = {
+  db: 'Step 1 is your own database. Everything the Tool learns about your business is kept there, and it stays yours.',
+  connect: 'Step 2 is connecting your mailboxes, drives and systems. Connecting and counting are free.',
+  search: 'Step 3 makes what you connected searchable. It is the first step that costs money, and you see the price before you press.',
+  understand: 'Step 4 reads what you choose and notes the facts in it. A small sample measures the price on your own mail first.',
+  ready: 'Step 5 shows whether your brain is ready, and what the Tool costs each month.',
+};
+const TAPS = {
+  db: [['What does the database cost?', 'cost'], ['How long does this step take?', 'time']],
+  connect: [['What does connecting cost?', 'cost'], ['How long does connecting take?', 'time']],
+  search: [['What does this cost?', 'cost'], ['How long will it take?', 'time']],
+  understand: [['What will understanding cost?', 'cost'], ['How long will it take?', 'time']],
+  ready: [['What does it cost each month?', 'cost'], ['How long until it is ready?', 'time']],
+};
+const WHERE = 'Where are we?';
+// The step card as drawn (fill/ready.js shape: Cost, Time, and the line saying where they come from). null when the screen
+// shows no card: someone who is not the owner sees no prices, and is given none.
+function head() {
+  const c = $('#gs-shape');
+  if (!c || !shown(c)) return null;
+  const ct = $$('.gs-ct > div', c).map((d) => words($('b', d)));
+  return { cost: ct[0] || '', time: ct[1] || '', src: words($('.am-small', c)) };
+}
+function stepTaps() { const r = readyNow(); return r && r.key && TAPS[r.key] && head() ? TAPS[r.key] : null; }
+function opener(key, turns) {
+  let o = $('#vera-open');
+  const t = OPEN[key];
+  if (!t) { if (o) o.remove(); return; }
+  if (o && o.isConnected && o.dataset.k === key) return;
+  if (!o || !o.isConnected) { o = el('div', 'vera-turn vera-open'); o.id = 'vera-open'; turns.prepend(o); }
+  o.dataset.k = key;
+  o.replaceChildren(el('p', 'vera-who', NAME()), el('p', null, t));
+  $$('.vera-free', turns).forEach((x) => x.remove());   // an answer about the step she left
+}
+
+// THE BRAIN'S OWN PROGRESS, as the person (search_progress: the press, its price, its sources; source_read_progress: every
+// mailbox and drive she may see). Kept 15 seconds. A refusal keeps its reason.
+let fact = null, factAt = 0, factBusy = null;
+function facts(fresh) {
+  if (!fresh && fact && Date.now() - factAt < 15000) return Promise.resolve(fact);
+  if (factBusy) return factBusy;
+  factBusy = Promise.all([brainCall('search_progress', {}), brainCall('source_read_progress', {})]).then(([g, rows]) => {
+    factBusy = null;
+    const why = (x) => String(x?.note || x?.reason || x?.error || 'no reason was given');
+    fact = { press: g && g.ok === true ? g : null, pressWhy: g && g.ok === true ? '' : why(g), rows: Array.isArray(rows) ? rows : null, rowsWhy: Array.isArray(rows) ? '' : why(rows) };
+    factAt = Date.now();
+    return fact;
+  });
+  return factBusy;
+}
+
+// WHAT A TYPED QUESTION ASKS, FROM ITS WORDS ALONE. English words only: a question in another language goes to the box.
+const LETTERS = 'abcdefghijklmnopqrstuvwxyz0123456789@.-_$';
+const KNOWN = (' a about account accounts add after again all already also am an and any are as at attachment attachments be been before being brain but by can'
+  + ' charge charged cheap connect connected connecting cost costing costs could credit database do does doing done drive drives each email emails estimate'
+  + ' everything expensive far file files finish finished first for from get getting go going got had has have here hour hours how i if in inbox is it its just'
+  + ' left like limit long longer mail mailbox mailboxes make making many me minute minutes more much my need needed next now of on one only or out over pay'
+  + ' paying price priced prices progress read reading ready really rest s sample search searchable setup so started status step steps still take takes taking'
+  + ' than that the then there this time to tool total understand understanding understood until up vera was what when where which whole why will with would'
+  + ' yet you your ').split(' ').filter(Boolean);
+function toks(q) {
+  const out = []; let cur = '';
+  for (const ch of String(q || '').toLowerCase()) { if (LETTERS.includes(ch)) cur += ch; else { if (cur) out.push(cur); cur = ''; } }
+  if (cur) out.push(cur);
+  const edge = '.-_';
+  return out.map((t) => { let a = 0, b = t.length; while (a < b && edge.includes(t[a])) a++; while (b > a && edge.includes(t[b - 1])) b--; return t.slice(a, b); }).filter(Boolean);
+}
+function askedOf(q) {
+  const t = ' ' + toks(q).join(' ') + ' ';
+  const has = (w) => t.includes(w);
+  const ids = [];
+  const time = has(' how long') || has(' longer') || has(' how much time') || has(' time left') || has(' when ') || has(' minutes') || has(' hours') || has(' finish') || has(' done ');
+  const much = has(' how much') && !has(' how much longer') && !has(' how much time');
+  if (has(' cost') || has(' price') || has(' pay ') || has(' paying') || has(' charge') || has(' expensive') || has(' cheap') || much) ids.push('cost');
+  if (time) ids.push('time');
+  if (has(' where are we') || has(' progress') || has(' how far') || has(' status')) ids.push('where');
+  return ids;
+}
+// Two names are one when they are equal, or both have five letters or more and one begins with the other, or they differ by
+// at most two letters in six or more (stratservice is stratserv; acme is nobody here).
+function near(a, b) {
+  if (a === b) return true;
+  if (a.length < 5 || b.length < 5) return false;
+  const sh = a.length <= b.length ? a : b, lg = sh === a ? b : a;
+  if (lg.startsWith(sh)) return true;
+  if (sh.length < 6 || lg.length - sh.length > 2) return false;
+  let prev = []; for (let j = 0; j <= lg.length; j++) prev.push(j);
+  for (let i = 1; i <= sh.length; i++) { const row = [i]; for (let j = 1; j <= lg.length; j++) row.push(Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (sh[i - 1] === lg[j - 1] ? 0 : 1))); prev = row; }
+  return prev[lg.length] <= 2;
+}
+const mailOf = (r) => (String(r.source || '').startsWith('gmail:') ? String(r.source).slice(6).toLowerCase() : '');
+// Which connected mailboxes a word names: the whole address, what follows the @, or its first part (stratserv of stratserv.co).
+// The part before the @ counts only when the question also says mailbox, account, inbox, mail or email (marketing alone is
+// her business, not a mailbox).
+function named(tok, rows, boxSaid) {
+  const first = (x) => x.split('.')[0];
+  const w = tok.includes('@') ? tok.split('@')[1] || tok : tok;
+  return rows.filter((r) => {
+    const m = mailOf(r); if (!m) return false;
+    const [local, dom] = m.split('@');
+    if (tok === m) return true;
+    if (dom && (near(w, dom) || near(first(w), first(dom)))) return true;
+    return boxSaid && !tok.includes('@') && tok === local;
+  });
+}
+// null when the question is not hers to answer for free; otherwise what it asks and the mailboxes it names (null: none named).
+function route(q, f) {
+  const ids = askedOf(q);
+  if (!ids.length) return null;
+  const all = toks(q);
+  const rows = (f && f.rows) || [];
+  const boxSaid = all.some((t) => ['mailbox', 'mailboxes', 'account', 'accounts', 'inbox', 'mail', 'email'].includes(t));
+  const t = ' ' + all.join(' ') + ' ';
+  const we = t.includes(' where are we ');
+  let about = null;
+  for (const tok of all) {
+    if (KNOWN.includes(tok) || (we && tok === 'we')) continue;
+    const hit = named(tok, rows, boxSaid);
+    if (!hit.length) return null;   // a word that is neither setup nor a connected mailbox: her business, the box's to answer
+    about = (about || []).concat(hit.filter((r) => !(about || []).includes(r)));
+  }
+  return { ids, about };
+}
+
+const num = (n) => Number(n || 0).toLocaleString('en-US');
+const usd = (n) => '$' + Number(n || 0).toFixed(2);
+// DUPLICATE, named: minutes or hours left is also worded in fill/ready.js (leftWords) and fill/brainpress.js; fold the three into one.
+const left = (m) => { const x = Number(m); if (m === null || m === undefined || !Number.isFinite(x)) return ''; return x < 90 ? 'about ' + num(Math.max(1, Math.round(x))) + ' minutes' : 'about ' + num(Math.round(x / 60)) + ' hours'; };
+function clock(at) {
+  const d = new Date(at);
+  if (!at || Number.isNaN(d.getTime())) return '';
+  const t = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return d.toDateString() === new Date().toDateString() ? t : t + ' on ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+// What is in line for these sources, read off source_read_progress's own columns.
+function lineOf(rows) {
+  const live = rows.filter((r) => Number(r.waiting) > 0);
+  const sum = (k, rs) => rs.reduce((a, r) => a + (Number(r[k]) || 0), 0);
+  const ml = live.length && live.every((r) => r.minutes_left !== null && r.minutes_left !== undefined) ? Math.max(...live.map((r) => Number(r.minutes_left) || 0)) : null;
+  return { live: live.length, done: sum('line_done', live), total: sum('line_total', live), pm: Math.round(sum('per_minute', live) * 10) / 10, ml, idle: live.length > 0 && sum('per_hour', live) === 0,
+    kept: sum('done', rows), yes: sum('waiting_for_owner', rows) + sum('files_waiting_for_owner', rows) };
+}
+function paceWords(L) {
+  if (L.pm > 0 && L.ml !== null) return 'At ' + num(L.pm) + ' a minute that is ' + left(L.ml) + ' left.';
+  if (L.idle) return 'Nothing has been read in the last hour, so I have no pace and no time left to give.';
+  return 'The pace is still being measured, so I have no time left to give yet.';
+}
+function pressWords(g, n) {
+  const at = clock(g.started_at);
+  return 'about ' + usd(g.usd_planned) + ' in all' + (n > 1 ? ' for the ' + num(n) + ' sources you pressed together' : '') + (at ? ', as you agreed at ' + at : ', as you agreed when you pressed') + '. Nothing more is charged for it.';
+}
+// THE ANSWER, in sentences. ids: cost, time, where. about: the mailboxes the question named, or null.
+function answer(key, ids, about, h, f) {
+  const out = [];
+  const g = f && f.press;
+  const pressed = g && (g.state === 'reading' || g.state === 'stopped') ? (g.sources || []).map((x) => x.source) : [];
+  if (about && about.length) {
+    const who = about.length === 1 ? mailOf(about[0]) : 'those ' + num(about.length) + ' mailboxes';
+    const L = lineOf(about);
+    const inPress = about.some((r) => pressed.includes(r.source));
+    if (ids.includes('time')) {
+      if (L.live) out.push(num(L.done) + ' of ' + num(L.total) + ' items of ' + who + ' are read. ' + paceWords(L));
+      else if (L.yes) out.push('Nothing of ' + who + ' is being read now: ' + num(L.yes) + ' items wait for your yes on step 3.');
+      else out.push(who.slice(0, 1).toUpperCase() + who.slice(1) + ': nothing is waiting to be read. ' + num(L.kept) + ' items are read.');
+    }
+    if (ids.includes('cost')) {
+      if (inPress) out.push('It costs ' + pressWords(g, pressed.length));
+      else if (L.live && !g) out.push('What you agreed for it could not be read just now (' + f.pressWhy + '). Step 3 shows it.');
+      else if (L.yes) out.push(num(L.yes) + ' items of ' + who + ' wait for your yes. Their price is on step 3 beside the name, before you press; nothing is charged until then.');
+      else out.push('Nothing of ' + who + ' is being read or waiting, so nothing is being charged for it.');
+    }
+  } else {
+    const reading = key === 'search' && g && g.state === 'reading';
+    if (ids.includes('time')) {
+      if (reading) { const L = lineOf((g.sources || [])); out.push(num(g.items_done) + ' of ' + num(g.items_total) + ' items are read. ' + (g.minutes_left !== null && g.minutes_left !== undefined && L.pm > 0 ? 'At ' + num(L.pm) + ' a minute that is ' + left(g.minutes_left) + ' left.' : paceWords(L)) + ' You can close this page; it keeps reading.'); }
+      else out.push('Time for this step: ' + (h.time || 'not shown') + '.');
+    }
+    if (ids.includes('cost')) {
+      if (reading) out.push('What is being read costs ' + pressWords(g, pressed.length) + (h.cost.includes('$') ? ' What is checked now on this step: ' + h.cost + '.' : ''));
+      else out.push('Cost of this step: ' + (h.cost || 'not shown') + '.' + (h.src ? ' ' + h.src + '.' : ''));
+    }
+    if (key === 'search' && f && !g && f.pressWhy && !reading) out.push('The progress could not be read just now (' + f.pressWhy + '), so this is what the step card shows.');
+  }
+  if (ids.includes('where')) {
+    const st = $$('#gr-steps [data-step]');
+    const cur = st.find((b) => b.getAttribute('aria-current') === 'step');
+    const done = st.filter((b) => $('.gs-done', b)).map((b) => words($('b', b)));
+    out.push('You are on step ' + (cur ? words($('.gs-n', cur)) + ' of ' + st.length + ', ' + words($('b', cur)) : 'one of ' + st.length) + '. ' + (done.length ? 'Done: ' + done.join(', ') + '.' : 'No step is done yet.'));
+  }
+  return out;
+}
+// Draw her question and the answer. The answer fills her column: the last free exchange only.
+async function setupAsk(q, ids, about) {
+  const r = readyNow(), h = head(), turns = $('#dock-turns');
+  if (!r || !h || !turns) return;
+  $$('.vera-free', turns).forEach((x) => x.remove());
+  const m = el('div', 'vera-mine vera-free'); m.appendChild(el('p', null, q)); turns.appendChild(m);
+  const d = el('div', 'vera-turn vera-free'); d.appendChild(el('p', 'vera-who', NAME()));
+  const wait = el('p', 'working no-late', 'Reading your setup'); d.appendChild(wait);
+  turns.appendChild(d);
+  const f = r.key === 'search' || (about && about.length) ? await facts(true) : null;
+  const parts = answer(r.key, ids, about, h, f);
+  wait.remove();
+  for (const t of parts) d.appendChild(el('p', null, t));
+  d.appendChild(el('p', 'vera-small', 'Free: answered from your setup.'));
+  const taps = TAPS[r.key] || [];
+  const more = taps.filter((t) => !ids.includes(t[1]));
+  if (more.length < 2 && !ids.includes('where')) more.push([WHERE, 'where']);
+  if (more.length) {
+    const row = el('div', 'vera-follow');
+    for (const [label, id] of more.slice(0, 2)) { const c = el('button', 'vera-chip', label); c.type = 'button'; c.addEventListener('click', () => setupAsk(label, [id], about)); row.appendChild(c); }
+    d.appendChild(row);
+  }
+  speak(parts.join(' '));
+  m.scrollIntoView?.({ block: 'nearest' });
+}
+// A question typed beside a step that asks about cost, time or where we are: hers when every word is setup's or a mailbox's.
+async function typed(q) {
+  const f = await facts(false);
+  const r = route(q, f);
+  if (r) { setupAsk(q, r.ids, r.about); return; }
+  const i = $('#panel-input'), s = $('#panel-send');
+  if (!i || !s) return;
+  bypass = true; i.value = q; fromPanel = Date.now();
+  try { s.click(); } finally { bypass = false; }
+  emptyAfter();
+}
+
 // ---- THE COLUMN ----
 function inColumn() { const p = $('#panel'); return !!p && p.classList.contains('in-vera'); }
 let panelEl = null;
