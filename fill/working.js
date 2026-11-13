@@ -200,7 +200,7 @@ function paint() {
   else if (n === 0) { sign.append(el('span', null, 'Finished Just Now')); chip.setAttribute('aria-label', 'Finished just now. Open the list'); }
   else {
     const c = el('span', 'wk-n', num(n)); c.setAttribute('translate', 'no');
-    sign.append(el('span', null, 'Working'), ' ' + DOT + ' ', c);   /* decision 1172.1: Working, the breathing mark and the count. SUPERSEDED 2026-11-13: Working: N things */
+    sign.append(el('span', 'wk-word', 'Working'), el('span', 'wk-dot', ' ' + DOT + ' '), c);   /* decision 1172.1: Working, the breathing mark and the count. SUPERSEDED 2026-11-13: Working: N things */
     chip.setAttribute('aria-label', 'Working: ' + num(n) + (n === 1 ? ' thing' : ' things') + '. Open the list');
   }
   chip.appendChild(sign);
