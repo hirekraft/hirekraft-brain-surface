@@ -3436,3 +3436,8 @@ body.hd-out .hd-me, body.hd-out .hd-menu { display: none; }
 .gs-exrow .gr-link { min-height: 0; }
 .gs-fin { margin: 0; overflow-wrap: anywhere; }
 .gs-after .gr-go .go[disabled] { opacity: .55; }
+body.hd-on .masthead > .health { order: 1; } body.hd-on .masthead > .wk { order: 2; } body.hd-on .masthead > .ai-bal { order: 3; } body.hd-on .masthead > .hd-me { order: 4; } body.hd-on .masthead > .hd-menu { order: 5; }
+#gr .gr-st b .gs-run { font-weight: var(--w-mid); }
+.gs-fin, .gs-runline, .gs-notin p { max-width: none; }
+.gs-exrow .gs-fold { border-top: 0; padding-top: 0; margin-top: 4px; }
+.gs-moreq { margin-top: calc(var(--u) * 2); }
