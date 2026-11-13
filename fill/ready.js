@@ -70,7 +70,7 @@
 // SEAT step4-fresh (2026-11-12; decision 1158, picture RYtvsKoVGVx2ELoeqN5PNx): step 4 rebuilt as the approved fresh look on step 3's
 // own tree. See STEP 4, THE FRESH LOOK above heroU. The line under the steps names the step that is open (it named the first
 // step not done: "Step 3 of 5" while step 4 was open).
-import { roadSteps } from './brainroom.js?v=2026-11-13-setup-polish';
+import { roadSteps } from './brainroom.js?v=2026-11-13-setup-clean';
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
 import { ic, points, card, openStory, doorPassed, storyOpen } from './setup.js?v=2026-11-10-setup-front-door';
 
@@ -168,9 +168,9 @@ function mark(S, key) { const m = S.marks?.mine?.[key]; if (m) return m; if (S.m
   const live = !!(S.road || S.src);
   const searchable = green3(S);
   const out = [
-    { k: 'db', n: '1', name: 'Your database', done: live, wait: !live },
+    { k: 'db', n: '1', name: 'Your Database', done: live, wait: !live },
     { k: 'connect', n: '2', name: 'Connect', done: road[0].state === 'done', wait: road[0].state === 'wait' },
-    { k: 'search', n: '3', name: 'Make it searchable', done: searchable, wait: road[1].state === 'wait' },
+    { k: 'search', n: '3', name: 'Make It Searchable', done: searchable, wait: road[1].state === 'wait' },
     { k: 'understand', n: '4', name: 'Understand', done: road[2].state === 'done', wait: road[2].state === 'wait' },
     { k: 'ready', n: '5', name: 'Ready', done: road[3].state === 'done' },
   ];
@@ -271,7 +271,7 @@ function wayBack() {
   window.addEventListener('gr-refresh', () => { if (C && !C.$('#s-ready')?.hidden) mount(C); });
   // VERA TAKES IT IN WORDS (decision 1163): "understand <mailbox>, only <year>" opens step 4 and that source's sheet with the year checked, for the owner to confirm (fill/vera.js partAsk)
   document.addEventListener('tool:understand-part', (e) => { const d = e.detail || {}; if (C && R && R.owner && d.source) partOpen(String(d.source), Array.isArray(d.years) ? d.years : []); });
-  document.addEventListener('tool:work', () => { for (const q of ['#gs-work', '#gs-uwork']) { const w = C?.$(q); if (w && R) workInto(w, R); } });   // the one indicator's reading moved (fill/working.js): the Working lines of steps 3 and 4 follow, in place
+  document.addEventListener('tool:work', () => { for (const q of ['#gs-work', '#gs-uwork']) { const w = C?.$(q); if (w && R) workInto(w, R); } runMarks(); if (R && (at === 'understand' || at === 'search') && !typing() && !C?.$('#gr-sheet') && !C?.$('#s-ready')?.hidden) paint(); });   // the one indicator's reading moved (fill/working.js): the Working lines of steps 3 and 4 follow, in place
   // the Brain's page closed (brainroom.js closePage): back to the step and the spot she was on, unless another page opened in its place
   window.addEventListener('br-closed', () => setTimeout(() => { const pg = C?.$('#br-page'); if (!pg || pg.hidden) closeOver(true); }, 0));
   window.addEventListener('fd-start', () => { at = 'db'; if (C && R && !C.$('#s-ready')?.hidden) { draw(); window.scrollTo({ top: 0 }); } });
@@ -341,13 +341,13 @@ function draw() {
   row.replaceChildren(...st.map((s) => {
     const b = btn('gr-st gr-' + s.state, '', () => { at = s.k; autoAt = false; draw(); });
     b.setAttribute('role', 'listitem'); b.dataset.step = s.k;
-    const n = el('span', 'gs-n', s.n); if (s.done) n.classList.add('gs-done');
+    const n = el('span', 'gs-n', s.done ? CHECK : s.n); if (s.done) n.classList.add('gs-done');   /* a done step shows its check (picture part 3) */
     b.append(n, el('b', null, s.name)); if (s.mark) { const mk = el('span', 'gs-mark' + (s.mark.open ? ' gs-mark-open' : ''), s.mark.n > 99 ? '99+' : num(s.mark.n)); mk.setAttribute('aria-hidden', 'true'); mk.title = s.mark.say; b.appendChild(mk); }
     b.setAttribute('aria-label', 'Step ' + s.n + ', ' + s.name + (s.done ? ', done' : '') + (s.mark ? ', ' + s.mark.say : ''));
     if (s.k === at) b.setAttribute('aria-current', 'step');
     return b;
   }));
-  fillBar(st);
+  fillBar(st); runMarks();
   const box = C.$('#gr-left');
   const kids = (CARDS[at] || CARDS.ready)(S, st);
   const nl = netLine(S); if (nl) kids.unshift(nl);
@@ -363,7 +363,7 @@ function draw() {
   if (at === 'understand' && S.owner && !S.gLoad) { S.gLoad = true; Promise.all([S.uans ? null : readAnswers(S), readSample(S)]).then(() => { if (R === S && at === 'understand' && !typing() && !C.$('#gr-sheet')) draw(); }); }   // step 4's answer (rows, prices) and her words, read when she is on it
   uPoll();
   if (at === 'understand' || at === 'ready') needEst(S);   // the monthly figure and the price per email, asked where they are shown
-  if (nov) C.$('#gr-meter')?.remove(); else meter(S);
+  C.$('#gr-meter')?.remove();   /* THE SETUP MONEY LEFT THE HEADER (seat setup-clean 2026-11-13, decision 1172.1): money is said on the step that spends it. SUPERSEDED: the spend line in the masthead (meter: Setup so far, This step), a second reading of money beside step 4's own */
   // The front door first, once per browser, until Get started (and never over a sheet or a story already open).
   if (!doorShown && !doorPassed() && pending && !storyOpen() && !C.$('#gr-sheet')) { doorShown = true; door(); }
 }
@@ -376,7 +376,7 @@ function fillBar(st) {
   const n = cur ? Number(cur.n) : st.length;
   const bar = el('div', 'gs-bar'); bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(st.length)); bar.setAttribute('aria-valuenow', String(done));
   const i = el('i'); i.style.width = Math.round((done / st.length) * 100) + '%'; bar.appendChild(i);
-  f.replaceChildren(bar, el('span', 'gs-line', 'Step ' + n + ' of ' + st.length + (done / st.length > 0.5 ? ' ' + DOT + ' more than halfway' : '')));
+  f.replaceChildren(); f.hidden = true;   /* REMOVED (seat setup-clean 2026-11-13, decision 1172.5): the bar and the line under the steps (Step N of 5, more than halfway). The green checks in the row of steps say it. */
 }
 
 function more() {
@@ -442,20 +442,6 @@ function soFar(S) {
   const d = pl.daily; if (!Array.isArray(d)) return null; return d.reduce((a, x) => a + (Number(x.one_time_usd) || 0), 0);
 }
 function balanceLeft(S) { const b = S.ai?.plain?.balance; return b && b.set_up ? Math.max(0, Number(b.left_usd) || 0) : null; }
-async function meter(S) {
-  const head = C.$('.masthead');
-  if (!head) return;
-  let m = C.$('#gr-meter');
-  if (!m) { m = btn('gr-meter', ''); m.id = 'gr-meter'; head.appendChild(m); }
-  const sf = soFar(S), pr = stepPrice(S, at);
-  const step = pr.spent !== undefined ? usd2(pr.spent) + ' spent' : pr.free ? 'free' : pr.counting ? 'counting' : pr.exact !== undefined ? usd2(pr.exact) : pr.usd !== undefined ? 'about ' + usd2(pr.usd) : null;
-  const spent = sf === null ? (S.moneyIn ? 'not read' : 'reading') : usd2(sf);
-  const a = el('span', null, 'Setup so far '); a.append(el('b', null, spent));
-  const b = el('span', null, 'This step '); b.append(el('b', null, step));
-  m.replaceChildren(a, el('span', null, DOT), b);
-  m.setAttribute('aria-label', 'Setup has spent ' + spent + ' on AI so far. This step: ' + step + '.');
-  m.onclick = () => toast('Setup has spent ' + spent + ' on AI so far: reading your mail and files once, this month, as counted for your AI bill. This step: ' + step + '.');
-}
 
 // ---------------------------------------------------------------------------------------------------------------------
 // THE SHEET AND THE TOAST (one of each, used by every spend on this screen, and by brainpress through C.sheet / C.toast)
