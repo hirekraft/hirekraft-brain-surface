@@ -18,8 +18,8 @@
 // photos square until seat scans-photos ships fill/scans.js (the square appears by itself when that file exists).
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
-import { filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-11-findable-fix-1';   // the files press and the reading's progress (seat brain-status-2; understandBlock retired here by seat audit-fix-screen)
-const READY_FOR_STEP = './ready.js?v=2026-11-12-steps-green';   // the same module instance lens.js loads (step 4 opens there)
+import { filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-13-setup-polish';   // the files press and the reading's progress (seat brain-status-2; understandBlock retired here by seat audit-fix-screen)
+const READY_FOR_STEP = './ready.js?v=2026-11-13-setup-polish';   // the same module instance lens.js loads (step 4 opens there)
 
 let C = null;   // { sb, el, $, askBody, isOwner, viewDeps, readSources, drawGroup, aiBlocks, door, goto, openAdd, closeAdd, connectSystem, me }
 let reading = null;   // the latest set of readings, so a page opens on what the room shows
@@ -164,7 +164,7 @@ function build(host) {
   const conn = C.el('section', 'br-sec');
   const ch = C.el('h3', 'br-h'); ch.append(document.createTextNode('Your sources'));
   const leg = C.el('span', 'br-legend');
-  for (const [k, w] of [['u', 'Understood'], ['f', 'Findable'], ['n', 'Not read']]) { const i = C.el('span'); i.append(C.el('i', 'br-k' + k), document.createTextNode(w)); leg.appendChild(i); }
+  for (const [k, w] of [['u', 'Understood'], ['f', 'Searchable'], ['n', 'Not read']]) { const i = C.el('span'); i.append(C.el('i', 'br-k' + k), document.createTextNode(w)); leg.appendChild(i); }
   ch.appendChild(leg);
   conn.appendChild(ch);
   const grid = C.el('div', 'br-grid'); grid.id = 'br-squares'; conn.appendChild(grid);
@@ -233,7 +233,7 @@ function steps(R) {
     sub: R.src ? [n('email') ? num(n('email')) + (n('email') === 1 ? ' mailbox' : ' mailboxes') : '', n('drives') ? num(n('drives')) + ' drives' : '', n('systems') ? num(n('systems')) + ' systems' : ''].filter(Boolean).join(', ') || 'Add a source to begin' : 'Reading' });
   if (!d) {
     const w = R.roadErr ? 'Could not be read just now' : 'Reading';
-    out.push({ k: 'f', name: 'Findable', state: 'wait', big: String.fromCharCode(8230), sub: w });
+    out.push({ k: 'f', name: 'Searchable', state: 'wait', big: String.fromCharCode(8230), sub: w });
     out.push({ k: 'u', name: 'Understood', state: 'wait', big: String.fromCharCode(8230), sub: w });
     out.push({ k: 'r', name: 'Ready', state: 'next', big: 'Not yet', sub: 'when 2 and 3 are done' });
     return out;
@@ -245,7 +245,7 @@ function steps(R) {
   const RS = d.ready && typeof d.ready === 'object' && typeof d.ready.searchable === 'boolean' ? d.ready : null;
   const fDone = RS ? RS.searchable === true : Number(F.left) === 0;
   const NS = RS && RS.not_searchable && RS.not_searchable.note ? String(RS.not_searchable.note) : '';
-  out.push({ k: 'f', name: 'Findable', state: fDone ? 'done' : 'now', big: fDone ? 'Done' : num(F.pct) + '%', pct: Number(F.pct),
+  out.push({ k: 'f', name: 'Searchable', state: fDone ? 'done' : 'now', big: fDone ? 'Done' : num(F.pct) + '%', pct: Number(F.pct),
     sub: RS ? (fDone ? 'everything a press can read can be found and quoted' : (Number(F.reading) > 0 ? num(F.reading) + ' files being read now. ' : '') + num(RS.to_read) + ' left to make searchable') + (NS ? '. Not counted: ' + NS : '') : fDone ? 'everything can be found and quoted' : (Number(F.reading) > 0 ? num(F.reading) + ' files being read now. ' : '') + num(F.left) + ' left: ' + [Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0) ? num(Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0)) + ' mail attachments' : '', Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes) ? num(Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes)) + ' drive files' : ''].filter(Boolean).join(', ') });
   const files = Number(Fi.read) + Number(Fi.not_read) + Number(Fi.waiting) + Number(Fi.waiting_yes);
   // READY IS THE BRAIN'S (seat setup-wire, decision 1141 ruling 1): brain_road 'ready' decides understood and ready, one rule for the
@@ -279,7 +279,7 @@ export function brainState(R) {
   if (H && H.overall === 'stopped') return { kind: 'stopped', word: 'Stopped: answers are not reliable', step: step < 0 ? 4 : step + 1, need: needN };
   if (needN) return { kind: 'needs', word: 'Needs you (' + needN + ')', step: step < 0 ? 4 : step + 1, need: needN };
   if (step < 0) return { kind: 'ready', word: 'Ready', step: 4, need: 0 };
-  return { kind: 'learning', word: 'Learning, step ' + (step + 1) + ' of 4', step: step + 1, need: 0 };
+  return { kind: 'learning', word: 'Learning'   /* SUPERSEDED 2026-11-13 (seat setup-polish, decision 1150.1): Learning, step N of 4 in the header beside Getting started's Step N of 5; the Brain page's own road keeps its four steps */, step: step + 1, need: 0 };
 }
 
 function paintRoad(R) {
@@ -298,7 +298,7 @@ function paintRoad(R) {
   const ready = st[3].state === 'done';
   const stat = C.el('p', 'br-stat');
   if (ready) stat.append(txt('b', null, 'You are ready to use the Tool now.'), document.createTextNode(' It keeps up every day; if anything slips, the step drops back and says why.'));
-  else if (st[2].state !== 'done') stat.append(txt('b', null, 'Findable, not understood yet.'), document.createTextNode(' Search works; counting, totaling and comparing need step 3.'));
+  else if (st[2].state !== 'done') stat.append(txt('b', null, 'Searchable, not understood yet.'), document.createTextNode(' Search works; counting, totaling and comparing need step 3.'));
   else stat.append(txt('b', null, 'Still learning.'), document.createTextNode(' Answers may be incomplete until it is ready.'));
   const horse = C.el('div', 'br-horse');
   for (const [ic, n, w] of [['find', 'Find', 'reads everything once, so you can search all of it by meaning.'], ['tag', 'Understand', 'turns each email and file into facts: who, what, how much, when.'], ['chat', 'Reason', 'answers you from those facts, with the proof.']]) {
@@ -378,7 +378,7 @@ function paintStart(R) {
   if (!R.owner) { box.replaceChildren(...out); return; }   // the presses and their prices are the owner's (picture's colleague line)
   const F = d.findable, M = d.mail, U = d.understood;
   const l1 = C.el('div', 'br-line br-line-col');
-  const a = C.el('span', 'br-line-l'); a.append(txt('b', null, 'Make findable'), C.el('br'),
+  const a = C.el('span', 'br-line-l'); a.append(txt('b', null, 'Make searchable'), C.el('br'),
     txt('span', 'br-small', Number(F.left) === 0 ? 'Done: everything since ' + String(M.from).slice(0, 4) + ' can be found.' : 'Everything since ' + String(M.from).slice(0, 4) + ' ' + DOT + ' ' + num(F.pct) + '% ' + DOT + ' ' + num(F.left) + ' left, mostly mail attachments.'));
   const pb = C.el('span', 'br-pb'); const fi = C.el('i', 'br-kf'); fi.style.width = Math.max(0, Math.min(100, Number(F.pct))) + '%'; pb.appendChild(fi); a.appendChild(pb);
   l1.appendChild(a);
@@ -494,14 +494,14 @@ function levelOf(s, R) {
     const left = hasLeft ? Number(M.attach_left) : Number(M.attach_waiting) + Number(M.attach_cannot) + Number(M.attach_held) + Number(M.attach_reading || 0);
     const of = Number(M.emails) + Number(M.attach_read) + left;
     const u = pc(Number(d.understood.mail), of);
-    return { u, f: pc(Number(M.emails) + Number(M.attach_read), of) - u, pill: left > 0 ? ['y', 'Findable ' + DOT + ' ' + num(left) + ' attachments not read yet'] : ['y', 'Findable'] };
+    return { u, f: pc(Number(M.emails) + Number(M.attach_read), of) - u, pill: left > 0 ? ['y', 'Searchable ' + DOT + ' ' + num(left) + ' attachments not read yet'] : ['y', 'Searchable'] };
   }
   if (s.key === 'drives' && d) {
     const F = d.files, of = Number(F.read) + Number(F.not_read) + Number(F.waiting) + Number(F.waiting_yes), left = of - Number(F.read);
     const u = pc(Number(d.understood.files), of);
-    return { u, f: pc(Number(F.read), of) - u, pill: left > 0 ? ['y', 'Findable ' + DOT + ' ' + num(left) + ' files not read yet'] : ['y', 'Findable'] };
+    return { u, f: pc(Number(F.read), of) - u, pill: left > 0 ? ['y', 'Searchable ' + DOT + ' ' + num(left) + ' files not read yet'] : ['y', 'Searchable'] };
   }
-  return { u: 0, f: 100, pill: ['y', 'Findable'] };
+  return { u: 0, f: 100, pill: ['y', 'Searchable'] };
 }
 
 function square(s, line, st, word, onClick, lv) {
@@ -664,9 +664,9 @@ async function groupPage(body, s, lede) {
 
 const STEP = {
   c: ['Connected', 'Your mailboxes, drives, calendar, contacts and systems are linked. You signed in with each company; the Tool never sees your passwords.'],
-  f: ['Findable', 'Everything is read once so you can find it and quote it, by meaning, not only by words. Search works on whatever is findable.'],
+  f: ['Searchable', 'Everything is read once so you can find it and quote it, by meaning, not only by words. Search works on whatever is searchable.'],
   u: ['Understood', 'Each email and file is turned into facts: who, what, how much, when, each with the sentence it came from, tied to the company or person. Only then can the Tool count, total and compare across them. An item counts as understood only when that is so.'],
-  r: ['Ready', 'Everything you chose is connected, findable and understood, and keeps up every day. Then the Tool says plainly: you are ready.'],
+  r: ['Ready', 'Everything you chose is connected, searchable and understood, and keeps up every day. Then the Tool says plainly: you are ready.'],
 };
 const PAGES = {
   step(body, k) {
@@ -678,7 +678,7 @@ const PAGES = {
     const d = reading?.road;
     if (d && k === 'f') {
       const q = panel(body), M = d.mail, F = d.files;
-      line(q, 'Emails', num(M.emails) + ' since ' + String(M.from).slice(0, 4) + ', all findable', null);
+      line(q, 'Emails', num(M.emails) + ' since ' + String(M.from).slice(0, 4) + ', all searchable', null);
       line(q, 'Mail attachments', num(M.attach_read) + ' read ' + DOT + ' ' + num(M.attach_left != null ? M.attach_left : M.attach_waiting) + ' waiting to be read ' + DOT + ' ' + num(M.attach_cannot) + ' could not be read ' + DOT + ' ' + num(M.attach_held) + ' held by a privacy rule', null);
       line(q, 'Drive files', num(F.read) + ' read ' + DOT + ' ' + num(F.not_read) + ' not read yet ' + DOT + ' ' + num(F.waiting) + ' waiting ' + DOT + ' ' + num(F.waiting_yes) + ' waiting for your yes', null);
       note(body, 'Left out by design and not counted: ' + num(M.attach_by_design) + ' mail attachments (pictures, automatic mail, copies) and ' + num(F.by_design) + ' drive files (pictures, videos, folders you left out, deleted).');
@@ -691,7 +691,7 @@ const PAGES = {
       line(q, 'Emails understood', null, num(U.mail));
       line(q, 'Files understood', 'contracts read so far, and files about people', num(U.files));
       line(q, 'People understood from your records', 'title and employer facts with the line they came from', num(U.records));
-      note(body, 'Everything else is findable or sorted (what kind it is, who may see it), not understood. Understanding the rest is your choice, priced first, on AI and costs.');
+      note(body, 'Everything else is searchable or sorted (what kind it is, who may see it), not understood. Understanding the rest is your choice, priced first, on AI and costs.');
       const pr = understandProgress(C, reading);
       if (pr) body.appendChild(pr);
       if (reading?.owner) { const b = C.el('button', 'go'); b.type = 'button'; b.textContent = 'Choose and see the price'; b.classList.add('br-leave'); b.addEventListener('click', () => { closePage(); showTab('ai'); C.$('#br-und')?.scrollIntoView({ block: 'start' }); }); body.appendChild(b); }
@@ -750,7 +750,7 @@ const PAGES = {
     const lv = mine.length ? level(s, mine, R) : null;
     const d = R.road;
     title(body, 'Mail', mine.length ? stateOf(mine) : 'none');
-    if (d) body.appendChild(txt('p', 'br-lede', num(mine.length) + (mine.length === 1 ? ' mailbox' : ' mailboxes') + ', ' + String(d.mail.from).slice(0, 4) + ' to today. ' + num(d.mail.emails) + ' emails, all findable; ' + num(d.understood.mail) + ' understood. ' + num(d.mail.attach_read) + ' attached files read.'));
+    if (d) body.appendChild(txt('p', 'br-lede', num(mine.length) + (mine.length === 1 ? ' mailbox' : ' mailboxes') + ', ' + String(d.mail.from).slice(0, 4) + ' to today. ' + num(d.mail.emails) + ' emails, all searchable; ' + num(d.understood.mail) + ' understood. ' + num(d.mail.attach_read) + ' attached files read.'));
     if (lv) { const bar = C.el('span', 'br-lvl'); bar.setAttribute('aria-hidden', 'true'); const u = C.el('i', 'br-ku'); u.style.width = lv.u.toFixed(1) + '%'; const f = C.el('i', 'br-kf'); f.style.width = Math.max(0, lv.f).toFixed(1) + '%'; bar.append(u, f); body.appendChild(bar); }
     const files = C.el('div', 'br-press'); body.appendChild(files);
     if (R.prog) filesBlock(C, files, R, () => drawRoom(true).then(() => { if (pageOpen()) openPage('mail'); }));
@@ -782,7 +782,7 @@ const PAGES = {
   chats(body) {
     const c = reading?.conn;
     title(body, 'Chats');
-    body.appendChild(txt('p', 'br-lede', c?.ok ? (c.saves ? num(c.saves) + ' conversations and documents saved from your own AI, findable. ' : 'Nothing saved from your own AI yet. ') + 'You can also bring in an export of your chats.' : 'Saved AI chats and imports.'));
+    body.appendChild(txt('p', 'br-lede', c?.ok ? (c.saves ? num(c.saves) + ' conversations and documents saved from your own AI, searchable. ' : 'Nothing saved from your own AI yet. ') + 'You can also bring in an export of your chats.' : 'Saved AI chats and imports.'));
     const b = C.el('button', 'go ghost'); b.type = 'button'; b.textContent = 'Open Chats'; b.classList.add('br-leave'); b.addEventListener('click', () => { closePage(); C.door('chats'); });
     body.appendChild(b);
   },
