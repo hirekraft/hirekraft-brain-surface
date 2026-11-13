@@ -775,7 +775,7 @@ function srcLeaf(S, q, nm, own, mini, word, tone) {
     const wi = (window.toolWork && Array.isArray(window.toolWork.items) ? window.toolWork.items : []).find((x) => x.kind === 'searchable' && x.source_key === q.key), pg0 = (S.prog ?? []).find((x) => x.source === q.key);
     const all = wi ? Number(wi.total) || 0 : Number(q.reading_total) || 0, done = wi ? Number(wi.done) || 0 : Number(q.reading_done) || 0, pg = wi ? { minutes_left: wi.state === 'stalled' ? null : wi.minutes_left } : pg0;
     const bar = el('div', 'gs-bar'), i = K(el('i'), 'w'); i.style.width = (all ? Math.min(100, Math.round((done / all) * 100)) : 0) + '%'; bar.appendChild(i);
-    w.append(bar, K(el('small', 'gs-srcnote', num(done) + ' of ' + num(all) + ' done ' + DOT + ' ' + leftWords(pg ? pg.minutes_left : null)), 'n'));
+    w.append(bar, K(el('small', 'gs-srcnote', num(done) + ' of ' + num(all) + ' done ' + DOT + ' ' + (wi && wi.state === 'stalled' ? 'nothing has moved for ' + num(wi.idle_minutes) + (Number(wi.idle_minutes) === 1 ? ' minute' : ' minutes') : leftWords(pg ? pg.minutes_left : null))), 'n'));
   }
   if (q && q.kind === 'mail' && q.old_searchable_only === true) w.appendChild(oldLine(q, nm));
   return w;
@@ -977,12 +977,12 @@ function notBody(S, host) {
   const D = S.road, F = D.findable, M = D.mail ?? {}, Fi = D.files ?? {}, NS = F.not_searchable ?? D.ready?.not_searchable ?? {};
   const n = (v) => Number(v) || 0;
   const body = el('div', 'gs-table'); body.id = 'gs-table';
-  body.appendChild(p('gr-small', 'The percentage counts only what a press can read. What cannot be read is said below with its reason, never counted as missing.'));
+  body.appendChild(p('gr-small', 'The percentage counts only what can be read. What cannot be read is said below with its reason, never counted as missing.'));
   body.appendChild(tRow('Searchable now', 'Emails, attachments and drive files', num(F.done)));
   const rd = n(M.attach_reading) + n(Fi.waiting);
   body.appendChild(tRow('Reading now', rd > 0 ? leftWords(F.minutes_left) : 'Nothing is being read just now', num(rd)));
   const wy = n(M.attach_waiting) + n(Fi.waiting_yes);
-  body.appendChild(tRow('Not searchable yet, can be put in', 'Attachments and drive files a press can read. ' + split(M.attach_waiting, Fi.waiting_yes), num(wy),
+  body.appendChild(tRow('Not searchable yet, can be put in', 'Attachments and drive files that can be read once you say yes. ' + split(M.attach_waiting, Fi.waiting_yes), num(wy),
     wy > 0 ? btn('gr-link', 'Put them in' + String.fromCharCode(8230), () => C.$('#gs-need')?.scrollIntoView({ block: 'start' })) : null));
   const HOW = ' No price yet: it is measured on a small sample of your own before you are asked. Not offered yet.';
   const pics = el('div', 'gs-tpics'); pics.id = 'gs-tpics';
