@@ -2603,6 +2603,7 @@ body.br-panel-open { overflow: hidden; }
   body .hd-menu .whoami .look-switch, body .hd-menu .whoami .lang-switch, body .hd-menu .clock-zone { min-height: 44px; }
   body .wk-chip .wk-word, body .wk-chip .wk-dot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   body .gs-exrow .gr-link { min-height: 44px; }
+  body .gs-pl > .gs-pv { overflow-wrap: normal; word-break: normal; min-width: 5.5em; text-align: right; }
   /* seat getting-ready-screen: one column; Vera's column under the step; pairs stacked; the spend line on its own row.
      Each rule carries body so it outweighs the GETTING READY block, which sits later in this file. */
   body .gr-grid, body .gr-row2, body .gr-row3, body .gr-layers, body .gr-promise, body .gr-conn, body .gr-bills { grid-template-columns: minmax(0, 1fr); }
@@ -3441,3 +3442,4 @@ body.hd-on .masthead > .health { order: 1; } body.hd-on .masthead > .wk { order:
 .gs-fin, .gs-runline, .gs-notin p { max-width: none; }
 .gs-exrow .gs-fold { border-top: 0; padding-top: 0; margin-top: 4px; }
 .gs-moreq { margin-top: calc(var(--u) * 2); }
+body.hd-out .masthead { flex-wrap: wrap; } body.hd-out .masthead > .whoami { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
