@@ -2249,10 +2249,10 @@ function speedCard(S) {
   const lo = Number(U.low_usd), hi = Number(U.high_usd), wait = picking(), P = uPrice(S) || {};
   const tl = el('div', 'gs-pl gs-totalrow'); tl.id = 'gs-uprice';
   if (wait) {
-    tl.append(el('b', 'gs-total', 'Your Price'), K(el('b', 'gs-pv', P.usd !== undefined ? 'about ' + usd2(P.usd) : 'measuring'), 'tot'));
+    tl.append(el('b', 'gs-total', 'Your Price'), K(el('b', 'gs-pv', P.usd !== undefined ? 'About ' + usd2(P.usd) : 'Measuring'), 'tot'));
     c.append(tl, p('working no-late gr-small', 'Working out the exact price and range for your choice'));
   } else {
-    tl.append(el('b', 'gs-total', 'Your Price'), K(el('b', 'gs-pv', P.usd !== undefined ? 'about ' + usd2(P.usd) : 'not measured'), 'tot'));
+    tl.append(el('b', 'gs-total', 'Your Price'), K(el('b', 'gs-pv', P.usd !== undefined ? 'About ' + usd2(P.usd) : 'Not measured'), 'tot'));
     c.append(tl, K(p('gr-small', 'Likely between ' + usd2(lo * mul) + ' and ' + usd2(hi * mul) + '.' + partsWords(U, mul) + ' One time, measured on a sample of your own mail and files.'), 'rng'));
   }
   const how = el('details', 'gs-fold'); how.id = 'gs-how'; how.open = howOpen; how.addEventListener('toggle', () => { howOpen = how.open; });
