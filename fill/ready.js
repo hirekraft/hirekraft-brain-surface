@@ -1535,7 +1535,7 @@ function runMarks() {
     const mv = its.filter((x) => x.state !== 'stalled'), r = el('span', 'gs-run'), mk = window.toolWorkParts && window.toolWorkParts.mark ? window.toolWorkParts.mark(mv[0] || its[0]) : null;
     if (mk) r.appendChild(mk);
     r.appendChild(el('span', null, mv.length ? num(mv.length) + ' running' : num(its.length) + ' not moving'));
-    b.appendChild(r);
+    (b.querySelector('b') || b).appendChild(r);   // under the step's name
   }
 }
 function runLine(it, text, still) {
