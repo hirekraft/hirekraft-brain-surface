@@ -2603,7 +2603,7 @@ body.br-panel-open { overflow: hidden; }
   /* seat setup-front-door: the front door and Getting started at 390 px; tiles one or two across, taps 44 px */
   body .fd { padding: calc(var(--u) * 4) 16px calc(var(--u) * 10); } body .fd .am-three { grid-template-columns: minmax(0, 1fr); }
   body .gs-tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } body .gs-tile, body .gs-how, body .gr-why summary { min-height: 44px; }
-  body #gr .gr-st { min-width: 56px; } body #gr .gr-st b { font-size: var(--t-micro); } body #gr .gs-mark { right: auto; left: 31px; top: 1px; min-width: 16px; height: 16px; padding: 0 4px; }
+  body #gr .gr-st { min-width: 56px; } body #gr .gr-st b { font-size: var(--t-micro); } body #gr .gs-mark { right: auto; left: 32px; top: 5px; min-width: 16px; height: 16px; padding: 0 4px; }
   body .gr-st, body .gr-amt, body .gr-sug button, body .gr-why summary, body .gr-link, body .gr-act .go, body .gr-go .go, body .gr-chips .go { min-height: 44px; }
   body .gr-sheet { bottom: 12px; }
   /* seat agents-tab: the team as two columns of buttons, the steps one under another, the card stacked */
