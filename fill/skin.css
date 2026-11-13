@@ -2594,6 +2594,15 @@ body.br-panel-open { overflow: hidden; }
   body .masthead .wk { order: 0; flex: 0 1 auto; margin: 0; }
   body .wk-chip { min-height: 44px; max-width: 44vw; padding: 4px 10px; }
   body .wk-list { position: fixed; left: 16px; right: 16px; top: 56px; width: auto; max-height: 70vh; }
+  /* seat setup-clean (decision 1172 point 1): the cleaned-up header on one line: the mark and the company, the Working count, the credit figure, her initial; the menu spans the screen under it; taps 44px */
+  body.hd-on .masthead { gap: 8px; }
+  body .wordmark .hd-t span { display: block; max-width: 30vw; }
+  body .wordmark { gap: 8px; }
+  body .hd-me { width: 44px; height: 44px; }
+  body .hd-menu { position: fixed; left: 16px; right: 16px; top: 60px; width: auto; max-height: calc(100vh - 92px); overflow-y: auto; }
+  body .hd-menu .whoami .look-switch, body .hd-menu .whoami .lang-switch, body .hd-menu .clock-zone { min-height: 44px; }
+  body .wk-chip .wk-word, body .wk-chip .wk-dot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  body .gs-exrow .gr-link { min-height: 44px; }
   /* seat getting-ready-screen: one column; Vera's column under the step; pairs stacked; the spend line on its own row.
      Each rule carries body so it outweighs the GETTING READY block, which sits later in this file. */
   body .gr-grid, body .gr-row2, body .gr-row3, body .gr-layers, body .gr-promise, body .gr-conn, body .gr-bills { grid-template-columns: minmax(0, 1fr); }
@@ -3389,3 +3398,41 @@ body.gr-over .br-leave { display: none; }
 .gs-exc .gs-ex .gr-link { margin-left: 6px; min-height: 44px; }
 .gs-exc .gs-exdone { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .gs-exc .gs-exdone b { font-size: 16px; } /* SETUP POLISH (seat setup-polish, 2026-11-13; audit fix list of 2026-11-12, decisions 1162 and 1169): a step with exceptions carries a small mark with its count in the corner of its button (gs-mark; gs-mark-open: something waits for her; otherwise quiet); after Done the choices are one folded card (gs-next: the list and How fast inside it lose their own card frame); the line that says what is left on an earlier step (gs-left3). Tokens only; on a phone the mark sits on the corner of the step number (rule in A PHONE IS A FIRST-CLASS SIZE). */ #gr .gr-st { position: relative; } .gs-mark { position: absolute; top: 3px; right: 3px; display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--paper); color: var(--ink-3); border: 1px solid var(--line); font-size: var(--t-micro); line-height: 1; font-weight: var(--w-strong); font-variant-numeric: tabular-nums; } .gs-mark.gs-mark-open { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); } .gs-next > .gs-fold { border-top: 0; padding-top: 0; } .gs-next > .gs-fold > summary b { color: var(--ink); } .gs-next .am-step { border: 0; padding: 0; background: none; } .gs-next .gs-speed { border-top: 1px solid var(--line); padding-top: calc(var(--u) * 3); } .gs-left3 { margin: 0; overflow-wrap: anywhere; } .gs-cont-note { color: var(--ink-3); }
+/* THE HEADER, CLEANED UP (seat setup-clean, 2026-11-13; decision 1172 point 1; picture HsJKa9JnsgmDza5dtX3gUH part 1). Four things: Verrandi and the company on the left; Working, Credit and the person's initial on the right. The initial opens a menu (fill/head.js) that holds her name and role, Language, Look, Settings, Sign Out and the date. WHAT LEFT THE HEADER IS ENFORCED HERE: while the header is on (body.hd-on) the Brain chip and the Getting started / Settings link are not shown, and the health word is shown only when it says Needs you. Tokens only. Phone rules in A PHONE IS A FIRST-CLASS SIZE. */
+.wordmark { display: inline-flex; align-items: center; gap: calc(var(--u) * 2.5); min-width: 0; }
+.hd-m { display: inline-grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 9px; background: var(--act); color: var(--on-act); font-family: var(--font-head); font-style: normal; font-weight: 700; font-size: var(--t-body); }
+.hd-t { display: flex; flex-direction: column; min-width: 0; font-weight: 600; line-height: 1.15; }
+.hd-v { font-style: normal; }
+.wordmark .hd-t span { margin-top: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40vw; }
+body.hd-on .masthead { align-items: center; justify-content: flex-start; gap: calc(var(--u) * 2.5); position: relative; flex-wrap: nowrap; }
+body.hd-on .masthead > .wordmark { margin-right: auto; }
+body.hd-on .masthead > #brain-engine, body.hd-on .masthead > #st-mast, body.hd-on .masthead > .health:not([data-state='needs_you']) { display: none; }
+.hd-me { display: inline-grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--ink); color: var(--paper); font: inherit; font-size: var(--t-small); font-weight: 700; letter-spacing: .02em; cursor: pointer; }
+.hd-me:hover, .hd-me[aria-expanded='true'] { background: var(--act); color: var(--on-act); }
+.hd-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 55; width: min(21rem, calc(100vw - 32px)); display: flex; flex-direction: column; gap: calc(var(--u) * 3); background: var(--paper); color: var(--ink-2); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px var(--shadow-c); padding: calc(var(--u) * 4); text-align: left; }
+.hd-menu[hidden] { display: none; }
+body .hd-menu .whoami { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; overflow: visible; white-space: normal; flex: none; }
+body .hd-menu .whoami > br { display: none; }
+body .hd-menu .whoami > b { font-size: var(--t-body); color: var(--ink); max-width: 100%; overflow-wrap: anywhere; }
+body .hd-menu .whoami > * { white-space: normal; }
+body .hd-menu .whoami .look-switch, body .hd-menu .whoami .lang-switch { margin: 0; min-height: var(--tap); width: auto; height: auto; padding: 4px 10px; }
+body .hd-menu .whoami .look-word { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+.hd-acts { display: flex; flex-direction: column; gap: 6px; }
+.hd-item { display: flex; align-items: center; min-height: 44px; padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); color: var(--ink); font: inherit; font-weight: var(--w-mid); text-align: left; cursor: pointer; }
+.hd-item:hover { border-color: var(--act); }
+body .hd-menu .clock { display: flex; flex: none; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 2px; border-top: 1px solid var(--line); padding-top: calc(var(--u) * 3); }
+body.hd-out .hd-me, body.hd-out .hd-menu { display: none; }
+/* MOVING MEANS WORKING (decision 1172 point 2): the one mark of fill/working.js beside a step that has work running (gs-run, in the row of steps) and beside a line that says what runs (gs-runline). STEP 4, DONE (point 3): the finished line, What Did Not Go In as rows with a count, and the note under the button. */
+.gs-run { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: var(--t-micro); font-weight: var(--w-mid); color: var(--warn); overflow-wrap: anywhere; }
+.gs-run .wk-mark { width: 12px; height: 12px; }
+.gs-runline { display: flex; align-items: flex-start; gap: calc(var(--u) * 2.5); margin: 0; padding: 10px 12px; border-radius: var(--radius); background: var(--warn-soft); color: var(--ink); font-size: var(--t-small); overflow-wrap: anywhere; }
+.gs-runline .wk-mark { margin-top: 2px; }
+.gs-runline.gs-still { background: var(--paper-2); }
+.gs-h3 { font-family: var(--font-head); font-size: var(--t-read); line-height: var(--lead-tight); margin: calc(var(--u) * 2) 0 0; overflow-wrap: anywhere; }
+.gs-exrow { display: flex; gap: calc(var(--u) * 3); align-items: flex-start; padding: calc(var(--u) * 3) 0; border-top: 1px solid var(--line); min-width: 0; }
+.gs-exrows > .gs-exrow:first-child { border-top: 0; }
+.gs-exrow > .gs-chip { flex: none; min-width: 2.2em; justify-content: center; text-align: center; }
+.gs-exrow > div { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.gs-exrow .gr-link { min-height: 0; }
+.gs-fin { margin: 0; overflow-wrap: anywhere; }
+.gs-after .gr-go .go[disabled] { opacity: .55; }
