@@ -89,7 +89,7 @@ export function workFacts(it) {
     p.append(' ' + DOT + ' ', s);
   } else {
     if (Number(it.per_minute) > 0) { const s = el('span', 'wk-n', Number(it.per_minute).toLocaleString('en-US')); s.setAttribute('translate', 'no'); p.append(' ' + DOT + ' ', s, ' ', el('span', null, 'a minute')); }
-    else p.append(' ' + DOT + ' ', el('span', null, 'pace not measured yet'));
+    else p.append(' ' + DOT + ' ', el('span', null, 'time left not known yet'));
     const l = leftWords(it.minutes_left);
     if (l) { p.append(' ' + DOT + ' '); l.forEach((w, i) => { if (i) p.append(' '); if (i === 1 && l.length === 3) { const s = el('span', 'wk-n', w); s.setAttribute('translate', 'no'); p.append(s); } else p.append(el('span', null, w)); }); }
   }
