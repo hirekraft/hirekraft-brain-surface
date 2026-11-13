@@ -484,8 +484,8 @@ function topUp(S, short) {
   const card = cardOf(S);
   const test = !card || card.mode !== 'live';
   const body = el('div');
-  body.appendChild(p('gr-small', pay ? "You pay on Stripe's own page; the Tool never sees your card. Your balance goes up when the payment is through." : 'Top up by card is coming. For now your request goes to Verrandi, who adds it to your balance and tells you.'));
-  if (pay && test) body.appendChild(p('gr-small gr-test', 'Card payments are in test mode: on Stripe use the test card 4242 4242 4242 4242, any future date, any 3 digits. A test payment is shown here and is never added to your balance.'));
+  body.appendChild(p('gr-small', pay ? "You pay on Stripe's own page; the Tool never sees your card. Your credit goes up when the payment is through." : 'Top up by card is coming. For now your request goes to Verrandi, who adds it to your credit and tells you.'));
+  if (pay && test) body.appendChild(p('gr-small gr-test', 'Card payments are in test mode: on Stripe use the test card 4242 4242 4242 4242, any future date, any 3 digits. A test payment is shown here and is never added to your credit.'));
   let pick = need !== null ? need : 50;
   const fee = p('gr-small gr-fee', ''); fee.id = 'gs-tfee';
   const amt = (a) => (Number.isInteger(a) ? String(a) : a.toFixed(2));
@@ -519,12 +519,12 @@ function topUp(S, short) {
       sheet.close(); toast(String(data.note || 'Your request is with Verrandi.'));
     } catch (e) { out.className = 'gr-small'; out.textContent = 'Not sent: ' + String(e?.message ?? e) + '.'; yes.disabled = false; no.disabled = false; }
   });
-  const no = btn('go ghost', 'Not now', () => sheet.close());
+  const no = btn('go ghost', 'Not Now', () => sheet.close());
   const acts = el('div', 'gr-chips'); acts.append(yes, no);
   say();
   body.append(seg, anyLab, fee, acts, out);
   if (pay) body.append(autoBlock(S));
-  sheet.open('Top up your AI balance', body);
+  sheet.open('Top up your credit', body);
 }
 
 // AUTOMATIC TOP-UP: her saved card adds her chosen amount when the balance falls under her line, within her monthly
@@ -544,7 +544,7 @@ function autoBlock(S) {
     sheet.close(); toast(String(data.note));
   };
   if (A.on) {
-    box.appendChild(p('gr-small', 'On: when your balance falls under $' + Number(A.below_usd).toFixed(0) + ', ' + card.card + ' adds $' + Number(A.amount_usd).toFixed(0) + ' plus the card fee, up to $' + Number(A.month_cap_usd).toFixed(0) + ' a month ($' + Number(A.this_month_usd || 0).toFixed(0) + ' so far this month).'));
+    box.appendChild(p('gr-small', 'On: when your credit falls under $' + Number(A.below_usd).toFixed(0) + ', ' + card.card + ' adds $' + Number(A.amount_usd).toFixed(0) + ' plus the card fee, up to $' + Number(A.month_cap_usd).toFixed(0) + ' a month ($' + Number(A.this_month_usd || 0).toFixed(0) + ' so far this month).'));
     box.append(btn('go ghost', 'Turn off', () => send(false)), out);
     return box;
   }
@@ -811,7 +811,7 @@ function treeCard(S) {
   // GMAIL: each mailbox by its address, its emails, one status word.
   const mail = src.filter((r) => r.group === 'email'), mt = tally(mail);
   const emails = mail.map(by).filter(Boolean).reduce((a, q) => a + (Number(q.emails) || 0), 0);
-  tree.appendChild(grp('mail', 'mail', 'Gmail', mail.length ? num(mail.length) + (mail.length === 1 ? ' mailbox' : ' mailboxes') + (P ? ' ' + DOT + ' ' + num(emails) + ' emails' : '') : 'none connected yet', mt[0], mt[1],
+  tree.appendChild(grp('mail', 'mail', 'Gmail', mail.length ? num(mail.length) + (mail.length === 1 ? ' mailbox' : ' mailboxes') + (P ? ' ' + DOT + ' ' + num(emails) + ' emails' : '') : 'None connected yet', mt[0], mt[1],
     mail.map((r) => row(r, (q) => num(q.emails) + ' emails')).concat([add('a mailbox')])));
   // GOOGLE DRIVE: shared drives, meetings, folders shared with the Tool, each by its own name with its files. A drive with
   // nothing in it is not a row: it is said in one plain line.
@@ -820,7 +820,7 @@ function treeCard(S) {
   const full = dr.filter((r) => !none(r)), dt = tally(full), { shared, meet, rest } = driveParts(full);
   const files = (q) => num(q.files) + ' files' + (q.state === 'to_read' ? ' ' + DOT + ' ' + num(q.to_read) + (Number(q.to_read) === 1 ? ' from before you connected is not searchable yet' : ' from before you connected are not searchable yet') : '');
   const part = (title, rows) => (rows.length ? [el('span', 'gs-oncelab', title)].concat(rows.map((r) => row(r, files))) : []);
-  const kids = part('Shared drives', shared).concat(part('Meetings', meet), part('Folders shared with the Tool', rest));
+  const kids = part('Shared Drives', shared).concat(part('Meetings', meet), part('Folders Shared With the Tool', rest));
   const empty = dr.filter(none);
   if (empty.length) {
     const who = empty.map((r) => { const a = String(r.source_key).split(':')[2] || '', n = a.split('@')[0]; return r.what === 'Drive' && a.includes('@') && n ? n[0].toUpperCase() + n.slice(1) + String.fromCharCode(8217) + 's' : null; });
@@ -831,7 +831,7 @@ function treeCard(S) {
         : 'They are connected and there is nothing in them to read. They fill in on their own when something is put there.')));
     kids.push(e);
   }
-  tree.appendChild(grp('drive', 'folder', 'Google Drive', [shared.length ? num(shared.length) + (shared.length === 1 ? ' shared drive' : ' shared drives') : '', meet.length ? 'meetings' : '', rest.length ? num(rest.length) + (rest.length === 1 ? ' folder' : ' folders') : ''].filter(Boolean).join(' ' + DOT + ' ') || (dr.length ? 'nothing in them yet' : 'none connected yet'),
+  tree.appendChild(grp('drive', 'folder', 'Google Drive', [shared.length ? num(shared.length) + (shared.length === 1 ? ' shared drive' : ' shared drives') : '', meet.length ? 'meetings' : '', rest.length ? num(rest.length) + (rest.length === 1 ? ' folder' : ' folders') : ''].filter(Boolean).join(' ' + DOT + ' ') || (dr.length ? 'nothing in them yet' : 'None connected yet'),
     dt[0], dt[1], kids.concat([add('a drive or folder')])));
   // YOUR SYSTEMS (with calendar and contacts): each by its name with the brain's own line of what it keeps, cut to its first part.
   const sys = src.filter((r) => ['systems', 'calendar', 'contacts'].includes(r.group));
@@ -839,7 +839,7 @@ function treeCard(S) {
   const bad = sys.filter((r) => r.state === 'needs_you').length;
   const sk = sys.map((r) => { const w = SV[r.state] || ['', ''], d = el('div', 'gs-src'); d.appendChild(leaf(String(r.name), holds(r), w[0], w[1])); return d; });
   if (sys.length) sk.push(el('small', 'gs-srcnote', 'The Tool keeps a copy of each system so answers come in a second, refreshed on its own; when an answer depends on the very latest, it checks the system live and says so.'));
-  tree.appendChild(grp('sys', 'systems', 'Your systems', sys.length ? num(sys.length) + ' connected' : 'none connected yet', !sys.length ? '' : bad ? num(bad) + (bad === 1 ? ' needs you' : ' need you') : 'Connected', bad ? 'warn' : 'ok', sk.concat([add('a system')])));
+  tree.appendChild(grp('sys', 'systems', 'Your systems', sys.length ? num(sys.length) + ' connected' : 'None connected yet', !sys.length ? '' : bad ? num(bad) + (bad === 1 ? ' needs you' : ' need you') : 'Connected', bad ? 'warn' : 'ok', sk.concat([add('a system')])));
   c.appendChild(tree);
   return c;
 }
@@ -898,7 +898,7 @@ function yesInto(c, S, P, need) {
   }), 'go');
   go.id = 'gs-go'; go.disabled = !known || over || !complete || !pick.length;
   const act = el('div', 'gs-act');
-  act.append(go, K(el('small', 'gs-srcnote', !known ? 'Your AI balance could not be read just now, so nothing can be started. It tries again on its own.' : over ? 'Top up your AI balance above first.' : 'Paid from your AI balance (' + usd2(bal) + ' left)'), 'bal'));
+  act.append(go, K(el('small', 'gs-srcnote', !known ? 'Your credit could not be read just now, so nothing can be started. It tries again on its own.' : over ? 'Top up your credit above first.' : 'Paid from your credit (' + usd2(bal) + ' left)'), 'bal'));
   c.append(act, out);
 }
 // A STEP IS GREEN OR SHOWS ITS EXCEPTIONS, NOTHING ELSE (seat steps-green 2026-11-12, decision 1169; Alex 12:38 PT: "management
@@ -1018,12 +1018,12 @@ function creditAsk(S, cost, bal) {
   const add = Math.max(5, Math.ceil(gap * 1.25));
   const f = cardFee(add);
   const d = el('div', 'gs-credit'); d.id = 'gs-credit';
-  d.append(el('b', null, 'Top up your AI balance first ' + DOT + ' ' + usd2(add)),
-    p('gr-small', 'What is checked costs ' + usd2(cost) + ' and your AI balance is ' + (bal < 0 ? usd2(-bal) + ' under zero' : usd2(bal)) + '. ' + usd2(add) + ' covers the ' + usd2(gap) + ' this step needs, with a cushion so it cannot stop halfway. What is left stays in your balance for the next step. Or uncheck something in the list.'),
+  d.append(el('b', null, 'Top up your credit first ' + DOT + ' ' + usd2(add)),
+    p('gr-small', 'What is checked costs ' + usd2(cost) + ' and your credit is ' + (bal < 0 ? usd2(-bal) + ' under zero' : usd2(bal)) + '. ' + usd2(add) + ' covers the ' + usd2(gap) + ' this step needs, with a cushion so it cannot stop halfway. What is left stays in your credit for the next step. Or uncheck something in the list.'),
     priceRow('Top-up', usd2(add)), priceRow('Card fee, at the card company' + String.fromCharCode(8217) + 's price', usd2(f)), priceRow('Total, one time', usd2(add + f)),
-    el('p', 'am-small', 'From the count above and your AI balance. It goes to the AI companies at their own price; Verrandi adds nothing. You type your card on Stripe' + String.fromCharCode(8217) + 's own page.' + (add === 5 && gap * 1.25 < 5 ? ' $5 is the smallest card payment.' : '')));
+    el('p', 'am-small', 'From the count above and your credit. It goes to the AI companies at their own price; Verrandi adds nothing. You type your card on Stripe' + String.fromCharCode(8217) + 's own page.' + (add === 5 && gap * 1.25 < 5 ? ' $5 is the smallest card payment.' : '')));
   const pay = !!S.marks?.payments, card0 = cardOf(S);
-  if (pay && (!card0 || card0.mode !== 'live')) d.appendChild(p('gr-small gr-test', 'Card payments are in test mode: on Stripe use the test card 4242 4242 4242 4242, any future date, any 3 digits. A test payment is shown here and is never added to your balance.'));
+  if (pay && (!card0 || card0.mode !== 'live')) d.appendChild(p('gr-small gr-test', 'Card payments are in test mode: on Stripe use the test card 4242 4242 4242 4242, any future date, any 3 digits. A test payment is shown here and is never added to your credit.'));
   const msg = p('gr-small', '');
   const go = btn('go', 'Add ' + usd2(add) + ' with Stripe', async () => {
     if (!agreedNow()) { msg.textContent = 'Check the box first: it says you agree to the terms of use.'; C.$('#gs-agree')?.focus(); return; }
@@ -1066,7 +1066,7 @@ function markOld(r, old, nm, own) {
     sheet.close(); toast(old ? 'Marked old: only you search it.' : 'No longer old.');
     await rePlan();
   });
-  const no = btn('go ghost', 'Not now', () => sheet.close());
+  const no = btn('go ghost', 'Not Now', () => sheet.close());
   const acts = el('div', 'gr-chips'); acts.append(yes, no);
   body.append(acts, said);
   sheet.open(old ? 'Mark this mailbox old?' : 'Undo old for ' + nm + '?', body);
@@ -1098,7 +1098,7 @@ async function searchPreview(S, pick, out, go) {
     sheet.close(); toast(String(r.data.note || 'Started. You get one short email when it is done.'));
     mount(C);
   });
-  const no = btn('go ghost', 'Not now', () => sheet.close());
+  const no = btn('go ghost', 'Not Now', () => sheet.close());
   const acts = el('div', 'gr-chips'); acts.append(yes, no);
   body.append(acts, said);
   sheet.open('Make them searchable?', body);
@@ -1260,7 +1260,7 @@ const CARDS = {
       ['What does searchable mean?', 'Every email, attachment and file you connect is read once and gets a fingerprint of its meaning, so you can find it by what it is about, not only by its exact words. It shows you your own documents and never invents anything.'],
       ['Which AI does this step use?', 'Two, each tested for its job: OpenAI makes the search fingerprint of every item, and Claude, by Anthropic, gives every item a quick privacy check, so sensitive things reach only the right people.'],
       ['Why pay ahead?', 'So you are never surprised by a bill, and the Tool never spends money you did not put in.'],
-      ['What happens to what is left?', 'It stays in your balance for the next steps.'],
+      ['What happens to what is left?', 'It stays in your credit for the next steps.'],
       ['Is my card safe?', 'You type it on the page of Stripe, the payment company. Verrandi only ever sees the card brand and the last four digits.'],
     ])));
     return out;
@@ -1311,9 +1311,9 @@ const CARDS = {
       el('p', 'am-small', 'Estimates until your first month is measured; then the measured numbers are in Settings, with your monthly limit.'));
     out.push(cost);
     const t = el('div', 'gs-tiles');
-    const mail = tileBtn('mail', 'Open my Mail', 'It looks like the mail you know, with ' + guideName() + ' beside it', ok ? 'Open' : 'When ready', ok, () => { if (!ok) { toast('Your Mail opens when your brain is ready.'); return; } unmount(); C.goTab('email'); });
+    const mail = tileBtn('mail', 'Open my Mail', 'It looks like the mail you know, with ' + guideName() + ' beside it', ok ? 'Open' : 'When Ready', ok, () => { if (!ok) { toast('Your Mail opens when your brain is ready.'); return; } unmount(); C.goTab('email'); });
     const claude = tileBtn('ai', 'Connect my Claude', 'Ask your brain from inside Claude', 'Connect', false, () => brainPanel('assistadd'));
-    const team = tileBtn('person', 'Invite your team', 'Each sees only what they can already open', ok ? 'Invite' : 'When ready', ok, () => { if (!ok) { toast('You can invite your team when your brain is ready. Each person will see only what they can already open.'); return; } unmount(); C.goTab('security'); });   /* inviting is built (Security, People and access: fill/people.js); SUPERSEDED 2026-11-13: the word coming */
+    const team = tileBtn('person', 'Invite your team', 'Each sees only what they can already open', ok ? 'Invite' : 'When Ready', ok, () => { if (!ok) { toast('You can invite your team when your brain is ready. Each person will see only what they can already open.'); return; } unmount(); C.goTab('security'); });   /* inviting is built (Security, People and access: fill/people.js); SUPERSEDED 2026-11-13: the word coming */
     t.append(mail, claude, team);
     out.push(card('hand', 'Start working', null, t));
     if (ok) { const g = el('div', 'gr-go'); g.appendChild(btn('go ghost', 'Open Settings', () => C.goto('s-settings'))); out.push(g); }
@@ -1843,7 +1843,7 @@ async function pick(key, v) {
 // brain's (understand_door). OVERNIGHT FIRST (1158): until she has chosen (understand_door 'chosen' false) the page shows
 // Overnight; her tap is kept at once (understand_door_set), and the press keeps the speed shown before it asks (doorKeep), so
 // what is pressed is what she saw. A brain without the second door has one speed and shows no cards.
-const DOORS = [['fast', 'As fast as possible'], ['overnight', 'Overnight']];
+const DOORS = [['fast', 'As Fast as Possible'], ['overnight', 'Overnight']];
 const OVERNIGHT_WHEN = 'usually within a few hours, at the latest in 24';
 let doorBusy = false;
 async function readDoor(S) {
@@ -1940,7 +1940,7 @@ async function partSheet(key, preset) {
   const body = el('div', 'gs-part'); body.id = 'gs-part';
   const wait = p('working no-late gr-small', 'Counting what each year holds, for free');
   const said = p('gr-small', ''); said.id = 'gs-psaid'; said.setAttribute('role', 'status');
-  const no = btn('go ghost', 'Not now', () => sheet.close());
+  const no = btn('go ghost', 'Not Now', () => sheet.close());
   const acts = el('div', 'gr-chips'); acts.appendChild(no);
   body.append(wait, acts, said);
   sheet.open('Only part of ' + nm, body);
@@ -1998,7 +1998,7 @@ async function partSheet(key, preset) {
     const r2 = rowsOf(R?.usam).find((x) => x.source_key === key), lim = Number(r2?.limit_usd);
     if (!r2 || !Number.isFinite(lim) || !(lim > 0)) { busy = false; paintS(); said.className = 'gr-small'; said.textContent = leftOf(r2 || {}) === 0 ? 'Nothing is left to read in this part.' : 'This part has no measured price yet, so it cannot be pressed on its own. It is kept for your next press.'; return; }
     const L = Math.ceil(Number((lim * mul * 100).toFixed(6))) / 100, q = { groups: chosenGroups(S), months: 24, limit: L, sources: [key] };
-    said.textContent = 'Checking your limit against your AI balance';
+    said.textContent = 'Checking your limit against your credit';
     const dk = await doorKeep(S);
     const pv = dk.ok ? await C.askBody({ understand_go: { ...q, confirm: false } }).catch((e) => ({ ok: false, error: String(e?.message ?? e) })) : { ok: false, note: 'your choice of speed could not be kept (' + dk.note + ')' };
     if (!body.isConnected) return;
@@ -2034,7 +2034,7 @@ function rowStand(r) {
   return { g: null, all, done: Math.max(0, all - leftOf(r)), cnr: 0, wait: 0, reading: false };
 }
 function standChip(T, on) {
-  if (T.reading) return chip('warn', 'Being understood');
+  if (T.reading) return chip('warn', 'Being Understood');
   if (T.all > 0 && T.done >= T.all) return chip('ok', 'Understood');
   if (T.g && T.wait === 0) return chip('ok', 'Understood');   /* SUPERSEDED 2026-11-13: the chip Could not read N, which gave no why; the count is in the row's line and opened with its reasons in the top card */
   if (T.g) return chip('', 'Not finished');
@@ -2069,7 +2069,7 @@ function uRow(r, nm, q, mul, priced, ro) {
   }
   row.appendChild(l);
   const sc = standChip(T, on);
-  if (ro) { row.appendChild(sc || chip('warn', 'Being understood')); return row; }   // while her press runs: what she chose, no buttons, no price to act on
+  if (ro) { row.appendChild(sc || chip('warn', 'Being Understood')); return row; }   // while her press runs: what she chose, no buttons, no price to act on
   if (T.g && sc) row.appendChild(sc);   // a pressed row always carries its one status word
   if (fin && (on || left <= T.cnr)) return row;   /* a finished row she chose to understand: never a chooser and a price again for what arrived since (HQ 2026-11-13, Alex's screenshot) */   // pressed and finished: nothing here to choose or to price
   if (left > 0) row.appendChild(seg(CHOICES, pickOf(r), (v) => pick(r.source_key, v), nm)); else if (!T.g) row.appendChild(chip('ok', 'Understood'));
@@ -2108,13 +2108,13 @@ function treeU(S, ro) {
   const tree = el('div', 'gs-groups');
   const g4 = (key, ...a) => grp('u' + key, ...a);   // step 3's own folding group; its folds are kept apart from step 3's
   const mail = src.filter((r) => r.group === 'email');
-  tree.appendChild(g4('mail', 'mail', 'Gmail', mail.length ? num(mail.length) + (mail.length === 1 ? ' mailbox' : ' mailboxes') + ' ' + DOT + ' their attachments included' : 'none connected yet', '', '', mail.map(line)));
+  tree.appendChild(g4('mail', 'mail', 'Gmail', mail.length ? num(mail.length) + (mail.length === 1 ? ' mailbox' : ' mailboxes') + ' ' + DOT + ' their attachments included' : 'None connected yet', '', '', mail.map(line)));
   const dr = src.filter((r) => r.group === 'drives'), full = dr.filter((r) => !none(r)), { shared, meet, rest } = driveParts(full);
   const part = (title, list) => (list.length ? [el('span', 'gs-oncelab', title)].concat(list.map(line)) : []);
-  const kids = part('Shared drives', shared).concat(part('Meetings', meet), part('Folders shared with the Tool', rest));
+  const kids = part('Shared Drives', shared).concat(part('Meetings', meet), part('Folders Shared With the Tool', rest));
   const empty = dr.length - full.length;
   if (empty > 0) kids.push(el('small', 'gs-srcnote', num(empty) + (empty === 1 ? ' more has nothing in it to read.' : ' more have nothing in them to read.')));
-  tree.appendChild(g4('drive', 'folder', 'Google Drive', [shared.length ? num(shared.length) + (shared.length === 1 ? ' shared drive' : ' shared drives') : '', meet.length ? 'meetings' : '', rest.length ? num(rest.length) + (rest.length === 1 ? ' folder' : ' folders') : ''].filter(Boolean).join(' ' + DOT + ' ') || (dr.length ? 'nothing in them to read' : 'none connected yet'), '', '', kids));
+  tree.appendChild(g4('drive', 'folder', 'Google Drive', [shared.length ? num(shared.length) + (shared.length === 1 ? ' shared drive' : ' shared drives') : '', meet.length ? 'meetings' : '', rest.length ? num(rest.length) + (rest.length === 1 ? ' folder' : ' folders') : ''].filter(Boolean).join(' ' + DOT + ' ') || (dr.length ? 'nothing in them to read' : 'None connected yet'), '', '', kids));
   const sys = src.filter((r) => r.group === 'systems'), sn = sys.map((r) => String(r.name || '')).filter(Boolean);
   if (sys.length) tree.appendChild(g4('sys', 'systems', 'Your systems', sn.length > 3 ? sn.slice(0, 3).join(', ') + ' and ' + num(sn.length - 3) + ' more' : sn.join(', '), 'Records already understood ' + DOT + ' free', 'ok',
     [el('small', 'gs-srcnote', 'Your systems already keep their records in order (invoices, contacts, people), so those count as understood from the moment a system is connected. Files a system holds, such as resumes in an applicant system, are searchable only for now.')]));
@@ -2166,7 +2166,7 @@ function insideFold(S) {
   });
   keep.disabled = !changed;
   const g = el('div', 'gr-go'); g.appendChild(keep); d.append(g, out);
-  if (!changed) d.appendChild(p('gr-small', kept ? 'Kept. Change any tap and press Keep my changes.' : 'Filled in from what was counted. Change any tap and press Keep my changes.'));
+  if (!changed) d.appendChild(p('gr-small', kept ? 'Kept. Change any tap and press Keep My Changes.' : 'Filled in from what was counted. Change any tap and press Keep My Changes.'));
   d.appendChild(movedBlock(S));
   return d;
 }
@@ -2191,7 +2191,7 @@ function limitSay() {
   const gap = bal === null ? null : Math.round((L - bal) * 100) / 100, short = gap !== null && gap > 0;
   uGap = short ? gap : null;   // what add by card offers first (decision 1160)
   const over = C.$('#gs-uover'), test = C.$('#gs-utest');
-  if (over) { over.textContent = short ? 'This is more than your AI balance: add ' + usd2(gap) + ' first, or lower your limit.' : bal === null ? 'Your AI balance could not be read just now, so nothing can be started. It tries again on its own.' : ''; over.hidden = !over.textContent; }
+  if (over) { over.textContent = short ? 'This is more than your credit: add ' + usd2(gap) + ' first, or lower your limit.' : bal === null ? 'Your credit could not be read just now, so nothing can be started. It tries again on its own.' : ''; over.hidden = !over.textContent; }
   if (test) test.hidden = !short || !!(card0 && card0.mode === 'live');
   go.textContent = goWords(S) + ' ' + DOT + ' up to ' + (Number.isFinite(L) && inp.value !== '' ? usd2(L) : '$0.00');
   go.disabled = doorBusy || picking() || inp.value === '' || !Number.isFinite(L) || L <= 0 || bal === null || short || !(rowsOf(U).length ? chosenRows(U).length : (U.by_mailbox ?? []).length);
@@ -2206,15 +2206,15 @@ function speedCard(S) {
   const fastTime = U.time && U.time.measured === true ? ' ' + DOT + ' ' + howLong(U.time.minutes) + ' at the pace of your sample' : '';
   if (f !== null) {
     const sp = el('div', 'gs-sp2'); sp.id = 'gs-sp'; sp.setAttribute('role', 'group'); sp.setAttribute('aria-label', 'How fast');
-    for (const [v, title, sub] of [['fast', 'As fast as possible', 'starts now ' + DOT + ' full price' + fastTime], ['overnight', 'Overnight ' + DOT + ' about half price', OVERNIGHT_WHEN]]) {
+    for (const [v, title, sub] of [['fast', 'As Fast as Possible', 'starts now ' + DOT + ' full price' + fastTime], ['overnight', 'Overnight ' + DOT + ' about half price', OVERNIGHT_WHEN]]) {
       const b = btn('gs-sp' + (v === cur ? ' on' : ''), '', () => doorPick(v)); b.dataset.door = v;
       b.append(el('b', null, title), el('small', null, sub)); b.setAttribute('aria-pressed', v === cur ? 'true' : 'false'); b.disabled = doorBusy;
       sp.appendChild(b);
     }
     c.appendChild(sp);
     if (doorBusy) c.appendChild(p('working no-late gr-small', 'Keeping your choice'));
-  } else c.appendChild(p('gr-small', 'As fast as possible' + fastTime + '.'));
-  const credit = () => { const r = el('div', 'gs-pl gs-ucredit'), v = el('span', 'gs-tval'); v.append(K(el('b', 'gs-pv', bal === null ? 'not read' : usd2(bal)), 'bal'), btn('gr-link', 'add by card', () => topUp(R, uGap))); r.append(el('span', null, 'Your AI balance'), v); return r; };
+  } else c.appendChild(p('gr-small', 'As Fast as Possible' + fastTime + '.'));
+  const credit = () => { const r = el('div', 'gs-pl gs-ucredit'), v = el('span', 'gs-tval'); v.append(K(el('b', 'gs-pv', bal === null ? 'not read' : usd2(bal)), 'bal'), btn('gr-link', 'add by card', () => topUp(R, uGap))); r.append(el('span', null, 'Your credit'), v); return r; };
   const expired = (S.uprog ?? []).reduce((a, x) => a + (Number(x.expired) || 0), 0);   // overnight items the AI company did not run in 24 hours (seat overnight-batch)
   if (expired > 0) c.appendChild(p('gr-small gs-over', num(expired) + ' were not read by the AI company within 24 hours. They were not billed. Press Understand again to send them.'));
   if (U.state === 'reading') {
@@ -2228,7 +2228,7 @@ function speedCard(S) {
     // no sample yet on this brain: the one button starts with it (see THE SAMPLE above for what is not built)
     const short = bal === null || bal < SAMPLE_CAP, any = (Number(U.conversations) || 0) + (Number(U.files) || 0) > 0;
     c.append(p(null, 'Your price is measured first. A small sample of about 100 of your own emails and files (never more than ' + capWords(U) + ') is read and turns into your real price, here. Nothing beyond the sample is read until you have seen that price and set your limit.'), credit());
-    if (short) c.appendChild(p('gr-small gs-over', 'The sample needs ' + usd2(SAMPLE_CAP) + ' in your AI balance' + (bal === null ? '; it could not be read just now.' : '; you have ' + usd2(bal) + '.')));
+    if (short) c.appendChild(p('gr-small gs-over', 'The sample needs ' + usd2(SAMPLE_CAP) + ' in your credit' + (bal === null ? '; it could not be read just now.' : '; you have ' + usd2(bal) + '.')));
     if (picking()) c.appendChild(p('working no-late gr-small', 'Keeping your choice'));
     const go = K(btn('go', goWords(S) + ' ' + DOT + ' the sample first, never more than ' + capWords(U), () => samplePress(R, R.usam)), 'go'); go.id = 'gs-ugo';
     go.disabled = short || picking() || !any;
@@ -2240,10 +2240,10 @@ function speedCard(S) {
   const lo = Number(U.low_usd), hi = Number(U.high_usd), wait = picking(), P = uPrice(S) || {};
   const tl = el('div', 'gs-pl gs-totalrow'); tl.id = 'gs-uprice';
   if (wait) {
-    tl.append(el('b', 'gs-total', 'Your price'), K(el('b', 'gs-pv', P.usd !== undefined ? 'about ' + usd2(P.usd) : 'measuring'), 'tot'));
+    tl.append(el('b', 'gs-total', 'Your Price'), K(el('b', 'gs-pv', P.usd !== undefined ? 'about ' + usd2(P.usd) : 'measuring'), 'tot'));
     c.append(tl, p('working no-late gr-small', 'Working out the exact price and range for your choice'));
   } else {
-    tl.append(el('b', 'gs-total', 'Your price'), K(el('b', 'gs-pv', P.usd !== undefined ? 'about ' + usd2(P.usd) : 'not measured'), 'tot'));
+    tl.append(el('b', 'gs-total', 'Your Price'), K(el('b', 'gs-pv', P.usd !== undefined ? 'about ' + usd2(P.usd) : 'not measured'), 'tot'));
     c.append(tl, K(p('gr-small', 'Likely between ' + usd2(lo * mul) + ' and ' + usd2(hi * mul) + '.' + partsWords(U, mul) + ' One time, measured on a sample of your own mail and files.'), 'rng'));
   }
   const how = el('details', 'gs-fold'); how.id = 'gs-how'; how.open = howOpen; how.addEventListener('toggle', () => { howOpen = how.open; });
@@ -2262,7 +2262,7 @@ function speedCard(S) {
   inp.addEventListener('input', limitSay);
   lab.appendChild(inp);
   const over = p('gr-small gs-over', ''); over.id = 'gs-uover'; over.dataset.k = 'ov'; over.hidden = true;
-  const test = p('gr-small gr-test', 'Card payments are in test mode: a test payment is shown but never added to your balance, so it cannot pay for this step.'); test.id = 'gs-utest'; test.dataset.k = 'ts'; test.hidden = true;
+  const test = p('gr-small gr-test', 'Card payments are in test mode: a test payment is shown but never added to your credit, so it cannot pay for this step.'); test.id = 'gs-utest'; test.dataset.k = 'ts'; test.hidden = true;
   const out = p('gr-small', ''); out.id = 'gs-uout';
   const go = K(btn('go', goWords(S), () => understandPress()), 'go'); go.id = 'gs-ugo';
   const act = el('div', 'gs-act'); act.appendChild(go);
@@ -2286,7 +2286,7 @@ function samplePress(S, U) {
     sheet.close(); toast(String(data.note || 'The sample is being read.')); R.usam = data; draw();
     try { document.dispatchEvent(new CustomEvent('tool:work-refresh')); } catch (_) { /* the indicator reads again on its own */ }
   });
-  const no = btn('go ghost', 'Not now', () => sheet.close());
+  const no = btn('go ghost', 'Not Now', () => sheet.close());
   const acts = el('div', 'gr-chips'); acts.append(yes, no); body.append(acts, said);
   sheet.open('Start with a sample?', body);
 }
@@ -2300,7 +2300,7 @@ async function understandPress() {
   // what is pressed is the brain's own choice (understand_choice: the rows above); a brain that sends no rows gets the mailboxes as before
   const hasRows = rowsOf(U).length > 0, dl = Number(U.drive_files?.left) || 0, al = (Number(U.attached_files?.left) || 0) - dl;
   const q = hasRows ? { groups, months: 24, limit: L } : { groups, months: 24, limit: L, sources: (U.by_mailbox ?? []).filter((x) => Number(x.conversations) > 0).map((x) => x.source_key) };
-  go.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Checking your limit against your AI balance';
+  go.disabled = true; out.className = 'working no-late gr-small'; out.textContent = 'Checking your limit against your credit';
   const dk = await doorKeep(S);
   if (!dk.ok) { out.className = 'gr-small'; out.textContent = 'Not started: your choice of speed could not be kept (' + dk.note + ').'; limitSay(); return; }
   const pv = await C.askBody({ understand_go: { ...q, confirm: false } }).catch((e) => ({ ok: false, error: String(e?.message ?? e) }));
@@ -2334,7 +2334,7 @@ async function understandPress() {
     ...count('gs-ca', 'Attached files to understand', 'every file attached to the mail of the mailboxes you chose', boxes, 'files_left', al),
     ...count('gs-cd', 'Drive files to understand', 'every file in the drives you chose', drives, 'files_left', dl),
     priceRow(night ? 'Measured price, overnight' : 'Measured price', usd2(price), 'likely between ' + usd2(Number(U.low_usd) * mul) + ' and ' + usd2(hi)),
-    ...(doorF(S) !== null ? [priceRow('How fast', night ? 'Overnight' : 'As fast as possible', night ? OVERNIGHT_WHEN + '; sent in batches that fit your limit' : (U.time && U.time.measured === true ? howLong(U.time.minutes) + ', measured on your sample' : 'time not measured yet'))] : []),
+    ...(doorF(S) !== null ? [priceRow('How fast', night ? 'Overnight' : 'As Fast as Possible', night ? OVERNIGHT_WHEN + '; sent in batches that fit your limit' : (U.time && U.time.measured === true ? howLong(U.time.minutes) + ', measured on your sample' : 'time not measured yet'))] : []),
     priceRow('Your limit, never passed', usd2(Number.isFinite(Number(pv.limit_usd)) ? pv.limit_usd : L), Math.abs(L - sug) < 0.005 ? 'the suggested limit' : 'suggested: ' + usd2(sug)));
   if (np + nd > 0) body.appendChild(p('gr-small', 'Your limit is one amount for everything you chose: ' + [np ? num(np) + (np === 1 ? ' mailbox' : ' mailboxes') : '', nd ? num(nd) + (nd === 1 ? ' drive' : ' drives') : ''].filter(Boolean).join(' and ') + ' read from it until it is used up. Nothing is read until you say yes.'));
   if (L < sug - 0.005 && (!Number.isFinite(hi) || L < hi)) { const w = p('gr-small gs-over', Number.isFinite(price) && L < price
@@ -2350,7 +2350,7 @@ async function understandPress() {
     try { document.dispatchEvent(new CustomEvent('tool:work-refresh')); } catch (_) { /* the indicator reads again on its own */ }
     uPick = {}; uLimit = null; mount(C);
   });
-  const no = btn('go ghost', 'Not now', () => sheet.close());
+  const no = btn('go ghost', 'Not Now', () => sheet.close());
   const acts = el('div', 'gr-chips'); acts.append(yes, no); body.append(acts, said);
   sheet.open(goWords(S) + '?', body);
 }
