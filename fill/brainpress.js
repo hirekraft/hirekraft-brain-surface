@@ -154,7 +154,7 @@ async function confirmStep(C, total, res, tot, mode, after) {
   const yes = btn(C, 'go', mode === 'understand' ? 'Yes, go ahead ' + DOT + ' about ' + usd(tot.usd) : 'Yes, go ahead');
   const no = btn(C, 'go ghost', 'Not now');
   const acts = C.el('div', 'br-chips'); acts.append(yes, no); box.appendChild(acts);
-  place(C, res, box, mode === 'understand' ? 'Understand what you chose?' : 'Make it findable?');
+  place(C, res, box, mode === 'understand' ? 'Understand what you chose?' : 'Make it searchable?');
   no.addEventListener('click', () => { shut(C); res.replaceChildren(); total.querySelectorAll('button').forEach((b) => { b.disabled = false; }); });
   yes.addEventListener('click', async () => {
     yes.disabled = true; no.disabled = true;
@@ -168,7 +168,7 @@ async function confirmStep(C, total, res, tot, mode, after) {
         if (data?.ok) ok += 1; else bad.push(data?.note ?? 'refused');
       } catch (e) { bad.push(e?.message ?? String(e)); }
     }
-    said(C, p, (ok ? 'Started: ' + ok + (ok === 1 ? ' source is' : ' sources are') + ' being ' + (mode === 'understand' ? 'understood' : 'made findable') + '. You can leave this page; it goes on by itself and the road shows how far it is.' : 'Nothing started.')
+    said(C, p, (ok ? 'Started: ' + ok + (ok === 1 ? ' source is' : ' sources are') + ' being ' + (mode === 'understand' ? 'understood' : 'made searchable') + '. You can leave this page; it goes on by itself and the road shows how far it is.' : 'Nothing started.')
       + (bad.length ? ' Not started: ' + bad.length + ' (' + bad[0] + ').' : ''));
     landed(C, p);
     if (after) after();
@@ -243,7 +243,7 @@ export function filesBlock(C, host, R, after) {
   out.push(line);
   if (R.owner) {
     const total = C.el('div', 'br-total');
-    const say = txt(C, 'span', 'br-total-t', 'Make them findable, so you can find and quote them.');
+    const say = txt(C, 'span', 'br-total-t', 'Make them searchable, so you can find and quote them.');
     const go = btn(C, 'go', 'Read them');
     total.append(say, go);
     const res = txt(C, 'p', 'br-small', '');
@@ -273,7 +273,7 @@ async function filesConfirm(C, total, res, rows, after) {
   if (!n) { free(); said(C, res, 'No file is waiting that this press reads. Nothing was started.'); return; }
   if (!Number.isFinite(rate) || rate <= 0) { free(); said(C, res, num(n) + ' files would be read, but what fingerprinting them costs has not been measured, so no figure is given and nothing was started.'); return; }
   const box = C.el('div', 'br-confirm');
-  box.appendChild(txt(C, 'p', 'br-small', num(n) + ' files from ' + pv.length + (pv.length === 1 ? ' mailbox' : ' mailboxes') + ' will be read with no AI and made findable, about ' + usd(n * rate) + ' in all. ' + (rows.length > pv.length ? num(rows.length - pv.length) + (rows.length - pv.length === 1 ? ' mailbox has' : ' mailboxes have') + ' only pictures or recordings waiting, which this press does not read. ' : '') + 'New mail keeps being read as usual.'));
+  box.appendChild(txt(C, 'p', 'br-small', num(n) + ' files from ' + pv.length + (pv.length === 1 ? ' mailbox' : ' mailboxes') + ' will be read with no AI and made searchable, about ' + usd(n * rate) + ' in all. ' + (rows.length > pv.length ? num(rows.length - pv.length) + (rows.length - pv.length === 1 ? ' mailbox has' : ' mailboxes have') + ' only pictures or recordings waiting, which this press does not read. ' : '') + 'New mail keeps being read as usual.'));
   const yes = btn(C, 'go', 'Yes, go ahead ' + DOT + ' about ' + usd(n * rate));
   const no = btn(C, 'go ghost', 'Not now');
   const acts = C.el('div', 'br-chips'); acts.append(yes, no); box.appendChild(acts);
@@ -291,7 +291,7 @@ async function filesConfirm(C, total, res, rows, after) {
         if (data?.ok) q += Number(data.files_queued) || 0; else bad.push(data?.note ?? 'refused');
       } catch (e) { bad.push(e?.message ?? String(e)); }
     }
-    said(C, p, (q ? 'Started: ' + num(q) + ' files are being made findable. The count, the pace and the time left show here in a few seconds.' : 'Nothing started.') + (bad.length ? ' Not started: ' + bad.length + ' (' + bad[0] + ').' : ''));
+    said(C, p, (q ? 'Started: ' + num(q) + ' files are being made searchable. The count, the pace and the time left show here in a few seconds.' : 'Nothing started.') + (bad.length ? ' Not started: ' + bad.length + ' (' + bad[0] + ').' : ''));
     landed(C, p);
     // seat findable-fix (1147): the block is freed at once, so the live line replaces this sentence within seconds (it used
     // to hold the old block, with its buttons greyed, for 30 seconds). Nothing started: the buttons work again.

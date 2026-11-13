@@ -96,7 +96,7 @@ function readyNow() {
   const nums = $$('.num', root).filter((n) => shown(n) && !colEl.contains(n)).map(words).slice(0, 4);
   const acts = $$('button', root).filter((b) => shown(b) && !colEl.contains(b) && !b.disabled && words(b).length < 80
     && (b.classList.contains('p') || b.classList.contains('go') || words(b).includes('$'))).map(words).slice(0, 5);
-  const step = cur && cur.children.length ? [...cur.children].map(words).filter(Boolean).join(' ') : words(cur);   // the step's number line and its name, apart
+  const step = cur && cur.children.length ? [...cur.children].filter((x) => !x.classList.contains('gs-mark')).map(words).filter(Boolean).join(' ') : words(cur);   // the step's number line and its name, apart
   return { col: colEl, step, key: stepKey(step + ' ' + words(card)), card: words(card), lead: words(lead).slice(0, 240), nums, acts };
 }
 
@@ -106,7 +106,7 @@ function stepKey(t) {
   const tag = $('[aria-current="step"][data-step]')?.dataset.step;
   if (tag) return tag;
   if (s.includes('your business')) return 'business';
-  if (s.includes('findable')) return 'find';
+  if (s.includes('findable') || s.includes('searchable')) return 'find';
   if (s.includes('understand')) return 'understand';
   if (s.includes('database')) return 'db';
   if (s.includes('connect')) return 'connect';
@@ -225,11 +225,11 @@ function suggestions() {
     db: ['What does the database cost me?', 'What happens if I cancel?'],
     connect: ['Is everything connected?', 'Why does it need my mailbox?'],
     business: ['Why do you ask this?', 'Can I change it later?'],
-    find: ['What does findable mean?', p ? 'Why only ' + p + '?' : 'Why is this so cheap?', 'Can I stop here?', 'Can I use Mail yet?'],
+    find: ['What does searchable mean?', p ? 'Why only ' + p + '?' : 'Why is this so cheap?', 'Can I stop here?', 'Can I use Mail yet?'],
     understand: ['What does understood mean?', 'Can I do 6 months first?', 'What does it cost every month after this?'],
     ready: ['What happens after ready?', 'Can I use Mail yet?'],
   };
-  const list = ['Where are we?'].concat(S[key] || (b && !b.ready ? ['What does findable mean?', 'Can I stop here?', 'Can I use Mail yet?'] : []));
+  const list = ['Where are we?'].concat(S[key] || (b && !b.ready ? ['What does searchable mean?', 'Can I stop here?', 'Can I use Mail yet?'] : []));
   return { key, list };
 }
 function drawSug() {
@@ -585,18 +585,18 @@ const WHERE = 'Where are we?';
 // shows no card: someone who is not the owner sees no prices, and is given none.
 function head() {
   const c = $('#gs-shape');
-  if (!c || !shown(c)) return null;
+  /* STEPS 3 AND 4 HAVE NO COST AND TIME CARD (seat setup-polish 2026-11-13, audit fix 6): there the step says how it stands itself (fill/ready.js window.toolSetup, from the readings its cards are drawn from). Without this she had no two questions on steps 3 and 4 and a typed setup question got no answer at all. */ if (!c || !shown(c)) { const t = typeof window.toolSetup === 'function' ? window.toolSetup() : null; return t ? { cost: String(t.cost || ''), time: String(t.time || ''), src: String(t.src || ''), open: String(t.open || '') } : null; }
   const ct = $$('.gs-ct > div', c).map((d) => words($('b', d)));
   return { cost: ct[0] || '', time: ct[1] || '', src: words($('.am-small', c)) };
 }
 function stepTaps() { const r = readyNow(); return r && r.key && TAPS[r.key] && head() ? TAPS[r.key] : null; }
 function opener(key, turns) {
   let o = $('#vera-open');
-  const t = OPEN[key];
+  const hd = head(), t = (hd && hd.open) || OPEN[key];   /* a step that has moved on says so: after a press her line no longer promises a sample (seat setup-polish) */
   if (!t) { if (o) o.remove(); return; }
-  if (o && o.isConnected && o.dataset.k === key) return;
+  if (o && o.isConnected && o.dataset.k === key + '|' + t) return;
   if (!o || !o.isConnected) { o = el('div', 'vera-turn vera-open'); o.id = 'vera-open'; turns.prepend(o); }
-  o.dataset.k = key;
+  o.dataset.k = key + '|' + t;
   o.replaceChildren(el('p', 'vera-who', NAME()), el('p', null, t));
   $$('.vera-free', turns).forEach((x) => x.remove());   // an answer about the step she left
 }
@@ -760,7 +760,7 @@ function answer(key, ids, about, h, f) {
 // Draw her question and the answer. The answer fills her column: the last free exchange only.
 async function setupAsk(q, ids, about) {
   const r = readyNow(), h = head(), turns = $('#dock-turns');
-  if (!r || !h || !turns) return;
+  if (!r || !turns) return; if (!h) { /* NEVER A SILENT NO-ANSWER (seat setup-polish): what could not be read is said */ $$('.vera-free', turns).forEach((x) => x.remove()); const m0 = el('div', 'vera-mine vera-free'); m0.appendChild(el('p', null, q)); const d0 = el('div', 'vera-turn vera-free'); d0.append(el('p', 'vera-who', NAME()), el('p', null, 'I could not read the figures of this step just now, so I will not guess. The card beside me shows them as soon as they are read.')); turns.append(m0, d0); return; }
   $$('.vera-free', turns).forEach((x) => x.remove());
   const m = el('div', 'vera-mine vera-free'); m.appendChild(el('p', null, q)); turns.appendChild(m);
   const d = el('div', 'vera-turn vera-free'); d.appendChild(el('p', 'vera-who', NAME()));

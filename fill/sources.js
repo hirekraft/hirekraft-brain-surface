@@ -126,7 +126,7 @@ export function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrai
     if ((findableFrom === null || findableFrom > -8.64e15) && understoodFrom !== -8.64e15) {
       const p = e0.findable_usd;
       if (p !== null && p !== undefined) choices.push({ mode: 'findable', months: null, price: Number(p),
-        label: `Make all of it findable (about ${usd(p)})` });
+        label: `Make all of it searchable (about ${usd(p)})` });
     }
     // The files attached to its findable mail (seat findable-all): the press's own preview gives the number it reads.
     if (!drive && findableFrom === -8.64e15) {
@@ -135,7 +135,7 @@ export function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrai
         const n = Number(data?.files_waiting);
         const rate = Number(first.estimate?.per_file_findable_usd);
         if (data?.ok && n > 0 && Number.isFinite(rate) && rate > 0) choices.push({ mode: 'findable', months: null, price: n * rate,
-          label: `Make its ${n.toLocaleString('en-US')} attached files findable (about ${usd(n * rate)})` });
+          label: `Make its ${n.toLocaleString('en-US')} attached files searchable (about ${usd(n * rate)})` });
       } catch (_) { /* no files choice: the line above says what is read */ }
     }
     windows.forEach(([m, words], i) => {
@@ -147,9 +147,9 @@ export function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrai
     });
     if (!choices.length) { box.remove(); return; }
     note.className = 'quiet';
-    note.textContent = `${drive ? 'Older files' : 'Older mail'} of ${name}: choose how the Tool reads ${drive ? 'them' : 'it'}. Findable means you can find any of it by meaning; `
+    note.textContent = `${drive ? 'Older files' : 'Older mail'} of ${name}: choose how the Tool reads ${drive ? 'them' : 'it'}. Searchable means you can find any of it by meaning; `
       + (drive ? 'no AI reads it, so it is not sorted or summarized, and a scanned file waits for understanding. Understanding reads the files the way new files are read.'
-        : 'no AI reads it, so it is not sorted or summarized; its Word, Excel, PowerPoint, PDF and text files can be made findable too. Understanding reads each email for who, which company, amounts and dates, each with the sentence it came from.')
+        : 'no AI reads it, so it is not sorted or summarized; its Word, Excel, PowerPoint, PDF and text files can be made searchable too. Understanding reads each email for who, which company, amounts and dates, each with the sentence it came from.')
       + (known ? ` Your AI balance is ${usd(balance)}.` : '');
     const acts = el('div', 'actions');
     const out = el('p', 'quiet');
