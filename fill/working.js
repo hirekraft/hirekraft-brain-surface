@@ -59,7 +59,7 @@ function name(text) { const s = el('b', 'wk-name', text); s.setAttribute('transl
 export function workTitle(it) {
   const f = document.createDocumentFragment();
   if (it.kind === 'pictures') { f.append(el('span', null, 'Reading pictures in'), ' ', name(it.name || 'a drive')); }
-  else if (it.kind === 'searchable') { f.append(el('span', null, 'Making searchable:'), ' ', name(it.name || 'a source')); }
+  else if (it.kind === 'searchable') { f.append(el('span', null, it.state === 'stalled' ? 'Paused:' : 'Making searchable:'), ' ', name(it.name || 'a source')); }   /* a line that is not moving says so in its title too (decision 1172.2, picture part 2) */
   else if (it.kind === 'understand') { f.append(el('span', null, 'Understanding your mail and files')); }
   else if (it.kind === 'agreements') { f.append(el('span', null, 'Reading agreements')); }
   else if (it.kind === 'privacy') { f.append(el('span', null, 'Privacy check on newly searchable items')); }
@@ -162,7 +162,7 @@ export function workPulse(it) {
     p.appendChild(s);
   } else if (failed) p.appendChild(el('span', 'wk-stall', 'could not be read just now'));
   else {
-    if (Number(it.out) > 0 && it.alive === true) { const o = el('span', 'wk-out'); const c = el('span', 'wk-n', num(it.out)); c.setAttribute('translate', 'no'); o.append(c, ' ', el('span', null, 'out at the AI maker')); p.append(o, ' ' + DOT + ' '); }
+    if (Number(it.out) > 0 && it.alive === true) { const o = el('span', 'wk-out'); const c = el('span', 'wk-n', num(it.out)); c.setAttribute('translate', 'no'); o.append(c, ' ', el('span', null, 'out at the AI company')); p.append(o, ' ' + DOT + ' '); }
     if (a !== null) {
       const b = el('span', 'wk-beat'); b.dataset.act = String(a);
       const n = el('span', 'wk-n', ''); n.setAttribute('translate', 'no');
@@ -196,22 +196,23 @@ function paint() {
   chip.classList.toggle('wk-still', n === 0 || stalled === n);
   const sign = el('span', 'wk-sign');
   if (n > 0) sign.appendChild(mark(its.some(workAlive)));
-  if (failed) sign.append(el('span', null, 'Working:'), ' ', el('span', null, 'could not be read just now'));
-  else if (n === 0) sign.append(el('span', null, 'Finished just now'));
+  if (failed) { sign.append(el('span', null, 'Working'), ' ' + DOT + ' ', el('span', null, 'Not Read Just Now')); chip.setAttribute('aria-label', 'Working: could not be read just now. Open the list'); }
+  else if (n === 0) { sign.append(el('span', null, 'Finished Just Now')); chip.setAttribute('aria-label', 'Finished just now. Open the list'); }
   else {
     const c = el('span', 'wk-n', num(n)); c.setAttribute('translate', 'no');
-    sign.append(el('span', null, 'Working:'), ' ', c, ' ', el('span', null, n === 1 ? 'thing' : 'things'));
+    sign.append(el('span', null, 'Working'), ' ' + DOT + ' ', c);   /* decision 1172.1: Working, the breathing mark and the count. SUPERSEDED 2026-11-13: Working: N things */
+    chip.setAttribute('aria-label', 'Working: ' + num(n) + (n === 1 ? ' thing' : ' things') + '. Open the list');
   }
   chip.appendChild(sign);
   if (!failed && stalled > 0) {
     const s = el('span', 'wk-stall'); const c = el('span', 'wk-n', num(stalled)); c.setAttribute('translate', 'no');
-    s.append(c, ' ', el('span', null, 'not moving'));
+    s.append(c, ' ', el('span', null, 'Not Moving'));
     chip.append(' ' + DOT + ' ', s);
   }
   chip.setAttribute('aria-expanded', open ? 'true' : 'false');
 
   if (!open) return;
-  list.replaceChildren(el('p', 'wk-head', 'What the Tool is working on'));
+  list.replaceChildren(el('p', 'wk-head', 'What the Tool Is Working On'));
   if (failed) list.appendChild(el('p', 'wk-note wk-stall', 'This could not be read just now, so the numbers below are from the last reading. It is the reading failing, not the work stopping.'));
   const ul = el('ul', 'wk-items');
   for (const it of its) {
@@ -250,7 +251,7 @@ function mount() {
   list.setAttribute('role', 'region'); list.setAttribute('aria-label', 'What the Tool is working on'); list.setAttribute('aria-live', 'polite');
   host.append(chip, list);
   const who = head.querySelector('#whoami');
-  if (who) head.insertBefore(host, who); else head.appendChild(host);
+  if (who && who.parentNode === head) head.insertBefore(host, who); else head.appendChild(host);   /* her name may sit in the menu behind her initial (fill/head.js); the header's order is the style sheet's */
   chip.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
   document.addEventListener('click', (e) => { if (open && !host.contains(e.target)) toggle(false); });
   document.addEventListener('keydown', (e) => { if (open && e.key === 'Escape') { toggle(false); chip.focus(); } });
