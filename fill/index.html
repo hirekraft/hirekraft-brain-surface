@@ -29,7 +29,7 @@ try {
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
 <title>Tool — your brain</title>
 <meta name="description" content="Your business's own memory.">
-<link rel="stylesheet" href="skin.css?v=2026-11-13-setup-polish">
+<link rel="stylesheet" href="skin.css?v=2026-11-13-setup-clean">
 <script>
 // THE FRONT DOOR, before anything is drawn (seat front-door, 2026-10-13): no stored sign-in on this
 // browser means she goes to sign in, and comes back to this tab after. lens.js makes the real check
@@ -76,7 +76,7 @@ try {
     <!-- The wordmark is the way back. No colour value is introduced here, so the
          re-skinnable-by-construction property holds. -->
     <a class="wordmark" href="../login/" title="Back to the front door"
-       style="text-decoration:none;color:inherit">Tool<span translate="no"></span></a>
+       style="text-decoration:none;color:inherit"><i class="hd-m" aria-hidden="true">V</i><b class="hd-t"><i class="hd-v" translate="no">Verrandi</i><span translate="no"></span></b></a>
     <!-- Filled from the token, never from anything this page asserts.
          Space is reserved so it cannot shift when the reading lands. -->
     <!-- TODAY, on every tab (seat chat-layout, Alex 2026-10-06): from this computer, or the zone
@@ -515,9 +515,9 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-11-13-setup-polish"></script>
+<script type="module" src="lens.js?v=2026-11-13-setup-clean"></script>
 <!-- Vera, the guide (seat vera-on-brain-2, decisions 1113, 1115, 1116): one button bottom right on every screen, opening the
      conversation panel above with what she is looking at; replaces the round phone Ask button. -->
-<script type="module" src="vera.js?v=2026-11-13-setup-polish"></script>
+<script type="module" src="vera.js?v=2026-11-13-setup-clean"></script>
 </body>
 </html>

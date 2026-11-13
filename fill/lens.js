@@ -17,7 +17,7 @@ import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
 import { removeControl, readChooser } from "./sources.js?v=2026-11-13-setup-polish"; // remove a source, choose how older mail is read (seat sources-basics)
 import { readSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-05-brain-tab-room"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
-import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-13-setup-polish"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
+import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-13-setup-clean"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 // BRAIN AND DRIVES FROM ONE READING (seat brain-and-drives, 2026-10-28, decision 1030): sources_view, asked once per brain
 // reading (fresh) and shared by the counts, the Sources list, the count under Brain's heading and the Drives tab.
@@ -79,7 +79,8 @@ import { onBrainChange } from "../doorbell.js";
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-05-work-tab";
 import { initWords } from "./words.js?v=2026-10-29-thinkrooms-3"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initLooks } from "./looks.js?v=2026-10-29-looks"; // the Look switch beside the language switch (seat looks, decision 1036)
-import { initWorking } from "./working.js?v=2026-11-13-setup-polish"; // all running work, one small indicator in the header (seat work-indicator, decision 1152 point 1)
+import { initHead, headOut } from "./head.js?v=2026-11-13-setup-clean"; // the header, cleaned up: her initial opens name, Language, Look, Settings, Sign Out (seat setup-clean, decision 1172.1)
+import { initWorking } from "./working.js?v=2026-11-13-setup-clean"; // all running work, one small indicator in the header (seat work-indicator, decision 1152 point 1)
 import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-29-thinkrooms-b";
 import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-10-30-rulings-small"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
@@ -347,6 +348,7 @@ function renderState(state, detail) {
   const who = $("#whoami");
   if (box) box.innerHTML = "";
   const b = el("div", "banner");
+  if (state !== "live") headOut();   // signed out or not read: what is written into #whoami below stays in plain sight in the header (seat setup-clean)
 
   if (state === "live") {
     b.className = "quiet";
@@ -400,6 +402,7 @@ function renderWho() {
   $("#whoami").innerHTML = `<b translate="no">${escape(v.name)}</b><br><span translate="no">${escape(v.role ?? "")}</span>`;
   initWords({ sb, url: SUPABASE_URL, key: PUBLISHABLE_KEY });   // the language switch beside her name (seat language-and-nudge)
   initLooks({ sb });   // the Look switch beside it, her look from the brain (seat looks)
+  initHead({ name: v.name, role: v.role, settings: () => goto('s-settings'), signOut: () => sb.auth.signOut() });   // her initial opens all of the above, with Settings and Sign Out (seat setup-clean, decision 1172.1)
   initWorking({ sb });   // "Working: 2 things" in the header on every screen, from the one reading work_running (seat work-indicator)
   // seat brain-status-2: the heading "What is in it." left with the retired #brain-old.
   // The one-line count under the heading: what the reading itself lists, never recounted here.
@@ -3767,7 +3770,7 @@ let routed = false;
 // go straight to the Brain page, which during setup was the second page with the second numbering.
 let landedBack = null;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
-const READY_JS = './ready.js?v=2026-11-13-setup-polish';   // seat getting-ready-screen; token seat setup-screens-2
+const READY_JS = './ready.js?v=2026-11-13-setup-clean';   // seat getting-ready-screen; token seat setup-screens-2
 let readyMod = null;
 // THE FRONT DOOR, How Verrandi Works (fill/setup.js, seat setup-front-door): from #how and the Brain at any time. Get started
 // opens Getting started at step 1; someone who is not the owner sees it without prices or Get started.
@@ -3778,7 +3781,7 @@ const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () =>
 const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
 // SETTINGS (seat setup-screens-2, decision 1138): after Ready, the same page becomes Settings (fill/settings.js, #s-settings,
 // #settings). The masthead carries one link: Getting started until Ready, Settings after (settings.js mastLink).
-const SETTINGS_JS = './settings.js?v=2026-11-13-setup-polish';
+const SETTINGS_JS = './settings.js?v=2026-11-13-setup-clean';
 let settingsMod = null;
 const setupLink = (notReady) => import(SETTINGS_JS).then((M) => M.mastLink(readyCtx(), notReady)).catch(() => { /* the Brain button still leads back */ });
 async function routeOnState(mode) {
@@ -4643,7 +4646,7 @@ function drawClock() {
     wrap.hidden = false;
     panel.innerHTML = '';
     if (error || !data) {
-      badge.className = 'badge b-grey'; badge.textContent = 'Not checked';
+      badge.className = 'badge b-grey'; badge.textContent = 'Not checked'; wrap.dataset.state = '';
       btn.title = 'How the Tool is doing: not checked';
       const p = el('p', 'health-head');
       p.textContent = 'The Tool could not read its own health just now. It will try again in a few minutes.';
@@ -4651,7 +4654,7 @@ function drawClock() {
       return;
     }
     badge.className = 'badge ' + (TONE[data.overall] || 'b-grey');
-    badge.textContent = data.word;
+    badge.textContent = data.word; wrap.dataset.state = String(data.overall || '');   // the cleaned-up header shows this word only when it is Needs you (skin.css, decision 1172.1)
     btn.title = 'How the Tool is doing: ' + data.word;
     const head = el('p', 'health-head');
     head.textContent = data.overall === 'healthy' ? 'Everything is working.'
@@ -4701,11 +4704,11 @@ function drawClock() {
     if (!r || r.ok !== true || !r.costs) { wrap.hidden = true; return; }
     const v = r.costs, b = v.balance || {};
     let tone = 'b-grey';
-    if (b.state === 'stopped_at_zero') { long.textContent = 'AI reading stopped: balance used up'; short.textContent = 'AI stopped'; tone = 'b-red'; }
+    if (b.state === 'stopped_at_zero') { long.textContent = 'Credit Used Up: Reading Stopped'; short.textContent = 'Credit $0'; tone = 'b-red'; }
     else if (b.state === 'no_prepaid_account' || b.balance_left_usd === undefined || b.balance_left_usd === null) {
       long.textContent = 'AI ' + money(v.this_month_usd) + ' this month'; short.textContent = 'AI ' + money(v.this_month_usd);
     } else {
-      long.textContent = 'AI balance ' + money(b.balance_left_usd) + ' left'; short.textContent = 'AI ' + money(b.balance_left_usd);
+      long.textContent = 'Credit ' + money(b.balance_left_usd); short.textContent = 'Credit ' + money(b.balance_left_usd);   /* ONE WORD: Credit (decision 1172.4). SUPERSEDED 2026-11-13: AI balance $N left */
       if (b.state === 'low' || b.state === 'answers_within_margin') tone = 'b-orange';
     }
     // THE COST DIAL'S WARNINGS (seat cost-dial, 2026-10-27, decision 1024 item 3): near (80 percent) or at the owner's
