@@ -587,7 +587,8 @@ function head() {
   const c = $('#gs-shape');
   /* STEPS 3 AND 4 HAVE NO COST AND TIME CARD (seat setup-polish 2026-11-13, audit fix 6): there the step says how it stands itself (fill/ready.js window.toolSetup, from the readings its cards are drawn from). Without this she had no two questions on steps 3 and 4 and a typed setup question got no answer at all. */ if (!c || !shown(c)) { const t = typeof window.toolSetup === 'function' ? window.toolSetup() : null; return t ? { cost: String(t.cost || ''), time: String(t.time || ''), src: String(t.src || ''), open: String(t.open || '') } : null; }
   const ct = $$('.gs-ct > div', c).map((d) => words($('b', d)));
-  return { cost: ct[0] || '', time: ct[1] || '', src: words($('.am-small', c)) };
+  const t1 = typeof window.toolSetup === 'function' ? window.toolSetup() : null;   /* the step's own line on how it stands, where it has one (seat setup-clean 2026-11-13: her opener matches the step's real state on every step) */
+  return { cost: ct[0] || '', time: ct[1] || '', src: words($('.am-small', c)), open: t1 && t1.open ? String(t1.open) : '' };
 }
 function stepTaps() { const r = readyNow(); return r && r.key && TAPS[r.key] && head() ? TAPS[r.key] : null; }
 function opener(key, turns) {
