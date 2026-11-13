@@ -306,7 +306,7 @@ function tick(now) {
 export function initWorking(ctx) {
   if (C) return;
   C = ctx;
-  window.toolWorkParts = { facts: workFacts, bar: workBar, title: workTitle, pulse: workPulse, alive: workAlive };   // one wording of a line of work, for any screen that shows one
+  window.toolWorkParts = { facts: workFacts, bar: workBar, title: workTitle, pulse: workPulse, alive: workAlive, mark: (it) => mark(workAlive(it)) };   /* mark: the breathing mark alone, alive only on a live reading (decision 1172.2: beside a step, beside a line) */   // one wording of a line of work, for any screen that shows one
   mount();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(true); });
   document.addEventListener('tool:work-refresh', () => { reading = null; seq++; tick(true); });
