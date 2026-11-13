@@ -1454,22 +1454,15 @@ function unreadFold(S, rows, short) {
   c.appendChild(el('span', 'am-num', 'Step 4 ' + DOT + ' Understand'));
   const top = el('div', 'gs-herotop'), l = el('div');
   const say = el('p', 'gr-small'); say.append(K(el('span', null, num(done)), 'pd'), ' of ', K(el('span', null, num(total)), 'pt'), drive ? ' of the mail and files you chose are understood' : ' of the mail you chose is understood');
+  if (pct === 100) say.replaceChildren(drive ? 'Of the mail and files you chose are understood.' : 'Of the mail you chose is understood.');   /* picture part 3: 100% and Done when only exceptions remain; the count is in the finished line below */
   l.append(K(el('div', 'gs-pct', pct === null ? '' : num(pct) + '%'), 'pct'), say);
   const r = el('div', 'gs-ustate');
   const w = K(el('div', 'gs-work'), 'work'); w.id = 'gs-uwork'; w.dataset.mode = 'after'; w.setAttribute('role', 'status'); workInto(w, S);
-  if (cnr > 0) say.append(' ' + DOT + ' ', K(el('b', null, num(cnr)), 'pc'), ' could not be read'); r.append(chip(stopped ? '' : 'ok', stopped ? 'Stopped' : 'Done'), w);
+  r.append(chip(stopped ? '' : 'ok', stopped ? 'Stopped' : 'Done'), w);   /* what could not be read is a row of What Did Not Go In (notIn4) */
   top.append(l, r);
   const bar = el('div', 'gs-bar gs-thick'), i = K(el('i'), 'bar'); i.style.width = (pct || 0) + '%'; bar.appendChild(i);
   c.append(top, bar);
-  const st = el('p', 'gs-story'); st.id = 'gs-ustory';
-  const priced = rows.every((x) => x.priced_usd !== null && x.priced_usd !== undefined && Number.isFinite(Number(x.priced_usd))) ? rows.reduce((a, x) => a + Number(x.priced_usd), 0) : null;
-  const mt = rows.map(mailedOf).filter((t) => t !== null), mailed = mt.length ? Math.max(...mt) : null;
-  const bits = [[el('b', null, stopped ? 'Stopped' : 'Done')], [K(el('b', null, num(done)), 'sd'), ' understood'],
-    [K(el('b', null, usd2(spent)), 'ss'), ' spent' + (priced !== null ? ' of ' + usd2(priced) + ' priced' : '') + (lim !== null ? (priced !== null ? ' (your limit ' + usd2(lim) + ')' : ', of your limit ' + usd2(lim)) : '')]];
-  /* what could not be read is said once, beside the count above, and opened below (seat setup-polish) */
-  if (mailed !== null) bits.push(['email sent ' + new Date(mailed).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })]);
-  bits.forEach((b, n) => { if (n) st.append(' ' + DOT + ' '); const sp = el('span', 'gs-sbit'); sp.append(...b); st.appendChild(sp); });
-  c.appendChild(st);
+  c.appendChild(finLine(rows, done, spent, lim, stopped));   /* SUPERSEDED 2026-11-13 (decision 1172.3): Done, N understood, $X spent of your limit, email sent, as one dotted line */
   if (tail.length) {
     const tn = tail.reduce((a, x) => a + (Number(x.waiting) || 0), 0), to = tail.reduce((a, x) => a + (Number(x.out_in_batches) || 0), 0);
     const q = p('gr-small gs-quiet', ''); q.id = 'gs-utail';
@@ -1478,7 +1471,6 @@ function unreadFold(S, rows, short) {
     q.append(sb, ' ', out);
     c.appendChild(q);
   }
-  const ll = leftLine(rows, lim); if (ll) c.appendChild(ll);
   // WHAT FAILED ON THE TOOL'S SIDE AND IS BEING READ AGAIN (brain_road ready.being_read_again, brain file steps-green-2): an
   // exception in repair, said in one line; it does not hold Ready back.
   const again = Number(S.road?.ready?.being_read_again) || 0;
@@ -1486,9 +1478,21 @@ function unreadFold(S, rows, short) {
   const exp = sum('expired');
   if (exp > 0) c.appendChild(p('gr-small gs-quiet', num(exp) + ' were not read by the AI company within 24 hours. They were not billed. Press Understand again to send them.'));
   if (S.uprogErr) c.appendChild(p('gr-small gs-over', NOREAD + ' The count above is the last one seen.'));
-  const uf = unreadFold(S, rows); if (uf) c.appendChild(uf);
-  /* DONE POINTS AT WHAT IS REALLY OPEN (audit fix 2): while an earlier step is not green the one button goes there and one line says what is left; Continue to Ready only when nothing earlier is open */ const prev = (sts || []).find((x) => !x.done && ['db', 'connect', 'search'].includes(x.k)); if (prev) { const ol = p('gs-left3', el('b', null, 'One thing left on step ' + prev.n + '.'), ' ' + leftSay(S, prev.k)); ol.id = 'gs-uleft3'; c.appendChild(ol); } const g = el('div', 'gr-go'), go = prev ? btn('go', 'Open step ' + prev.n + ' ' + DOT + ' ' + prev.name, () => { at = prev.k; autoAt = false; draw(); window.scrollTo({ top: 0 }); }) : btn('go', 'Continue to Ready', () => { at = 'ready'; draw(); window.scrollTo({ top: 0 }); }); go.id = prev ? 'gs-uback' : 'gs-uready';
+  const ni = notIn4(S, rows, lim); if (ni) c.appendChild(ni);
+  /* THE BUTTON SAYS WHERE IT GOES, AND WAITS FOR STEP 3 WHEN STEP 3 RUNS (seat setup-clean 2026-11-13, decision 1172.3; before it seat setup-polish, audit fix 2). An earlier step with something for her: one line, and the button goes there. Step 3 still working with nothing for her: a line with the mark, and the button waits. Otherwise Continue to Ready. */
+  const prev = (sts || []).find((x) => !x.done && ['db', 'connect', 'search'].includes(x.k)), L3 = step3Left(S), r3 = step3Run(S);
+  const waits = !!prev && prev.k === 'search' && !(L3 && L3.need.length > 0 && !smallBusy.search) && (!!r3 || smallBusy.search || !!(L3 && L3.busy));
+  const g = el('div', 'gr-go'); let go;
+  if (waits) {
+    const mailK = r3 ? r3.its.filter((x) => x.source_kind === 'gmail').length : 0, what = !r3 || !(r3.left > 0) ? 'your mail and files' : num(r3.left) + ' ' + (mailK === r3.its.length ? (r3.left === 1 ? 'email' : 'emails') : mailK ? 'emails and files' : r3.left === 1 ? 'file' : 'files');
+    const rl = runLine(r3 ? (r3.mv[0] || r3.its[0]) : null, 'Step 3 is still making ' + what + ' searchable' + (r3 && r3.mins !== null ? ' ' + DOT + ' ' + leftWords(r3.mins) : '') + '. Ready opens when it is done.', !!r3 && !r3.mv.length); rl.id = 'gs-uwait3'; c.appendChild(rl);
+    go = btn('go', 'Continue to Ready ' + DOT + ' After Step 3', () => {}); go.disabled = true; go.id = 'gs-uready';
+  } else if (prev) {
+    const ol = p('gs-left3', el('b', null, 'One thing left on step ' + prev.n + '.'), ' ' + leftSay(S, prev.k)); ol.id = 'gs-uleft3'; c.appendChild(ol);
+    go = btn('go', 'Open Step ' + prev.n + ' ' + DOT + ' ' + prev.name, () => { at = prev.k; autoAt = false; draw(); window.scrollTo({ top: 0 }); }); go.id = 'gs-uback';
+  } else { go = btn('go', 'Continue to Ready', () => { at = 'ready'; draw(); window.scrollTo({ top: 0 }); }); go.id = 'gs-uready'; }
   g.appendChild(go); c.appendChild(g);
+  const M = monthlyOf(S); c.appendChild(K(el('small', 'gs-srcnote', M === null ? 'New mail is understood as it arrives. Its monthly cost is in Settings once it is measured.' : 'New mail is understood as it arrives, about ' + usd2(M) + ' a month, shown in Settings.'), 'mo'));
   return c;
 }
 // ---------------------------------------------------------------------------------------------------------------------
