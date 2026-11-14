@@ -3521,3 +3521,8 @@ body.hd-out .hd-date { display: none; }
 .vera-draft-out:empty { display: none; }
 .vera-draft-ok { color: var(--ok-ink); font-weight: var(--w-mid); }
 .vera-draft-held { color: var(--ink); font-weight: var(--w-mid); }
+/* ── EVERY TAB IN THE SETUP'S STYLE (seat tabs-style, 2026-11-14, decision 1178). The writing rules are in the tab files' own words; the one mark beside a line being read is fill/working.js's (.wk-mark), not a second one. Tokens only. ── */
+.br-ll-h .wk-mark { width: 14px; height: 14px; }
+.mk-who-sees { overflow-wrap: anywhere; min-width: 0; }
+.mk-reads { min-width: 0; max-width: 100%; }
+.mk-reads select { max-width: 100%; min-width: 0; }
