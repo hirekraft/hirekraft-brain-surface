@@ -17,6 +17,7 @@
 // (fill/door.js). SUPERSEDED: the single line 'N in line' drawn from brain_road once a minute, whose time came from the last
 // full hour (it said 7,060 minutes ten minutes after a press of 22,384 files).
 import { brainDoor } from './door.js?v=2026-11-11-findable-fix-1';
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 
 const DOT = String.fromCharCode(183);
 const DASH = String.fromCharCode(8211);
@@ -155,7 +156,7 @@ async function confirmStep(C, total, res, tot, mode, after) {
   working(C, res, 'Asking the brain what this would start');
   let pv;
   try { const { data, error } = await C.sb.rpc('source_read_approve', { p_source_key: first.key, p_mode: mode, p_months: first.months ?? null, p_confirm: false }); if (error) throw error; pv = data; }
-  catch (e) { said(C, res, 'It could not be asked: ' + (e?.message ?? e) + '. Nothing was started.'); total.querySelectorAll('button').forEach((b) => { b.disabled = false; }); return; }
+  catch (e) { said(C, res, 'It could not be asked: ' + plainWords(String(e?.message ?? e)) + '. Nothing was started.'); total.querySelectorAll('button').forEach((b) => { b.disabled = false; }); return; }
   if (!pv?.ok) { said(C, res, (pv?.note ?? 'It was refused, and no reason was given.') + ' Nothing was started.'); return; }
   const box = C.el('div', 'br-confirm');
   const n = tot.keys.length;
