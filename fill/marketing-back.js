@@ -156,7 +156,7 @@ function drawHistory(stage, h) {
       ul.appendChild(li);
     }
     sec.appendChild(ul);
-    if (op.length > 10) sec.appendChild(mk('p', 'quiet', 'And ' + n0(op.length - 10) + ' more. Ask the box for the whole list.'));
+    if (op.length > 10) sec.appendChild(mk('p', 'quiet', 'And ' + n0(op.length - 10) + ' more. Ask Vera for the whole list.'));
   }
   const ds = Array.isArray(h.domains) ? h.domains : [];
   if (ds.length) {
