@@ -76,7 +76,7 @@ function drawBrain(fresh) {
 }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-14-tabs-style";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-14-mail-questions";
 import { initWords } from "./words.js?v=2026-10-29-thinkrooms-3"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initLooks } from "./looks.js?v=2026-10-29-looks"; // the Look switch beside the language switch (seat looks, decision 1036)
 import { initHead, headOut } from "./head.js?v=2026-11-14-ready-alive"; // the header, cleaned up: her initial opens name, Language, Look, Settings, Sign Out (seat setup-clean, decision 1172.1)

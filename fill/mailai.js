@@ -18,11 +18,18 @@
 
 export const QUESTIONS = [
   { k: 'money', q: 'Can I make money with this?', covers: 'Requirements, leads, partners and work orders read from your mail.', tone: 'money' },
-  { k: 'threat', q: 'Is anything threatening my business?', covers: 'Read so far: where your books and your mail disagree. Disputes and legal letters are not read for yet.', tone: 'warn' },
-  { k: 'harm', q: 'Could anything hurt or embarrass me?', covers: 'The Tool does not read for this yet. Mark examples under Teach the Tool so it can learn.', tone: 'room' },
+  { k: 'threat', q: 'Is anything threatening my business?', covers: 'Disputes and problems raised by people outside your business, read from the emails the Tool understands, and where your books and your mail disagree.', tone: 'warn' },
   { k: 'due', q: 'Is anything late or due?', covers: 'Money owed from your books, people waiting on your reply, and invitations.', tone: 'warn' },
   { k: 'scam', q: 'Is someone trying to scam me?', covers: 'Every email is checked as it arrives for someone pretending to be you, a look-alike address, or a push to pay someone new.', tone: 'scam' },
   { k: 'clean', q: 'What can I get rid of?', covers: 'Newsletters and sellers nobody here ever wrote to.', tone: 'people' },
+];
+// LEFT OUT UNTIL IT WORKS (seat mail-questions, 2026-11-14; decision 1075, the Beetle rule: works or is left out). The sixth question
+// of the approved picture (1088), Could anything hurt or embarrass me?, has no reading behind it: the understanding reader keeps
+// orders, invoices, payments, promises, complaints, contracts, meetings, requests and rates, and the privacy check decides only who
+// else may open an item. So it is not drawn as a question with an empty list, and not offered in Teach the Tool; one line says so.
+// SUPERSEDES its row "The Tool does not read for this yet. Mark examples under Teach the Tool" (no mark was ever kept: 0 on HireKraft).
+export const LEFT_OUT = [
+  { k: 'harm', line: 'Could anything hurt or embarrass me? is left out for now: the Tool does not yet read your mail for this, so it cannot answer it. It comes back here once it does.' },
 ];
 
 let A = null;           // what mail.js hands over (initAi)
@@ -40,9 +47,27 @@ const mk = (t, c, x) => A.mk(t, c, x);
 function btn(label, cls, fn) { const b = mk('button', cls, label); b.type = 'button'; b.addEventListener('click', () => fn(b)); return b; }
 
 // ── the six questions, in the middle column ──
+// THE THREATS come beside attention's list, not in it (attention.threats; seat mail-questions): Worth Your Attention and For You
+// read only items and more and do not change. Each is tagged by the same question rule and Not This, so q is 'threat' or 'none'.
+function threatItems() {
+  const at = A.attn();
+  const gone = at && at.gone ? at.gone : new Set();
+  return at && at.data && Array.isArray(at.data.threats) ? at.data.threats.filter((x) => x.q === 'threat' && !gone.has(x.key)) : [];
+}
+function threatBoundary() {
+  const d = A.attn() && A.attn().data;
+  if (!d) return '';
+  if (d.threats_error) return 'Disputes could not be read just now. ' + A.plainWords(String(d.threats_error)) + ' This is not a claim that nothing threatens your business.';
+  const r = d.threats_read || {};
+  const not = Array.isArray(r.not_understood) ? r.not_understood : [];
+  const held = Number(d.threats_held_back || 0);
+  return (not.length ? 'Not read for disputes: ' + not.join(', ') + ' (the Tool does not understand ' + (not.length === 1 ? 'this mailbox' : 'these mailboxes') + ').' : '')
+    + (held ? (not.length ? ' ' : '') + held + ' more ' + (held === 1 ? 'email is' : 'emails are') + ' held back because you may not open ' + (held === 1 ? 'it' : 'them') + '.' : '');
+}
 export function questionCounts() {
   const out = new Map(QUESTIONS.map((x) => [x.k, 0]));
   for (const it of A.attnAll()) if (out.has(it.q)) out.set(it.q, out.get(it.q) + 1);
+  out.set('threat', out.get('threat') + threatItems().length);
   out.set('scam', A.scamItems().length);
   out.set('clean', cleanup && cleanup.data ? Number(cleanup.data.senders || 0) : out.get('clean'));
   return out;
@@ -61,11 +86,13 @@ export function drawQuestions(list) {
   for (const Q of QUESTIONS) {
     const sec = mk('section', 'mailx-q mailx-q-' + Q.tone);
     const h = mk('h4', 'mailx-q-head');
-    const rows = Q.k === 'scam' ? A.scamItems() : Q.k === 'clean' ? [] : items.filter((x) => x.q === Q.k);
+    const rows = Q.k === 'scam' ? A.scamItems() : Q.k === 'clean' ? [] : Q.k === 'threat' ? items.filter((x) => x.q === Q.k).concat(threatItems()) : items.filter((x) => x.q === Q.k);
     const n = Q.k === 'clean' ? (cleanup && cleanup.data ? Number(cleanup.data.senders || 0) : null) : rows.length;
     h.append(mk('span', 'mailx-q-dot'), mk('span', 'mailx-q-text', Q.q), mk('span', 'mailx-q-n', n === null ? '' : String(n)));
     sec.appendChild(h);
     sec.appendChild(mk('p', 'mailx-q-covers', Q.covers));
+    const bound = Q.k === 'threat' ? threatBoundary() : '';
+    if (bound) sec.appendChild(mk('p', 'mailx-q-covers', bound));
     const ul = mk('ul', 'mailx-msgs mailx-att-rows');
     if (Q.k === 'clean') {
       if (!cleanup || cleanup.loading) sec.appendChild(mk('p', 'quiet working', 'Grouping newsletters and sellers across your mailboxes.'));
@@ -99,13 +126,13 @@ export function drawQuestions(list) {
         ul.appendChild(li);
       }
     }
-    if (Q.k === 'harm') sec.appendChild(btn('Teach the Tool', 'go ghost', () => { teachQ = 'harm'; A.chooseView({ kind: 'teach' }); }));
-    else if (!rows.length && Q.k !== 'clean') sec.appendChild(mk('p', 'quiet', 'Nothing in the last 14 days.'));
+    if (!rows.length && Q.k !== 'clean') sec.appendChild(mk('p', 'quiet', 'Nothing in the last 14 days.'));
     if (ul.childNodes.length) sec.appendChild(ul);
     const said = markSaid.get('q|' + Q.k);
     if (said) { const p = mk('p', 'mailx-att-out find-lesson'); p.setAttribute('aria-live', 'polite'); p.textContent = said; sec.appendChild(p); }
     list.appendChild(sec);
   }
+  for (const L of LEFT_OUT) list.appendChild(mk('p', 'quiet mailx-q-left', L.line));
   const rest = items.filter((x) => !x.q && !x.following);
   if (rest.length) {
     const sec = mk('section', 'mailx-q');
