@@ -7,6 +7,7 @@
 // Drawn into #money-ledger on the Money tab (runway left that mount for it). Owner only, like the tab.
 
 import { fmtDate } from "./dates.js?v=2026-10-22-dates";
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 let ctx = null;   // { sb, el, $, countOf }
 let data = null;
 
@@ -25,7 +26,7 @@ async function readLedger() {
     if (!error) return d;
     let body = null; try { body = await error.context?.json?.(); } catch (_) { body = null; }
     return body ?? { ok: false, note: "Where we stand could not be worked out: " + String(error.message ?? error) };
-  } catch (e) { return { ok: false, note: "Where we stand could not be worked out: " + String(e?.message ?? e) }; }
+  } catch (e) { return { ok: false, note: "Where we stand could not be worked out: " + plainWords(String(e?.message ?? e)) }; }
 }
 
 export async function loadLedger() {
