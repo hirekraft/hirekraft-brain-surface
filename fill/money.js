@@ -245,7 +245,7 @@ function drawRunway() {
   if (run.personal_card_spend?.note) note(mount, run.personal_card_spend.note);
   const src = (run.sources ?? []).map((s) => s.system + " " + s.what + (s.read_at ? " (" + when(s.read_at) + ")" : ""));
   if (src.length) note(mount, "Read live just now: " + src.join("; ") + ".");
-  note(mount, "Ask the box: how long can we go?");
+  note(mount, "Ask Vera: how long can we go?");
 }
 
 // ── what we pay for ──────────────────────────────────────────────────────────
@@ -314,7 +314,7 @@ function drawCommitments() {
     d.appendChild(commitmentTable(people));
     mount.appendChild(d);
   }
-  note(mount, "Ask the box: what are we paying for every month?");
+  note(mount, "Ask Vera: what are we paying for every month?");
 }
 
 // ── what was not read ────────────────────────────────────────────────────────
