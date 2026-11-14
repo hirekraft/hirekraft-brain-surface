@@ -937,9 +937,10 @@ function excCard(S) {
   const c = el('section', 'am-step gs-yes gs-exc'); c.id = 'gs-need';
   if (L.need.length) {
     c.appendChild(el('h2', 'am-h2', 'What Is Not Searchable Yet'));
-    if (smallBusy.search) { const rl = runLine(null, 'Making these searchable on its own' + (L.P.small ? ': it costs under ' + usdT(L.P.small.under_usd) + ', so no need to ask.' : '.')); rl.id = 'gs-small3'; c.appendChild(rl); }   /* decision 1171 */
+    /* SMALL LEFTOVERS GO ON THEIR OWN (seat ready-alive 2026-11-14, decisions 1171 and 1173 (1)): the brain starts them on its schedule, within about half an hour, page open or not; the step says so and asks nothing. The amount and the verdict are the brain's (brain_road ready.small). */
+    if (S.road?.ready?.small?.on_its_own === true && mark(S, 'agreed')) { const n3 = L.need.reduce((a, x) => a + (Number(x.to_read) || 0), 0), u3 = L.need.reduce((a, x) => a + (Number(x.usd) || 0), 0); const rl = p('gs-runline gs-still', el('b', null, num(n3)), (n3 === 1 ? ' new item is' : ' new items are') + ' not searchable yet. ' + (n3 === 1 ? 'It goes' : 'They go') + ' in on ' + (n3 === 1 ? 'its' : 'their') + ' own within the half hour ' + DOT + ' ', el('b', null, usd2(u3)), ' (under ' + usdT(S.road.ready.small.under_usd) + ', so no need to ask).'); rl.id = 'gs-small3'; c.appendChild(rl); }
     else {
-      c.appendChild(el('small', 'gs-srcnote', 'One thing is left for you. When it is in, this step is green.'));
+      c.appendChild(el('small', 'gs-srcnote', 'This waits for your yes. When it is in, or set aside on step 5, this step is green.'));
       if (smallWhy.search) c.appendChild(p('gr-small gs-over', 'This was not started on its own: ' + dotted(smallWhy.search)));
       yesInto(c, S, L.P, L.need);
     }
@@ -1314,8 +1315,9 @@ const CARDS = {
     const ok = st[st.length - 1].done;
     /* THE TWO BOXES THAT SAID NOTHING GO (seat setup-clean 2026-11-13, decision 1172, Also): Cost "your monthly costs, below" and Time "now". One line says what Ready is; the costs are in their own card below. Her guide reads this step from window.toolSetup. */
     const out = [H(ok ? 'Your brain is ready.' : 'Your brain is not ready yet.'), p('gs-does', 'Mail, Drives and the rest of the Tool open, and your brain keeps up by itself.')];
-    out.push(ok ? (() => { const d = okMark('Everything is connected and searchable, and what matters is understood. It keeps up by itself.'); return d; })() : p('gr-lead', 'When steps 1 to 4 are done, this turns green and you are told. From then on it keeps up by itself.'));
-    if (!ok) { const so = stillOpen(S); if (so) out.push(so); } { const x5 = exc5(S); if (x5) out.push(x5); }
+    const RD5 = S.road?.ready || {}, aside5 = ok && RD5.set_aside === true && RD5.by_itself === false;   /* seat ready-alive 2026-11-14, decision 1173 (2) */
+    out.push(ok ? okMark(aside5 ? 'Ready. You opened the Tool with a few things set aside; they are listed below. It keeps up by itself.' : 'Everything is connected and searchable, and what matters is understood. It keeps up by itself.') : p('gr-lead', 'When what is open below is settled, or you choose Continue Anyway, this says Ready. From then on it keeps up by itself.'));
+    if (!ok || aside5) { const so = stillOpen(S); if (so) out.push(so); } { const x5 = exc5(S); if (x5) out.push(x5); }
     out.push(brainCard(S));
     const M = monthlyOf(S);
     const db = S.ai?.cost?.database;
@@ -1341,24 +1343,43 @@ const CARDS = {
     return out;
   },
 };
-// WHAT IS STILL OPEN BEFORE READY (seat step4-after 2026-11-12, Alex: "What can I work with?"): the brain's own reasons
-// (brain_road 'ready'), each in words with the step that settles it. Never a second rule: only what the brain answered.
+// READY SETTLES WHAT IS OPEN IN PLACE (seat ready-alive 2026-11-14, decisions 1173 (2) and 1174 (2); Alex 18:04 PT: "There has to
+// be also a place to say just ignore and move on"; 18:09 PT: "it would make sense to have that in the Ready tab ... now if I click
+// on it, it takes me to step 3"). The brain's own reasons (brain_road 'ready'), each in one line, and its action right here: what
+// can be put in is put in from this card (step 3's own press, yesInto), and Continue Anyway (the owner's, kept by the brain as
+// setup_mark ready_anyway) opens the Tool with the rest set aside. Once set aside, the same list stays under Ready, titled Set
+// Aside. Never a second rule, never a link to another step. SUPERSEDED 2026-11-14: rows that each sent her to another step.
+let anyBusy = false, anyWhy = '';
 function stillOpen(S) {
   const RD = S.road?.ready;
   if (!RD || typeof RD !== 'object') return null;
-  const rows = [], add = (t, k, n) => rows.push([t, k, n]);
-  if (RD.searchable === false) add(Number(RD.to_read) > 0 ? num(RD.to_read) + ' emails and files are still to be made searchable' : Number(RD.not_counted) > 0 ? num(RD.not_counted) + (Number(RD.not_counted) === 1 ? ' mailbox or drive is' : ' mailboxes or drives are') + ' not counted yet' : 'Not everything is searchable yet', 'search', '3');
+  const aside = RD.set_aside === true, rows = [], add = (n, t) => rows.push([n, t]);
+  const L = step3Left(S), need = L && S.owner ? L.need : [];
+  if (RD.searchable === false && !need.length) { if (Number(RD.not_counted) > 0) add(RD.not_counted, (Number(RD.not_counted) === 1 ? 'mailbox or drive is' : 'mailboxes or drives are') + ' not counted yet. Counting is free and goes on by itself.'); else if (Number(RD.to_read) > 0) add(RD.to_read, (Number(RD.to_read) === 1 ? 'email or file is' : 'emails and files are') + ' being made searchable now.'); }
   if (RD.understood === false) {
     const miss = Number(RD.mailboxes_to_choose) - Number(RD.mailboxes_chosen);
-    if (miss > 0) add(num(miss) + (miss === 1 ? ' mailbox has' : ' mailboxes have') + ' not been started on step 4 yet', 'understand', '4');
-    if (Number(RD.stopped) > 0) add(num(RD.stopped) + (Number(RD.stopped) === 1 ? ' mailbox was' : ' mailboxes were') + ' stopped while being understood', 'understand', '4');
-    if (Number(RD.waiting) > 0) add(num(RD.waiting) + (Number(RD.waiting) === 1 ? ' is' : ' are') + ' waiting to be understood', 'understand', '4');
+    if (miss > 0) add(miss, (miss === 1 ? 'mailbox is' : 'mailboxes are') + ' not understood yet: Understand was not started for ' + (miss === 1 ? 'it' : 'them') + '.');
+    if (Number(RD.stopped) > 0) add(RD.stopped, (Number(RD.stopped) === 1 ? 'mailbox was' : 'mailboxes were') + ' stopped while being understood.');
+    if (Number(RD.waiting) > 0) add(RD.waiting, (Number(RD.waiting) === 1 ? 'email or file is' : 'emails and files are') + ' still being understood.');
   }
-  if (RD.keeping_up === false) add(num(RD.refresh_errors) + (Number(RD.refresh_errors) === 1 ? ' connection' : ' connections') + ' could not refresh', 'connect', '2');
-  if (!rows.length) return null;
-  const c = card('hand', 'What Is Still Open', null); c.id = 'gs-open';
-  for (const [t, k, n] of rows) { const r = el('div', 'gs-pl'), b = btn('gr-link', 'Open Step ' + n, () => { at = k; autoAt = false; draw(); window.scrollTo({ top: 0 }); }); r.append(el('span', null, t), b); c.appendChild(r); }
-  c.appendChild(p('gr-small', 'Mail, Drives and the rest open when these are settled.'));
+  if (RD.keeping_up === false) add(RD.refresh_errors, (Number(RD.refresh_errors) === 1 ? 'connection' : 'connections') + ' could not refresh. The Tool tries again on its own.');
+  if (!rows.length && !(RD.searchable === false && need.length)) return null;
+  const c = card('hand', aside ? 'Set Aside' : 'What Is Still Open', null); c.id = 'gs-open';
+  if (aside) c.appendChild(p('gr-small', 'You opened the Tool with this still open' + (RD.set_aside_at ? ' on ' + whenWords(RD.set_aside_at) : '') + '. It stays listed here until it is settled.'));
+  for (const [n, t] of rows) { const d = el('div', 'gs-ex'), x = el('span'); x.append(el('b', null, num(n)), ' ' + t); d.appendChild(x); c.appendChild(d); }
+  if (RD.searchable === false && need.length) { const box = el('div', 'gs-openput'); box.id = 'gs-openput'; yesInto(box, S, L.P, need); c.appendChild(box); }
+  if (!aside && S.owner) {
+    const out = p('gr-small', anyWhy), go = btn('go ghost', anyBusy ? 'Opening' : 'Continue Anyway', async () => {
+      if (anyBusy) return; anyBusy = true; anyWhy = ''; paint();
+      const r = await rpc('getting_ready_mark', { p_key: 'ready_anyway', p_value: { at: new Date().toISOString(), to_read: Number(RD.setup_to_read ?? RD.to_read) || 0, waiting: Number(RD.waiting) || 0 } });
+      anyBusy = false;
+      if (r.error || !r.data || r.data.ok !== true) { anyWhy = 'Not opened: ' + dotted(String(r.error?.message ?? r.data?.note ?? r.data?.reason ?? 'no reason was given')); if (R === S) paint(); return; }
+      mount(C);
+    });
+    go.id = 'gs-anyway'; go.disabled = anyBusy; out.id = 'gs-anyout';
+    const act = el('div', 'gs-act gs-anyact'); act.append(go, el('small', 'gs-srcnote', 'Opens Mail, Drives and the rest now. What is open stays listed here, and you can settle it any time.'));
+    c.append(act, out);
+  }
   return c;
 }
 // THE BRAIN, ONE ROW PER KIND (step 5): counts from brain_road and the one reading of sources; Understood only where the
@@ -1567,9 +1588,9 @@ function step3Run(S) {
 // afterwards what was done and what it cost. THE AMOUNT AND THE VERDICT ARE THE BRAIN'S; the press is the same door as her own
 // (lens-ask search_go / understand_go, as the signed-in owner, with their refusals: never past her credit, 1148). What went through
 // is kept by the brain (getting_ready_mark small_search / small_understand, which refuses a figure that is not under the amount).
-// Only after she has agreed to the terms, only what is left over (step 4: only after her own press is done), once per opening;
-// a refusal is said on the card and the ordinary button stays. STATED BOUNDARY: it happens while the owner has this page open;
-// nothing presses while nobody is here, because her credit is read at the meter by lens-ask, which the brain cannot ask by itself.
+// Only after she has agreed to the terms, only what is left over. SINCE 2026-11-14 (seat ready-alive, decision 1173) THE BRAIN DOES THIS ON
+// ITS OWN SCHEDULE, page open or not (small_cost_tick); this page only says what was done, from the marks. SUPERSEDED: the stated
+// boundary that it happened only while the owner had this page open.
 const SMALL_DAYS = 3;   // how long a step keeps saying what went through on its own
 const smallBusy = { search: false, understand: false }, smallTried = { search: false, understand: false }, smallWhy = { search: '', understand: '' };
 const smallUnder = (S) => { const u = Number(S.splan?.small?.under_usd); return S.splan && S.splan.ok === true && Number.isFinite(u) && u > 0 ? u : null; };
@@ -1580,48 +1601,9 @@ const smallIds = (S) => { const v = mark(S, 'small_understand')?.value; return n
 const mainAll = (S) => { const ids = smallIds(S); return ids.size ? pressAll(S).filter((x) => !ids.has(String(x.press_id || ''))) : pressAll(S); };
 const smallAll = (S) => { const ids = smallIds(S); return ids.size ? pressAll(S).filter((x) => ids.has(String(x.press_id || ''))) : []; };
 const workRefresh = () => { try { document.dispatchEvent(new CustomEvent('tool:work-refresh')); } catch (_) { /* the indicator reads again on its own */ } };
-async function smallSearch(S) {
-  if (R !== S || !S.owner || !pending || smallBusy.search || smallTried.search || C.$('#gr-sheet')) return;
-  const L = step3Left(S), P = L && L.P;
-  if (!P || !P.small || P.small.ok !== true || !L.need.length || !mark(S, 'agreed') || L.need.some((r) => plan.off[r.key])) return;
-  const under = Number(P.small.under_usd), keys = L.need.map((x) => x.key);
-  smallBusy.search = true; smallTried.search = true; paint();
-  const stop = (why) => { smallBusy.search = false; smallWhy.search = String(why || ''); if (R === S) paint(); };
-  const pv = await goAsk({ months: plan.months, sources: keys, confirm: false });   // the exact price at this moment, before anything starts
-  if (pv.error || !pv.data || pv.data.ok !== true) return stop(pv.error?.message ?? pv.data?.note ?? pv.data?.reason ?? 'no reason was given');
-  if (pv.data.nothing_to_read) return stop('');
-  if (!(Number(pv.data.total_usd) < under)) return stop('it costs ' + usd2(pv.data.total_usd) + ', which is not under ' + usdT(under));
-  const r = await goAsk({ months: plan.months, sources: keys, confirm: true });
-  if (r.error || !r.data || r.data.ok !== true) return stop(r.error?.message ?? r.data?.note ?? r.data?.reason ?? 'no reason was given');
-  await rpc('getting_ready_mark', { p_key: 'small_search', p_value: { usd: Number(r.data.total_usd) || 0, items: Number(r.data.total_items) || 0, press: r.data.press || null, at: new Date().toISOString() } });
-  smallBusy.search = false; workRefresh();
-  toast(num(r.data.total_items) + ' are being made searchable ' + DOT + ' ' + usd2(r.data.total_usd) + ' (under ' + usdT(under) + ', so no need to ask).');
-  mount(C);
-}
-// what is chosen to be understood, has something left, is priced, and is in no press of hers yet (a source she already pressed
-// takes what arrives in it on its own, understand_tick, and is never pressed a second time from here)
-function smallURows(S) {
-  const U = S.usam; if (!U || U.ok !== true || U.state !== 'done') return [];
-  const pressed = new Set(pressAll(S).map((x) => x.source_key));
-  return chosenRows(U).filter((r) => !pressed.has(r.source_key) && r.usd !== null && r.usd !== undefined && Number.isFinite(Number(r.usd)));
-}
-async function smallUnderstand(S) {
-  if (R !== S || !S.owner || !pending || smallBusy.understand || smallTried.understand || C.$('#gr-sheet') || picking() || doorBusy) return;
-  const under = smallUnder(S), bal = balanceLeft(S);
-  if (under === null || bal === null || !mark(S, 'agreed') || !mainAll(S).length || !pressSettled(S)) return;
-  const rows = smallURows(S); if (!rows.length) return;
-  const price = Math.round(rows.reduce((a, r) => a + Number(r.usd), 0) * doorMul(S) * 100) / 100, lim = Math.floor((under - 0.01) * 100) / 100;
-  if (!(price < under) || lim > bal) return;
-  smallBusy.understand = true; smallTried.understand = true; paint();
-  const stop = (why) => { smallBusy.understand = false; smallWhy.understand = String(why || ''); if (R === S) paint(); };
-  const dk = await doorKeep(S); if (!dk.ok) return stop(dk.note);
-  const g = await C.askBody({ understand_go: { groups: chosenGroups(S), months: 24, limit: lim, sources: rows.map((r) => r.source_key), confirm: true } }).catch((e) => ({ ok: false, error: String(e?.message ?? e) }));
-  if (!g || g.ok !== true) return stop(noteOf(g));
-  const was = mark(S, 'small_understand')?.value, ids = (Array.isArray(was?.presses) ? was.presses.map(String) : []).concat(g.press ? [String(g.press)] : []).slice(-20);
-  await rpc('getting_ready_mark', { p_key: 'small_understand', p_value: { usd: price, limit_usd: lim, n: rows.length, presses: ids, at: new Date().toISOString() } });
-  smallBusy.understand = false; workRefresh();
-  mount(C);
-}
+// smallSearch and smallUnderstand (this page starting the small leftovers itself, with its own preview and press) were REMOVED by seat
+// ready-alive 2026-11-14: the brain starts them on its own schedule (small_cost_tick), so there is one implementation. smallBusy and
+// smallWhy stay as the two never-set flags the cards still read; a later seat may take them out with their branches.
 // STEP 4, DONE: THE FINISHED LINE (picture part 3): how many understood, what it cost of the limit as she typed it, when it finished
 // (the brain's press_done_at: when the last thing her press asked for was read; never the time of the email).
 function finLine(rows, done, spent, lim, stopped) {
@@ -2134,8 +2116,8 @@ function treeU(S, ro) {
   if (empty > 0) kids.push(el('small', 'gs-srcnote', num(empty) + (empty === 1 ? ' more has nothing in it to read.' : ' more have nothing in them to read.')));
   tree.appendChild(g4('drive', 'folder', 'Google Drive', [shared.length ? num(shared.length) + (shared.length === 1 ? ' shared drive' : ' shared drives') : '', meet.length ? 'meetings' : '', rest.length ? num(rest.length) + (rest.length === 1 ? ' folder' : ' folders') : ''].filter(Boolean).join(' ' + DOT + ' ') || (dr.length ? 'Nothing in them to read' : 'None connected yet'), '', '', kids));
   const sys = src.filter((r) => r.group === 'systems'), sn = sys.map((r) => String(r.name || '')).filter(Boolean);
-  if (sys.length) tree.appendChild(g4('sys', 'systems', 'Your Systems', sn.length > 3 ? sn.slice(0, 3).join(', ') + ' and ' + num(sn.length - 3) + ' more' : sn.join(', '), 'Records Already Understood ' + DOT + ' Free', 'ok',
-    [el('small', 'gs-srcnote', 'Your systems already keep their records in order (invoices, contacts, people), so those count as understood from the moment a system is connected. Files a system holds, such as resumes in an applicant system, are searchable only for now.')]));
+  if (sys.length) tree.appendChild(g4('sys', 'systems', 'Your Systems', sn.length > 3 ? sn.slice(0, 3).join(', ') + ' and ' + num(sn.length - 3) + ' more' : sn.join(', '), 'Records Kept and Searchable ' + DOT + ' Free', 'ok',
+    [el('small', 'gs-srcnote', 'Your systems already keep their records in order (invoices, contacts, people), so the Tool keeps them as they are, searchable and ready to ask about, from the moment a system is connected. Files a system holds, such as resumes in an applicant system, are searchable only for now.')]));
   if (!ro) { c.append(tree, insideFold(S)); return c; }
   const f = el('details', 'gs-fold'); f.id = 'gs-chosefold'; f.open = choseOpen; f.addEventListener('toggle', () => { choseOpen = f.open; });
   f.append(el('summary', null, ok && rows.length ? 'See the ' + (chosenWords(U) || 'mailboxes and drives') + ' being understood' : 'See your mailboxes and drives'), tree);
