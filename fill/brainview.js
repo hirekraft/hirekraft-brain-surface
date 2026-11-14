@@ -13,6 +13,7 @@
 // The brain's own sentences (a source's line, a finding's line) are shown as the brain wrote them.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 const WORD = { up_to_date: ['Up to Date', 'green'], reading: ['Reading', 'blue'], needs_you: ['Needs You', 'orange'] };
 const GROUPS = [['email', 'Email'], ['drives', 'Drives and Folders'], ['calendar', 'Calendar'], ['contacts', 'Contacts'],
   ['systems', 'Systems'], ['loose', 'Loose Files']];
@@ -34,7 +35,7 @@ export function readSources(sb, fresh) {
 
 function failed(box, el, what, e) {
   const p = el('p', 'quiet');
-  p.textContent = what + ' could not be read just now (' + String(e?.message ?? e) + '). This is the reading failing, not the sources being empty.';
+  p.textContent = what + ' could not be read just now (' + plainWords(String(e?.message ?? e)) + '). This is the reading failing, not the sources being empty.';
   box.replaceChildren(p);
 }
 
