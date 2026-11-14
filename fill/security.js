@@ -66,11 +66,11 @@ function drawGauges() {
   const first = last?.ok ? last.run.first_run : false;
   const ch = g?.change?.places;
   const tiles = [
-    { n: g?.openings_to_decide, words: "openings need a decision", sub: !last?.ok ? "" : first ? "first run" : (ch ? (ch > 0 ? ch + " more places than last run" : -ch + " fewer places than last run") : "same as last run"), go: "#sec-openings", red: Number(g?.openings_to_decide) > 0 },
-    { n: g?.critical_places_beyond_company, words: "places with critical files open beyond the company", sub: first ? "first run" : "", go: "#sec-openings", red: Number(g?.critical_places_beyond_company) > 0 },
-    { n: g?.outside_parties, words: "outside people and domains with access", sub: first ? "first run" : "", go: "#sec-grid" },
-    { n: g == null ? null : Number(g.delegates) + Number(g.send_as), words: g == null ? "mailbox delegates and send-as" : plural(g.delegates, "delegate", "delegates") + " and " + plural(g.send_as, "send-as", "send-as") + " on mailboxes", sub: "", go: "#sec-grid" },
-    { n: live.refused?.ok ? (live.refused.people ?? []).reduce((a, p) => a + Number(p.week ?? 0), 0) : null, words: "questions refused this week", sub: "", go: "#sec-watch", red: (live.refused?.people ?? []).some((p) => p.alert) },
+    { n: g?.openings_to_decide, words: "Openings need a decision", sub: !last?.ok ? "" : first ? "first run" : (ch ? (ch > 0 ? ch + " more places than last run" : -ch + " fewer places than last run") : "same as last run"), go: "#sec-openings", red: Number(g?.openings_to_decide) > 0 },
+    { n: g?.critical_places_beyond_company, words: "Places with critical files open beyond the company", sub: first ? "first run" : "", go: "#sec-openings", red: Number(g?.critical_places_beyond_company) > 0 },
+    { n: g?.outside_parties, words: "Outside people and domains with access", sub: first ? "first run" : "", go: "#sec-grid" },
+    { n: g == null ? null : Number(g.delegates) + Number(g.send_as), words: g == null ? "Mailbox delegates and send-as" : plural(g.delegates, "delegate", "delegates") + " and " + plural(g.send_as, "send-as", "send-as") + " on mailboxes", sub: "", go: "#sec-grid" },
+    { n: live.refused?.ok ? (live.refused.people ?? []).reduce((a, p) => a + Number(p.week ?? 0), 0) : null, words: "Questions refused this week", sub: "", go: "#sec-watch", red: (live.refused?.people ?? []).some((p) => p.alert) },
     { n: live.door?.ok && live.door.door?.ran_at ? live.door.door.passing : null, words: live.door?.ok && live.door.door?.ran_at ? "of " + ((live.door.door.lines ?? []).length) + " Tool checks passing" : "Tool checks passing", sub: live.door?.door?.stale ? "not run lately" : "", go: "#sec-door", red: (live.door?.door?.lines ?? []).some((x) => !x.ok) },
   ];
   const row = ctx.el("div", "sp-gauges");
@@ -109,18 +109,18 @@ function placeRow(p) {
   const acts = ctx.el("div", "sp-acts");
   const said = line("quiet", "");
   if (p.state === "quiet") {
-    acts.appendChild(button('Take back "on purpose"', () => mark(p, false, said)));
+    acts.appendChild(button('Take Back "On Purpose"', () => mark(p, false, said)));
   } else {
-    acts.appendChild(button("This is on purpose", () => mark(p, true, said)));
+    acts.appendChild(button("This Is on Purpose", () => mark(p, true, said)));
   }
   if (p.link) {
     const a = ctx.el("a", "go ghost"); a.href = p.link; a.target = "_blank"; a.rel = "noopener";
-    a.textContent = "Close it in Google"; a.title = "Opens the folder in Google; use Share there to change who can open it.";
+    a.textContent = "Close It in Google"; a.title = "Opens the folder in Google; use Share there to change who can open it.";
     acts.appendChild(a);
   } else {
     acts.appendChild(line("quiet", "These files sit at the top of a person's own Drive; close each in Google."));
   }
-  if (Number(p.critical) > 0) acts.appendChild(button("Show the critical files", () => showCritical(p, li)));
+  if (Number(p.critical) > 0) acts.appendChild(button("Show the Critical Files", () => showCritical(p, li)));
   li.appendChild(acts); li.appendChild(said);
   return li;
 }
@@ -172,7 +172,7 @@ function drawOpenings() {
   } else if (places.length) note(mount, "Every opening is marked on purpose.");
   if (quiet.length) {
     const d = ctx.el("details", "recs");
-    const s = ctx.el("summary", "recs-sum"); s.textContent = "Open on purpose (" + quiet.length + ")"; d.appendChild(s);
+    const s = ctx.el("summary", "recs-sum"); s.textContent = "Open on Purpose (" + quiet.length + ")"; d.appendChild(s);
     const ul = ctx.el("ul", "attn");
     for (const p of quiet) ul.appendChild(placeRow(p));
     d.appendChild(ul); mount.appendChild(d);
@@ -229,7 +229,7 @@ function drawHow() {
   mount.innerHTML = "";
   if (!last?.ok) return;
   const d = ctx.el("details", "recs");
-  const s = ctx.el("summary", "recs-sum"); s.textContent = "How this is counted"; d.appendChild(s);
+  const s = ctx.el("summary", "recs-sum"); s.textContent = "How This Is Counted"; d.appendChild(s);
   d.appendChild(line("a-detail", "A file is critical when it would hurt if a stranger got it. Your definition:"));
   const ul = ctx.el("ul", "ans-list");
   for (const k of last.critical_definition ?? []) { const li = ctx.el("li"); li.textContent = k.words + " (set by " + String(k.set_by).split(" (")[0] + ")"; ul.appendChild(li); }
