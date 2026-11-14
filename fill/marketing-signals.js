@@ -17,7 +17,7 @@ export function sourcesOf(it) {
   const seen = new Map();
   for (const r of (it.roles || [])) for (const s of (r.sources || [])) {
     const mail = MAIL_SOURCES.includes(s) && !(r.found && r.found.length);
-    const label = mail ? 'Job alert in your mail' : 'Seen on ' + s;
+    const label = mail ? 'Job Alert in Your Mail' : 'Seen on ' + s;
     if (!seen.has(label)) seen.set(label, { label, mail });
   }
   return [...seen.values()].slice(0, 3);
@@ -38,9 +38,9 @@ export function sourcePicture(C, items, b) {
   const s = b.web_search || {};
   const row = mk(C, 'div', 'mk2-tiles');
   const t = (n, label, note) => { const d = mk(C, 'div', 'mk2-tile'); d.append(data_(C, 'p', 'mk2-tile-n', n0(n)), mk(C, 'p', 'mk2-tile-label', label)); if (note) d.appendChild(mk(C, 'p', 'mk-item-meta', note)); return d; };
-  row.append(t(items.length, 'companies hiring where you know someone', n0(b.companies_hiring || 0) + ' hiring in all'),
-    t(mail, 'from job alerts in your mail', Object.keys(boards).map((k) => (k === 'Other' ? 'other boards' : k) + ' ' + boards[k]).join(', ')),
-    t(web, 'from the daily web search', s.at ? n0(s.kept || 0) + ' openings on ' + day(s.at) + ', USD ' + Number(s.cost_usd || 0).toFixed(2) + ' of ' + Number(s.cap_usd || 1).toFixed(2) + ' a day' : 'not run yet'));
+  row.append(t(items.length, 'Companies hiring where you know someone', n0(b.companies_hiring || 0) + ' hiring in all'),
+    t(mail, 'From job alerts in your mail', Object.keys(boards).map((k) => (k === 'Other' ? 'other boards' : k) + ' ' + boards[k]).join(', ')),
+    t(web, 'From the daily web search', s.at ? n0(s.kept || 0) + ' openings on ' + day(s.at) + ', USD ' + Number(s.cost_usd || 0).toFixed(2) + ' of ' + Number(s.cap_usd || 1).toFixed(2) + ' a day' : 'not run yet'));
   return row;
 }
 
@@ -49,7 +49,7 @@ export function quickHand(C, data, it) {
   const to = ((data && data.handable) || []).filter((x) => x.marketing)[0];
   if (!data || !data.owner || !to || (it.handed || []).some((h) => h.to_id === to.id)) return box;
   const b = mk(C, 'button', 'go ghost'); b.type = 'button';
-  b.append(mk(C, 'span', null, 'Hand to'), document.createTextNode(' '), data_(C, 'span', null, String(to.name || '').split(' ')[0]));
+  b.append(mk(C, 'span', null, 'Hand To'), document.createTextNode(' '), data_(C, 'span', null, String(to.name || '').split(' ')[0]));
   const said = mk(C, 'span', 'mk-said'); said.setAttribute('aria-live', 'polite');
   b.addEventListener('click', async () => {
     b.disabled = true; said.className = 'mk-said working no-late'; said.textContent = 'Giving it';
