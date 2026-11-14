@@ -7,6 +7,7 @@
 // their own sign-in, never anyone else's. Every date goes through fill/dates.js.
 
 import { fmtDate, zone } from './dates.js?v=2026-10-22-dates';
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 
 const WORDS = {
   'calendar.readonly': 'your calendar',
@@ -36,7 +37,7 @@ export async function drawGoogleSignin(box, { sb, el, connect }) {
   } catch (e) {
     card.innerHTML = '';
     const p = el('p', '');
-    p.textContent = 'Your Google sign-in could not be checked just now: ' + String(e?.message ?? e);
+    p.textContent = 'Your Google sign-in could not be checked just now: ' + plainWords(String(e?.message ?? e));
     card.appendChild(p);
     return;
   }
@@ -82,7 +83,13 @@ export async function drawGoogleSignin(box, { sb, el, connect }) {
     for (const r of reading) {
       const q = el('p', r.failed ? 'notice flagged' : 'quiet');
       const what = r.what === 'calendar' ? 'Your calendar' : 'Your address book';
-      const said = r.failed ? 'the last read stopped: ' + r.failed : (r.paused || r.line || 'waiting for its first read.');
+      // ONE NUMBER (seat day-one-fixes 2026-11-14, decision 1172 (5), morning-audit-2 fix 5): the records kept, counted by the brain
+      // (google_signin_state kept), not the walk's running tally of keeps ("1,721 meetings kept" while 892 are kept). The walk's line
+      // is still said when the brain gives no count (an older brain), and its words whenever the read stopped or is held.
+      const kept = Number(r.kept);
+      const counted = r.kept !== undefined && r.kept !== null && Number.isFinite(kept)
+        ? kept.toLocaleString('en-US') + (r.what === 'calendar' ? (kept === 1 ? ' entry' : ' entries') : (kept === 1 ? ' contact' : ' contacts')) + ' kept and searchable.' : null;
+      const said = r.failed ? plainWords('the last read stopped: ' + r.failed) : (r.paused || counted || r.line || 'waiting for its first read.');
       const last = r.last_read_at ? ' Last read ' + fmtDate(r.last_read_at, 'when') + '.' : '';
       q.textContent = what + ': ' + said + last;
       card.appendChild(q);
@@ -142,7 +149,7 @@ async function drawWeek(box, { sb, el }) {
     w = data;
   } catch (e) {
     wait.remove();
-    say('Your next 7 days could not be read just now: ' + String(e?.message ?? e), 'notice flagged');
+    say('Your next 7 days could not be read just now: ' + plainWords(String(e?.message ?? e)), 'notice flagged');
     return;
   }
   wait.remove();
