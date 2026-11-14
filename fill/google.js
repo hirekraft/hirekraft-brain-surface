@@ -52,7 +52,7 @@ export async function drawGoogleSignin(box, { sb, el, connect }) {
   }
 
   const h = el('h3', '');
-  h.textContent = 'Your calendar and contacts';
+  h.textContent = 'Your Calendar and Contacts';
   card.appendChild(h);
 
   const p = el('p', '');
@@ -99,7 +99,7 @@ export async function drawGoogleSignin(box, { sb, el, connect }) {
     const actions = el('div', 'actions');
     const b = el('button', 'go');
     b.type = 'button';
-    const label = s.state === 'granted' ? 'Sign in to Google again' : 'Sign in with Google';
+    const label = s.state === 'granted' ? 'Sign In to Google Again' : 'Sign In with Google';
     b.textContent = label;
     b.addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -170,7 +170,7 @@ async function drawWeek(box, { sb, el }) {
     const part = (text, keep) => { const sp = el('span', ''); if (keep) sp.setAttribute('translate', 'no'); sp.textContent = text; p.appendChild(sp); return sp; };
     if (r.all_day) part('All day'); else part(fmtDate(r.start, 'time') + (r.end ? ' to ' + fmtDate(r.end, 'timeZone') : ''), true);
     part(' · ', true);
-    part(r.title || '(no title)', true).style.fontWeight = '600';
+    part(r.title || '(No title)', true).style.fontWeight = '600';
     card.appendChild(p);
     const who = (Array.isArray(r.attendees) ? r.attendees : []).filter((a) => typeof a === 'string' && a);
     const lines = [];
