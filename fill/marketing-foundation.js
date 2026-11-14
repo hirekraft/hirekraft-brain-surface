@@ -21,18 +21,18 @@ const plural = (k, one, many) => (Number(k) === 1 ? one : many);
 const day = (iso) => { if (!iso) return ''; const d = new Date(String(iso).length === 10 ? iso + 'T12:00:00' : iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
 
 export const PARTS = [
-  { key: 'where_now', label: 'Where we are', q: 'Where do we stand today?' },
-  { key: 'where_next', label: 'Where we want to go', q: 'Where are we taking the business?' },
+  { key: 'where_now', label: 'Where We Are', q: 'Where do we stand today?' },
+  { key: 'where_next', label: 'Where We Want to Go', q: 'Where are we taking the business?' },
   { key: 'positioning', label: 'Positioning', q: 'What do we say we are?' },
-  { key: 'icp', label: 'Ideal customers', q: 'Who buys from us, and what do they pay for?' },
+  { key: 'icp', label: 'Ideal Customers', q: 'Who buys from us, and what do they pay for?' },
   { key: 'offers', label: 'Offers', q: 'What do we sell, and on what terms?' },
   { key: 'proof', label: 'Proof', q: 'What can we show?' },
   { key: 'themes', label: 'Themes', q: 'What do we talk about?' },
   { key: 'voice', label: 'Voice', q: 'How do we sound?' },
-  { key: 'never_say', label: 'Never say', q: 'What do we never say?' },
-  { key: 'brand', label: 'Brand assets', q: 'What does it look like?' },
+  { key: 'never_say', label: 'Never Say', q: 'What do we never say?' },
+  { key: 'brand', label: 'Brand Assets', q: 'What does it look like?' },
 ];
-const STATE = { approved: 'Approved', changed: 'Changed since approval', not: 'Not approved yet' };
+const STATE = { approved: 'Approved', changed: 'Changed Since Approval', not: 'Not Approved Yet' };
 
 const STYLE = 'marketing-foundation.css?v=2026-11-02-marketing-vault';
 const ensureStyle = () => { try { if (!document.querySelector('link[data-mk-foundation]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = new URL(STYLE, import.meta.url).href; l.setAttribute('data-mk-foundation', '1'); document.head.appendChild(l); } } catch (e) { /* no document: tests */ } };
@@ -97,7 +97,7 @@ function draw() {
   whole.appendChild(mk('p', 'mkf-whole-state mkf-' + ws, 'The whole foundation: ' + stateLine(D.whole) + '.'));
   const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
   if (ws !== 'approved') {
-    const ab = mk('button', 'go', 'Approve the whole foundation'); ab.type = 'button';
+    const ab = mk('button', 'go', 'Approve the Whole Foundation'); ab.type = 'button';
     ab.addEventListener('click', () => approve(null, ab, said));
     whole.appendChild(ab);
   }
@@ -134,7 +134,7 @@ function drawPart(p, P) {
   if (!P.lines.length) ul.appendChild(mk('li', 'quiet', 'Nothing here yet.'));
   det.appendChild(ul);
   // add a line
-  const add = mk('button', 'go ghost', 'Add a line'); add.type = 'button';
+  const add = mk('button', 'go ghost', 'Add a Line'); add.type = 'button';
   const addBox = mk('div', 'mkf-edit');
   add.addEventListener('click', () => { addBox.innerHTML = ''; editor(addBox, '', p.key === 'icp' ? '' : null, async (body, why, grp2) => rpc('mk_foundation_edit', { p_line: null, p_part: p.key, p_grp: grp2, p_body: body, p_why: why }), p.key); });
   const acts = mk('div', 'mk-acts');
@@ -195,7 +195,7 @@ function drawLine(l, said) {
   acts.appendChild(e);
   const s = l.source || {};
   if ((s.kind === 'chat' || s.kind === 'document') && s.ref) {
-    const b = mk('button', 'go ghost', 'See the source'); b.type = 'button';
+    const b = mk('button', 'go ghost', 'See the Source'); b.type = 'button';
     b.addEventListener('click', () => { box.innerHTML = ''; showSource(box, s.ref); });
     acts.appendChild(b);
   }
@@ -217,7 +217,7 @@ function drawLine(l, said) {
 
 function drawProposal(x, P, said) {
   const card = mk('div', 'mkf-proposal');
-  card.appendChild(mk('p', 'eyebrow', 'Proposed change'));
+  card.appendChild(mk('p', 'eyebrow', 'Proposed Change'));
   const old = x.proposes ? P.lines.find((l) => l.id === x.proposes) : null;
   if (old) { card.appendChild(mk('p', 'mk-item-meta', 'Now:')); card.appendChild(data_('p', 'mkf-body mkf-strike', old.body)); card.appendChild(mk('p', 'mk-item-meta', 'Would become:')); }
   else card.appendChild(mk('p', 'mk-item-meta', 'A new line:'));
@@ -304,7 +304,7 @@ function retireBox(box, l) {
   box.appendChild(mk('p', 'state', 'Retire moves this line to Earlier. It stays in the history with your reason.'));
   const why = C.el('input'); why.className = 'mkf-in'; why.setAttribute('aria-label', 'Why'); why.placeholder = 'Why (kept with the change)';
   const acts = mk('div', 'mk-acts');
-  const ok = mk('button', 'go', 'Retire this line'); ok.type = 'button';
+  const ok = mk('button', 'go', 'Retire This Line'); ok.type = 'button';
   const no = mk('button', 'go ghost', 'Cancel'); no.type = 'button';
   const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
   no.addEventListener('click', () => { box.innerHTML = ''; });

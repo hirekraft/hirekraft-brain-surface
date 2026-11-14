@@ -47,7 +47,7 @@ export function closeCard(slot, body, ctx) {
   const ok = rows.filter((r) => r.status === "verified");
   const ne = rows.filter((r) => r.status === "not_expected");
   if (ex.length) {
-    const h = el("p", "close-h"); h.textContent = ex.length === 1 ? "Needs you" : "Need you (" + ex.length + ")"; wrap.appendChild(h);
+    const h = el("p", "close-h"); h.textContent = ex.length === 1 ? "Needs You" : "Need you (" + ex.length + ")"; wrap.appendChild(h);
     for (const r of ex) wrap.appendChild(rowCard(r, false));
   }
   if (ok.length) {
@@ -67,7 +67,7 @@ export function closeCard(slot, body, ctx) {
   if (runId) {
     const keepRow = el("div", "close-keep");
     const b = el("button", "close-btn close-gold"); b.type = "button";
-    b.textContent = "This month is right now: keep it as the right answer";
+    b.textContent = "This Month Is Right Now: Keep It as the Right Answer";
     const said = el("p", "quiet close-said");
     b.addEventListener("click", async () => {
       b.disabled = true; said.textContent = "Keeping it...";

@@ -19,9 +19,9 @@
 let C = null, host = null, picked = null, D = null;
 const SYS = '/functions/v1/system-read';
 const STATUS = { agreed: 'Agreed', draft: 'Draft', done: 'Done' };
-const KIND = { post: 'Post', email: 'Email', page: 'Website page', follow_up: 'Follow-up', campaign: 'Campaign', other: 'Task' };
-const FIRE = { linkedin: 'Copy and open LinkedIn', company_page: 'Copy and open the company page', group: 'Copy and open the group',
-  website: 'Make a WordPress draft', email: 'Hand to Sending', mark: 'Mark done' };
+const KIND = { post: 'Post', email: 'Email', page: 'Website Page', follow_up: 'Follow-up', campaign: 'Campaign', other: 'Task' };
+const FIRE = { linkedin: 'Copy and Open LinkedIn', company_page: 'Copy and Open the Company Page', group: 'Copy and Open the Group',
+  website: 'Make a WordPress Draft', email: 'Hand to Sending', mark: 'Mark Done' };
 const OPEN_AT = { linkedin: 'https://www.linkedin.com/feed/?shareActive=true', company_page: 'https://www.linkedin.com/feed/', group: 'https://www.linkedin.com/groups/' };
 const CH = { linkedin: 'li', company_page: 'li', group: 'li', website: 'web', email: 'mail', mark: 'other' };
 
@@ -68,7 +68,7 @@ export function fireButton(it, said, ctx) {
   C = C || ctx;
   const kind = it.fire || 'mark';
   if (kind === 'website' && it.wp_draft && it.wp_draft.wp_id) {
-    const a = mk('a', 'go', it.wp_draft.now === 'publish' ? 'Open the published article' : 'Open the draft in WordPress');
+    const a = mk('a', 'go', it.wp_draft.now === 'publish' ? 'Open the Published Article' : 'Open the Draft in WordPress');
     a.href = it.wp_draft.link || '#'; a.target = '_blank'; a.rel = 'noopener';
     return a;
   }
@@ -101,7 +101,7 @@ async function fire(it, b, said, ctx) {
     clearTimeout(t); b.disabled = false;
     if (r && r.ok === true) {
       say(said, 'state', (r.already ? 'This draft was made before, on ' + day(r.made_at) + '. ' : 'Made as a draft in WordPress. Nothing was published: ' + (r.published_before ?? '') + ' published articles before and after. ') + 'A person publishes it in WordPress.');
-      if (r.link) { const a = mk('a', 'go ghost', 'Open the draft in WordPress'); a.href = r.link; a.target = '_blank'; a.rel = 'noopener'; said.after(a); }
+      if (r.link) { const a = mk('a', 'go ghost', 'Open the Draft in WordPress'); a.href = r.link; a.target = '_blank'; a.rel = 'noopener'; said.after(a); }
       if (ctx.refresh) await redraw(ctx);
       keep(said, ctx);
     } else say(said, 'stalled', 'No draft was made: ' + String((r && (r.reason || r.error)) || 'no reason was given') + '.');
@@ -153,7 +153,7 @@ function drawBoard(ctx) {
   for (const w of (D.weeks || [])) {
     const b = mk('button', 'mk2-week'); b.type = 'button'; b.setAttribute('role', 'tab');
     b.setAttribute('aria-selected', w.week_of === D.week_of ? 'true' : 'false');
-    b.append(mk('span', null, w.week_of === thisWeek ? 'This week' : short(w.week_of)), document.createTextNode(' '), data_('span', 'mk2-week-n', String(weekCount(w, who))));
+    b.append(mk('span', null, w.week_of === thisWeek ? 'This Week' : short(w.week_of)), document.createTextNode(' '), data_('span', 'mk2-week-n', String(weekCount(w, who))));
     b.addEventListener('click', async () => { picked = null; const d = await ctx.refresh(w.week_of); D = d; drawBoard({ ...ctx, week: d }); });
     tabs.appendChild(b);
   }
@@ -179,7 +179,7 @@ function drawBoard(ctx) {
     board.appendChild(col);
   }
   const anyCol = mk('section', 'mk2-day mk2-any');
-  anyCol.appendChild(mk('h3', 'mk2-day-head', 'Any day this week'));
+  anyCol.appendChild(mk('h3', 'mk2-day-head', 'Any Day This Week'));
   const undated = (D.items || []).filter((x) => !x.day);
   const anyList = mk('div', 'mk2-cards');
   for (const it of undated) { anyList.appendChild(card(it, who, ctx)); all.push(it); }
@@ -210,7 +210,7 @@ function card(it, who, ctx) {
   if (it.owned_by) meta.push(it.owned_by);
   if (meta.length) b.appendChild(data_('span', 'mk2-card-meta', meta.join(' · ')));
   const st = it.state === 'done' ? (it.act && it.act.by ? 'Done by ' + it.act.by : 'Done') : it.state === 'skipped' ? 'Skipped'
-    : it.state === 'fired' ? (it.act && it.act.fired === 'draft_made' ? 'Draft made' : it.act && it.act.fired === 'to_sending' ? 'In Sending' : 'Copied and opened') : '';
+    : it.state === 'fired' ? (it.act && it.act.fired === 'draft_made' ? 'Draft Made' : it.act && it.act.fired === 'to_sending' ? 'In Sending' : 'Copied and opened') : '';
   if (st || it.moved) b.appendChild(mk('span', 'mk2-card-meta', [st, it.moved ? 'Moved from ' + short(it.planned_day) : ''].filter(Boolean).join(' · ')));
   const also = (it.also || []).length;
   if (also) b.appendChild(mk('span', 'mk2-card-meta', 'Also said in ' + also + ' other ' + plural(also, 'chat', 'chats')));
@@ -222,7 +222,7 @@ function card(it, who, ctx) {
 // folds under one line; the approved piece is in Ready to go above. Nothing is deleted: open the fold to see the older item.
 function replacedFold(it, who, ctx) {
   const det = mk('details', 'mk2-more');
-  det.appendChild(mk('summary', 'mk-hand-label', 'Replaced by the approved ' + (it.replaced_by.kind === 'email' ? 'email' : 'post') + ' above'));
+  det.appendChild(mk('summary', 'mk-hand-label', 'Replaced by the Approved ' + (it.replaced_by.kind === 'email' ? 'email' : 'post') + ' above'));
   det.appendChild(card(it, who, ctx));
   if (picked && picked.id === it.id) det.open = true;
   return det;
@@ -253,7 +253,7 @@ function drawPanel(panel, it, ctx) {
   if (it.cadence) meta.push(it.cadence);
   panel.appendChild(data_('p', 'mk-item-meta', meta.join(' · ')));
   panel.appendChild(mk('p', 'mk-item-meta', [KIND[it.kind] || it.kind, it.day && !it.cadence ? wd(it.day) + ' ' + short(it.day) : '', STATUS[it.status] || it.status || ''].filter(Boolean).join(' · ')));
-  if (it.act) panel.appendChild(mk('p', 'state', (it.act.act === 'done' ? 'Done' : it.act.act === 'skipped' ? 'Skipped' : it.act.fired === 'draft_made' ? 'Draft made' : it.act.fired === 'to_sending' ? 'Handed to Sending' : 'Copied and opened')
+  if (it.act) panel.appendChild(mk('p', 'state', (it.act.act === 'done' ? 'Done' : it.act.act === 'skipped' ? 'Skipped' : it.act.fired === 'draft_made' ? 'Draft Made' : it.act.fired === 'to_sending' ? 'Handed to Sending' : 'Copied and opened')
     + ' by ' + (it.act.by || 'someone') + ' on ' + day(it.act.at) + (it.act.why ? ': ' + it.act.why : '') + '.'));
   else if (it.said_done) panel.appendChild(mk('p', 'state', 'Said to be done in the chat.'));
   if (words(it)) { const t = data_('div', 'mk2-words', words(it).slice(0, 3000)); panel.appendChild(t); }
@@ -264,7 +264,7 @@ function drawPanel(panel, it, ctx) {
     acts.appendChild(fireButton(it, said, ctx));
     if (it.fire !== 'mark') { const d = mk('button', 'go ghost', 'Done'); d.type = 'button'; d.addEventListener('click', () => act(it, 'done', null, null, said, ctx)); acts.appendChild(d); }
   } else {
-    const u = mk('button', 'go ghost', 'Open it again'); u.type = 'button'; u.addEventListener('click', () => act(it, 'undone', null, null, said, ctx)); acts.appendChild(u);
+    const u = mk('button', 'go ghost', 'Open It Again'); u.type = 'button'; u.addEventListener('click', () => act(it, 'undone', null, null, said, ctx)); acts.appendChild(u);
   }
   panel.appendChild(acts);
   if (it.state === 'open' || it.state === 'fired') {
@@ -274,8 +274,8 @@ function drawPanel(panel, it, ctx) {
     skip.addEventListener('click', () => { if (String(why.value).trim().length < 3) { say(said, 'stalled', 'Say in a few words why it is skipped.'); why.focus(); return; } act(it, 'skipped', why.value, null, said, ctx); });
     more.append(why, skip);
     if (!it.cadence) {
-      const sel = C.el('select'); sel.className = 'mk-hand-pick'; sel.setAttribute('aria-label', 'Move to');
-      const o0 = C.el('option'); o0.value = ''; o0.textContent = 'Move to'; sel.appendChild(o0);
+      const sel = C.el('select'); sel.className = 'mk-hand-pick'; sel.setAttribute('aria-label', 'Move To');
+      const o0 = C.el('option'); o0.value = ''; o0.textContent = 'Move To'; sel.appendChild(o0);
       for (let k = 0; k < 12; k++) {
         const dd = addDays(D.week_of, k);
         const dw = ((new Date(dd + 'T12:00:00').getDay() + 6) % 7) + 1;
@@ -292,12 +292,12 @@ function drawPanel(panel, it, ctx) {
   const out = mk('div', 'mk2-src');
   const links = mk('div', 'mk-acts');
   if (src.chat_id) {
-    const s = mk('button', 'go ghost', 'From the chat of ' + day(src.said_at)); s.type = 'button';
+    const s = mk('button', 'go ghost', 'From the Chat of ' + day(src.said_at)); s.type = 'button';
     s.addEventListener('click', () => { out.innerHTML = ''; showSource(out, src); });
     links.appendChild(s);
   }
   if (Number(it.changes)) {
-    const h = mk('button', 'go ghost', 'See how it changed (' + it.changes + ')'); h.type = 'button';
+    const h = mk('button', 'go ghost', 'See How It Changed (' + it.changes + ')'); h.type = 'button';
     h.addEventListener('click', () => { out.innerHTML = ''; showHistory(out, it.id); });
     links.appendChild(h);
   }
@@ -310,7 +310,7 @@ function drawPanel(panel, it, ctx) {
       row.appendChild(data_('span', 'mk-item-meta', [a.title, a.cadence].filter(Boolean).join(' · ')));
       const sa = a.source || {};
       if (sa.chat_id) {
-        const s2 = mk('button', 'go ghost', 'From the chat of ' + day(sa.said_at)); s2.type = 'button';
+        const s2 = mk('button', 'go ghost', 'From the Chat of ' + day(sa.said_at)); s2.type = 'button';
         const out2 = mk('div', 'mk2-src');
         s2.addEventListener('click', () => { out2.innerHTML = ''; showSource(out2, sa); });
         row.appendChild(s2); box.append(row, out2);

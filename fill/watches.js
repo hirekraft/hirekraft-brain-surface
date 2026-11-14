@@ -80,7 +80,7 @@ function findingCard(f, onClosed) {
   const chip = C.el("span", "find-chip watch-chip"); chip.textContent = f.watch || "Watch";
   const url = openUrl(f);
   const title = url ? C.el("a", "find-title") : C.el("span", "find-title");
-  title.textContent = f.title || "(no subject)";
+  title.textContent = f.title || "(No subject)";
   if (url) { title.href = url; title.target = "_blank"; title.rel = "noopener"; }
   top.append(chip, title);
   const meta = C.el("p", "find-meta");
@@ -88,7 +88,7 @@ function findingCard(f, onClosed) {
   const snip = C.el("p", "find-snip"); snip.textContent = String(f.line || "");
   const acts = C.el("div", "watch-acts");
   const done = C.el("button", "go ghost"); done.type = "button"; done.textContent = "Done";
-  const noise = C.el("button", "go ghost"); noise.type = "button"; noise.textContent = "Not useful";
+  const noise = C.el("button", "go ghost"); noise.type = "button"; noise.textContent = "Not Useful";
   const answer = async (a, btn) => {
     done.disabled = true; noise.disabled = true;
     const r = await rpc("watch_hit_answer", { p_id: f.id, p_answer: a });

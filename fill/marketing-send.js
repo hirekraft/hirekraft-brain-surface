@@ -59,7 +59,7 @@ async function drawDetail(stage) {
 const RULE = { postal_address: 'Postal address', sending_subdomain: 'Sending address', engine: 'Email engine', domain_verified: 'Sending domain', spf: 'SPF', dkim: 'DKIM', dmarc: 'DMARC' };
 function readyPart(stage, S, R, E) {
   const sec = mk('section', 'mk-people');
-  sec.appendChild(mk('h3', 'mk-sub', 'Before the first send'));
+  sec.appendChild(mk('h3', 'mk-sub', 'Before the First Send'));
   sec.appendChild(mk('p', 'state', 'Every campaign email carries your postal address and a one-click unsubscribe, and goes from a sending address on a subdomain of your domain, so your own mail keeps its good name.'));
   const checks = (R && Array.isArray(R.checks)) ? R.checks : [];
   if (!checks.length) sec.appendChild(mk('p', 'quiet', 'The checks run with the next send run, within 15 minutes of a change.'));
@@ -70,8 +70,8 @@ function readyPart(stage, S, R, E) {
   if (R && R.checked_at) sec.appendChild(mk('p', 'quiet', (R.ok ? 'Ready to send. ' : '') + 'Checked ' + day(R.checked_at) + (E && E.name ? ', with ' + E.name : '') + '.'));
   const det = C.el('details');
   if (!S.postal_address || !S.sending_from) det.open = true;
-  det.appendChild(mk('summary', 'mk-hand-label', 'Your address and sending address'));
-  const fields = [['postal_address', 'Postal address (street, town, postal code)'], ['sending_from', 'Sending address, for example news@mail.yourdomain.com'], ['sending_name', 'Sender name']];
+  det.appendChild(mk('summary', 'mk-hand-label', 'Your Address and Sending Address'));
+  const fields = [['postal_address', 'Postal Address (Street, Town, Postal Code)'], ['sending_from', 'Sending address, for example news@mail.yourdomain.com'], ['sending_name', 'Sender Name']];
   const inputs = {};
   for (const [k, label] of fields) {
     const lab = mk('label', 'mk-hand-label', label);
@@ -97,13 +97,13 @@ function readyPart(stage, S, R, E) {
 
 // SENDING LIMITS (seat rulings-1049, 2026-10-31): the numbers every batch obeys, in words, and changeable here by the owner.
 const LIMITS = [
-  ['week1', 'People a day, first step'], ['week2', 'People a day, second step'], ['week3', 'People a day, third step'], ['day_max', 'At most, a day, after that'],
-  ['campaign_gap_days', 'Days between two campaign emails to the same person'], ['note_gap_days', 'Days between two job notes to the same person'],
-  ['bounce_pause_pct', "Pause when a day's bounces pass (percent)"], ['complaint_pause_pct', "Pause when a day's spam complaints pass (percent)"],
+  ['week1', 'People a Day, First Step'], ['week2', 'People a Day, Second Step'], ['week3', 'People a Day, Third Step'], ['day_max', 'At Most, a Day, After That'],
+  ['campaign_gap_days', 'Days Between Two Campaign Emails to the Same Person'], ['note_gap_days', 'Days Between Two Job Notes to the Same Person'],
+  ['bounce_pause_pct', "Pause When a Day's Bounces Pass (Percent)"], ['complaint_pause_pct', "Pause When a Day's Spam Complaints Pass (Percent)"],
 ];
 function limitsPart(stage, L, T) {
   const sec = mk('section', 'mk-people');
-  sec.appendChild(mk('h3', 'mk-sub', 'Sending limits'));
+  sec.appendChild(mk('h3', 'mk-sub', 'Sending Limits'));
   for (const line of [
     'Warm-up: ' + n0(L.week1) + ' people a day to start, then ' + n0(L.week2) + ', then ' + n0(L.week3) + ', then at most ' + n0(L.day_max) + ' a day, all campaigns together. Each next step is earned by opens, not by time: after ' + n0(L.earn_days || 2) + ' full days at a step, when at least ' + (L.earn_open_pct || 20) + ' percent of those emails were opened and bounces stayed under the pause limit.',
     'The same person gets a campaign email at most once every ' + n0(L.campaign_gap_days) + ' days, and a note about a job at most once every ' + n0(L.note_gap_days) + ' days. Nobody who unsubscribed ever gets one.',
@@ -114,7 +114,7 @@ function limitsPart(stage, L, T) {
   if (T && T.size !== undefined) sec.appendChild(mk('p', 'quiet', T.pause ? String(T.why || 'Sending is paused.') : 'Today: step ' + n0(T.step || T.week) + ', up to ' + n0(T.size) + ' people can go out.'));
   sec.appendChild(mk('p', 'quiet', String(L.said || '') + (L.set_at ? ' (' + day(L.set_at) + ')' : '')));
   const det = C.el('details');
-  det.appendChild(mk('summary', 'mk-hand-label', 'Change the limits'));
+  det.appendChild(mk('summary', 'mk-hand-label', 'Change the Limits'));
   const inputs = {};
   for (const [k, label] of LIMITS) {
     const lab = mk('label', 'mk-hand-label', label);
@@ -122,7 +122,7 @@ function limitsPart(stage, L, T) {
     i.step = k.endsWith('_pct') ? '0.1' : '1'; i.min = k.endsWith('_pct') ? '0.1' : '1';
     inputs[k] = i; lab.appendChild(i); det.appendChild(lab);
   }
-  const save = mk('button', 'go ghost', 'Save the limits'); save.type = 'button';
+  const save = mk('button', 'go ghost', 'Save the Limits'); save.type = 'button';
   const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
   save.addEventListener('click', async () => {
     const body = {};
@@ -140,17 +140,17 @@ function limitsPart(stage, L, T) {
 
 function startBox(stage, lists) {
   const box = mk('section', 'mk-hand');
-  box.appendChild(mk('h3', 'mk-sub', 'Start a campaign'));
+  box.appendChild(mk('h3', 'mk-sub', 'Start a Campaign'));
   if (!lists.length) { box.appendChild(mk('p', 'quiet', 'Make a list first, in Lists. A campaign goes to one list.')); return box; }
-  const lab = mk('label', 'mk-hand-label', 'To the list');
+  const lab = mk('label', 'mk-hand-label', 'To the List');
   const sel = mk('select', 'mk-hand-pick');
   for (const l of lists) { const o = document.createElement('option'); o.value = l.id; o.textContent = l.question + ' (' + n0(l.in) + ')'; o.translate = false; sel.appendChild(o); }
   lab.appendChild(sel);
   const sl = mk('label', 'mk-hand-label', 'Subject');
   const subj = mk('input', 'mk-subject'); subj.type = 'text'; subj.setAttribute('aria-label', 'Subject'); sl.appendChild(subj);
-  const bl = mk('label', 'mk-hand-label', 'The email');
-  const body = mk('textarea', 'mk-text'); body.rows = 7; body.setAttribute('aria-label', 'The email'); bl.appendChild(body);
-  const go = mk('button', 'go', 'Start the campaign'); go.type = 'button';
+  const bl = mk('label', 'mk-hand-label', 'The Email');
+  const body = mk('textarea', 'mk-text'); body.rows = 7; body.setAttribute('aria-label', 'The Email'); bl.appendChild(body);
+  const go = mk('button', 'go', 'Start the Campaign'); go.type = 'button';
   const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
   go.addEventListener('click', async () => {
     go.disabled = true; said.className = 'mk-said working no-late'; said.textContent = 'Checking the words and making the first batch';
@@ -177,7 +177,7 @@ function campaignCard(stage, c) {
   const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
   const set = async (state) => { const r = await rpc('mk_campaign_set', { p_campaign: c.id, p_state: state }); if (r.ok) mount(STAGE, C); else { said.className = 'mk-said stalled'; said.textContent = 'Not changed: ' + (r.reason || 'no reason was given') + '.'; } };
   if (c.state === 'paused') { const r = mk('button', 'go ghost', 'Resume'); r.type = 'button'; r.addEventListener('click', () => set('running')); acts.appendChild(r); }
-  if (c.state === 'running' || c.state === 'paused') { const s = mk('button', 'go ghost', 'Stop this campaign'); s.type = 'button'; s.addEventListener('click', () => set('stopped')); acts.appendChild(s); }
+  if (c.state === 'running' || c.state === 'paused') { const s = mk('button', 'go ghost', 'Stop This Campaign'); s.type = 'button'; s.addEventListener('click', () => set('stopped')); acts.appendChild(s); }
   li.append(acts, said);
   return li;
 }
@@ -203,10 +203,10 @@ function batchRow(stage, b) {
     a.addEventListener('click', async () => { a.disabled = true; const r = await rpc('mk_batch_approve', { p_batch: b.id }); if (r.ok) mount(STAGE, C); else { a.disabled = false; said.className = 'mk-said stalled'; said.textContent = 'Not approved: ' + (r.reason || 'no reason was given') + '.'; } });
     acts.appendChild(a);
   }
-  const who = mk('button', 'go ghost', 'Who is in it'); who.type = 'button';
+  const who = mk('button', 'go ghost', 'Who Is in It'); who.type = 'button';
   who.addEventListener('click', () => people(out, b.id, true));
   acts.appendChild(who);
-  if (parts.length) { const w2 = mk('button', 'go ghost', 'Who is left out and why'); w2.type = 'button'; w2.addEventListener('click', () => people(out, b.id, false)); acts.appendChild(w2); }
+  if (parts.length) { const w2 = mk('button', 'go ghost', 'Who Is Left Out and Why'); w2.type = 'button'; w2.addEventListener('click', () => people(out, b.id, false)); acts.appendChild(w2); }
   box.append(acts, said, out);
   return box;
 }
@@ -250,7 +250,7 @@ export async function mount(stage, ctx) {
   stage.appendChild(waiting(v));
   stage.appendChild(mk('p', 'notice', "Nothing goes to anyone yet: the Tool's own sending is locked while it is tested. A batch you approve is held, and says why."));
   const det = mk('details', 'mk-hand');
-  det.appendChild(mk('summary', 'mk-hand-label', 'Campaigns, the rules every email meets, and the limits'));
+  det.appendChild(mk('summary', 'mk-hand-label', 'Campaigns, the Rules Every Email Meets, and the Limits'));
   const host = mk('div');
   det.appendChild(host);
   let drawn = false;
@@ -314,7 +314,7 @@ function health(v) {
 
 function waiting(v) {
   const sec = mk('section', 'mk-hand');
-  sec.appendChild(mk('h3', 'mk-sub', 'Next step'));
+  sec.appendChild(mk('h3', 'mk-sub', 'Next Step'));
   const ws = v.waiting || [];
   const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
   if (ws.length) {

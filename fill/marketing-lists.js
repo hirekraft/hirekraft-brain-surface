@@ -15,8 +15,8 @@
 
 let C = null;
 let STAGE = null;
-const REL = [['prospect', 'Prospects, from your CRM'], ['candidate', 'Candidates, from your applicant tracking'], ['contact', 'Other people you know'], ['unknown', 'Not known to the Tool']];
-const ENG = [['d30', 'opened in the last 30 days'], ['d90', 'in 31 to 90 days'], ['d180', 'in 91 to 180 days'], ['older', 'earlier'], ['never', 'never opened']];
+const REL = [['prospect', 'Prospects, from Your CRM'], ['candidate', 'Candidates, from Your Applicant Tracking'], ['contact', 'Other People You Know'], ['unknown', 'Not Known to the Tool']];
+const ENG = [['d30', 'Opened in the Last 30 Days'], ['d90', 'In 31 to 90 Days'], ['d180', 'In 91 to 180 Days'], ['older', 'Earlier'], ['never', 'Never Opened']];
 const OUT = { unsubscribed: 'unsubscribed or marked as spam', bounced: 'bounced', client: 'at a current client', colleague: 'a colleague', gmail_failed: 'a Gmail address that failed before' };
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
 const data_ = (tag, cls, text) => { const n = mk(tag, cls, text); n.translate = false; return n; };
@@ -62,7 +62,7 @@ const FIRST_NAME = 'Warm-up: opened in the last 30 days';
 function first(v) {
   const f = v.first || {};
   const sec = mk('section', 'mk-hand');
-  sec.appendChild(mk('h3', 'mk-sub', 'Your first warm-up list'));
+  sec.appendChild(mk('h3', 'mk-sub', 'Your First Warm-Up List'));
   const days = Number(f.per_day) ? Math.ceil(Number(f.size) / Number(f.per_day)) : 0;
   sec.appendChild(mk('p', 'mk-story', n0(f.size) + ' people who opened an email in the last 30 days and may be emailed: the most engaged first. At ' + n0(f.per_day)
     + ' a day that is ' + n0(days) + ' ' + (days === 1 ? 'day' : 'days') + '. The next ' + n0(f.next) + ' opened in the last 90 days.'));
@@ -70,7 +70,7 @@ function first(v) {
   const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
   if (have) sec.appendChild(mk('p', 'state', 'Made on ' + day(have.made_at) + ': ' + n0(have.in) + ' on it. It is below under Your lists.'));
   else {
-    const b = mk('button', 'go', 'Make this list'); b.type = 'button';
+    const b = mk('button', 'go', 'Make This List'); b.type = 'button';
     b.addEventListener('click', () => make(b, said, FIRST_NAME, { engaged: ['d30'], gmail: 'apart' }));
     sec.appendChild(b);
   }
@@ -87,7 +87,7 @@ async function make(btn, said, name, spec) {
 
 function picture(v) {
   const sec = mk('section', 'mk-people');
-  sec.appendChild(mk('h3', 'mk-sub', 'Who may be emailed, and when they last opened'));
+  sec.appendChild(mk('h3', 'mk-sub', 'Who May Be Emailed, and When They Last Opened'));
   const g = v.grid || {};
   for (const [k, label] of REL) {
     const row = g[k] || {};
@@ -111,7 +111,7 @@ function picture(v) {
 function leftOff(v) {
   const o = v.left_off || {};
   const sec = mk('section', 'mk-people');
-  sec.appendChild(mk('h3', 'mk-sub', 'Left off every list, and why'));
+  sec.appendChild(mk('h3', 'mk-sub', 'Left Off Every List, and Why'));
   sec.appendChild(mk('p', 'state', n0(o.unsubscribed) + ' unsubscribed or marked an email as spam.'));
   sec.appendChild(mk('p', 'state', n0(o.bounced) + ' bounced.'));
   const cl = mk('p', 'state');
@@ -127,7 +127,7 @@ function leftOff(v) {
 
 function kept(v) {
   const sec = mk('section', 'mk-people');
-  sec.appendChild(mk('h3', 'mk-sub', 'Your lists'));
+  sec.appendChild(mk('h3', 'mk-sub', 'Your Lists'));
   const ls = v.lists || [];
   if (!ls.length) { sec.appendChild(mk('p', 'quiet', 'No list yet.')); return sec; }
   const ul = mk('ul', 'mk-person-list');
@@ -159,7 +159,7 @@ function kept(v) {
 
 function maker() {
   const det = mk('details', 'mk-hand');
-  det.appendChild(mk('summary', 'mk-hand-label', 'Make another list'));
+  det.appendChild(mk('summary', 'mk-hand-label', 'Make Another List'));
   const nl = mk('label', 'mk-hand-label', 'Name');
   const name = mk('input', 'mk-subject'); name.type = 'text'; nl.appendChild(name);
   det.appendChild(nl);
@@ -176,13 +176,13 @@ function maker() {
     det.appendChild(fs);
     return boxes;
   };
-  const eng = pick('Last opened', ENG, ['d30', 'd90']);
+  const eng = pick('Last Opened', ENG, ['d30', 'd90']);
   const rel = pick('Who', REL, REL.map((r) => r[0]));
   const gl = mk('label', 'mk-check');
   const gc = mk('input'); gc.type = 'checkbox';
-  gl.append(gc, mk('span', null, 'Include Gmail addresses that failed before'));
+  gl.append(gc, mk('span', null, 'Include Gmail Addresses That Failed Before'));
   det.appendChild(gl);
-  const go = mk('button', 'go', 'Make the list'); go.type = 'button';
+  const go = mk('button', 'go', 'Make the List'); go.type = 'button';
   const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
   go.addEventListener('click', () => {
     const on = (o) => Object.keys(o).filter((k) => o[k].checked);

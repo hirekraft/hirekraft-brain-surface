@@ -29,6 +29,15 @@ const clock = (iso) => { const d = new Date(iso); return Number.isFinite(d.getTi
 const shortName = (k) => String(k).split(':').slice(1).join(':') || String(k);
 
 function txt(C, tag, cls, text) { const e = C.el(tag, cls); e.textContent = text; return e; }
+// THE ONE MARK BESIDE A LINE BEING READ (seat tabs-style, 2026-11-14, decision 1178 with 1164). This file had its own dot
+// (.gs-pulse) that moved whenever a line was drawn, alive or not, also on a line that had stopped. SUPERSEDED: the mark is
+// fill/working.js's (window.toolWorkParts.mark), which breathes only while the brain's one reading of running work
+// (window.toolWork) says this source is alive, and is still otherwise. No reading yet: a still mark, never motion.
+function runMark(r) {
+  const P = window.toolWorkParts, W = window.toolWork;
+  const it = W && Array.isArray(W.items) ? W.items.find((x) => x.source_key === r.source) : null;
+  return P && P.mark ? P.mark(it || null) : document.createElement('span');
+}
 function btn(C, cls, text) { const b = C.el('button', cls); b.type = 'button'; b.textContent = text; return b; }
 function working(C, p, text) { p.className = 'working no-late br-small'; p.textContent = text; }
 function said(C, p, text) { p.className = 'br-small br-said'; p.textContent = text; }
@@ -72,8 +81,8 @@ function sum(list, kind) {
 
 // ---------------------------------------------------------------------------------------------------------------------
 // MAKE IT UNDERSTOOD: choose per source and how far back, see the price and time, Go.
-const MAIL_CH = [['m6', 6, '6 months'], ['m24', 24, '2 years'], ['all', null, 'Everything'], ['no', undefined, 'Not now']];
-const DRIVE_CH = [['all', null, 'All files'], ['no', undefined, 'Not now']];
+const MAIL_CH = [['m6', 6, '6 months'], ['m24', 24, '2 years'], ['all', null, 'Everything'], ['no', undefined, 'Not Now']];
+const DRIVE_CH = [['all', null, 'All Files'], ['no', undefined, 'Not Now']];
 let pick = { mail: 'm24', drive: 'no' };
 
 export function understandBlock(C, host, R, after) {
@@ -131,7 +140,7 @@ function drawUnderstand(C, host, E, R, after) {
   total.append(say, go);
   out.push(total);
   const notes = [];
-  notes.push('Prices are measured on test mail and scaled to the length of your own; the first hour of reading shows the true figure on your AI and costs. Overnight reading at half price is not switched on yet.');
+  notes.push('Prices are measured on test mail and scaled to the length of your own; the first hour of reading shows the true figure on AI and Costs. Overnight reading at half price is not switched on yet.');
   if (bal !== null) notes.push(over ? 'This is more than your AI balance of ' + usd(bal) + ', so Go waits until the balance is topped up.' : 'Your AI balance is ' + usd(bal) + '.');
   out.push(txt(C, 'p', 'br-small br-note', notes.join(' ')), res);
   go.addEventListener('click', () => confirmStep(C, total, res, tot, 'understand', after));
@@ -151,8 +160,8 @@ async function confirmStep(C, total, res, tot, mode, after) {
   const box = C.el('div', 'br-confirm');
   const n = tot.keys.length;
   box.appendChild(txt(C, 'p', 'br-small', String(pv.note ?? '') + (n > 1 ? ' The same for ' + (n - 1) + ' more ' + (n - 1 === 1 ? 'source' : 'sources') + '.' : '')));
-  const yes = btn(C, 'go', mode === 'understand' ? 'Yes, go ahead ' + DOT + ' about ' + usd(tot.usd) : 'Yes, go ahead');
-  const no = btn(C, 'go ghost', 'Not now');
+  const yes = btn(C, 'go', mode === 'understand' ? 'Yes, Go Ahead ' + DOT + ' about ' + usd(tot.usd) : 'Yes, Go Ahead');
+  const no = btn(C, 'go ghost', 'Not Now');
   const acts = C.el('div', 'br-chips'); acts.append(yes, no); box.appendChild(acts);
   place(C, res, box, mode === 'understand' ? 'Understand what you chose?' : 'Make it searchable?');
   no.addEventListener('click', () => { shut(C); res.replaceChildren(); total.querySelectorAll('button').forEach((b) => { b.disabled = false; }); });
@@ -190,7 +199,7 @@ function lineBlock(C, prog, names) {
     const all = Number(r.line_total), done = Number(r.line_done), has = Number.isFinite(all) && all > 0 && Number.isFinite(done);
     const pm = Number(r.per_minute);
     const t = r.line_started ? clock(r.line_started) : null;
-    const head = C.el('b', 'br-ll-h'); head.append(C.el('i', 'gs-pulse'), document.createTextNode('Reading ' + String(names[r.source] || shortName(r.source)) + (t ? ' ' + DOT + ' started ' + t : '')));
+    const head = C.el('b', 'br-ll-h'); head.append(runMark(r), document.createTextNode('Reading ' + String(names[r.source] || shortName(r.source)) + (t ? ' ' + DOT + ' started ' + t : '')));
     l.appendChild(head);
     if (r.state === 'stopped') l.appendChild(txt(C, 'span', 'br-small', (has ? num(done) + ' of ' + num(all) + ' done' + ' ' + DOT + ' ' : num(r.waiting) + ' in line ' + DOT + ' ') + 'nothing has moved for 30 minutes. The Tool starts it again on its own and says here if it cannot.'));
     else if (has) l.appendChild(txt(C, 'span', 'br-small', num(done) + ' of ' + num(all) + ' done ' + DOT + ' ' + (pm > 0 ? num(Math.round(pm)) + ' a minute, measured ' + DOT + ' ' + leftWords(r.minutes_left) : 'measuring the pace')));
@@ -244,7 +253,7 @@ export function filesBlock(C, host, R, after) {
   if (R.owner) {
     const total = C.el('div', 'br-total');
     const say = txt(C, 'span', 'br-total-t', 'Make them searchable, so you can find and quote them.');
-    const go = btn(C, 'go', 'Read them');
+    const go = btn(C, 'go', 'Read Them');
     total.append(say, go);
     const res = txt(C, 'p', 'br-small', '');
     out.push(total, res);
@@ -274,8 +283,8 @@ async function filesConfirm(C, total, res, rows, after) {
   if (!Number.isFinite(rate) || rate <= 0) { free(); said(C, res, num(n) + ' files would be read, but what fingerprinting them costs has not been measured, so no figure is given and nothing was started.'); return; }
   const box = C.el('div', 'br-confirm');
   box.appendChild(txt(C, 'p', 'br-small', num(n) + ' files from ' + pv.length + (pv.length === 1 ? ' mailbox' : ' mailboxes') + ' will be read with no AI and made searchable, about ' + usd(n * rate) + ' in all. ' + (rows.length > pv.length ? num(rows.length - pv.length) + (rows.length - pv.length === 1 ? ' mailbox has' : ' mailboxes have') + ' only pictures or recordings waiting, which this press does not read. ' : '') + 'New mail keeps being read as usual.'));
-  const yes = btn(C, 'go', 'Yes, go ahead ' + DOT + ' about ' + usd(n * rate));
-  const no = btn(C, 'go ghost', 'Not now');
+  const yes = btn(C, 'go', 'Yes, Go Ahead ' + DOT + ' about ' + usd(n * rate));
+  const no = btn(C, 'go ghost', 'Not Now');
   const acts = C.el('div', 'br-chips'); acts.append(yes, no); box.appendChild(acts);
   place(C, res, box, 'Read ' + num(n) + ' files?');
   no.addEventListener('click', () => { free(); shut(C); res.replaceChildren(); total.querySelectorAll('button').forEach((b) => { b.disabled = false; }); });

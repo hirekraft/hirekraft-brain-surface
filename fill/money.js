@@ -91,7 +91,7 @@ function owedCard(it) {
   box.appendChild(line("", it.line));
   if (it.state === "to_decide") box.appendChild(line("quiet", "To decide. " + it.what_fix_does));
   const d = ctx.el("details", "recs");
-  const s = ctx.el("summary", "recs-sum"); s.textContent = "See the detail"; d.appendChild(s);
+  const s = ctx.el("summary", "recs-sum"); s.textContent = "See the Detail"; d.appendChild(s);
   d.appendChild(line("a-title", "What QuickBooks says now")); d.appendChild(line("a-detail", it.books_now));
   if ((it.sources ?? []).length) {
     d.appendChild(line("a-title", "What the mail shows"));
@@ -99,15 +99,15 @@ function owedCard(it) {
     for (const m of it.sources) {
       const li = ctx.el("li");
       const p = line("a-detail", day(m.date) + ", " + (m.from ?? "") + ": " + m.why + ". ");
-      const a = ctx.el("a"); a.href = gmailLink(m); a.target = "_blank"; a.rel = "noopener"; a.textContent = "Open the email";
+      const a = ctx.el("a"); a.href = gmailLink(m); a.target = "_blank"; a.rel = "noopener"; a.textContent = "Open the Email";
       p.appendChild(a); li.appendChild(p); ul.appendChild(li);
     }
     d.appendChild(ul);
   }
   const inv = it.invoices ?? [];
   if (inv.length) {
-    d.appendChild(line("a-title", it.state === "to_decide" ? "Where it stands" : "What the fix changes"));
-    d.appendChild(table(["", "Open now", it.state === "to_decide" ? "Open after the payment" : "Open after"],
+    d.appendChild(line("a-title", it.state === "to_decide" ? "Where It Stands" : "What the Fix Changes"));
+    d.appendChild(table(["", "Open Now", it.state === "to_decide" ? "Open After the Payment" : "Open After"],
       inv.map((x) => [x.doc, money(x.now), money(x.after ?? x.after_payment)])));
   }
   if (it.what_fix_does && it.state !== "to_decide") d.appendChild(line("a-detail", it.what_fix_does));
@@ -149,15 +149,15 @@ function drawOwed() {
   if (!owed?.ok) { note(mount, refusedText(owed, "What you are owed could not be shown"), true); return; }
   const gap = Number(owed.gap ?? 0);
   const row = ctx.el("div", "sp-gauges");
-  row.appendChild(tile(whole(owed.books), "Your books say", ctx.countOf(owed.open_invoices) + " open invoices, " + ctx.countOf(owed.past_due) + " past due"));
-  row.appendChild(tile(whole(owed.believed), "We believe", gap > 0 ? "less money that arrived" : "the same as your books"));
+  row.appendChild(tile(whole(owed.books), "Your Books Say", ctx.countOf(owed.open_invoices) + " open invoices, " + ctx.countOf(owed.past_due) + " past due"));
+  row.appendChild(tile(whole(owed.believed), "We Believe", gap > 0 ? "less money that arrived" : "the same as your books"));
   mount.appendChild(row);
   mount.appendChild(line("", gap > 0
     ? money(gap) + " has arrived that QuickBooks does not show yet, so your books say you are owed more than you are."
     : "Your books and your mail agree on what you are owed."));
   const items = owed.cleanup ?? [];
   const why = ctx.el("details", "recs");
-  const s = ctx.el("summary", "recs-sum"); s.textContent = "Why the two differ"; why.appendChild(s);
+  const s = ctx.el("summary", "recs-sum"); s.textContent = "Why the Two Differ"; why.appendChild(s);
   const less = items.filter((i) => Number(i.lowers_owed) > 0);
   if (less.length) lines(why, less.map((i) => i.line + " Owed falls by " + money(i.lowers_owed) + " when it is recorded."));
   why.appendChild(line("quiet", owed.how));
@@ -168,7 +168,7 @@ function drawOwed() {
   const done = owed.fixed_lately ?? [];
   if (done.length) {
     const d = ctx.el("details", "recs");
-    const s2 = ctx.el("summary", "recs-sum"); s2.textContent = "Fixed lately (" + done.length + ")"; d.appendChild(s2);
+    const s2 = ctx.el("summary", "recs-sum"); s2.textContent = "Fixed Lately (" + done.length + ")"; d.appendChild(s2);
     lines(d, done.map((x) => day(x.fixed_at) + ": " + x.line));
     mount.appendChild(d);
   }
@@ -207,11 +207,11 @@ function drawRunway() {
   const rw = run.runway, b = run.burn, bk = run.books;
 
   const row = ctx.el("div", "sp-gauges");
-  if (rw?.cash_only) row.appendChild(tile(String(rw.cash_only.months), "months at today's spend, on the cash in the bank", "", rw.cash_only.months < 6));
-  else row.appendChild(tile("?", "months left", "not worked out: see What was not read", true));
-  if (rw?.after_collecting_and_paying) row.appendChild(tile(String(rw.after_collecting_and_paying.months), "months after collecting what we are owed and paying what we owe", ""));
-  row.appendChild(tile(run.cash == null ? "?" : money(run.cash), "cash in the bank now", run.cash == null ? "the bank could not be read" : (run.cash_as_posted ? money(run.cash_bank_own) + " from the banks read live, " + money(run.cash_as_posted) + " as posted in QuickBooks" : "the banks' own figures") + ", " + when(run.as_of), run.cash == null));
-  if (b) row.appendChild(tile(money(b.continuing), "spend a month that continues", "operating expenses, " + (b.averaged_over ?? []).join(", ")));
+  if (rw?.cash_only) row.appendChild(tile(String(rw.cash_only.months), "Months at today's spend, on the cash in the bank", "", rw.cash_only.months < 6));
+  else row.appendChild(tile("?", "Months left", "Not worked out: see What Was Not Read", true));
+  if (rw?.after_collecting_and_paying) row.appendChild(tile(String(rw.after_collecting_and_paying.months), "Months after collecting what we are owed and paying what we owe", ""));
+  row.appendChild(tile(run.cash == null ? "?" : money(run.cash), "Cash in the bank now", run.cash == null ? "The bank could not be read" : (run.cash_as_posted ? money(run.cash_bank_own) + " from the banks read live, " + money(run.cash_as_posted) + " as posted in QuickBooks" : "The banks' own figures") + ", " + when(run.as_of), run.cash == null));
+  if (b) row.appendChild(tile(money(b.continuing), "Spend a month that continues", "Operating expenses, " + (b.averaged_over ?? []).join(", ")));
   mount.appendChild(row);
 
   if (rw?.cash_only) note(mount, "How it is worked out: " + rw.cash_only.arithmetic + "." + (rw.after_collecting_and_paying ? " With what is owed: " + rw.after_collecting_and_paying.arithmetic + "." : ""));
@@ -220,24 +220,24 @@ function drawRunway() {
   // cash in the bank
   const bankRows = (run.bank_accounts ?? []).map((a) => [a.system + " " + a.name + (a.ending ? " ending " + a.ending : ""),
     a.currency && a.currency !== "USD" ? cur(a.current, a.currency) : money(a.current), a.available != null ? money(a.available) : "", !a.counted ? "not counted (not dollars)" : a.figure === "books" ? "as posted in QuickBooks; this bank is not read live" : "the bank's own figure"]);
-  if (bankRows.length) { mount.appendChild(line("a-title", "Cash, account by account")); mount.appendChild(table(["Account", "Current balance", "Available", ""], bankRows)); }
+  if (bankRows.length) { mount.appendChild(line("a-title", "Cash, account by account")); mount.appendChild(table(["Account", "Current Balance", "Available", ""], bankRows)); }
 
   // the books, beside
   if (bk) {
     mount.appendChild(line("a-title", "The books (QuickBooks, as posted" + (bk.as_of ? ", " + day(bk.as_of) : "") + ")"));
-    mount.appendChild(table(["", "The books"], [["Bank accounts as booked", money(bk.bank)], ["Owed to us (open invoices)", money(bk.owed_to_us)], ["Owed by us (unpaid bills)", money(bk.owed_by_us)], ["Credit cards", money(bk.credit_cards)]]));
+    mount.appendChild(table(["", "The Books"], [["Bank Accounts as Booked", money(bk.bank)], ["Owed to Us (Open Invoices)", money(bk.owed_to_us)], ["Owed by Us (Unpaid Bills)", money(bk.owed_by_us)], ["Credit Cards", money(bk.credit_cards)]]));
   }
 
   // monthly spend
   if (b) {
     mount.appendChild(line("a-title", "Monthly spend (QuickBooks, by month)"));
-    mount.appendChild(table(["Month", "Income", "Cost of sales", "Expenses", "Other expenses"],
+    mount.appendChild(table(["Month", "Income", "Cost of Sales", "Expenses", "Other Expenses"],
       (b.months ?? []).map((m) => [m.month, money(m.income), money(m.cost_of_sales), money(m.expenses), money(m.other_expenses)])));
     note(mount, "Averaged over " + (b.averaged_over ?? []).join(", ") + ": income " + money(b.income) + ", cost of sales " + money(b.cost_of_sales) + ", expenses " + money(b.expenses) + ", other " + money(b.other_expenses) + ". Spend now " + money(b.spend_now) + " a month; continuing " + money(b.continuing) + ".");
     if ((b.largest_lines ?? []).length) {
       const d = ctx.el("details", "recs");
-      const s = ctx.el("summary", "recs-sum"); s.textContent = "Largest expense lines, a month (tell the box if any of these also stop with the contractors)"; d.appendChild(s);
-      d.appendChild(table(["Line", "A month"], b.largest_lines.map((l) => [l.name, money(l.monthly)])));
+      const s = ctx.el("summary", "recs-sum"); s.textContent = "Largest Expense Lines, a Month (Tell the Box If Any of These Also Stop with the Contractors)"; d.appendChild(s);
+      d.appendChild(table(["Line", "A Month"], b.largest_lines.map((l) => [l.name, money(l.monthly)])));
       mount.appendChild(d);
     }
   }
@@ -257,7 +257,7 @@ function gmailLink(e) {
 function commitmentTable(rows) {
   const wrap = ctx.el("div", "sp-grid-wrap");
   const tbl = ctx.el("table", "sp-grid");
-  const heads = ["Who bills", "How often", "Last charge", "Usual", "Card", "Next expected", "", "From the emails"];
+  const heads = ["Who Bills", "How Often", "Last Charge", "Usual", "Card", "Next Expected", "", "From the Emails"];
   const hr = ctx.el("tr");
   for (const h of heads) { const th = ctx.el("th"); th.scope = "col"; th.textContent = h; hr.appendChild(th); }
   const thead = ctx.el("thead"); thead.appendChild(hr); tbl.appendChild(thead);
@@ -303,14 +303,14 @@ function drawCommitments() {
     mount.appendChild(commitmentTable(active));
     if (stopped.length) {
       const d = ctx.el("details", "recs");
-      const s = ctx.el("summary", "recs-sum"); s.textContent = "Looks stopped (" + stopped.length + "): no bill for well past their usual gap"; d.appendChild(s);
+      const s = ctx.el("summary", "recs-sum"); s.textContent = "Looks Stopped (" + stopped.length + "): no bill for well past their usual gap"; d.appendChild(s);
       d.appendChild(commitmentTable(stopped));
       mount.appendChild(d);
     }
   }
   if (people.length) {
     const d = ctx.el("details", "recs");
-    const s = ctx.el("summary", "recs-sum"); s.textContent = "Invoices sent by people (" + people.length + "): clients, contractors and partners, not subscriptions"; d.appendChild(s);
+    const s = ctx.el("summary", "recs-sum"); s.textContent = "Invoices Sent by People (" + people.length + "): clients, contractors and partners, not subscriptions"; d.appendChild(s);
     d.appendChild(commitmentTable(people));
     mount.appendChild(d);
   }
@@ -321,8 +321,8 @@ function drawCommitments() {
 function drawNotRead() {
   const mount = ctx.$("#money-notread"); if (!mount) return;
   mount.innerHTML = "";
-  const items = [].concat(run?.ok ? (run.not_read ?? []) : [{ what: "how long we can go", why: refusedText(run, "could not be worked out") }],
-    last?.ok ? (last.not_read ?? []) : [{ what: "what we pay for", why: refusedText(last, "could not be read") }]);
+  const items = [].concat(run?.ok ? (run.not_read ?? []) : [{ what: "How Long We Can Go", why: refusedText(run, "Could not be worked out") }],
+    last?.ok ? (last.not_read ?? []) : [{ what: "What We Pay For", why: refusedText(last, "Could not be read") }]);
   if (!items.length) { note(mount, "Everything this tab uses was read."); return; }
   const ul = ctx.el("ul", "attn");
   for (const x of items) {

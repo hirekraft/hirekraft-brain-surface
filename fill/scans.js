@@ -67,10 +67,10 @@ function sqLine() {
   const its = w ? w.items.filter((x) => x.kind === 'pictures') : [];
   if (its.length) {
     const d = its.reduce((a, x) => a + Number(x.done || 0), 0), t = its.reduce((a, x) => a + Number(x.total || 0), 0);
-    return [num(d) + ' of ' + num(t) + ' read', 'reading', its.every((x) => x.state === 'stalled') ? 'Not moving' : 'Reading'];
+    return [num(d) + ' of ' + num(t) + ' read', 'reading', its.every((x) => x.state === 'stalled') ? 'Not Moving' : 'Reading'];
   }
   const chosen = (S.sources ?? []).some((s) => s.reading_chosen && Number(s.waiting) > 0 && (!w || justStarted(s.source_key)));
-  if (wait > 0) return [num(wait) + ' not read yet', chosen ? 'reading' : 'none', chosen ? 'Reading' : (S.is_owner === true ? 'Your choice' : 'Waiting')];
+  if (wait > 0) return [num(wait) + ' not read yet', chosen ? 'reading' : 'none', chosen ? 'Reading' : (S.is_owner === true ? 'Your Choice' : 'Waiting')];
   if (Number(S.documents_read) > 0 || Number(S.photos_kept) > 0) return [[Number(S.documents_read) ? num(S.documents_read) + ' documents read' : '', Number(S.photos_kept) ? num(S.photos_kept) + ' photos kept' : ''].filter(Boolean).join(' ' + DOT + ' '), 'up_to_date', null];
   return ['No pictures in your drives', 'empty', null];
 }
@@ -153,7 +153,7 @@ function press(ctx, wrap, host, keys, mode, word, say) {
       if (error) throw error;
       out.textContent = (data?.ok && data.preview && say) ? say : (data?.note ?? 'No answer was given.');
       if (!data?.ok || data.nothing_new || !data.preview) { b.disabled = false; free(); return; }
-      const yes = btn(ctx, 'Yes, go ahead'), no = btn(ctx, 'Not now', true);
+      const yes = btn(ctx, 'Yes, Go Ahead'), no = btn(ctx, 'Not Now', true);
       const row = ctx.el('span', 'br-ready sc-yes'); row.append(yes, no);
       out.after(row);
       no.addEventListener('click', () => { row.remove(); out.hidden = true; b.disabled = false; free(); if (page) refresh(page.body, page.ctx); });
@@ -205,12 +205,12 @@ function driveRow(ctx, s, owner) {
   const right = ctx.el('span', 'br-line-r');
   const d = line(ctx, wrap, s.label || 'A drive', driveSub(ctx, s, owner, it), right);
   d.querySelector('b')?.setAttribute('translate', 'no');
-  if (it) right.appendChild(it.state === 'stalled' ? chip(ctx, 'off', 'Not moving') : chip(ctx, 'read', 'Reading'));
-  else if (!wait) right.appendChild(chip(ctx, 'ok', 'Up to date'));
+  if (it) right.appendChild(it.state === 'stalled' ? chip(ctx, 'off', 'Not Moving') : chip(ctx, 'read', 'Reading'));
+  else if (!wait) right.appendChild(chip(ctx, 'ok', 'Up to Date'));
   else if (s.reading_chosen && (!work() || justStarted(s.source_key))) right.appendChild(chip(ctx, 'read', 'Reading'));   // chosen; the count is on its way, or this brain gives none
   else if (owner) {
     if (s.reading_chosen) wrap.appendChild(txt(ctx, 'p', 'br-small sc-note', 'These were chosen to be read and are not in line any more, so they were not read. You can start them again.'));
-    press(ctx, wrap, right, [s.source_key], 'pictures', 'Read them');
+    press(ctx, wrap, right, [s.source_key], 'pictures', 'Read Them');
   } else right.appendChild(chip(ctx, 'off', 'Waiting'));
   return wrap;
 }
@@ -240,11 +240,11 @@ function restPanel(ctx, owner, list) {
       const keys = (allOn ? drives : drives.filter((s) => !s.new_scans)).map((s) => s.source_key);
       const names = (allOn ? drives : drives.filter((s) => !s.new_scans)).map((s) => s.label || 'a drive').join(', ');
       const each = S.per_picture_usd !== null && S.per_picture_usd !== undefined ? ', at about ' + String(Math.round(Number(S.per_picture_usd) * 1000) / 10) + String.fromCharCode(162) + ' each' : '';
-      press(ctx, q, nr, keys, allOn ? 'pictures_new_off' : 'pictures_new_on', allOn ? 'Turn off' : 'Turn on',
+      press(ctx, q, nr, keys, allOn ? 'pictures_new_off' : 'pictures_new_on', allOn ? 'Turn off' : 'Turn On',
         allOn ? 'New pictures in ' + names + ' will wait for your choice again.' : 'New pictures added to ' + names + ' will be read as they arrive' + each + '.');
     } else nr.appendChild(chip(ctx, on.length ? 'ok' : 'off', on.length ? 'On' : 'Off'));
   }
-  if (Number(S.not_readable) > 0) line(ctx, q, 'Not read', pics(S.not_readable) + ' of a kind the Tool does not read (drawings, very large files, or a folder set aside in bulk). Kept with their name and date', null);
+  if (Number(S.not_readable) > 0) line(ctx, q, 'Not Read', pics(S.not_readable) + ' of a kind the Tool does not read (drawings, very large files, or a folder set aside in bulk). Kept with their name and date', null);
   return q;
 }
 
@@ -283,19 +283,19 @@ function refresh(body, ctx) {
 export async function drawPage(body, ctx) {
   page = { body, ctx };
   wire();
-  body.replaceChildren(txt(ctx, 'h2', 'br-ph', 'Scans and photos'), txt(ctx, 'p', 'br-lede working no-late', 'Reading'));
+  body.replaceChildren(txt(ctx, 'h2', 'br-ph', 'Scans and Photos'), txt(ctx, 'p', 'br-lede working no-late', 'Reading'));
   askWork();
   await read(ctx, true);
   repaint();
   if (!body.isConnected) return;
-  body.replaceChildren(txt(ctx, 'h2', 'br-ph', 'Scans and photos'));
+  body.replaceChildren(txt(ctx, 'h2', 'br-ph', 'Scans and Photos'));
   if (err || !S) { body.appendChild(txt(ctx, 'p', 'br-lede', 'Your pictures could not be read just now: ' + (err || 'no reason was given') + '. This is the reading failing, not your drives being empty.')); return; }
   const owner = S.is_owner === true;
   const list = S.sources ?? [];
   body.appendChild(txt(ctx, 'p', 'br-lede', 'Pictures in your drives: scanned contracts, photographed receipts and invoices, and ordinary photos. Documents in pictures are read only when you choose.'));
 
   // DOCUMENTS IN PICTURES, per drive: waiting, the price, Read them; while they are read, done of total, pace and time left
-  body.appendChild(txt(ctx, 'h3', 'br-h3', 'Documents in pictures'));
+  body.appendChild(txt(ctx, 'h3', 'br-h3', 'Documents in Pictures'));
   const p = ctx.el('div', 'br-panel sc-drives'); body.appendChild(p);
   body.appendChild(restPanel(ctx, owner, list));
   body.appendChild(txt(ctx, 'p', 'br-small br-note', S.faces || 'The Tool identifies nobody by their face.'));

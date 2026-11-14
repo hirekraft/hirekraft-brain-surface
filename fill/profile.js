@@ -122,7 +122,7 @@ function notRead(lp) {
   if (b.systems_read_live) items.push(['Books, bank and payments', 'Not read in this pass, so nothing here is checked against them.']);
   for (const g of b.could_not_tell ?? []) items.push(['Could not tell' + (g.area ? ': ' + g.area : ''), g.why_not]);
   const d = ctx.el('details', 'recs');
-  const s = ctx.el('summary', 'recs-sum'); s.textContent = 'What this was not based on (' + items.length + ')'; d.appendChild(s);
+  const s = ctx.el('summary', 'recs-sum'); s.textContent = 'What This Was Not Based On (' + items.length + ')'; d.appendChild(s);
   const ul = ctx.el('ul', 'attn');
   for (const [t, w] of items) { const li = ctx.el('li'); li.appendChild(line('a-title', t)); if (w) li.appendChild(line('a-detail', w)); ul.appendChild(li); }
   d.appendChild(ul);
@@ -156,7 +156,7 @@ function draw() {
   const out = all.filter((s) => s.status === 'rejected');
   if (out.length) {
     const d = ctx.el('details', 'recs');
-    const s = ctx.el('summary', 'recs-sum'); s.textContent = 'You said these are wrong (' + out.length + ')'; d.appendChild(s);
+    const s = ctx.el('summary', 'recs-sum'); s.textContent = 'You Said These Are Wrong (' + out.length + ')'; d.appendChild(s);
     const ul = ctx.el('ul', 'attn');
     for (const r of out) { const li = statement(r); ul.appendChild(li); }
     d.appendChild(ul);

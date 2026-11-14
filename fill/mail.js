@@ -49,9 +49,9 @@
 import { conversation, composer, askDraft } from './answer.js?v=2026-10-29-mail-invites';
 import { fmtDate } from './dates.js?v=2026-10-22-dates';
 import { plainWords } from './plain.js?v=2026-10-27-mail-views';
-import { drawBench } from './bench.js?v=2026-11-02-mail-clean';   // Bench (staffing): Who we have on a requirement, only where the business has it
+import { drawBench } from './bench.js?v=2026-11-14-tabs-style';   // Bench (staffing): Who we have on a requirement, only where the business has it
 import { screenLang, screenLangName } from './words.js?v=2026-10-29-thinkrooms-3';   // See it in <language> (seat language-and-nudge)
-import { initAi, drawQuestions, drawCleanup, drawTeach, questionCounts, cleanupCount, loadCleanup } from './mailai.js?v=2026-11-05-mail-tab-build-r2';   // the AI view's six questions, Clean-up, Teach the Tool (seat mail-tab-build round 2)
+import { initAi, drawQuestions, drawCleanup, drawTeach, questionCounts, cleanupCount, loadCleanup } from './mailai.js?v=2026-11-14-tabs-style';   // the AI view's six questions, Clean-up, Teach the Tool (seat mail-tab-build round 2)
 
 // VIEWS IN THE LEFT COLUMN (seat mail-views, 2026-10-27; Alex 14:41 PT: "Worth your attention should be ... on the left-hand
 // side instead of an email, like a label ... worth your attention, and the other would be starred"). At the top of the left
@@ -418,7 +418,7 @@ function whoOf(it) { return String(it.what || '').split(': ')[0].split(' (')[0];
 // table of seat mail-views (Draft a reply, Not mine, Not important, Warn, Report it in Gmail, Draft a reminder), removed with
 // kindOf, settle, gone, dismiss, openFor and gmailHref.
 const saidChoice = new Map();   // item key -> { line, id, choice }: the last choice's line and its Undo survive the redraw that follows
-const CHOICES = [['got_it', 'Got it'], ['keep_me_posted', 'Keep me posted'], ['not_for_this_list', 'Not for this list'], ['already_paid', 'Already paid']];
+const CHOICES = [['got_it', 'Got It'], ['keep_me_posted', 'Keep Me Posted'], ['not_for_this_list', 'Not for This List'], ['already_paid', 'Already Paid']];
 async function choose(it, choice, btn, out, key) {
   btn.disabled = true;
   out.className = 'mailx-att-out working'; out.textContent = 'Keeping your choice.';
@@ -457,7 +457,7 @@ function saidLine(out, k) {
 }
 function choiceRow(it, row, out) {
   const b = (label, fn, primary) => { const x = mk('button', primary ? 'go' : 'go ghost', label); x.type = 'button'; x.addEventListener('click', () => fn(x)); row.appendChild(x); return x; };
-  if (it.following) { b('Stop following', (x) => choose(it, 'stop_following', x, out), false); return; }
+  if (it.following) { b('Stop Following', (x) => choose(it, 'stop_following', x, out), false); return; }
   for (const [c, label] of CHOICES) {
     if (c === 'keep_me_posted' && it.kind !== 'email') continue;
     if (c === 'already_paid' && !it.is_money) continue;
@@ -468,7 +468,7 @@ function choiceRow(it, row, out) {
 // A thought left for her: Read it shows it whole (and marks it read, which its author can see), See the original shows the
 // speaker's own words, Reply in the Thinkroom opens its room with the composer (seat every-voice, decision 1025; seat thinkrooms-a).
 function thoughtActions(it, row, said) {
-  const read = mk('button', 'go', 'Read it');
+  const read = mk('button', 'go', 'Read It');
   read.type = 'button';
   read.addEventListener('click', () => {
     said.textContent = String(it.text || it.why || '');
@@ -478,17 +478,17 @@ function thoughtActions(it, row, said) {
   row.appendChild(read);
   if (it.translated) {
     let orig = null;
-    const o = mk('button', 'go ghost', 'See the original');
+    const o = mk('button', 'go ghost', 'See the Original');
     o.type = 'button';
     o.addEventListener('click', () => {
-      if (orig) { orig.remove(); orig = null; o.textContent = 'See the original'; return; }
+      if (orig) { orig.remove(); orig = null; o.textContent = 'See the Original'; return; }
       orig = mk('p', 'mailx-att-why thought-original', String(it.original || '')); orig.lang = it.lang || '';
-      said.after(orig); o.textContent = 'Hide the original';
+      said.after(orig); o.textContent = 'Hide the Original';
     });
     row.appendChild(o);
   }
   if (C.startThought) {
-    const rp = mk('button', 'go ghost', it.room_id ? 'Reply in the Thinkroom' : 'Reply with a thought');
+    const rp = mk('button', 'go ghost', it.room_id ? 'Reply in the Thinkroom' : 'Reply with a Thought');
     rp.type = 'button';
     rp.addEventListener('click', () => C.startThought(it.room_id ? { room: it.room_id, draft: '' } : { draft: 'Tell ' + String(it.from || '') + ' that ' }));
     row.appendChild(rp);
@@ -510,7 +510,7 @@ function matterRow(it, onPick, current) {
   if (current) b.setAttribute('aria-current', 'true');
   if (it.kind === 'email' || it.following) {
     const top = mk('span', 'mailx-matter-top');
-    top.appendChild(mk('span', 'mailx-subj mailx-att-what', String(it.subject || it.title || '(no subject)')));
+    top.appendChild(mk('span', 'mailx-subj mailx-att-what', String(it.subject || it.title || '(No subject)')));
     if (it.news) top.appendChild(mk('span', 'mailx-matter-new', 'New'));
     b.appendChild(top);
     if (it.who) { const w = mk('span', 'mailx-from mailx-matter-who', String(it.who) + (it.org && it.org !== it.who ? ' · ' + it.org : '') + (it.at ? ' · ' + when(it.at) : '')); w.translate = false; b.appendChild(w); }
@@ -535,8 +535,8 @@ function matterRow(it, onPick, current) {
 }
 function drawAttnList(list) {
   const head = mk('div', 'mailx-head');
-  head.appendChild(navButton('All views', 'side'));
-  head.appendChild(mk('h3', null, mode === 'ai' ? 'For you' : 'Worth your attention'));
+  head.appendChild(navButton('All Views', 'side'));
+  head.appendChild(mk('h3', null, mode === 'ai' ? 'For You' : 'Worth Your Attention'));
   head.appendChild(mk('p', 'mailx-list-sub', 'Someone waiting on you, money, and what you follow. Nothing else.'));
   list.appendChild(head);
   if (!attn || attn.loading) { list.appendChild(mk('p', 'quiet working', 'Looking through your mail and books. Nothing in your mailboxes is changed.')); return; }
@@ -558,12 +558,12 @@ function drawAttnList(list) {
   if (!sellHead && sellSaid && attn.more) ul.appendChild(sellerHead(0));
   list.appendChild(ul);
   if (more.length) {
-    const b = mk('button', 'go ghost', attn.more ? 'Show fewer' : 'Show ' + more.length + ' more, ranked lower');
+    const b = mk('button', 'go ghost', attn.more ? 'Show Fewer' : 'Show ' + more.length + ' more, ranked lower');
     b.type = 'button';
     b.addEventListener('click', () => { attn.more = !attn.more; drawList(); });
     list.appendChild(b);
   }
-  const learned = mk('button', 'mailx-toggle mailx-learned-link', 'What it learned');
+  const learned = mk('button', 'mailx-toggle mailx-learned-link', 'What It Learned');
   learned.type = 'button';
   const out = mk('div', 'mailx-att-learned');
   learned.addEventListener('click', () => attnLearned(out));
@@ -598,7 +598,7 @@ function sellerHead(n) {
 }
 function sellerClear(li, it) {
   li.classList.add('mailx-sell-li');
-  const x = mk('button', 'go ghost mailx-sell-clear', 'Not for this list'); x.type = 'button';
+  const x = mk('button', 'go ghost mailx-sell-clear', 'Not for This List'); x.type = 'button';
   x.addEventListener('click', async () => {
     x.disabled = true;
     let r = null;
@@ -633,7 +633,7 @@ async function sellerUndo() {
 function followItems() { return attn && attn.data ? (attn.data.following || []).map((f) => Object.assign({}, f, { following: true, kind: 'email', subject: f.title })) : []; }
 function drawFollowList(list) {
   const head = mk('div', 'mailx-head');
-  head.appendChild(navButton('All views', 'side'));
+  head.appendChild(navButton('All Views', 'side'));
   head.appendChild(mk('h3', null, 'Following'));
   list.appendChild(head);
   if (!attn || attn.loading) { list.appendChild(mk('p', 'quiet working', 'Reading what you follow.')); return; }
@@ -685,7 +685,7 @@ function emailInCard(slot, it) {
     wn.append(nm, ad); who.appendChild(wn);
     if (t.gmail_url) { const a = mk('a', 'mailx-gmail', 'Open in Gmail'); a.href = t.gmail_url; a.target = '_blank'; a.rel = 'noopener'; who.appendChild(a); }
     slot.appendChild(who);
-    const sj = mk('h3', 'mailx-subject mailx-card-subject', m.subject || t.subject || '(no subject)'); sj.translate = false;
+    const sj = mk('h3', 'mailx-subject mailx-card-subject', m.subject || t.subject || '(No subject)'); sj.translate = false;
     slot.appendChild(sj);
     if (m.to) { const to = mk('p', 'quiet mailx-to', 'to ' + m.to + (m.cc ? ', cc ' + m.cc : '')); to.translate = false; slot.appendChild(to); }
     const atts = Array.isArray(it.attachments) ? it.attachments : [];
@@ -698,7 +698,7 @@ function emailInCard(slot, it) {
     box.appendChild(messageContent(m));
     slot.appendChild(box);
     if (msgs.length > 1) {
-      const o = mk('button', 'mailx-toggle', 'Show the whole conversation (' + msgs.length + ' emails)'); o.type = 'button';
+      const o = mk('button', 'mailx-toggle', 'Show the Whole Conversation (' + msgs.length + ' emails)'); o.type = 'button';
       o.addEventListener('click', () => openEmail(it.open_source, it.open_id));
       slot.appendChild(o);
     }
@@ -719,12 +719,12 @@ function mailCardActs(it, row, out) {
   if (it.kind === 'new_business' && ['work_order', 'lead', 'partner'].includes(it.nb_intent)) {
     b('Open as ' + capWord(it.nb_word || 'work order'), 'go ghost', (x) => orderCall('work_order_open', { p_comm: comm }, x, out, 'Opening it.', [it.key, 'work_order:' + comm]));
   } else if (it.kind === 'work_order') {
-    const st = { open: ['in_progress', 'In progress'], in_progress: ['delivered', 'Delivered'], delivered: ['done', 'Done'] }[it.state];
+    const st = { open: ['in_progress', 'In Progress'], in_progress: ['delivered', 'Delivered'], delivered: ['done', 'Done'] }[it.state];
     if (st) b(st[1], 'go ghost', (x) => orderCall('work_order_set', { p_id: it.wo_id, p_state: st[0] }, x, out, 'Keeping it.', [it.key]));
   } else if (it.kind === 'email') {
-    b('Got it', 'go ghost', (x) => choose(it, 'got_it', x, out));
+    b('Got It', 'go ghost', (x) => choose(it, 'got_it', x, out));
   }
-  if (it.kind !== 'work_order') b('Not for this list', 'go ghost', (x) => choose(it, 'not_for_this_list', x, out));
+  if (it.kind !== 'work_order') b('Not for This List', 'go ghost', (x) => choose(it, 'not_for_this_list', x, out));
 }
 function drawMailCard(read, it, eyebrow) {
   const card = mk('article', 'mailx-att-card mailx-matter-card mailx-mail-card');
@@ -746,14 +746,14 @@ function drawMailCard(read, it, eyebrow) {
   emailInCard(slot, it);
   // Below the email, quiet: the order's facts and its other states; why this is here and what was read, one press.
   if (it.kind === 'work_order') drawOrderBelow(card, it);
-  const t = mk('button', 'mailx-toggle', 'Why this is here'); t.type = 'button'; t.setAttribute('aria-expanded', 'false');
+  const t = mk('button', 'mailx-toggle', 'Why This Is Here'); t.type = 'button'; t.setAttribute('aria-expanded', 'false');
   const box = mk('div', 'mailx-matter-why'); box.hidden = true;
   if (it.kind === 'email' && stateOf(it)) { const p = mk('p', 'mailx-att-why', stateOf(it)); p.translate = false; box.appendChild(p); }
   if (it.why) box.appendChild(mk('p', 'mailx-att-why', String(it.why)));
   const checked = Array.isArray(it.checked) ? it.checked.join(' ') : '';
   if (checked) box.appendChild(mk('p', 'mailx-att-checked', 'What was checked: ' + checked));
   if (it.kind === 'email') {
-    const k = mk('button', 'go ghost', 'Keep me posted'); k.type = 'button';
+    const k = mk('button', 'go ghost', 'Keep Me Posted'); k.type = 'button';
     k.addEventListener('click', () => choose(it, 'keep_me_posted', k, out));
     box.appendChild(k);
   }
@@ -762,15 +762,15 @@ function drawMailCard(read, it, eyebrow) {
   read.appendChild(card);
 }
 function drawAttnCard(read, it) {
-  read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
+  read.appendChild(navButton('Back to the List', 'list', ' mailx-back'));
   if (isMailItem(it)) {
-    return drawMailCard(read, it, it.kind === 'new_business' ? nbTag(it)[1] : it.kind === 'work_order' ? orderTag(it) : mode === 'ai' ? 'For you' : 'Worth your attention');
+    return drawMailCard(read, it, it.kind === 'new_business' ? nbTag(it)[1] : it.kind === 'work_order' ? orderTag(it) : mode === 'ai' ? 'For You' : 'Worth Your Attention');
   }
   const card = mk('article', 'mailx-att-card mailx-matter-card' + (it.kind === 'thought' ? ' mailx-att-thought' : ''));
   const eyebrow = it.kind === 'thought' ? 'Left for you' : it.kind === 'money' ? 'Money' : it.following ? 'Following'
-    : it.kind === 'impostor' ? 'Pretending to be someone of your business' : it.kind === 'new_business' ? nbTag(it)[1] : it.kind === 'work_order' ? orderTag(it) : mode === 'ai' ? 'For you' : 'Worth your attention';
+    : it.kind === 'impostor' ? 'Pretending to be someone of your business' : it.kind === 'new_business' ? nbTag(it)[1] : it.kind === 'work_order' ? orderTag(it) : mode === 'ai' ? 'For You' : 'Worth Your Attention';
   card.appendChild(mk('p', 'eyebrow', eyebrow));
-  const h = mk('h2', 'mailx-subject', String(it.kind === 'email' || it.following ? (it.subject || it.title || '(no subject)') : (it.what || '')));
+  const h = mk('h2', 'mailx-subject', String(it.kind === 'email' || it.following ? (it.subject || it.title || '(No subject)') : (it.what || '')));
   card.appendChild(h);
   if (it.kind === 'thought') {
     const said = mk('p', 'mailx-att-why', String(it.why || ''));
@@ -786,12 +786,12 @@ function drawAttnCard(read, it) {
   // AN INVITATION WAITING ON HER (seat mail-invites): the invitation itself, its presses, and the email one press away.
   if (it.invite) {
     card.appendChild(inviteCard(it.invite, { onSuggest: () => { openEmail(it.open_source, it.open_id); pendingSuggest = it.invite.id; } }));
-    const o = mk('button', 'go ghost mailx-invite-open', 'Open the email'); o.type = 'button';
+    const o = mk('button', 'go ghost mailx-invite-open', 'Open the Email'); o.type = 'button';
     o.addEventListener('click', () => openEmail(it.open_source, it.open_id));
     card.appendChild(o);
   }
   if ((it.kind === 'email' || it.following) && !String(it.key || '').startsWith('invite:')) {
-    card.appendChild(mk('h3', 'mailx-matter-h', 'Where it stands'));
+    card.appendChild(mk('h3', 'mailx-matter-h', 'Where It Stands'));
     const st = stateOf(it);
     if (st) {
       const p = mk('p', 'mailx-matter-state-full', st); p.translate = false; card.appendChild(p);
@@ -804,7 +804,7 @@ function drawAttnCard(read, it) {
     }
     const pass = passageOf(it);
     if (pass) {
-      card.appendChild(mk('h3', 'mailx-matter-h', 'The latest words'));
+      card.appendChild(mk('h3', 'mailx-matter-h', 'The Latest Words'));
       const q = mk('blockquote', 'mailx-matter-passage-full', pass); q.translate = false; card.appendChild(q);
       card.appendChild(mk('p', 'mailx-att-checked', it.state && it.state.passage_by === 'ai' ? 'Copied word for word from the latest email.' : 'The first lines of the latest email.'));
     }
@@ -818,7 +818,7 @@ function drawAttnCard(read, it) {
   if (it.kind === 'new_business' && it.open_source && it.open_id) {
     const rp = mk('button', 'go', 'Reply'); rp.type = 'button';
     rp.addEventListener('click', () => { pendingCompose = 'reply'; openEmail(it.open_source, it.open_id); });
-    const hd = mk('button', 'go ghost', 'Hand to a colleague'); hd.type = 'button';
+    const hd = mk('button', 'go ghost', 'Hand to a Colleague'); hd.type = 'button';
     hd.addEventListener('click', () => { pendingCompose = 'forward'; openEmail(it.open_source, it.open_id); });
     row.prepend(rp, hd);
   }
@@ -831,7 +831,7 @@ function drawAttnCard(read, it) {
   }
   if (it.kind === 'work_order') drawOrder(card, it, row, out);
   if ((it.kind === 'impostor' || it.kind === 'scam_alert') && it.open_source && it.open_id) {
-    const o = mk('button', 'go ghost', 'Open the email'); o.type = 'button';
+    const o = mk('button', 'go ghost', 'Open the Email'); o.type = 'button';
     o.addEventListener('click', () => openEmail(it.open_source, it.open_id));
     row.appendChild(o);
   }
@@ -840,7 +840,7 @@ function drawAttnCard(read, it) {
   // Why it is here and what was checked: one press (1031 item 2).
   const checked = Array.isArray(it.checked) ? it.checked.join(' ') : '';
   if ((it.kind === 'email' && it.why) || checked) {
-    const t = mk('button', 'mailx-toggle', 'Why this is here'); t.type = 'button'; t.setAttribute('aria-expanded', 'false');
+    const t = mk('button', 'mailx-toggle', 'Why This Is Here'); t.type = 'button'; t.setAttribute('aria-expanded', 'false');
     const box = mk('div', 'mailx-matter-why'); box.hidden = true;
     if (it.kind === 'email' && it.why) box.appendChild(mk('p', 'mailx-att-why', String(it.why)));
     if (checked) box.appendChild(mk('p', 'mailx-att-checked', 'What was checked: ' + checked));
@@ -849,7 +849,7 @@ function drawAttnCard(read, it) {
   }
   // The money line opens to its list: each invoice and bill, with the books one press away and Already paid on each.
   if (it.kind === 'money' && Array.isArray(it.list) && it.list.length) {
-    card.appendChild(mk('h3', 'mailx-matter-h', 'In your books'));
+    card.appendChild(mk('h3', 'mailx-matter-h', 'In Your Books'));
     const ul = mk('ul', 'mailx-matter-list');
     for (const l of it.list) {
       const li = mk('li');
@@ -859,7 +859,7 @@ function drawAttnCard(read, it) {
       if (l.open_url) { const a = mk('a', 'go ghost', 'Open in QuickBooks'); a.href = l.open_url; a.target = '_blank'; a.rel = 'noopener'; acts.appendChild(a); }
       if (!l.paid_by_you) {
         const lo = mk('div', 'mailx-att-out'); lo.setAttribute('aria-live', 'polite');
-        const p = mk('button', 'go ghost', 'Already paid'); p.type = 'button';
+        const p = mk('button', 'go ghost', 'Already Paid'); p.type = 'button';
         p.addEventListener('click', () => choose(Object.assign({}, l, { is_money: true }), 'already_paid', p, lo, l.key));
         acts.appendChild(p); li.append(acts, lo); saidLine(lo, l.key);
       } else li.appendChild(acts);
@@ -871,7 +871,7 @@ function drawAttnCard(read, it) {
   const src = Array.isArray(it.sources) ? it.sources : [];
   if (src.length) {
     const n = Number(it.n_emails || src.length);
-    card.appendChild(mk('h3', 'mailx-matter-h', n > src.length ? 'Its emails, the latest ' + src.length + ' of ' + n : 'Its emails'));
+    card.appendChild(mk('h3', 'mailx-matter-h', n > src.length ? 'Its Emails, the Latest ' + src.length + ' of ' + n : 'Its Emails'));
     const ul = mk('ul', 'mailx-matter-sources');
     for (const s of src) {
       const li = mk('li');
@@ -886,7 +886,7 @@ function drawAttnCard(read, it) {
     }
     card.appendChild(ul);
   } else if (it.open_source && it.open_id && it.kind !== 'impostor' && it.kind !== 'scam_alert') {
-    const o = mk('button', 'go ghost', 'Open the email'); o.type = 'button';
+    const o = mk('button', 'go ghost', 'Open the Email'); o.type = 'button';
     o.addEventListener('click', () => openEmail(it.open_source, it.open_id));
     card.appendChild(o);
   }
@@ -904,13 +904,13 @@ async function attnLearned(out) {
   const ul = mk('ul', 'find-learned-list');
   for (const r of rows) {
     const li = mk('li');
-    const rm = mk('button', 'go ghost', 'Forget this');
+    const rm = mk('button', 'go ghost', 'Forget This');
     rm.type = 'button';
     rm.addEventListener('click', async () => {
       rm.disabled = true;
       let ok = false;
       try { const x = await C.sb.rpc('find_learned_remove', { p_id: r.id }); ok = !x.error && x.data && x.data.ok === true; } catch (_) { ok = false; }
-      if (ok) { li.remove(); loadAttention(); } else { rm.disabled = false; rm.textContent = 'Not removed. Try again'; }
+      if (ok) { li.remove(); loadAttention(); } else { rm.disabled = false; rm.textContent = 'Not Removed. Try Again'; }
     });
     li.append(mk('span', null, String(r.line || '')), rm);
     ul.appendChild(li);
@@ -1053,7 +1053,7 @@ function scamWho(it) { return it.pretends ? 'Pretends to be ' + it.pretends : 'P
 
 function drawScamList(list) {
   const head = mk('div', 'mailx-head');
-  head.appendChild(navButton('All views', 'side'));
+  head.appendChild(navButton('All Views', 'side'));
   head.appendChild(mk('h3', null, 'Caught'));
   head.appendChild(mk('p', 'mailx-list-sub', 'Emails pretending to be someone. Links and pictures are off.'));
   list.appendChild(head);
@@ -1071,7 +1071,7 @@ function drawScamList(list) {
     if (scam.ready && items.length > 1 && movable.length === items.length) {
       const row = mk('div', 'mailx-att-acts');
       const out = mk('p', 'quiet'); out.setAttribute('aria-live', 'polite');
-      const all = mk('button', 'go mailx-danger', 'Move all ' + items.length + ' to Spam'); all.type = 'button';
+      const all = mk('button', 'go mailx-danger', 'Move All ' + items.length + ' to Spam'); all.type = 'button';
       all.addEventListener('click', () => moveToSpam(movable, all, out));
       row.appendChild(all);
       list.append(row, out);
@@ -1128,7 +1128,7 @@ function drawScamList(list) {
   }
   const safe = j.not_scam || [];
   if (safe.length) {
-    list.appendChild(mk('h4', 'mailx-domain', 'Not a scam (' + safe.length + ')'));
+    list.appendChild(mk('h4', 'mailx-domain', 'Not a Scam (' + safe.length + ')'));
     const su = mk('ul', 'mailx-scam-done');
     for (const s of safe) {
       const li = mk('li');
@@ -1149,7 +1149,7 @@ function drawScamList(list) {
 // warning-email lines each on their own, the five-choice Handled form before the press).
 const scamDone = new Map();    // flag id -> { action_id } she marked Handled on this page: the card stays, with Undo and the line
 function drawScamCard(read, it) {
-  read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
+  read.appendChild(navButton('Back to the List', 'list', ' mailx-back'));
   const card = mk('article', 'mailx-att-card mailx-scam-card');
   const banner = mk('div', 'mailx-scam-banner');
   banner.setAttribute('role', 'alert');
@@ -1160,10 +1160,10 @@ function drawScamCard(read, it) {
   card.appendChild(h);
   const facts = mk('dl', 'mailx-scam-facts4');
   const fact = (label, value, keep) => { const d = mk('div'); d.appendChild(mk('dt', null, label)); const v = mk('dd', null, value); if (keep) v.translate = false; d.appendChild(v); facts.appendChild(d); };
-  fact('Pretends to be', it.pretends ? String(it.pretends) : 'Someone you pay', !!it.pretends);
-  fact('Really from', String(it.from_email || ''), true);
-  fact('Asks for', it.asks_payment ? 'A payment, urgently, to someone you have never paid' : 'That you act on it');
-  fact('Your books', it.books ? String(it.books) : scam && scam.data && scam.data.owner ? 'Not checked for this one.' : 'Only the owner’s view shows the books.');
+  fact('Pretends to Be', it.pretends ? String(it.pretends) : 'Someone you pay', !!it.pretends);
+  fact('Really From', String(it.from_email || ''), true);
+  fact('Asks For', it.asks_payment ? 'A payment, urgently, to someone you have never paid' : 'That you act on it');
+  fact('Your Books', it.books ? String(it.books) : scam && scam.data && scam.data.owner ? 'Not checked for this one.' : 'Only the owner’s view shows the books.');
   card.appendChild(facts);
   if (it.warn) card.appendChild(mk('p', 'mailx-warning-line', String(it.warn)));
   const out = mk('div', 'mailx-att-out');
@@ -1178,10 +1178,10 @@ function drawScamCard(read, it) {
     card.appendChild(ok);
     // The line comes after the press, and only if she wants one.
     const f = mk('div', 'mailx-att-why-box');
-    const lab = mk('label', null, 'Add a line for the others (optional)');
+    const lab = mk('label', null, 'Add a Line for the Others (Optional)');
     const inp = mk('input', 'mailx-att-input'); inp.type = 'text'; inp.maxLength = 280; inp.value = done.line || '';
     lab.appendChild(inp);
-    const keep = mk('button', 'go ghost', 'Keep the line'); keep.type = 'button';
+    const keep = mk('button', 'go ghost', 'Keep the Line'); keep.type = 'button';
     keep.addEventListener('click', () => keepLine(it, done, inp, keep, status));
     f.append(lab, keep);
     if (done.said) { status.className = 'find-lesson'; status.textContent = done.said; }
@@ -1193,7 +1193,7 @@ function drawScamCard(read, it) {
     mv.addEventListener('click', () => moveToSpam([it], mv, status));
     const hd = mk('button', 'go ghost', 'Handled'); hd.type = 'button';
     hd.addEventListener('click', () => handleNow(it, hd, status));
-    const ns = mk('button', 'go ghost', 'Not a scam'); ns.type = 'button';
+    const ns = mk('button', 'go ghost', 'Not a Scam'); ns.type = 'button';
     ns.addEventListener('click', () => notScam(it, out));
     row.append(mv, hd, ns);
     card.append(row, status);
@@ -1205,7 +1205,7 @@ function drawScamCard(read, it) {
     : it.gmail_label === 'applied' ? 'It carries the red Suspected scam label in Gmail.' : '';
   if (perm) card.appendChild(mk('p', 'mailx-small', perm));
   if (it.warning_email) card.appendChild(mk('p', 'mailx-small', String(it.warning_email)));
-  const orig = mk('button', 'mailx-textlink', 'Show the original (links and pictures stay off)'); orig.type = 'button';
+  const orig = mk('button', 'mailx-textlink', 'Show the Original (Links and Pictures Stay Off)'); orig.type = 'button';
   orig.addEventListener('click', () => showOriginal(it, orig, out));
   card.append(orig, out);
   read.appendChild(card);
@@ -1265,7 +1265,7 @@ function showOriginal(it, btn, out) {
   out.innerHTML = '';
   const ask = mk('div', 'mailx-att-why-box');
   ask.appendChild(mk('p', null, 'This shows the email’s words only. Its links, pictures and attachments stay switched off. Show it?'));
-  const yes = mk('button', 'go ghost', 'Yes, show the words'); yes.type = 'button';
+  const yes = mk('button', 'go ghost', 'Yes, Show the Words'); yes.type = 'button';
   ask.appendChild(yes);
   out.appendChild(ask);
   yes.addEventListener('click', async () => {
@@ -1339,7 +1339,7 @@ async function loadMarked(v, more) {
 function drawMarkedList(list) {
   const v = view;
   const head = mk('div', 'mailx-head');
-  head.appendChild(navButton('All views', 'side'));
+  head.appendChild(navButton('All Views', 'side'));
   const h3 = mk('h3', null, v.kind === 'starred' ? 'Starred' : v.name); if (v.kind !== 'starred') h3.translate = false;
   head.appendChild(h3);
   const d0 = marked && marked.key === markedKey(v) && marked.data ? marked.data : null;
@@ -1367,7 +1367,7 @@ function drawMarkedList(list) {
       r1.appendChild(mk('span', 'mailx-from', String(r.from_name || r.from_email || '')));
       r1.appendChild(mk('span', 'mailx-when', when(r.date)));
       b.appendChild(r1);
-      b.appendChild(mk('span', 'mailx-subj', String(r.subject || '(no subject)')));
+      b.appendChild(mk('span', 'mailx-subj', String(r.subject || '(No subject)')));
       withAvatar(b, r.from_name || r.from_email, 'people');
       b.addEventListener('click', () => openThread(r.id, r.source));
       li.appendChild(b);
@@ -1377,7 +1377,7 @@ function drawMarkedList(list) {
   }
   const row = mk('div', 'mailx-att-acts');
   if (d.more) {
-    const o = mk('button', 'go ghost', marked.paging ? 'Reading the next 100.' : 'Show 100 more'); o.type = 'button';
+    const o = mk('button', 'go ghost', marked.paging ? 'Reading the next 100.' : 'Show 100 More'); o.type = 'button';
     o.disabled = !!marked.paging;
     o.addEventListener('click', () => loadMarked(v, true));
     row.appendChild(o);
@@ -1385,9 +1385,9 @@ function drawMarkedList(list) {
   }
   if (marked.pageError) list.appendChild(mk('p', 'state stalled', 'The next ones could not be read just now. ' + marked.pageError));
   if (Number(d.not_kept)) list.appendChild(mk('p', 'mailx-att-quiet', d.not_kept + ' more ' + (d.not_kept === 1 ? 'is' : 'are') + ' in Gmail but not kept in the Tool (for example set aside as junk), so ' + (d.not_kept === 1 ? 'it is' : 'they are') + ' not listed here. Search all of Gmail finds ' + (d.not_kept === 1 ? 'it' : 'them') + '.'));
-  const g = mk('button', 'go ghost', 'Search all of Gmail'); g.type = 'button';
+  const g = mk('button', 'go ghost', 'Search All of Gmail'); g.type = 'button';
   g.addEventListener('click', () => {
-    if (v.kind === 'starred') findMail('is:starred', readingKeys(), { title: 'Starred, everything in Gmail', view: true });
+    if (v.kind === 'starred') findMail('is:starred', readingKeys(), { title: 'Starred, Everything in Gmail', view: true });
     else findMail(labelQuery(v.name), ['gmail:' + v.address], { title: v.name + ', everything in Gmail', view: true });
   });
   row.appendChild(g);
@@ -1448,12 +1448,12 @@ function orderTag(it) { return capWord(it.word || it.tag || 'work order') + (it.
 function drawOrder(card, it, row, out) {
   const facts = mk('dl', 'mailx-order-facts');
   const fact = (k, v) => { if (!v) return; facts.appendChild(mk('dt', null, k)); const d = mk('dd', null, String(v)); d.translate = false; facts.appendChild(d); };
-  fact('For', it.for_whom); fact('Their client', it.end_client); fact('Contact', [it.contact_name, it.contact_email].filter(Boolean).join(', ')); fact('Wanted by', it.by_when);
+  fact('For', it.for_whom); fact('Their Client', it.end_client); fact('Contact', [it.contact_name, it.contact_email].filter(Boolean).join(', ')); fact('Wanted By', it.by_when);
   if (facts.childNodes.length) card.appendChild(facts);
-  if (it.words) { card.appendChild(mk('h3', 'mailx-matter-h', 'What they wrote')); const q = mk('blockquote', 'mailx-matter-passage-full', String(it.words)); q.translate = false; card.appendChild(q); }
+  if (it.words) { card.appendChild(mk('h3', 'mailx-matter-h', 'What They Wrote')); const q = mk('blockquote', 'mailx-matter-passage-full', String(it.words)); q.translate = false; card.appendChild(q); }
   const atts = Array.isArray(it.attachments) ? it.attachments : [];
   if (atts.length) {
-    card.appendChild(mk('h3', 'mailx-matter-h', atts.length === 1 ? 'Its attachment' : 'Its attachments'));
+    card.appendChild(mk('h3', 'mailx-matter-h', atts.length === 1 ? 'Its Attachment' : 'Its Attachments'));
     const ul = mk('ul', 'mailx-order-atts');
     for (const a of atts) {
       const li = mk('li', null, ''); const n = mk('span', null, String(a.file_name || 'a file')); n.translate = false; li.appendChild(n);
@@ -1464,13 +1464,13 @@ function drawOrder(card, it, row, out) {
     card.appendChild(ul);
   }
   if (it.open_source && it.open_id) {
-    const dr = mk('button', 'go', 'Draft the acknowledgement'); dr.type = 'button';
+    const dr = mk('button', 'go', 'Draft the Acknowledgement'); dr.type = 'button';
     dr.addEventListener('click', () => { pendingCompose = 'draft'; openEmail(it.open_source, it.open_id); });
-    const oe = mk('button', 'go ghost', 'Open the email'); oe.type = 'button';
+    const oe = mk('button', 'go ghost', 'Open the Email'); oe.type = 'button';
     oe.addEventListener('click', () => openEmail(it.open_source, it.open_id));
     row.append(dr, oe);
   }
-  const next = { open: [['in_progress', 'In progress'], ['delivered', 'Delivered'], ['done', 'Done']], in_progress: [['delivered', 'Delivered'], ['done', 'Done']], delivered: [['done', 'Done'], ['in_progress', 'Back to in progress']] }[it.state] || [];
+  const next = { open: [['in_progress', 'In Progress'], ['delivered', 'Delivered'], ['done', 'Done']], in_progress: [['delivered', 'Delivered'], ['done', 'Done']], delivered: [['done', 'Done'], ['in_progress', 'Back to in Progress']] }[it.state] || [];
   for (const [st, label] of next) {
     const b = mk('button', 'go ghost', label); b.type = 'button';
     b.addEventListener('click', () => orderCall('work_order_set', { p_id: it.wo_id, p_state: st }, b, out, 'Keeping it.', [it.key]));
@@ -1481,7 +1481,7 @@ function drawOrder(card, it, row, out) {
     if (out.querySelector('.mailx-order-close')) return;
     const f = mk('div', 'mailx-order-close');
     const inp = mk('input', null); inp.type = 'text'; inp.placeholder = 'Why is it closed?'; inp.setAttribute('aria-label', 'Why is it closed?');
-    const ok = mk('button', 'go', 'Close it'); ok.type = 'button';
+    const ok = mk('button', 'go', 'Close It'); ok.type = 'button';
     ok.addEventListener('click', () => orderCall('work_order_set', { p_id: it.wo_id, p_state: 'closed', p_reason: inp.value }, ok, out, 'Closing it.', [it.key]));
     f.append(inp, ok); out.innerHTML = ''; out.className = 'mailx-att-out'; out.appendChild(f); inp.focus();
   });
@@ -1492,12 +1492,12 @@ function drawOrder(card, it, row, out) {
 function drawOrderBelow(card, it) {
   const facts = mk('dl', 'mailx-order-facts');
   const fact = (k, v) => { if (!v) return; facts.appendChild(mk('dt', null, k)); const d = mk('dd', null, String(v)); d.translate = false; facts.appendChild(d); };
-  fact('For', it.for_whom); fact('Their client', it.end_client); fact('Contact', [it.contact_name, it.contact_email].filter(Boolean).join(', ')); fact('Wanted by', it.by_when);
+  fact('For', it.for_whom); fact('Their Client', it.end_client); fact('Contact', [it.contact_name, it.contact_email].filter(Boolean).join(', ')); fact('Wanted By', it.by_when);
   if (facts.childNodes.length) card.appendChild(facts);
   const row = mk('div', 'mailx-att-acts mailx-order-states');
   const out = mk('div', 'mailx-att-out'); out.setAttribute('aria-live', 'polite');
   const first = { open: 'in_progress', in_progress: 'delivered', delivered: 'done' }[it.state];
-  const next = { open: [['delivered', 'Delivered'], ['done', 'Done']], in_progress: [['done', 'Done']], delivered: [['in_progress', 'Back to in progress']] }[it.state] || [];
+  const next = { open: [['delivered', 'Delivered'], ['done', 'Done']], in_progress: [['done', 'Done']], delivered: [['in_progress', 'Back to in Progress']] }[it.state] || [];
   for (const [st, label] of next) {
     if (st === first) continue;
     const b = mk('button', 'go ghost', label); b.type = 'button';
@@ -1509,7 +1509,7 @@ function drawOrderBelow(card, it) {
     if (out.querySelector('.mailx-order-close')) return;
     const f = mk('div', 'mailx-order-close');
     const inp = mk('input', null); inp.type = 'text'; inp.placeholder = 'Why is it closed?'; inp.setAttribute('aria-label', 'Why is it closed?');
-    const ok = mk('button', 'go', 'Close it'); ok.type = 'button';
+    const ok = mk('button', 'go', 'Close It'); ok.type = 'button';
     ok.addEventListener('click', () => orderCall('work_order_set', { p_id: it.wo_id, p_state: 'closed', p_reason: inp.value }, ok, out, 'Closing it.', [it.key]));
     f.append(inp, ok); out.innerHTML = ''; out.className = 'mailx-att-out'; out.appendChild(f); inp.focus();
   });
@@ -1653,7 +1653,7 @@ function viewButton(label, count, on, fn, title) {
   b.addEventListener('click', fn);
   return b;
 }
-const VIEW_WORDS = ['Worth your attention', 'Caught', 'Starred', 'Labels', 'All labels', 'For you', 'Following', 'Six questions', 'Clean-up', 'Teach the Tool'];
+const VIEW_WORDS = ['Worth Your Attention', 'Caught', 'Starred', 'Labels', 'All Labels', 'For You', 'Following', 'Six Questions', 'Clean-up', 'Teach the Tool'];
 const NOT_SEEN = 'Not yet seen by you in the Tool';
 // THE INBOX VIEW'S LEFT COLUMN (seat mail-inbox, decision 1033 item 1): Worth your attention as it was; Mark all as seen; Mailboxes;
 // Caught (the Suspicious view renamed); Starred and Labels under "Your Gmail". Every number is not yet seen by you.
@@ -1666,7 +1666,7 @@ function viewList(side, rows) {
 }
 function drawMarkAll(side) {
   const wrap = mk('div', 'mailx-markall');
-  const b = mk('button', 'go ghost', 'Mark all as seen'); b.type = 'button';
+  const b = mk('button', 'go ghost', 'Mark All as Seen'); b.type = 'button';
   b.title = 'Every mailbox and view. Gmail is not changed. You can undo it for a day.';
   const out = mk('p', 'quiet'); out.setAttribute('aria-live', 'polite');
   b.addEventListener('click', () => markAll(b, out));
@@ -1719,7 +1719,7 @@ function drawSide() {
   drawModeSwitch(side);
   const n = attn && attn.data ? attnUnseenCount() : null;
   if (mode === 'ai') { drawAiSide(side, n); side.scrollTop = top; return; }
-  const you = viewButton('Worth your attention', n === null ? '' : n, view && view.kind === 'attention', () => chooseView({ kind: 'attention' }), NOT_SEEN);
+  const you = viewButton('Worth Your Attention', n === null ? '' : n, view && view.kind === 'attention', () => chooseView({ kind: 'attention' }), NOT_SEEN);
   you.classList.add('mailx-view-you');
   viewList(side, [you]);
   drawMarkAll(side);
@@ -1756,7 +1756,7 @@ function drawAiSide(side, n) {
   const fresh = followItems().filter((f) => f.news).length;
   const cc = cleanupCount();
   if (cc === null) loadCleanupOnce();
-  const q = viewButton('Six questions', total || '', view && view.kind === 'questions', () => chooseView({ kind: 'questions' }), 'Everything the six questions hold now');
+  const q = viewButton('Six Questions', total || '', view && view.kind === 'questions', () => chooseView({ kind: 'questions' }), 'Everything the six questions hold now');
   q.classList.add('mailx-view-you');
   viewList(side, [
     q,
@@ -1793,7 +1793,7 @@ function drawBoxes(side) {
   if (!all.length) {
     if (C.readingState() === null) { side.appendChild(mk('p', 'quiet working', 'Reading your mailboxes.')); return; }
     side.appendChild(mk('p', 'quiet', 'No mailbox is open to you here yet.'));
-    const b = mk('button', 'go ghost', 'Connect yours in Brain');
+    const b = mk('button', 'go ghost', 'Connect Yours in Brain');
     b.type = 'button';
     b.addEventListener('click', () => C.openConnect('email'));
     side.appendChild(b);
@@ -1880,7 +1880,7 @@ function drawList() {
   const m = boxRow();
   if (!m) { list.appendChild(mk('p', 'quiet', 'Choose a mailbox on the left.')); return; }
   const head = mk('div', 'mailx-head');
-  head.appendChild(navButton('All views', 'side'));
+  head.appendChild(navButton('All Views', 'side'));
   const h3 = mk('h3', null, m.address); h3.translate = false;
   head.appendChild(h3);
   const hide = mk('button', 'mailx-textlink', 'Hide from Mail'); hide.type = 'button';
@@ -1921,7 +1921,7 @@ function drawList() {
     }
     b.appendChild(r1);
     if (!x.details_unavailable) {
-      b.appendChild(mk('span', 'mailx-subj', x.subject || '(no subject)'));
+      b.appendChild(mk('span', 'mailx-subj', x.subject || '(No subject)'));
       if (x.snippet) b.appendChild(mk('span', 'mailx-snip', String(x.snippet).slice(0, 140)));
     }
     const xw = warnFor(chosen, [x.id]);
@@ -1935,7 +1935,7 @@ function drawList() {
   list.appendChild(ul);
   if (inbox.error) list.appendChild(mk('p', 'state stalled', 'The next page could not be read. ' + inbox.error));
   if (inbox.next) {
-    const more = mk('button', 'go ghost', inbox.more ? 'Reading more' : 'More mail');
+    const more = mk('button', 'go ghost', inbox.more ? 'Reading More' : 'More Mail');
     more.type = 'button';
     more.disabled = inbox.more;
     more.addEventListener('click', () => loadInbox(true));
@@ -2046,9 +2046,9 @@ function drawRead() {
     read.appendChild(mk('p', 'quiet mailx-none', view && (view.kind === 'attention' || view.kind === 'following') ? 'Choose one to see where it stands and what you can do.' : 'Choose an email to read it here.'));
     return;
   }
-  read.appendChild(navButton('Back to the list', 'list', ' mailx-back'));
+  read.appendChild(navButton('Back to the List', 'list', ' mailx-back'));
   if (pick && view && (view.kind === 'attention' || view.kind === 'following' || view.kind === 'questions')) {
-    const back = mk('button', 'mailx-toggle', 'Back to where it stands');
+    const back = mk('button', 'mailx-toggle', 'Back to Where It Stands');
     back.type = 'button';
     back.addEventListener('click', () => { open = null; drawRead(); });
     read.appendChild(back);
@@ -2077,7 +2077,7 @@ function drawRead() {
     who.appendChild(a);
   }
   read.appendChild(who);
-  const subj = mk('h2', 'mailx-subject', t.subject || '(no subject)'); subj.translate = false;
+  const subj = mk('h2', 'mailx-subject', t.subject || '(No subject)'); subj.translate = false;
   { const mine = boxAddress(); const toAsk = String(latest.from_email || '').toLowerCase() === mine ? ([...msgs].reverse().find((m) => String(m.from_email || '').toLowerCase() !== mine) || latest) : latest;   // her own reply open: the email to ask about is the other person's
     askMark(who, chosen, t.thread_id, toAsk, t.subject, toAsk.body || toAsk.snippet || '', true); askQuiet(read, true); }   // on the sender row, not the subject: the subject is the customer's own words and is never put in another language, and the offer must be
   read.appendChild(subj);
@@ -2104,8 +2104,8 @@ function drawRead() {
   // stands, and the emails and documents that belong with it, each openable.
   if (open.more) {
     const more = mk('section', 'mailx-more');
-    more.setAttribute('aria-label', 'What I know about this');
-    more.appendChild(mk('h3', 'mailx-more-h', 'What I know about this'));
+    more.setAttribute('aria-label', 'What I Know About This');
+    more.appendChild(mk('h3', 'mailx-more-h', 'What I Know About This'));
     const r = open.related;
     if (t.bulk) more.appendChild(mk('p', null, newsletterLine(t, r)));
     else {
@@ -2124,7 +2124,7 @@ function drawRead() {
         const ul = mk('ul');
         for (const x of mail) {
           const li = mk('li');
-          const b = mk('button', 'mailx-link', (x.subject || '(no subject)') + ' · ' + (x.from_name || x.from_email || '') + ', ' + when(x.date));
+          const b = mk('button', 'mailx-link', (x.subject || '(No subject)') + ' · ' + (x.from_name || x.from_email || '') + ', ' + when(x.date));
           b.type = 'button'; b.translate = false;
           b.addEventListener('click', () => openThread(x.thread_id));
           li.appendChild(b);
@@ -2157,7 +2157,7 @@ function drawRead() {
     read.appendChild(p);
   }
   if (msgs.length > 1) {
-    const tg = mk('button', 'mailx-toggle', hidden > 0 ? 'Show the whole conversation' : 'Show only this email');
+    const tg = mk('button', 'mailx-toggle', hidden > 0 ? 'Show the Whole Conversation' : 'Show Only This Email');
     tg.type = 'button';
     tg.addEventListener('click', () => { open.full = !open.full; drawRead(); });
     read.appendChild(tg);
@@ -2206,7 +2206,7 @@ function messageContent(m) {
 function seeItIn(wrap, m) {
   if (screenLang() === 'en') return wrap;
   const holder = mk('div', 'mailx-seeit');
-  const b = mk('button', 'go ghost mailx-seeit-btn', 'See it in ' + screenLangName());
+  const b = mk('button', 'go ghost mailx-seeit-btn', 'See It in ' + screenLangName());
   b.type = 'button';
   const out = mk('div', 'mailx-seeit-out');
   out.setAttribute('aria-live', 'polite');
@@ -2300,13 +2300,13 @@ function linkify(node, text) {
 
 function plainMessage(text) {
   const box = mk('div', 'mailx-text');
-  if (!text) { box.textContent = '(no text)'; return box; }
+  if (!text) { box.textContent = '(No text)'; return box; }
   const lines = String(text).split(NL);
   const cut = foldAt(lines);
   linkify(box, (cut > 0 ? lines.slice(0, cut) : lines).join(NL).trimEnd());
   if (cut > 0) {
     const d = mk('details', 'mailx-quote');
-    d.appendChild(mk('summary', null, 'Show all'));
+    d.appendChild(mk('summary', null, 'Show All'));
     const q = mk('div', 'mailx-text');
     linkify(q, lines.slice(cut).join(NL));
     d.appendChild(q);
@@ -2377,7 +2377,7 @@ function foldQuote(doc) {
   const d = doc.createElement('details');
   d.className = 'mailx-quote';
   const s = doc.createElement('summary');
-  s.textContent = 'Show all';
+  s.textContent = 'Show All';
   d.appendChild(s);
   const r = doc.createRange();
   r.setStartBefore(start);
@@ -2410,7 +2410,7 @@ function htmlMessage(wrap, m) {
   const fill = () => { frame.srcdoc = frameDoc(prepared.doc, imagesShown.has(m.id)); };
   if (prepared.remote && !imagesShown.has(m.id)) {
     const line = mk('p', 'mailx-imgs', 'Pictures in this email are hidden, because loading them tells the sender you opened it. ');
-    const b = mk('button', 'mailx-show', 'Show images');
+    const b = mk('button', 'mailx-show', 'Show Images');
     b.type = 'button';
     b.addEventListener('click', () => { imagesShown.add(m.id); line.remove(); fill(); });
     line.appendChild(b);
@@ -2490,8 +2490,8 @@ function drawChangeSaid(read) {
     if (!(d && d.ok)) changeSaid.step = 'done';
     drawRead();
   };
-  const y = mk('button', 'go', 'Yes, mark them'); y.type = 'button'; y.addEventListener('click', () => ans(true, y));
-  const n = mk('button', 'go ghost', 'No, just show me in the Tool'); n.type = 'button'; n.addEventListener('click', () => ans(false, n));
+  const y = mk('button', 'go', 'Yes, Mark Them'); y.type = 'button'; y.addEventListener('click', () => ans(true, y));
+  const n = mk('button', 'go ghost', 'No, Just Show Me in the Tool'); n.type = 'button'; n.addEventListener('click', () => ans(false, n));
   row.append(y, n);
   box.appendChild(row);
   read.appendChild(box);
@@ -2564,7 +2564,7 @@ function consentBox(out, key) {
   box.appendChild(mk('p', null, 'You approve it once, on Google’s own page. After that, Move to Spam, Delete and Archive just work. Nothing moves unless you press. Google may first say the app is not verified yet: choose Advanced, then Go to Verrandi.'));
   const row = mk('div', 'mailx-att-acts');
   const go = mk('button', 'go', 'Continue to Google'); go.type = 'button';
-  const no = mk('button', 'go ghost', 'Not now'); no.type = 'button';
+  const no = mk('button', 'go ghost', 'Not Now'); no.type = 'button';
   const said = mk('p', 'quiet'); said.setAttribute('aria-live', 'polite');
   go.addEventListener('click', () => startChange(key, go, said));
   no.addEventListener('click', () => { out.innerHTML = ''; });
@@ -2594,11 +2594,11 @@ function actions(t) {
   const row = mk('div', 'mailx-acts');
   const btn = (label, cls, fn) => { const b = mk('button', cls, label); b.type = 'button'; b.addEventListener('click', fn); row.appendChild(b); return b; };
   btn('Reply', 'go', () => startCompose(t, 'reply'));
-  btn('Reply all', 'go ghost', () => startCompose(t, 'replyall'));
+  btn('Reply All', 'go ghost', () => startCompose(t, 'replyall'));
   btn('Forward', 'go ghost', () => startCompose(t, 'forward'));
   row.appendChild(mk('span', 'mailx-acts-gap'));
-  btn('Draft a reply for me', 'go ghost mailx-ai-btn', () => draftFor(t));
-  const more = btn(open && open.more ? 'Hide the background' : 'Tell me more about this', 'go ghost mailx-ai-btn', () => {
+  btn('Draft a Reply for Me', 'go ghost mailx-ai-btn', () => draftFor(t));
+  const more = btn(open && open.more ? 'Hide the Background' : 'Tell Me More About This', 'go ghost mailx-ai-btn', () => {
     open.more = !open.more;
     if (open.more) convoFor(t, true).brief();
     drawRead();
@@ -2713,7 +2713,7 @@ function inviteCard(inv, opts) {
   card.setAttribute('aria-label', 'Invitation');
   if (!inv.readable) { card.appendChild(mk('p', 'quiet', 'This email carries a calendar invitation the Tool could not read.')); return card; }
   card.appendChild(mk('p', 'eyebrow mailx-invite-kind', inv.kind === 'cancel' ? 'Canceled meeting' : inv.kind === 'update' ? 'Updated invitation' : 'Invitation'));
-  const h = mk('h3', 'mailx-invite-title', inv.summary || '(no title)'); h.translate = false;
+  const h = mk('h3', 'mailx-invite-title', inv.summary || '(No title)'); h.translate = false;
   card.appendChild(h);
   const dl = mk('dl', 'mailx-invite-facts');
   const fact = (label, node) => { if (!node) return; dl.append(mk('dt', null, label)); const dd = mk('dd'); dd.appendChild(node); dl.appendChild(dd); };
@@ -2730,16 +2730,16 @@ function inviteCard(inv, opts) {
     whenBox.appendChild(t2);
   }
   fact('When', whenBox);
-  fact('How long', inviteLength(inv));
+  fact('How Long', inviteLength(inv));
   if (inv.recurring) fact('Repeats', mk('span', null, 'It repeats'));
   if (inv.location && (!inv.join_url || String(inv.location).indexOf('http') < 0)) { const l = mk('span', null, inv.location); l.translate = false; fact('Where', l); }
   const org = inv.organizer || {};
-  if (org.email) { const o = mk('span', null, org.name || org.email); o.translate = false; o.title = org.email; fact('Invited by', o); }
+  if (org.email) { const o = mk('span', null, org.name || org.email); o.translate = false; o.title = org.email; fact('Invited By', o); }
   const others = Array.isArray(inv.others) ? inv.others : [];
   if (others.length) {
     const names = mk('span', 'mailx-invite-others', others.slice(0, 5).map((p) => p.name || p.email).join(', ') + (others.length > 5 ? ' +' + (others.length - 5) : ''));
     names.translate = false;
-    fact('Also invited', names);
+    fact('Also Invited', names);
   }
   card.appendChild(dl);
   if (inv.join_url && !inv.cancelled) {
@@ -2772,8 +2772,8 @@ function inviteCard(inv, opts) {
     b('Accept', 'go', (x) => rsvp(inv, 'ACCEPTED', x, out));
     b('Maybe', 'go ghost', (x) => rsvp(inv, 'TENTATIVE', x, out));
     b('Decline', 'go ghost', (x) => rsvp(inv, 'DECLINED', x, out));
-    b('Suggest another time', 'go ghost', () => opts && opts.onSuggest && opts.onSuggest());
-    if (inv.on_calendar === false) b('Add to my calendar', 'go ghost', (x) => calendarAdd(inv, x, out));
+    b('Suggest Another Time', 'go ghost', () => opts && opts.onSuggest && opts.onSuggest());
+    if (inv.on_calendar === false) b('Add to My Calendar', 'go ghost', (x) => calendarAdd(inv, x, out));
     card.appendChild(row);
   }
   card.appendChild(out);
@@ -2840,7 +2840,7 @@ function convoFor(t, create, keptChat) {
   const threadId = t.thread_id;
   const conv = conversation(C, {
     sourceKey: chosen, mailbox: (m && m.address) || chosen.split(':').slice(1).join(':'), thread: t,
-    keep: { chat: keptChat || null, about: key, title: t.subject || '(no subject)' },
+    keep: { chat: keptChat || null, about: key, title: t.subject || '(No subject)' },
     // The first question puts the conversation on screen under the email; later ones leave the page as it is.
     onTurn: () => { if (open && open.id === threadId && conv.count() === 1) drawRead(); },
     onDiscard: () => { convos.delete(key); if (open && open.id === threadId) drawRead(); },
@@ -2974,7 +2974,7 @@ function addrOf(key) {
 function drawFound(list) {
   const f = found;
   const head = mk('div', 'mailx-head');
-  head.appendChild(navButton('All views', 'side'));
+  head.appendChild(navButton('All Views', 'side'));
   head.appendChild(mk('h3', null, f.title || 'Found'));
   // A view (Starred, a label) is left by choosing another on the left; a find has its own close.
   if (!f.view) {
@@ -3031,7 +3031,7 @@ function drawFound(list) {
   else if (byMeaning) box.appendChild(mk('p', 'quiet', byMeaning + ' found by meaning in what the company has read.'));
   if (f.note) box.appendChild(mk('p', 'quiet', f.note));
   if (f.unsure && f.askInstead) {
-    const b = mk('button', 'go ghost mailx-instead', 'Ask this as a question instead');
+    const b = mk('button', 'go ghost mailx-instead', 'Ask This as a Question Instead');
     b.type = 'button';
     b.addEventListener('click', f.askInstead);
     box.appendChild(b);
@@ -3068,10 +3068,10 @@ function drawFound(list) {
       if (!r.details_unavailable) r1.appendChild(mk('span', 'mailx-when', when(r.date)));
       b.appendChild(r1);
       if (!r.details_unavailable) {
-        b.appendChild(mk('span', 'mailx-subj', r.subject || '(no subject)'));
+        b.appendChild(mk('span', 'mailx-subj', r.subject || '(No subject)'));
         if (r.snippet) b.appendChild(mk('span', 'mailx-snip', String(r.snippet).slice(0, 140)));
       }
-      if (r.by_meaning) b.appendChild(mk('span', 'mailx-why', 'found by meaning'));
+      if (r.by_meaning) b.appendChild(mk('span', 'mailx-why', 'Found by meaning'));
       const rw = warnFor(r.source_key, [r.id]);
       if (rw) warnTag(b, rw);
       b.addEventListener('click', () => openThread(r.thread_id, r.source_key));

@@ -8,7 +8,7 @@
 // sent or posted by the Tool. Everything comes from mk_outreach (as the signed-in person): refused with the reason, never empty.
 // No colour, size or font here (skin.css, SIGNALS AND OUTREACH classes). No regex literals, no backslashes.
 
-const SIGNALS_ROW = './marketing.js?v=2026-11-03-screen-rollback';   // the same token lens.js loads, so it is the same module
+const SIGNALS_ROW = './marketing.js?v=2026-11-14-tabs-style';   // the same token lens.js loads, so it is the same module
 let C = null, O = null, oDay = null;
 
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
@@ -37,7 +37,7 @@ function draw(el) {
   if (!O.line || !days.length) return;
   if (!oDay || !days.some((d) => d.day === oDay)) oDay = days[0].day;
   const sec = mk('section', 'mk-people');
-  sec.appendChild(mk('h3', 'mk-sub', 'LinkedIn messages this week'));
+  sec.appendChild(mk('h3', 'mk-sub', 'LinkedIn Messages This Week'));
   sec.appendChild(mk('p', 'mkw-count', O.per_day + ' ' + plural(O.per_day, 'person', 'people') + ' a day, at companies hiring now where you know someone.'));
   const row = mk('div', 'mk-acts'); row.setAttribute('role', 'group'); row.setAttribute('aria-label', 'Day');
   for (const d of days) {
@@ -46,7 +46,7 @@ function draw(el) {
     row.appendChild(b);
   }
   const list = mk('ul', 'mk-person-list');
-  const why = mk('button', 'go ghost', 'Why these people'); why.type = 'button';
+  const why = mk('button', 'go ghost', 'Why These People'); why.type = 'button';
   const whyText = mk('p', 'state', String(O.note || '')); whyText.hidden = true;
   why.addEventListener('click', () => { whyText.hidden = !whyText.hidden; });
   sec.append(row, list, why, whyText);

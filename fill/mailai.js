@@ -49,8 +49,8 @@ export function questionCounts() {
 }
 export function drawQuestions(list) {
   const head = mk('div', 'mailx-head');
-  head.appendChild(A.navButton('All views', 'side'));
-  head.appendChild(mk('h3', null, 'Six questions'));
+  head.appendChild(A.navButton('All Views', 'side'));
+  head.appendChild(mk('h3', null, 'Six Questions'));
   head.appendChild(mk('p', 'mailx-list-sub', 'Across every mailbox you can open, the last 14 days. Your mail is not changed.'));
   list.appendChild(head);
   const at = A.attn();
@@ -85,7 +85,7 @@ export function drawQuestions(list) {
         const li = mk('li');
         const b = mk('button', 'mailx-msg mailx-att-row warned');
         b.type = 'button';
-        b.appendChild(mk('span', 'mailx-subj mailx-att-what', String(it.subject || '(no subject)')));
+        b.appendChild(mk('span', 'mailx-subj mailx-att-what', String(it.subject || '(No subject)')));
         b.appendChild(mk('span', 'mailx-snip mailx-att-line', A.scamWho(it) + '. Really from ' + String(it.from_email || '') + '.'));
         b.addEventListener('click', () => A.openScam(it));
         li.appendChild(b); ul.appendChild(li);
@@ -109,7 +109,7 @@ export function drawQuestions(list) {
   const rest = items.filter((x) => !x.q && !x.following);
   if (rest.length) {
     const sec = mk('section', 'mailx-q');
-    sec.appendChild(mk('h4', 'mailx-q-head', 'Also for you'));
+    sec.appendChild(mk('h4', 'mailx-q-head', 'Also for You'));
     const ul = mk('ul', 'mailx-msgs mailx-att-rows');
     for (const it of rest) ul.appendChild(A.matterRow(it));
     sec.appendChild(ul);
@@ -118,7 +118,7 @@ export function drawQuestions(list) {
 }
 function liButton(label, fn) { const li = mk('li'); li.appendChild(btn(label, 'go ghost', fn)); return li; }
 function notThis(it, q) {
-  return btn('Not this', 'go ghost mailx-sell-clear', async (b) => {
+  return btn('Not This', 'go ghost mailx-sell-clear', async (b) => {
     b.disabled = true;
     const r = await rpc('ai_view_mark', { p_question: q, p_item_key: String(it.key || ''), p_source: it.open_source || null, p_message_id: it.open_id || null,
       p_title: String(it.subject || it.what || '').slice(0, 150), p_proposed: 'not_this', p_mark: 'not_show' });
@@ -142,7 +142,7 @@ export async function loadCleanup() {
 export function cleanupCount() { return cleanup && cleanup.data ? Number(cleanup.data.senders || 0) : null; }
 export function drawCleanup(list) {
   const head = mk('div', 'mailx-head');
-  head.appendChild(A.navButton('All views', 'side'));
+  head.appendChild(A.navButton('All Views', 'side'));
   head.appendChild(mk('h3', null, 'Clean-up'));
   list.appendChild(head);
   if (!cleanup) loadCleanup();
@@ -156,7 +156,7 @@ export function drawCleanup(list) {
   const ul = mk('ul', 'mailx-msgs mailx-clean-rows');
   for (const r of rows) ul.appendChild(cleanRow(r));
   list.appendChild(ul);
-  if ((d.rows || []).length > cleanShown) list.appendChild(btn('Show 50 more', 'go ghost', () => { cleanShown += 50; A.redraw(); }));
+  if ((d.rows || []).length > cleanShown) list.appendChild(btn('Show 50 More', 'go ghost', () => { cleanShown += 50; A.redraw(); }));
   else if (d.senders > (d.rows || []).length) list.appendChild(mk('p', 'quiet', 'The ' + (d.rows || []).length + ' with the most emails are listed; ' + (d.senders - d.rows.length).toLocaleString('en-US') + ' more send fewer.'));
 }
 function cleanRow(r) {
@@ -229,7 +229,7 @@ async function keep(r, b, yes) {
 // ── Teach the Tool ──
 export function drawTeach(list) {
   const head = mk('div', 'mailx-head');
-  head.appendChild(A.navButton('All views', 'side'));
+  head.appendChild(A.navButton('All Views', 'side'));
   head.appendChild(mk('h3', null, 'Teach the Tool'));
   head.appendChild(mk('p', 'mailx-list-sub', 'For each question, mark what belongs and what does not. Your marks become the test the questions are checked against.'));
   list.appendChild(head);
@@ -267,14 +267,14 @@ function group(list, title, sub, rows) {
 function teachRow(r) {
   const li = mk('li', 'mailx-clean-row');
   const who = mk('div', 'mailx-clean-who');
-  const t = mk('span', 'mailx-from', String(r.title || '(no subject)')); t.translate = false;
+  const t = mk('span', 'mailx-from', String(r.title || '(No subject)')); t.translate = false;
   const w = mk('span', 'mailx-snip', String(r.who || '') + (r.at ? ' · ' + A.when(r.at) : '')); w.translate = false;
   who.append(t, w);
-  if (r.source && r.message_id) who.appendChild(btn('Open the email', 'mailx-textlink', () => A.openEmail(r.source, r.message_id)));
+  if (r.source && r.message_id) who.appendChild(btn('Open the Email', 'mailx-textlink', () => A.openEmail(r.source, r.message_id)));
   li.appendChild(who);
   const acts = mk('div', 'mailx-att-acts');
-  const yes = btn('Belongs here', r.mark === 'show' ? 'go' : 'go ghost', (b) => mark(r, r.mark === 'show' ? null : 'show', b));
-  const no = btn('Does not belong', r.mark === 'not_show' ? 'go' : 'go ghost', (b) => mark(r, r.mark === 'not_show' ? null : 'not_show', b));
+  const yes = btn('Belongs Here', r.mark === 'show' ? 'go' : 'go ghost', (b) => mark(r, r.mark === 'show' ? null : 'show', b));
+  const no = btn('Does Not Belong', r.mark === 'not_show' ? 'go' : 'go ghost', (b) => mark(r, r.mark === 'not_show' ? null : 'not_show', b));
   yes.setAttribute('aria-pressed', r.mark === 'show' ? 'true' : 'false');
   no.setAttribute('aria-pressed', r.mark === 'not_show' ? 'true' : 'false');
   acts.append(yes, no);

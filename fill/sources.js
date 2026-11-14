@@ -21,10 +21,10 @@ export function removeControl(sourceKey, name, { sb, el, refreshBrain }) {
   box.hidden = true;
   const keep = el('button', 'go ghost');
   keep.type = 'button';
-  keep.textContent = 'Stop reading it and keep what was already read';
+  keep.textContent = 'Stop Reading It and Keep What Was Already Read';
   const forget = el('button', 'go ghost');
   forget.type = 'button';
-  forget.textContent = 'Stop and forget everything read from it';
+  forget.textContent = 'Stop and Forget Everything Read from It';
   const note = el('p', 'quiet');
   box.append(keep, forget, note);
   open.addEventListener('click', (ev) => { ev.stopPropagation(); box.hidden = !box.hidden; });
@@ -63,7 +63,7 @@ export function removeControl(sourceKey, name, { sb, el, refreshBrain }) {
         if (!data?.ok) return;
         armed = true;
         const n = Number(data.pieces ?? 0);
-        forget.textContent = `Yes, forget ${n.toLocaleString('en-US')} ${n === 1 ? 'piece' : 'pieces'}`;
+        forget.textContent = `Yes, Forget ${n.toLocaleString('en-US')} ${n === 1 ? 'piece' : 'pieces'}`;
         return;
       }
       note.className = 'working';
@@ -126,7 +126,7 @@ export function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrai
     if ((findableFrom === null || findableFrom > -8.64e15) && understoodFrom !== -8.64e15) {
       const p = e0.findable_usd;
       if (p !== null && p !== undefined) choices.push({ mode: 'findable', months: null, price: Number(p),
-        label: `Make all of it searchable (about ${usd(p)})` });
+        label: `Make All of It Searchable (About ${usd(p)})` });
     }
     // The files attached to its findable mail (seat findable-all): the press's own preview gives the number it reads.
     if (!drive && findableFrom === -8.64e15) {
@@ -135,7 +135,7 @@ export function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrai
         const n = Number(data?.files_waiting);
         const rate = Number(first.estimate?.per_file_findable_usd);
         if (data?.ok && n > 0 && Number.isFinite(rate) && rate > 0) choices.push({ mode: 'findable', months: null, price: n * rate,
-          label: `Make its ${n.toLocaleString('en-US')} attached files searchable (about ${usd(n * rate)})` });
+          label: `Make Its ${n.toLocaleString('en-US')} attached files searchable (about ${usd(n * rate)})` });
       } catch (_) { /* no files choice: the line above says what is read */ }
     }
     windows.forEach(([m, words], i) => {
@@ -143,7 +143,7 @@ export function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrai
       const u = s?.understand;
       if (!u || u.state !== 'estimated' || !(Number(u.to_read) > 0)) return;
       choices.push({ mode: 'understand', months: m, price: Number(u.usd),
-        label: `Have it understand ${words}: ${Number(u.to_read).toLocaleString('en-US')} ${drive ? 'files' : 'emails'} (about ${usd(u.usd)}, between ${usd(u.low_usd)} and ${usd(u.high_usd)})` });
+        label: `Have It Understand ${words}: ${Number(u.to_read).toLocaleString('en-US')} ${drive ? 'files' : 'emails'} (about ${usd(u.usd)}, between ${usd(u.low_usd)} and ${usd(u.high_usd)})` });
     });
     if (!choices.length) { box.remove(); return; }
     note.className = 'quiet';
@@ -176,7 +176,7 @@ export function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrai
             if (error) throw error;
             out.className = 'quiet';
             out.textContent = data?.note ?? 'It was refused, and no reason was given.';
-            if (data?.ok && !data.nothing_new) { armed = true; b.disabled = false; b.textContent = `Yes, go ahead (about ${usd(c.price)})`; }
+            if (data?.ok && !data.nothing_new) { armed = true; b.disabled = false; b.textContent = `Yes, Go Ahead (About ${usd(c.price)})`; }
             else buttons.forEach((x, i) => { x.disabled = known && choices[i].price > balance; });
             return;
           }
