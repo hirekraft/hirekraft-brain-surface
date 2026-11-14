@@ -14,6 +14,7 @@
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
 import { zone } from './dates.js?v=2026-10-22-dates';
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 
 const DOT = String.fromCharCode(183);
 const num = (n) => Number(n || 0).toLocaleString('en-US');
@@ -176,7 +177,7 @@ function paintCard(host, sb, data) {
   top.append(h, seg);
   const out = [top];
   if (!data) {
-    out.push(el('p', 'br-small td-bad', 'What came in could not be read just now: ' + String(failed) + '. This is the reading failing, not nothing arriving. It tries again on its own.'));
+    out.push(el('p', 'br-small td-bad', 'What came in could not be read just now: ' + plainWords(String(failed)) + '. This is the reading failing, not nothing arriving. It tries again on its own.'));
     host.replaceChildren(...out);
     return;
   }
