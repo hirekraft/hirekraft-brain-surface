@@ -9,6 +9,7 @@
 // NO FILE LISTS: a single file is reached by asking the box. A place's critical files open one click
 // down, and only those.
 
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 let ctx = null;          // { sb, zone, el, $ , countOf, goto }
 let last = null;         // the last panel reading
 const live = { refused: null, door: null };
@@ -43,7 +44,7 @@ export async function loadPanel() {
     const msg = String(e?.message ?? e);
     last = { ok: false, note: msg.includes("Could not find the function")
       ? "The panel is not switched on yet: one change to the brain is waiting to be applied."
-      : "The panel could not be read, so nothing here is known: " + msg };
+      : "The panel could not be read, so nothing here is known: " + plainWords(msg) };
   }
   drawAll();
 }
@@ -133,7 +134,7 @@ function button(text, fn) {
 async function mark(p, onPurpose, said) {
   said.textContent = onPurpose ? "Marking." : "Taking it back.";
   const { data, error } = await ctx.sb.rpc("audit_place_mark_set", { p_place_key: p.key, p_on_purpose: onPurpose, p_reason: null });
-  if (error || !data?.ok) { said.textContent = data?.note ?? (error ? "That did not save: " + error.message : "That did not save."); return; }
+  if (error || !data?.ok) { said.textContent = data?.note ?? (error ? "That did not save: " + plainWords(error.message) : "That did not save."); return; }
   await loadPanel();
 }
 
@@ -143,7 +144,7 @@ async function showCritical(p, li) {
   box.appendChild(line("quiet working", "Reading."));
   const { data, error } = await ctx.sb.rpc("audit_place_files", { p_place_key: p.key });
   box.innerHTML = "";
-  if (error || !data?.ok) { note(box, data?.note ?? (error ? "Could not be read: " + error.message : "Could not be read."), true); return; }
+  if (error || !data?.ok) { note(box, data?.note ?? (error ? "Could not be read: " + plainWords(error.message) : "Could not be read."), true); return; }
   const ul = ctx.el("ul", "ans-list");
   for (const f of data.files ?? []) {
     const it = ctx.el("li");
