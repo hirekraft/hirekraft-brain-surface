@@ -3,18 +3,15 @@
 // there's new functionality, here's how it works, test it. Ultimately that's how the customer would also learn about
 // functionality." And: "No morning brief ... I don't want these accumulating."
 // When she opens the Tool and the guide has something she has not been shown, the conversation says it ONCE: one
-// line per new thing in her words, how it works (the guide's what_it_is) and how to try it, newest first, at most
-// five, the rest one tap away. Then they are marked seen (guide_news_seen), so they never pile up. Nothing is
+// line per new thing in her words (its title and one short sentence, the rest under More), newest first, at most
+// three, the rest one tap away. Then they are marked seen (guide_news_seen), so they never pile up. Nothing is
 // pushed by email or phone; nothing is said when nothing is new.
-// For HireKraft's owner the studio's check for that entry (whats_new on studio-core, by guide_slug) is drawn under
-// it with Works / Doesn't, the same card and the same answer as the To test view. Anyone else sees no buttons:
-// studio-july refuses whoever is not on the studio allowlist, and this page does not ask for anyone without all access.
+// The studio's checks are NOT drawn here (see showNews): they live in the To test view only.
 // Reads guide_news() in the brain (migrations/hirekraft/2026-10-23-test-list-guide-news.sql in studio-walkers).
 // Until that is applied the call fails and nothing is said, by design: an unasked message has nothing to refuse.
 
-import { initToTest, readList, card } from './totest.js?v=2026-10-23-test-list-2';
 
-const SHOW = 5;
+const SHOW = 3;
 let done = false;
 
 // A REPLY TO A SUSPECTED SCAM, OR THE BOOKS NAMING ONE, said to the owner first and once (seat mail-inbox, decision 1033 item 3:
@@ -34,10 +31,28 @@ async function scamAlerts({ sb, el, log, openPanel }) {
   try { await sb.rpc('scam_alerts_seen', { p_ids: items.map((x) => x.id), p_month: a.monthly ? a.month : null }); } catch (_) { /* said again next time, the safe side */ }
 }
 
-export async function showNews({ sb, el, $, openPanel, owner }) {
+// NOTHING OF THE STUDIO'S IN HER COLUMN, AND NO GUIDE DUMPS (seat ready-alive 2026-11-14, HQ brief after Alex's screenshot of Nov 13,
+// 18:04 PT: Vera's setup column held the getting-started guide in full and two test cards with Works / Doesn't / Not now). Rules:
+// - the studio's test cards are drawn ONLY in the To test view (fill/totest.js, #totest), never here, for anyone. SUPERSEDED: the
+//   card under each new entry for HireKraft's owner (seat test-list round 2, 2026-10-23).
+// - during setup nothing is said unasked: she is on a step, and her guide speaks about that step. The news waits, unseen, until
+//   the Tool is open (lens.js passes setupSaid: resolves true while Getting Started is the page; unknown counts as setup).
+// - each new thing is its title and ONE short sentence in plain words; the rest of the guide's text opens under More.
+const SHORT = 140;
+function firstSentence(t) {
+  const x = String(t || '').split(String.fromCharCode(10)).join(' ').trim(); if (!x) return { head: '', more: false };
+  let cut = -1; for (const stop of ['. ', '? ', '! ']) { const i = x.indexOf(stop); if (i > 0 && (cut < 0 || i < cut)) cut = i; }
+  let head = cut > 0 ? x.slice(0, cut + 1) : x;
+  if (head.length > SHORT) { const sp = head.lastIndexOf(' ', SHORT); head = head.slice(0, sp > 40 ? sp : SHORT) + String.fromCharCode(8230); }
+  return { head, more: head.length < x.length };
+}
+export async function showNews({ sb, el, $, openPanel, owner, setupSaid }) {
   if (done) return; done = true;
+  let inSetup = true;
+  try { inSetup = await Promise.race([Promise.resolve(setupSaid).then((v) => v !== false), new Promise((r) => setTimeout(() => r(true), 20000))]); } catch (_) { inSetup = true; }
   const log = $('#dock-turns'); if (!log) return;
-  if (owner) await scamAlerts({ sb, el, log, openPanel });
+  if (owner) await scamAlerts({ sb, el, log, openPanel });   // a suspected scam is hers to know at once, setup or not
+  if (inSetup) { console.info('what is new: not said during setup'); return; }
   let news;
   try {
     const { data, error } = await sb.rpc('guide_news');
@@ -46,13 +61,6 @@ export async function showNews({ sb, el, $, openPanel, owner }) {
   } catch (e) { console.info('what is new: not read', String(e?.message ?? e)); return; }
   const items = news.news || [];
   if (!items.length) return;
-
-  let checks = {};
-  if (owner) {
-    initToTest({ sb, el, $ });
-    const list = await readList();
-    (list?.ready || []).forEach((g) => (g.checks || []).forEach((c) => { if (c.guide_slug && !checks[c.guide_slug]) checks[c.guide_slug] = c; }));
-  }
 
   const turn = el('div', 'turn said news');
   const head = el('p');
@@ -64,15 +72,14 @@ export async function showNews({ sb, el, $, openPanel, owner }) {
   const item = (g) => {
     const box = el('div', 'news-item');
     const t = el('b'); t.textContent = g.title; box.appendChild(t);
-    if (g.what_it_is) { const p = el('p'); p.textContent = g.what_it_is; box.appendChild(p); }
-    const c = checks[g.slug];
-    if (c) {
-      const wrap = el('div', 'news-check');
-      const redraw = () => wrap.replaceChildren(card(c, false, redraw));
-      redraw();
-      box.appendChild(wrap);
-    } else if (g.how_to_ask) {
-      const p = el('p', 'news-try'); p.textContent = 'Try it: ' + g.how_to_ask; box.appendChild(p);
+    const f = firstSentence(g.what_it_is);
+    if (f.head) {
+      const p = el('p'); p.textContent = f.head; box.appendChild(p);
+      if (f.more) {
+        const more = el('button', 'gr-link news-more'); more.type = 'button'; more.textContent = 'More';
+        more.addEventListener('click', () => { p.textContent = String(g.what_it_is || ''); if (g.how_to_ask) { const q = el('p', 'news-try'); q.textContent = 'Try it: ' + g.how_to_ask; box.appendChild(q); } more.remove(); });
+        box.appendChild(more);
+      }
     }
     return box;
   };
