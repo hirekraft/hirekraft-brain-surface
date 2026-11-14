@@ -2888,6 +2888,7 @@ body.br-panel-open { overflow: hidden; }
   body.hd-on header.masthead > .hd-date { order: 9; flex: 1 0 100%; margin: 0; padding: 0 0 4px; text-align: center; pointer-events: none; min-height: 0; font-size: var(--t-micro); }
   body #gr .gs-marks { font-size: var(--t-micro); }
   body #gs-anyway, body .news-more { min-height: 44px; }
+  /* seat keeping-up 2026-11-14: Today on a phone: the three choices share the row, each at least 44px; a source's line wraps under its name */ body .td-seg { width: 100%; } body .td-tab { flex: 1 1 0; min-height: 44px; } body .td-srow { grid-template-columns: minmax(0, 1fr); } body .td-src > summary { min-height: 44px; display: flex; align-items: center; }
 }
 /* ── NO TOOL TO OPEN (seat any-brain round 2, 2026-11-05, decision 1097): fill/brain.js draws this in place of the whole screen,
    before any tab, when the brain this browser points to no longer opens. One sentence, one way on. Tokens only. ── */
@@ -3460,3 +3461,28 @@ body.hd-out .hd-date { display: none; }
 .gs-openput { display: grid; gap: calc(var(--u) * 3); padding: calc(var(--u) * 3) 0 0; border-top: 1px solid var(--line); min-width: 0; }
 .gs-anyact { margin-top: calc(var(--u) * 2); padding-top: calc(var(--u) * 3); border-top: 1px solid var(--line); }
 .news-more { align-self: flex-start; }
+/* ── TODAY (seat keeping-up, 2026-11-14; decision 1176). The Brain tab's first card for the owner: what came in today (Yesterday and Last 7 Days one tap away), searchable, understood, what could not be read and why, what it cost; Keeping Up green, Not Keeping Up red with each reason; one line of the same in the Working list (wk-today). Tokens only. Phone rules in A PHONE IS A FIRST-CLASS SIZE. ── */
+.br-today { cursor: default; gap: calc(var(--u) * 2.5); }
+.td-top { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2) calc(var(--u) * 4); align-items: center; justify-content: space-between; min-width: 0; }
+.td-seg { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1.5); min-width: 0; }
+.td-tab { padding: 6px 14px; min-height: 40px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--paper); color: var(--ink-3); font: inherit; font-size: var(--t-small); cursor: pointer; overflow-wrap: anywhere; }
+.td-tab.on { background: var(--act-soft); color: var(--ink); border-color: var(--act); font-weight: var(--w-mid); }
+.td-line { margin: 0; font-size: var(--t-read); color: var(--ink-2); line-height: var(--lead-read); overflow-wrap: anywhere; min-width: 0; }
+.td-line .td-n, .td-reason .td-n { color: var(--ink); font-variant-numeric: tabular-nums; }
+.td-ok { color: var(--ok-ink); font-weight: var(--w-mid); }
+.td-bad, .td-bad .td-n { color: var(--scam); }
+.td-why { display: grid; gap: calc(var(--u) * 1); min-width: 0; }
+.td-reason { margin: 0; font-size: var(--t-small); color: var(--ink-2); overflow-wrap: anywhere; }
+.td-src > summary { cursor: pointer; color: var(--ink-3); font-size: var(--t-small); }
+.td-src[open] > summary { margin-bottom: calc(var(--u) * 2); }
+.td-srow { display: grid; grid-template-columns: minmax(120px, 220px) minmax(0, 1fr); gap: calc(var(--u) * 1) calc(var(--u) * 3); padding: calc(var(--u) * 1.5) 0; border-top: 1px solid var(--line); min-width: 0; }
+.td-srow .td-line { font-size: var(--t-small); }
+.td-sname { overflow-wrap: anywhere; min-width: 0; font-size: var(--t-small); color: var(--ink); }
+.td-verdict { display: grid; gap: calc(var(--u) * 1); padding: calc(var(--u) * 3); border-radius: var(--radius); min-width: 0; overflow-wrap: anywhere; font-size: var(--t-small); }
+.td-verdict.td-good { background: var(--money-soft); color: var(--ok-ink); display: block; }
+.td-verdict.td-behind { background: var(--scam-soft); color: var(--scam); }
+.td-verdict .td-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: currentColor; margin-right: calc(var(--u) * 1.5); vertical-align: middle; }
+.td-vh, .td-vline { margin: 0; }
+.td-vline { color: var(--ink-2); }
+.wk-today { padding: calc(var(--u) * 2) 0 0; margin-top: calc(var(--u) * 2); border-top: 1px solid var(--line); min-width: 0; }
+.wk-today .td-line { font-size: var(--t-small); }
