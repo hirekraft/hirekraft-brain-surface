@@ -13,9 +13,9 @@
 // The brain's own sentences (a source's line, a finding's line) are shown as the brain wrote them.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
-const WORD = { up_to_date: ['Up to date', 'green'], reading: ['Reading', 'blue'], needs_you: ['Needs you', 'orange'] };
-const GROUPS = [['email', 'Email'], ['drives', 'Drives and folders'], ['calendar', 'Calendar'], ['contacts', 'Contacts'],
-  ['systems', 'Systems'], ['loose', 'Loose files']];
+const WORD = { up_to_date: ['Up to Date', 'green'], reading: ['Reading', 'blue'], needs_you: ['Needs You', 'orange'] };
+const GROUPS = [['email', 'Email'], ['drives', 'Drives and Folders'], ['calendar', 'Calendar'], ['contacts', 'Contacts'],
+  ['systems', 'Systems'], ['loose', 'Loose Files']];
 const MORE = String.fromCharCode(8943);
 const num = (n) => Number(n || 0).toLocaleString('en-US');
 
@@ -52,7 +52,7 @@ export async function drawCounts(box, { sb, el, reveal }) {
   try { v = await readSources(sb); } catch (e) { failed(box, el, 'The counts', e); return; }
   if (!v?.ok) { const p = el('p', 'quiet'); p.textContent = v?.note ?? 'The counts could not be read.'; box.replaceChildren(p); return; }
   const wrap = el('div', 'brain-counts');
-  for (const [key, word] of [['up_to_date', 'Up to date'], ['reading', 'Reading'], ['needs_you', 'Needs you']]) {
+  for (const [key, word] of [['up_to_date', 'Up to Date'], ['reading', 'Reading'], ['needs_you', 'Needs You']]) {
     const n = Number(v.counts?.[key] ?? 0);
     const b = el('button', 'brain-count' + (key === 'needs_you' && n > 0 ? ' needs' : ''));
     b.type = 'button';
@@ -173,7 +173,7 @@ function leftOut(v, el) {
   if (!lo.length) return null;
   const det = el('details', 'src-left');
   const sum = el('summary');
-  sum.textContent = lo.length === 1 ? '1 left out by choice' : lo.length + ' left out by choice';
+  sum.textContent = lo.length === 1 ? '1 Left Out by Choice' : lo.length + ' left out by choice';
   const ul = el('ul', 'src-list');
   for (const x of lo) {
     const li = el('li', 'src-row is-left');
@@ -265,13 +265,13 @@ export async function drawDrives(box, d) {
   if (d.choose) {
     const ch = el('button', 'go ghost');
     ch.type = 'button';
-    ch.textContent = 'Choose what comes in';
+    ch.textContent = 'Choose What Comes In';
     ch.addEventListener('click', () => d.choose());
     top.appendChild(ch);
   }
   out.push(top);
-  for (const [place, label, lede] of [['shared', 'Shared drives', 'Owned by the company. People stay members when someone leaves.'],
-    ['folder', "Folders in someone's drive", "A folder in one person's own My Drive. It belongs to that person's account."]]) {
+  for (const [place, label, lede] of [['shared', 'Shared Drives', 'Owned by the company. People stay members when someone leaves.'],
+    ['folder', "Folders in Someone's Drive", "A folder in one person's own My Drive. It belongs to that person's account."]]) {
     const mine = rows.filter((r) => r.place === place);
     if (!mine.length) continue;
     const h = el('h3', 'src-group');
@@ -319,7 +319,7 @@ export async function drawOrganize(box, { sb, el }) {
     const t = el('p', 'org-title'); t.textContent = f.title;
     head.appendChild(t);
     if (f.state === 'counted') { const n = el('span', 'org-n'); n.textContent = num(f.n); head.appendChild(n); }
-    else { const b = el('span', 'badge b-grey'); b.textContent = 'Not counted yet'; head.appendChild(b); }
+    else { const b = el('span', 'badge b-grey'); b.textContent = 'Not Counted Yet'; head.appendChild(b); }
     const line = el('p', 'org-line'); line.textContent = f.line ?? '';
     li.append(head, line);
     const ex = f.examples ?? [];
