@@ -56,7 +56,7 @@ async function load(wrap, ctx) {
     const p = el('p', 'notice flagged');
     p.textContent = 'This could not be read just now: ' + String(r?.error ?? r?.ai?.error ?? 'no reason was given') + '. Nothing here is a claim either way.';
     const again = el('button', 'go ghost');
-    again.type = 'button'; again.textContent = 'Try again';
+    again.type = 'button'; again.textContent = 'Try Again';
     again.addEventListener('click', () => load(wrap, ctx));
     wrap.append(p, again);
     return;
@@ -88,9 +88,9 @@ function draw(wrap, ai, ctx) {
     const lim = ai.limit ? limitBlock(ai.limit, ctx, () => load(wrap, ctx)) : null;
     wrap.appendChild(glanceBlock(ai.glance, ai.limit, lim, el));
     if (lim) wrap.appendChild(lim);
-    wrap.appendChild(fold('Month by month', [monthsBlock(ai.months, p, el)], el));
-    wrap.appendChild(fold('Day by day', [byDay(p, el, ai.glance)], el));
-    wrap.appendChild(fold('Next month, estimated, and everything else it costs', [nextMonth(p, el), costBlock(ai.cost, el)], el));
+    wrap.appendChild(fold('Month by Month', [monthsBlock(ai.months, p, el)], el));
+    wrap.appendChild(fold('Day by Day', [byDay(p, el, ai.glance)], el));
+    wrap.appendChild(fold('Next Month, Estimated, and Everything Else It Costs', [nextMonth(p, el), costBlock(ai.cost, el)], el));
   } else {
     // the brain gave no glance (an older brain, or it could not be made): the earlier order, said so
     if (ai.glance && ai.glance.ok !== true) { const n = el('p', 'notice flagged'); n.textContent = 'The summary could not be made just now: ' + String(ai.glance.error || 'no reason was given') + '. The figures below are read directly.'; wrap.appendChild(n); }
@@ -105,7 +105,7 @@ function draw(wrap, ai, ctx) {
   // 6. Detail, one press down: the AI behind each step (the cards of seat ai-tab, unchanged in substance).
   const more = el('details', 'ai2-more');
   const sum = el('summary', 'ai2-more-sum');
-  sum.textContent = 'Which AI does each step, its test score, and other choices';
+  sum.textContent = 'Which AI Does Each Step, Its Test Score, and Other Choices';
   more.appendChild(sum);
   const inner = el('div', 'ai2-more-body');
   const basis = el('p', 'ai2-small');
@@ -113,7 +113,7 @@ function draw(wrap, ai, ctx) {
   inner.appendChild(basis);
   for (const s of (Array.isArray(ai.steps) ? ai.steps : [])) inner.appendChild(stepCard(s, ctx, () => load(wrap, ctx)));
   if (ai.quick_deep) { const q = el('p', 'ai2-small'); q.textContent = String(ai.quick_deep); inner.appendChild(q); }
-  const comingHead = el('h3', 'ai-h'); comingHead.textContent = 'Other ways to run it';
+  const comingHead = el('h3', 'ai-h'); comingHead.textContent = 'Other Ways to Run It';
   inner.appendChild(comingHead);
   for (const c of (Array.isArray(ai.coming) ? ai.coming : [])) {
     const row = el('div', 'ai-coming');
@@ -149,7 +149,7 @@ function howMuch(p, el, cost) {
   const say = el('p', 'ai2-sentence'); say.textContent = String(p.sentence || '');
   sec.append(lab, big, say);
   if (cost && cost.ok === true) {
-    const h = el('p', 'ai2-label ai2-all-h'); h.textContent = 'Everything it costs you each month';
+    const h = el('p', 'ai2-label ai2-all-h'); h.textContent = 'Everything It Costs You Each Month';
     const list = el('div', 'ai2-all');
     const row = (title, value, said) => {
       const r = el('div', 'ai2-row');
@@ -162,13 +162,13 @@ function howMuch(p, el, cost) {
     const a = cost.ai || {};
     list.appendChild(row('AI', (dollars(a.this_month_usd) ?? '$0') + ' so far',
       a.next_month_estimate_usd !== null && a.next_month_estimate_usd !== undefined
-        ? 'Next month about ' + dollars(a.next_month_estimate_usd) + ', estimated. Exactly what the AI makers charge.' : 'Exactly what the AI makers charge.'));
+        ? 'Next month about ' + dollars(a.next_month_estimate_usd) + ', estimated. Exactly what the AI companies charge.' : 'Exactly what the AI companies charge.'));
     const d = cost.database || {};
-    list.appendChild(row('Your database', d.known ? 'About ' + (dollars(d.estimate_usd) ?? '?') + ', estimated' : 'On their invoice',
+    list.appendChild(row('Your Database', d.known ? 'About ' + (dollars(d.estimate_usd) ?? '?') + ', estimated' : 'On their invoice',
       d.known ? String(d.provider) + ' ' + String(d.plan) + ' plan, ' + String(d.size_gb) + ' GB. Estimated from ' + String(d.provider)
         + '’s published list price (from ' + (dollars(d.list_from_usd) ?? '?') + ' a month), more if it runs on a larger server. '
         + String(d.provider) + ' bills you directly; the exact figure is on their invoice.' : String(d.say || '')));
-    list.appendChild(row('Verrandi’s fee', 'Not set yet', 'Not decided yet. Nothing is charged for it today.'));
+    list.appendChild(row('Verrandi’s Fee', 'Not set yet', 'Not decided yet. Nothing is charged for it today.'));
     const no = el('p', 'ai2-small'); no.textContent = 'No total is shown: the database figure is an estimate and the fee is not set.';
     sec.append(h, list, no);
   }
@@ -195,10 +195,10 @@ function glanceBlock(G, L, lim, el) {
     sec.appendChild(d);
     return d;
   };
-  q('How much', G.how_much);
+  q('How Much', G.how_much);
   sec.appendChild(glancePicture(G.picture || {}, el));
-  q('Where it went', G.where);
-  const b = q('How long your balance lasts', G.balance);
+  q('Where It Went', G.where);
+  const b = q('How Long Your Balance Lasts', G.balance);
   const bf = G.balance_figures || {};
   if (bf.set_up && Number(bf.put_in_usd) > 0) {
     const left = Math.max(0, Number(bf.left_usd) || 0), put = Number(bf.put_in_usd);
@@ -217,7 +217,7 @@ function glanceBlock(G, L, lim, el) {
     if (!open) {
       lim.hidden = true;
       const go = el('button', 'go ai2-act'); go.type = 'button';
-      go.textContent = 'Set a monthly limit';
+      go.textContent = 'Set a Monthly Limit';
       go.setAttribute('aria-expanded', 'false');
       go.addEventListener('click', () => {
         lim.hidden = !lim.hidden;
@@ -285,7 +285,7 @@ function fold(title, parts, el) {
 function costBlock(cost, el) {
   if (!cost || cost.ok !== true) return null;
   const sec = el('section', 'ai2-block');
-  const h = el('p', 'ai2-label'); h.textContent = 'Everything it costs you each month';
+  const h = el('p', 'ai2-label'); h.textContent = 'Everything It Costs You Each Month';
   const list = el('div', 'ai2-all');
   const row = (title, value, said) => {
     const r = el('div', 'ai2-row');
@@ -296,12 +296,12 @@ function costBlock(cost, el) {
     return r;
   };
   const a = cost.ai || {};
-  list.appendChild(row('AI', (money(a.this_month_usd) ?? '$0.00') + ' so far', 'Exactly what the AI makers charge.'));
+  list.appendChild(row('AI', (money(a.this_month_usd) ?? '$0.00') + ' so far', 'Exactly what the AI companies charge.'));
   const d = cost.database || {};
-  list.appendChild(row('Your database', d.known ? 'Estimated: about ' + (dollars(d.estimate_usd) ?? '?') : 'On their invoice',
+  list.appendChild(row('Your Database', d.known ? 'Estimated: about ' + (dollars(d.estimate_usd) ?? '?') : 'On their invoice',
     d.known ? String(d.provider) + ' ' + String(d.plan) + ' plan, ' + String(d.size_gb) + ' GB. An estimate from ' + String(d.provider)
       + '’s published list price (from ' + (dollars(d.list_from_usd) ?? '?') + ' a month); ' + String(d.provider) + ' bills you directly, and the exact figure is on their invoice.' : String(d.say || '')));
-  list.appendChild(row('Verrandi’s fee', 'Not set yet', 'Not decided yet. Nothing is charged for it today.'));
+  list.appendChild(row('Verrandi’s Fee', 'Not set yet', 'Not decided yet. Nothing is charged for it today.'));
   const no = el('p', 'ai2-small'); no.textContent = 'No total is shown: the database figure is an estimate and the fee is not set.';
   sec.append(h, list, no);
   return sec;
@@ -316,7 +316,7 @@ function costBlock(cost, el) {
 export function limitBlock(L, ctx, reload) {   // exported for the Brain engine room's This month page (seat brain-tab-room)
   const { el, askBody } = ctx;
   const sec = el('section', 'ai2-block ai2-limit');
-  const lab = el('p', 'ai2-label'); lab.textContent = 'Your monthly AI limit';
+  const lab = el('p', 'ai2-label'); lab.textContent = 'Your Monthly AI Limit';
   sec.appendChild(lab);
   const warn = L.state === 'near' || L.state === 'reached' || L.state === 'stopped';
   if (L.set === true) {
@@ -355,19 +355,19 @@ export function limitBlock(L, ctx, reload) {   // exported for the Brain engine 
   };
   if (warn && L.raise_to_usd) {
     const up = el('button', 'go'); up.type = 'button';
-    up.textContent = 'Raise it to ' + dollars(L.raise_to_usd);
+    up.textContent = 'Raise It to ' + dollars(L.raise_to_usd);
     up.addEventListener('click', () => send(up, String(L.raise_to_usd), 'Raising the limit'));
     acts.appendChild(up);
   }
   const form = el('form', 'ai2-limit-form');
   const field = el('label', 'ai2-limit-field');
-  const cap = el('span', 'ai2-small'); cap.textContent = L.set === true ? 'A different limit, in dollars a month' : 'Set a limit, in dollars a month';
+  const cap = el('span', 'ai2-small'); cap.textContent = L.set === true ? 'A Different Limit, in Dollars a Month' : 'Set a Limit, in Dollars a Month';
   const inp = el('input', 'ai2-limit-in');
   inp.type = 'text'; inp.inputMode = 'numeric'; inp.autocomplete = 'off';
   inp.placeholder = L.set === true ? String(L.limit_usd) : '150';
   field.append(cap, inp);
   const set = el('button', L.set === true ? 'go ghost' : 'go'); set.type = 'submit';
-  set.textContent = L.set === true ? 'Change it' : 'Set the limit';
+  set.textContent = L.set === true ? 'Change It' : 'Set the Limit';
   form.append(field, set);
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -377,7 +377,7 @@ export function limitBlock(L, ctx, reload) {   // exported for the Brain engine 
   });
   acts.appendChild(form);
   if (L.set === true) {
-    const off = el('button', 'go ghost'); off.type = 'button'; off.textContent = 'Remove the limit';
+    const off = el('button', 'go ghost'); off.type = 'button'; off.textContent = 'Remove the Limit';
     off.addEventListener('click', () => send(off, '', 'Removing the limit'));
     acts.appendChild(off);
   }
@@ -388,7 +388,7 @@ export function limitBlock(L, ctx, reload) {   // exported for the Brain engine 
 // 2. Am I in control: one bar, left of what was put in.
 export function balance(b, p, el) {   // exported for the Brain engine room's AI balance page (seat brain-tab-room)
   const sec = el('section', 'ai2-block ai2-bal');
-  const lab = el('p', 'ai2-label'); lab.textContent = 'Your prepaid balance';
+  const lab = el('p', 'ai2-label'); lab.textContent = 'Your Prepaid Balance';
   sec.appendChild(lab);
   if (!b.set_up) {
     const n = el('p', 'ai2-sentence'); n.textContent = 'No prepaid balance is set up for this business.';
@@ -444,7 +444,7 @@ const monthName = (iso, kind) => {
 
 function monthsBlock(M, p, el) {
   const sec = el('section', 'ai2-block ai2-months');
-  const h = el('h3', 'ai2-h'); h.textContent = 'Month by month';
+  const h = el('h3', 'ai2-h'); h.textContent = 'Month by Month';
   sec.appendChild(h);
   if (!M || M.ok !== true || !Array.isArray(M.months) || !M.months.length) {
     const n = el('p', 'notice flagged');
@@ -480,7 +480,7 @@ function monthsBlock(M, p, el) {
     b.dataset.month = String(m.month);
     const usd = Number(m.usd) || 0;
     const v = el('span', 'ai2-mval');
-    v.textContent = !m.metered ? '–' : !m.priced ? 'Not priced' : dollars(usd) ?? '$0';
+    v.textContent = !m.metered ? '–' : !m.priced ? 'Not Priced' : dollars(usd) ?? '$0';
     const col = el('span', 'ai2-mcol');
     const fill = el('span', 'ai2-mfill');
     fill.style.height = (m.metered && m.priced ? Math.max(usd > 0 ? 3 : 0, (usd / top) * 100) : 0).toFixed(1) + '%';
@@ -544,7 +544,7 @@ function monthCard(m, M, p, el) {
   }
   const models = Array.isArray(m.by_model) ? m.by_model : [];
   if (models.length) {
-    const h = el('p', 'ai2-label'); h.textContent = 'By AI maker and model';
+    const h = el('p', 'ai2-label'); h.textContent = 'By AI Company and Model';
     const list = el('div', 'ai2-lines');
     const shown = models.slice(0, 4), rest = models.slice(4);
     for (const x of shown) {
@@ -557,7 +557,7 @@ function monthCard(m, M, p, el) {
     }
     if (rest.length) {
       const r = el('div', 'ai2-row');
-      const n = el('span', 'ai2-row-title'); n.textContent = 'Other models';
+      const n = el('span', 'ai2-row-title'); n.textContent = 'Other Models';
       const v = el('span', 'ai2-row-usd'); v.textContent = money(rest.reduce((a, x) => a + (Number(x.usd) || 0), 0)) ?? '$0.00';
       r.append(n, v);
       list.appendChild(r);
@@ -610,7 +610,7 @@ export function boughtLines(lines, total, el, withOneTime) {   // exported for t
 // run off the top when they are far larger than a normal day (said on the chart in words, not hidden).
 function byDay(p, el, G) {
   const sec = el('section', 'ai2-block');
-  const h = el('h3', 'ai2-h'); h.textContent = 'Day by day';
+  const h = el('h3', 'ai2-h'); h.textContent = 'Day by Day';
   sec.appendChild(h);
   const days = Array.isArray(p.daily) ? p.daily : [];
   // seat ai-tab-clear: a one-bar chart on the 1st said nothing true; under 7 days it is said in words instead
@@ -689,8 +689,8 @@ function byDay(p, el, G) {
   frame.appendChild(svg);
   sec.append(frame, readout);
   const key = el('p', 'ai2-key');
-  const k1 = el('span', 'ai2-key-run'); k1.textContent = 'Running cost';
-  const k2 = el('span', 'ai2-key-one'); k2.textContent = 'One-time reading of older items';
+  const k1 = el('span', 'ai2-key-run'); k1.textContent = 'Running Cost';
+  const k2 = el('span', 'ai2-key-one'); k2.textContent = 'One-Time Reading of What Was Already There';
   key.append(k1, k2);
   sec.appendChild(key);
   if (runs.length) {
@@ -700,7 +700,7 @@ function byDay(p, el, G) {
   }
   // the numbers, one press away
   const det = el('details', 'ai2-table');
-  const s = el('summary', 'ai2-more-sum'); s.textContent = 'See the numbers for each day';
+  const s = el('summary', 'ai2-more-sum'); s.textContent = 'See the Numbers for Each Day';
   const tbl = el('table', 'ai2-days');
   const hd = el('tr', '');
   for (const c of ['Day', 'Running', 'One-time', 'Total']) { const th = el('th', ''); th.textContent = c; hd.appendChild(th); }
@@ -743,7 +743,7 @@ function stepCard(s, ctx, reload) {
   const by = el('span', 'quiet');
   by.textContent = (s.maker ? ' from ' + s.maker : '') + (s.chosen_by === 'you' ? ', your choice' : ", the studio's choice");
   runs.append(lead, name, by);
-  if (s.chosen_by === 'you') { const b = el('span', 'badge b-blue'); b.textContent = 'Chosen by you'; runs.append(' ', b); }
+  if (s.chosen_by === 'you') { const b = el('span', 'badge b-blue'); b.textContent = 'Chosen by You'; runs.append(' ', b); }
 
   const score = el('p', 'ai-score');
   const sl = el('span', 'ai-label'); sl.textContent = 'On our test: ';
@@ -758,7 +758,7 @@ function stepCard(s, ctx, reload) {
   const toggle = el('button', 'go ghost ai-other');
   toggle.type = 'button';
   toggle.setAttribute('aria-expanded', 'false');
-  toggle.textContent = alts.length ? 'Other choices (' + alts.length + ')' : 'No other choices yet';
+  toggle.textContent = alts.length ? 'Other Choices (' + alts.length + ')' : 'No Other Choices Yet';
   const list = el('div', 'ai-alts'); list.hidden = true;
   if (alts.length) {
     toggle.addEventListener('click', () => {
@@ -779,7 +779,7 @@ function altRow(s, a, said, ctx, reload) {
   const n = el('b'); n.textContent = a.name;
   const m = el('span', 'quiet'); m.textContent = a.maker;
   top.append(n, ' ', m);
-  if (a.ready === false) { const b = el('span', 'badge b-orange'); b.textContent = 'Not ready'; top.append(' ', b); }
+  if (a.ready === false) { const b = el('span', 'badge b-orange'); b.textContent = 'Not Ready'; top.append(' ', b); }
   const score = el('p', 'ai-alt-line'); score.textContent = 'On our test: ' + String(a.score || '');
   const price = el('p', 'ai-alt-line');
   const was = money(s.cost_30d_usd);
@@ -804,7 +804,7 @@ function backRow(s, said, ctx, reload) {
   const { el } = ctx;
   const row = el('div', 'ai-alt');
   const b = el('button', 'go ghost ai-use');
-  b.type = 'button'; b.textContent = "Go back to the studio's choice";
+  b.type = 'button'; b.textContent = "Go Back to the Studio's Choice";
   b.addEventListener('click', () => preview(s, null, b, said, ctx, reload));
   row.appendChild(b);
   return row;
@@ -825,8 +825,8 @@ async function preview(s, model, btn, said, ctx, reload) {
   const box = el('div', 'ai-confirm');
   const p = el('p', 'ai-effect'); p.textContent = String(c.say || '');
   const acts = el('div', 'actions');
-  const yes = el('button', 'go'); yes.type = 'button'; yes.textContent = 'Yes, change it';
-  const no = el('button', 'go ghost'); no.type = 'button'; no.textContent = 'Keep it as it is';
+  const yes = el('button', 'go'); yes.type = 'button'; yes.textContent = 'Yes, Change It';
+  const no = el('button', 'go ghost'); no.type = 'button'; no.textContent = 'Keep It as It Is';
   acts.append(yes, no);
   box.append(p, acts);
   said.appendChild(box);
