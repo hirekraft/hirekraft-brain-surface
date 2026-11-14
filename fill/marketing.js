@@ -49,7 +49,7 @@ async function post(path, body) {
   } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; }
 }
 
-export function drawMarketing(body, ctx) { C = ctx; import('./marketing-shell.js?v=2026-11-14-day-one-fixes').then((M) => M.drawShell(body, ctx, { signals: (s) => { C = ctx; load(s); }, reads: (s) => { C = ctx; drawReads(s); } })).catch((e) => { body.innerHTML = ''; body.appendChild(mk('p', 'notice flagged', 'The Marketing and sales tab could not be loaded: ' + String((e && e.message) || e))); }); return;   // THE SHELL (seat marketing-build-a, 2026-11-02, decision 1059): the tab opens through fill/marketing-shell.js; the round-1 part row below (seat marketing-parts, with marketing-build-b's Lists button) is superseded by Alex's approval of the round 2 design and no longer runs; it goes at the next whole edit of this file.
+export function drawMarketing(body, ctx) { C = ctx; import('./marketing-shell.js?v=2026-11-14-day-one-fixes-2').then((M) => M.drawShell(body, ctx, { signals: (s) => { C = ctx; load(s); }, reads: (s) => { C = ctx; drawReads(s); } })).catch((e) => { body.innerHTML = ''; body.appendChild(mk('p', 'notice flagged', 'The Marketing and sales tab could not be loaded: ' + String((e && e.message) || e))); }); return;   // THE SHELL (seat marketing-build-a, 2026-11-02, decision 1059): the tab opens through fill/marketing-shell.js; the round-1 part row below (seat marketing-parts, with marketing-build-b's Lists button) is superseded by Alex's approval of the round 2 design and no longer runs; it goes at the next whole edit of this file.
   C = ctx;
   body.innerHTML = '';
   const wrap = mk('div', 'mk');
@@ -66,7 +66,7 @@ export function drawMarketing(body, ctx) { C = ctx; import('./marketing-shell.js
   p2.addEventListener('click', () => pick(p2, drawReads));
   p3.addEventListener('click', () => pick(p3, (s) => import('./marketing-plan.js?v=2026-11-14-tabs-style').then((M) => M.drawPlan(s, C))));
   p4.addEventListener('click', () => pick(p4, (s) => import('./marketing-send.js?v=2026-11-14-tabs-style').then((M) => M.drawSend(s, C))));
-  p5.addEventListener('click', () => pick(p5, (s) => import('./marketing-back.js?v=2026-11-14-tabs-style').then((M) => M.drawBack(s, C))));
+  p5.addEventListener('click', () => pick(p5, (s) => import('./marketing-back.js?v=2026-11-14-day-one-fixes-2').then((M) => M.drawBack(s, C))));
   const stage = mk('div', 'mk-stage');
   wrap.append(parts, stage);
   body.appendChild(wrap);
