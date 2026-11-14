@@ -30,6 +30,7 @@
 
 import { fmtDate } from "./dates.js?v=2026-10-22-dates";
 import { micFor } from "./box.js?v=2026-11-14-tabs-style";
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 
 let C = null;   // { sb, el, $, openPanel, askBody, startThought, foundCard, findCtx, goThoughts, url, key }
 let view = 'open';        // 'open' | 'decided'
@@ -56,9 +57,9 @@ function button(label, cls, fn) { const b = el('button', cls || 'go ghost', labe
 async function rpc(name, args) {
   try {
     const { data, error } = await C.sb.rpc(name, args || {});
-    if (error) return { ok: false, why: 'The Tool could not reach your brain just now (' + String(error.message || 'no reason was given') + ').' };   // what and why, never the bare error (seat tabs-style, decisions 1178, 1169, 1030)
+    if (error) return { ok: false, why: 'The Tool could not reach your brain just now (' + plainWords(String(error.message || 'no reason was given')) + ').' };   // what and why, never the bare error (seat tabs-style, decisions 1178, 1169, 1030)
     return data || { ok: false, why: 'No answer came back.' };
-  } catch (e) { return { ok: false, why: 'The Tool could not reach your brain just now (' + String(e?.message || e) + ').' }; }
+  } catch (e) { return { ok: false, why: 'The Tool could not reach your brain just now (' + plainWords(String(e?.message || e)) + ').' }; }
 }
 function working(host, text, slowText) {
   const w = el('p', 'working', text);
