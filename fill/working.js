@@ -90,9 +90,15 @@ export function workFacts(it) {
     s.append(el('span', null, 'Nothing has moved for'), ' ', n(it.idle_minutes), ' ', el('span', null, Number(it.idle_minutes) === 1 ? 'minute' : 'minutes'));
     p.append(' ' + DOT + ' ', s);
   } else {
-    if (Number(it.per_minute) > 0) { const s = el('span', 'wk-n', Number(it.per_minute).toLocaleString('en-US')); s.setAttribute('translate', 'no'); p.append(' ' + DOT + ' ', s, ' ', el('span', null, 'a minute')); }
+    // A TIME LEFT ONLY FOR A LINE THAT IS MOVING NOW (seat day-one-fixes 2026-11-14, decisions 1164 and 1173 (3), morning-audit-2
+    // fix 8): the brain gives no time to a stalled line; a line the screen cannot see moving (its reading is old, or the brain says
+    // it is not alive) gets no pace and no time either. Between two moves of a slow line the brain's own stall rule decides,
+    // not this screen's 60-second breathing mark.
+    const stale = !W || failed || !gotAt || Date.now() - gotAt > LIVE_FOR, live = !stale && it.alive !== false;
+    if (!live) p.append(' ' + DOT + ' ', el('span', null, stale ? 'no time left until it is read again' : 'not moving just now, so no time left is given'));
+    else if (Number(it.per_minute) > 0) { const s = el('span', 'wk-n', Number(it.per_minute).toLocaleString('en-US')); s.setAttribute('translate', 'no'); p.append(' ' + DOT + ' ', s, ' ', el('span', null, 'a minute')); }
     else p.append(' ' + DOT + ' ', el('span', null, 'time left not known yet'));
-    const l = leftWords(it.minutes_left);
+    const l = live ? leftWords(it.minutes_left) : null;
     if (l) { p.append(' ' + DOT + ' '); l.forEach((w, i) => { if (i) p.append(' '); if (i === 1 && l.length === 3) { const s = el('span', 'wk-n', w); s.setAttribute('translate', 'no'); p.append(s); } else p.append(el('span', null, w)); }); }
   }
   if (Number(it.not_read) > 0) { p.append(' ' + DOT + ' ', n(it.not_read), ' ', el('span', null, 'could not be read')); }
@@ -188,17 +194,21 @@ function paint() {
   const now = Date.now();
   finished = finished.filter((f) => now - f.at < KEEP);
   const its = items();
-  const n = its.length;
+  // WORKING COUNTS ONLY WHAT IS NOT STALLED (seat day-one-fixes, morning-audit-2 fix 8; decision 1173 (3): nothing read is not
+  // working). A stalled line is shown apart, as Not Moving, never in the Working count.
   const stalled = its.filter((x) => x.state === 'stalled').length;
-  const show = !absent && (n > 0 || finished.length > 0 || (failed && prev.size > 0));
+  const n = its.length - stalled;
+  const show = !absent && (its.length > 0 || finished.length > 0 || (failed && prev.size > 0));
   host.hidden = !show;
   if (!show) { if (open) toggle(false); return; }
 
   chip.replaceChildren();
-  chip.classList.toggle('wk-still', n === 0 || stalled === n);
+  chip.classList.toggle('wk-still', n === 0);
   const sign = el('span', 'wk-sign');
   if (n > 0) sign.appendChild(mark(its.some(workAlive)));
+  const onlyStalled = n === 0 && stalled > 0;
   if (failed) { sign.append(el('span', null, 'Working'), ' ' + DOT + ' ', el('span', null, 'Not Read Just Now')); chip.setAttribute('aria-label', 'Working: could not be read just now. Open the list'); }
+  else if (onlyStalled) { chip.setAttribute('aria-label', 'Nothing is working now; ' + num(stalled) + ' not moving. Open the list'); }
   else if (n === 0) { sign.append(el('span', null, 'Finished Just Now')); chip.setAttribute('aria-label', 'Finished just now. Open the list'); }
   else {
     const c = el('span', 'wk-n', num(n)); c.setAttribute('translate', 'no');
@@ -209,7 +219,7 @@ function paint() {
   if (!failed && stalled > 0) {
     const s = el('span', 'wk-stall'); const c = el('span', 'wk-n', num(stalled)); c.setAttribute('translate', 'no');
     s.append(c, ' ', el('span', null, 'Not Moving'));
-    chip.append(' ' + DOT + ' ', s);
+    if (onlyStalled) chip.append(s); else chip.append(' ' + DOT + ' ', s);
   }
   chip.setAttribute('aria-expanded', open ? 'true' : 'false');
 
