@@ -13,6 +13,7 @@
 // by seat contractor-ledger; this file leaves that mount alone), and what was not read.
 
 import { fmtDate } from "./dates.js?v=2026-10-22-dates";
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 let ctx = null;   // { sb, el, $, countOf, zone }
 let last = null;  // money_commitments
 let run = null;   // money-runway
@@ -33,8 +34,8 @@ async function readRunway() {
     const { data, error } = await ctx.sb.functions.invoke("money-runway", { body: {} });
     if (!error) return data;
     let body = null; try { body = await error.context?.json?.(); } catch (_) { body = null; }
-    return body ?? { ok: false, note: "How long the business can go could not be worked out: " + String(error.message ?? error) };
-  } catch (e) { return { ok: false, note: "How long the business can go could not be worked out: " + String(e?.message ?? e) }; }
+    return body ?? { ok: false, note: "How long the business can go could not be worked out: " + plainWords(String(error.message ?? error)) };
+  } catch (e) { return { ok: false, note: "How long the business can go could not be worked out: " + plainWords(String(e?.message ?? e)) }; }
 }
 async function readCommitments() {
   try {
@@ -45,7 +46,7 @@ async function readCommitments() {
     const msg = String(e?.message ?? e);
     return { ok: false, note: msg.includes("Could not find the function")
       ? "This part is not switched on yet: one change to the brain is waiting to be applied."
-      : "What the business pays for could not be read, so nothing here is known: " + msg };
+      : "What the business pays for could not be read, so nothing here is known: " + plainWords(msg) };
   }
 }
 
@@ -72,7 +73,7 @@ async function readOwed() {
     const msg = String(e?.message ?? e);
     return { ok: false, note: msg.includes("Could not find the function")
       ? "This part is not switched on yet: one change to the brain is waiting to be applied."
-      : "What you are owed could not be worked out, so nothing here is known: " + msg };
+      : "What you are owed could not be worked out, so nothing here is known: " + plainWords(msg) };
   }
 }
 async function booksFix(id, mode) {
@@ -80,8 +81,8 @@ async function booksFix(id, mode) {
     const { data, error } = await ctx.sb.functions.invoke("system-read", { body: { action: "books_fix", finding_id: id, mode } });
     if (!error) return data;
     let body = null; try { body = await error.context?.json?.(); } catch (_) { body = null; }
-    return body ?? { ok: false, reason: "QuickBooks could not be reached: " + String(error.message ?? error) };
-  } catch (e) { return { ok: false, reason: "QuickBooks could not be reached: " + String(e?.message ?? e) }; }
+    return body ?? { ok: false, reason: "QuickBooks could not be reached: " + plainWords(String(error.message ?? error)) };
+  } catch (e) { return { ok: false, reason: "QuickBooks could not be reached: " + plainWords(String(e?.message ?? e)) }; }
 }
 function lines(mount, list, cls) { const ul = ctx.el("ul", "attn"); for (const t of list ?? []) { const li = ctx.el("li"); li.appendChild(line(cls ?? "a-detail", t)); ul.appendChild(li); } mount.appendChild(ul); }
 
