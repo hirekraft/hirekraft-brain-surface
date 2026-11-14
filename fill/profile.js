@@ -12,6 +12,7 @@
 // Lives in the Brain tab's "Read it back to me" section (s-recognition), above the list of what is connected.
 
 import { fmtDate } from './dates.js?v=2026-10-22-dates';
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 let ctx = null;   // { sb, el, $, countOf }
 let last = null;
 let saying = '';
@@ -46,7 +47,7 @@ async function answer(id, verdict, words, btns) {
     if (!data?.ok) throw new Error(data?.note ?? data?.reason ?? 'no reason was given');
     saying = verdict === 'right' ? 'Kept as right.' : verdict === 'wrong' ? 'Set aside as wrong. The Tool will not rely on it.' : 'Kept in your words.';
   } catch (e) {
-    saying = 'Not kept: ' + (e?.message ?? e) + '. Nothing changed.';
+    saying = 'Not kept: ' + plainWords(String(e?.message ?? e)) + '. Nothing changed.';
   }
   await loadProfile();
 }
