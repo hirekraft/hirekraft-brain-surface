@@ -18,12 +18,13 @@
 // priceWorks, understandQs); Your answers no longer shows what each mailbox is for.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 import { ic, card } from './setup.js?v=2026-11-10-setup-front-door';
-import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep, brainDoor, priceWorks, understandQs } from './ready.js?v=2026-11-14-day-one-fixes-2';
+import { topUpFor, balanceLeft, cardOf, monthlyOf, understandModel, openStep, brainDoor, priceWorks, understandQs } from './ready.js?v=2026-11-14-day-one-fixes-3';
 // SEAT ready-never-spins (2026-11-11): every brain call here goes through ready.js brainDoor (a real promise that cannot throw). The
 // client's own rpc call object has then and no catch: the two presses below that put .catch on it (Mark it old, the guide's name)
 // threw on press.
 const rpc = (name, args) => brainDoor(C.sb, name, args);
 import { screenLangName } from './words.js?v=2026-10-29-thinkrooms-3';
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 
 const DOT = String.fromCharCode(183);
 const AP = String.fromCharCode(8217);
@@ -132,7 +133,7 @@ async function proposeYears(asked) {
   // through lens-ask (ruling 1141.5): the Tool reads the balance from the meter itself; the page sends none
   const ask = async (confirm) => { const r = await C.askBody({ search_go: { months: 48, sources: null, confirm } }); return r && r.ok === true ? { data: r } : { error: { message: String(r?.note ?? r?.reason ?? r?.error ?? 'no reason was given') } }; };
   const { data, error } = await ask(false);
-  if (error || !data || data.ok !== true) { propose({ asked, say: 'This cannot be done just now: ' + String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given') + '. Nothing was changed.' }); return; }
+  if (error || !data || data.ok !== true) { propose({ asked, say: 'This cannot be done just now: ' + plainWords(String(error?.message ?? data?.note ?? data?.reason ?? 'no reason was given')) + '. Nothing was changed.' }); return; }
   if (data.nothing_to_read) { propose({ asked, say: 'Your last 4 years are already searchable. Nothing to change.' }); return; }
   propose({ asked, say: 'Here is the change and its price, one time.', lines: [['Make searchable', '4 years of mail and files'], ['Items', num(data.total_items)], ['Price, one time', usd2(data.total_usd)], ['Time', data.minutes === null || data.minutes === undefined ? 'measuring' : 'about ' + num(data.minutes) + ' minutes']],
     yes: async () => { const r = await ask(true); const ok = !r.error && r.data && r.data.ok === true; return { ok, note: ok ? String(r.data.note || 'Started. You get one short email when it is done.') : 'Not started: ' + String(r.error?.message ?? r.data?.note ?? r.data?.reason ?? 'no reason was given') + '.' }; } });
@@ -172,7 +173,7 @@ function moneyCard() {
   const lr = row('Monthly AI Limit', L?.set === true ? usd0(L.limit_usd) + ' a month' : 'No limit', null);
   lr.appendChild(link(L?.set === true ? 'Change' : 'Set a Limit', () => {
     if (!L) { openUnder(lr, p('gr-small', 'Your monthly AI limit could not be read just now' + (S.aiErr ? ' (' + String(S.aiErr) + ')' : '') + '.')); return; }
-    import('./ai.js?v=2026-11-14-tabs-style').then((M) => openUnder(lr, M.limitBlock(L, { el: (t, k) => el(t, k), askBody: C.askBody }, () => mount(C)))).catch(() => openUnder(lr, p('gr-small', 'Your monthly AI limit could not be shown just now.')));
+    import('./ai.js?v=2026-11-14-day-one-fixes-3').then((M) => openUnder(lr, M.limitBlock(L, { el: (t, k) => el(t, k), askBody: C.askBody }, () => mount(C)))).catch(() => openUnder(lr, p('gr-small', 'Your monthly AI limit could not be shown just now.')));
   }));
   c.appendChild(lr);
   c.appendChild(row('This Month So Far', L && Number.isFinite(Number(L.spent_usd)) ? usd2(L.spent_usd) : '', link('Open', () => { C.goto('s-summary', 'panel'); C.roomPage('month'); })));
