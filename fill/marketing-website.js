@@ -10,7 +10,7 @@
 // Everything comes from the brain as the signed-in person (wp_site_health): the site is connected with the owner's password, so the
 // brain refuses anyone else, with its reason, shown here. No colour, size or font here (skin.css); no regex literals, no backslashes.
 
-import { fireButton } from './marketing-plan.js?v=2026-11-02-marketing-week-2';
+import { fireButton } from './marketing-plan.js?v=2026-11-14-tabs-style';
 
 let C = null;
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
@@ -53,10 +53,10 @@ export async function mount(el, ctx) {
   } else {
     const tiles = mk('div', 'mk2-tiles');
     tiles.append(
-      tile('articles in the last 30 days', n0(r.posts_30), n0(r.posts_90) + ' in 90 days'),
-      tile('last article', r.last_post ? day(r.last_post.at) : 'none', null),
-      tile('pages', n0(r.pages), n0(r.old_pages) + ' not changed in over a year'),
-      tile('waiting in WordPress', n0(r.waiting), 'drafts and posts waiting for review'));
+      tile('Articles in the last 30 days', n0(r.posts_30), n0(r.posts_90) + ' in 90 days'),
+      tile('Last article', r.last_post ? day(r.last_post.at) : 'None', null),
+      tile('Pages', n0(r.pages), n0(r.old_pages) + ' not changed in over a year'),
+      tile('Waiting in WordPress', n0(r.waiting), 'Drafts and posts waiting for review'));
     el.appendChild(tiles);
     if (r.last_post) {
       const p = mk('p', 'state');
@@ -82,7 +82,7 @@ export async function mount(el, ctx) {
   }
   // the one action: this week's website items, each made into a WordPress draft
   const sec = mk('section', 'mk-roles');
-  sec.appendChild(mk('h3', 'mk-sub', 'This week’s website items from the plan'));
+  sec.appendChild(mk('h3', 'mk-sub', 'This Week’s Website Items from the Plan'));
   if (!items.length) sec.appendChild(mk('p', 'quiet', week ? 'No website item in the plan this week.' : 'The plan could not be read, so this week’s website items are not shown.'));
   for (const it of items) {
     const row = mk('div', 'mk2-site-item');
@@ -98,7 +98,7 @@ export async function mount(el, ctx) {
   el.appendChild(sec);
   if (r && r.ok === true) {
     const ds = mk('section', 'mk-roles');
-    ds.appendChild(mk('h3', 'mk-sub', 'Drafts the Tool made'));
+    ds.appendChild(mk('h3', 'mk-sub', 'Drafts the Tool Made'));
     if (!(r.drafts || []).length) ds.appendChild(mk('p', 'quiet', 'None yet.'));
     for (const d of (r.drafts || [])) {
       const p = mk('p', 'mk-role');
