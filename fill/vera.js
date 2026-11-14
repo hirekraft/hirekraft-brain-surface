@@ -190,8 +190,8 @@ function paintDot() {
 // The Tool's own buttons, as the Brain drew them. Each offer carries the real button's words and price.
 function offers() {
   const out = [];
-  const read = $$('#br-files button.go').find((b) => b.textContent.trim() === 'Read them' && !b.disabled);
-  if (read) out.push({ label: 'Read them (it shows the price first)', find: () => $$('#br-files button.go').find((b) => b.textContent.trim() === 'Read them'), press: true });
+  const read = $$('#br-files button.go').find((b) => b.textContent.trim() === 'Read Them' && !b.disabled);
+  if (read) out.push({ label: 'Read Them (it shows the price first)', find: () => $$('#br-files button.go').find((b) => b.textContent.trim() === 'Read Them'), press: true });
   const tot = $('#br-und-pick .br-total');
   const go = tot && $$('button.go', tot).find((b) => b.textContent.trim() === 'Go');
   if (go && !go.disabled) {
