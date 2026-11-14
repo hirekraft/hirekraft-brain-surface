@@ -741,7 +741,7 @@ function stepCard(s, ctx, reload) {
   const lead = el('span', 'quiet'); lead.textContent = 'Runs on ';
   const name = el('b'); name.textContent = s.model_name;
   const by = el('span', 'quiet');
-  by.textContent = (s.maker ? ' from ' + s.maker : '') + (s.chosen_by === 'you' ? ', your choice' : ", the studio's choice");
+  by.textContent = (s.maker ? ' from ' + s.maker : '') + (s.chosen_by === 'you' ? ', your choice' : ", the Tool’s choice");
   runs.append(lead, name, by);
   if (s.chosen_by === 'you') { const b = el('span', 'badge b-blue'); b.textContent = 'Chosen by You'; runs.append(' ', b); }
 
