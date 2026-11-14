@@ -76,7 +76,7 @@ function drawBrain(fresh) {
 }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-05-work-tab";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-14-vera-one-door";
 import { initWords } from "./words.js?v=2026-10-29-thinkrooms-3"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initLooks } from "./looks.js?v=2026-10-29-looks"; // the Look switch beside the language switch (seat looks, decision 1036)
 import { initHead, headOut } from "./head.js?v=2026-11-14-ready-alive"; // the header, cleaned up: her initial opens name, Language, Look, Settings, Sign Out (seat setup-clean, decision 1172.1)
@@ -2127,6 +2127,36 @@ function fullPanel(on) {
   }
 })();
 
+// WHAT VERA NEEDS FROM THIS FILE, IN ONE PLACE (seat vera-one-door, 2026-11-14). fill/vera.js is the conversation's face on every tab;
+// it opens and puts away this one panel, posts a send through the person's own session, and brings back the conversation she was
+// in. SUPERSEDES vera.js pressing the tabs' hidden Ask button to open the panel (seat vera-on-brain-2's live objection).
+window.toolLens = {
+  open: () => openPanel(), away: () => putAway(), isOpen: () => panelOpen(),
+  post: async (path, body) => {
+    const { data } = await sb.auth.getSession();
+    const jwt = data?.session?.access_token;
+    if (!jwt) return { status: 401, j: { ok: false, error: "You are not signed in on this browser, so there is nobody to act as." } };
+    const r = await fetch(SUPABASE_URL + path, { method: "POST", headers: { Authorization: `Bearer ${jwt}`, apikey: PUBLISHABLE_KEY, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    return { status: r.status, j: await r.json().catch(() => null) };
+  },
+  // ONE CONTINUING CONVERSATION (decision 1175.1, 1113.1): after a reload the conversation she was in today comes back, unless one
+  // is already on screen. Only her own general conversation (not an email's or an order's own chat), last used within 12 hours;
+  // older ones stay in Work. Reads work_list and work_open as her; a refusal leaves a new conversation, said nowhere.
+  latest: async () => {
+    if (workChat || workOrder || asking || $("#answer-in")?.children.length) return false;
+    let data = null;
+    try { const r = await sb.rpc("work_list", {}); data = r.error ? null : r.data; } catch (_) { data = null; }
+    if (!data?.ok) return false;
+    const c = (data.chats || []).filter((x) => !x.about && x.updated_at && Date.now() - Date.parse(x.updated_at) < 12 * 3600000)
+      .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))[0];
+    if (!c || workChat || asking || $("#answer-in")?.children.length) return false;
+    const was = panelOpen();
+    await openChat(c.id);
+    if (!was && !$("#panel").classList.contains("in-work")) putAway();
+    return true;
+  },
+};
+
 // -- the ask ----------------------------------------------------------------
 // THE SERVER SETS THE STATE AND THIS FILE MAY NOT. lens-ask returns one of four
 // states and carries an `answer` field in exactly ONE of them. So nothing below
@@ -2681,7 +2711,11 @@ const OUT_CTX = { askUrl: ASK_URL, key: PUBLISHABLE_KEY, session: () => sb.auth.
 // turn's own question line. A turn without a question line (Mail's automatic briefing) gets no actions.
 function renderAsk(slot, body, opts) {
   // A draft written inside an order (lens-ask state 'draft', asked with the order's email as its anchor; seat work-tab).
-  if (body && body.state === "draft" && body.draft) { draftCard(slot, body, workOrder); return; }
+  if (body && body.state === "draft" && body.draft) {
+    // Outside an order the draft is Vera's one-off action (seat vera-one-door, decision 1175.2): To, subject, words, Send, Change, Not Now (fill/act.js through vera.js).
+    if (!workOrder && typeof window.veraDraft === "function") { slot.innerHTML = ""; window.veraDraft(slot, body, !!opts); costLine(slot, body); return; }   // opts: asked just now; a kept draft opened again is shown, not sendable
+    draftCard(slot, body, workOrder); return;
+  }
   drawAsk.opts = opts || null;
   drawAsk(slot, body);
   dropEchoHeading(slot);
@@ -3028,8 +3062,16 @@ function drawAsk(slot, body) {
   const gap = gapBox(body);
   if (gap) slot.appendChild(gap);
 
-  // 3. THE REST OF THE ANSWER, below the lead.
-  if (rest) slot.appendChild(proseBlocks(rest));
+  // 3. THE REST OF THE ANSWER, below the lead. IN VERA'S COLUMN THE ANSWER IS SHORT (seat vera-one-door, 2026-11-14, decision 1175
+  //    and its picture: "Short answers in her column ... a more link when you want detail"): the lead is the answer and the rest
+  //    waits behind More; skin.css shows the rest at once in Work and at full screen, where there is room to read. The words are
+  //    the same either way: nothing is asked again and nothing is cut.
+  if (rest) {
+    const more = el("div", "ans-rest"); more.appendChild(proseBlocks(rest));
+    const b = el("button", "ans-more"); b.type = "button"; b.textContent = "More"; b.setAttribute("aria-expanded", "false");
+    b.addEventListener("click", () => { const on = slot.classList.toggle("more-open"); b.textContent = on ? "Less" : "More"; b.setAttribute("aria-expanded", String(on)); });
+    slot.append(b, more);
+  }
   if (!answered && state === "records_only" && body.not_composed_because) {
     const n = el("p", "ans-meta");
     n.textContent = "Not composed because " + body.not_composed_because + ".";
@@ -3104,11 +3146,17 @@ async function ask(question, files) {
   const q = (question ?? "").trim();
   if (!q || asking) return;
   const added = Array.isArray(files) ? files : [];
+  // WHAT VERA IS LOOKING AT GOES WITH THE QUESTION (seat vera-one-door, 2026-11-14; decisions 1130 and 1175). fill/vera.js keeps what
+  // the person pointed at (an email, a box, selected words). An email goes as lens-ask's anchor, the same door and reasoning as a
+  // question on the open email, so a reply asked for comes back as a draft; anything else goes as one line in front of the question
+  // (she sees only her own words). SUPERSEDES vera.js's wrapper round fetch, which sent a field (screen) the deployed lens-ask does
+  // not read (read at source 2026-11-14: no line of it names that field).
+  const vc = !workOrder && typeof window.veraContext === "function" ? window.veraContext() : null;
   asking = true;
 
   const sec = $("#s-answer");
   const mount = $("#answer-in");
-  if (!mount.children.length && !workChat && !workOrder) panelTitle(q);
+  if (!mount.querySelector(".answer-asked") && !workChat && !workOrder) panelTitle(q);   // her own first question names the conversation (a line of Vera's before it does not count)
   workHelloShow(false);
   sec.hidden = false;
   openPanel();
@@ -3153,7 +3201,9 @@ async function ask(question, files) {
       // lens-ask checks she may open that mailbox, and the conversation's last turns travel with it.
       body: JSON.stringify(workOrder
         ? Object.assign({ question: q, tz: zone(), anchor: orderAnchor(workOrder), turns: workOrderTurns.slice(-6) }, requestId ? { request_id: requestId } : {})
-        : Object.assign({ question: q, tz: zone(), plan_first: true }, requestId ? { request_id: requestId } : {}, lastAsked ? { follows: lastAsked } : {}, added.length ? { files: added } : {})),
+        : vc && vc.anchor && !added.length
+        ? Object.assign({ question: (vc.lead ? vc.lead + String.fromCharCode(10, 10) : "") + q, tz: zone(), anchor: vc.anchor, turns: (vc.turns || []).slice(-6) }, vc.draft ? { draft: vc.draft } : {}, requestId ? { request_id: requestId } : {})
+        : Object.assign({ question: (vc && vc.lead ? vc.lead + String.fromCharCode(10, 10) : "") + q, tz: zone(), plan_first: true }, requestId ? { request_id: requestId } : {}, lastAsked ? { follows: lastAsked } : {}, added.length ? { files: added } : {})),
     });
     const body = await r.json().catch(() => null);
     stopSteps();
@@ -3161,7 +3211,9 @@ async function ask(question, files) {
     if (body.ok !== true) { askProblem(slot, body.error ?? "The brain did not take this question. Nothing was changed."); return; }
     // Save as test and Teach are drawn by renderAsk for the owner (seat teach-process). lastAsked is still the
     // previous question here, so the test form knows when this one was a follow-on.
+    if (vc && vc.about) body.pointed = vc.about;   // which email a draft answers, taken when the question was asked (she may point elsewhere while it is being written)
     renderAsk(slot, body, { q, follows: lastAsked });
+    if (vc && typeof window.veraHeard === "function") window.veraHeard(q, body);
     afterAnswer(q, body, slot);   // a 'why did we' with no thought of hers under it: said once (seat thoughtgram)
     drawBox();   // the top box now says it continues this conversation
     speakAnswer(slot);   // read aloud when she switched it on (box.js); never for a reopened, kept answer
