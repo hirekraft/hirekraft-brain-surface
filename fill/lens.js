@@ -17,7 +17,7 @@ import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
 import { removeControl, readChooser } from "./sources.js?v=2026-11-14-tabs-style"; // remove a source, choose how older mail is read (seat sources-basics)
 import { readSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-14-tabs-style"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
-import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-14-day-one-fixes"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
+import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-14-day-one-fixes-2"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 // BRAIN AND DRIVES FROM ONE READING (seat brain-and-drives, 2026-10-28, decision 1030): sources_view, asked once per brain
 // reading (fresh) and shared by the counts, the Sources list, the count under Brain's heading and the Drives tab.
@@ -76,11 +76,11 @@ function drawBrain(fresh) {
 }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-14-day-one-fixes";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-14-day-one-fixes-2";
 import { initWords } from "./words.js?v=2026-10-29-thinkrooms-3"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initLooks } from "./looks.js?v=2026-10-29-looks"; // the Look switch beside the language switch (seat looks, decision 1036)
 import { initHead, headOut } from "./head.js?v=2026-11-14-ready-alive"; // the header, cleaned up: her initial opens name, Language, Look, Settings, Sign Out (seat setup-clean, decision 1172.1)
-import { initWorking } from "./working.js?v=2026-11-14-ready-alive"; // all running work, one small indicator in the header (seat work-indicator, decision 1152 point 1)
+import { initWorking } from "./working.js?v=2026-11-14-day-one-fixes-2"; // all running work, one small indicator in the header (seat work-indicator, decision 1152 point 1)
 import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-11-14-tabs-style";
 import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-11-14-tabs-style"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-11-14-tabs-style"; // the Tool tells her first (seat watches)
@@ -88,9 +88,9 @@ import { attachOutputs } from "./outputs.js?v=2026-11-14-tabs-style";
 import { initWorkTab, drawOpenWork, countOpenWork, findOrder, orderTop, orderAnchor, hello as workHello, draftCard } from "./work.js?v=2026-11-14-tabs-style"; // Work's own pages: Open work, an order's details, the greeting (seat work-tab)
 import { foundCard } from "./find.js?v=2026-11-14-tabs-style"; // find first, then work on what was found (seat find-first)
 import { closeCard } from "./close.js?v=2026-11-14-tabs-style"; // the month-end check, corrected cell by cell (seat month-end)
-import { initPanel, loadPanel, setLive } from "./security.js?v=2026-11-14-tabs-style"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-11-14-tabs-style"; // sub-tab row and People and access (seat people-and-access)
+import { initPanel, loadPanel, setLive } from "./security.js?v=2026-11-14-day-one-fixes-2"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-11-14-tabs-style"; // sub-tab row and People and access (seat people-and-access)
 import { initChats, loadChats, connectPart } from "./chats.js?v=2026-11-14-tabs-style"; // Chats tab (seat chat-import)
-import { initMoney, loadMoney } from "./money.js?v=2026-11-14-tabs-style"; // Money tab (seat runway)
+import { initMoney, loadMoney } from "./money.js?v=2026-11-14-day-one-fixes-2"; // Money tab (seat runway)
 import { initProfile, loadProfile } from "./profile.js?v=2026-11-14-tabs-style"; // what the Tool thinks the business is (seat know-the-business)
 
 // WHICH BRAIN (seat any-brain round 2, 2026-11-05, decision 1097 shape A): the address and the public key come from
@@ -1670,7 +1670,7 @@ function stageKey(groupKey, o) {
       out.innerHTML = "";
       const msg = el("div", body?.ok ? "notice" : "notice flagged");
       msg.textContent = body?.ok
-        ? `${o.name} is connected. ${connectedSaid(o.key, body)}${o.key === "wordpress" ? "The box does not read it yet: answering from it is the next step." : o.key === "elasticemail" ? "The box learns your sending history next; until then it is all on What Came Back." : "Ask the box about it in your own words."}`
+        ? `${o.name} is connected. ${connectedSaid(o.key, body)}${o.key === "wordpress" ? "Vera does not read it yet: answering from it is the next step." : o.key === "elasticemail" ? "Vera learns your sending history next; until then it is all on What Came Back." : "Ask Vera about it in your own words."}`
         : `Not connected: ${body?.reason ?? body?.error ?? "no reason was given"} Nothing was kept.`;
       out.appendChild(msg);
       if (body?.ok) await refreshBrain();
@@ -2019,7 +2019,7 @@ function stageLoose(stage) {
     p.textContent = line || 'No figure: you are not the owner, so what reading costs is not shown.';
     const later = el('p', 'quiet');
     later.textContent = 'Keeping a set of files in the brain is not built yet, so nothing is read from here. '
-      + 'To have files read now, add them to a question with the + in the box: they are read with that question and not kept.';
+      + 'To have files read now, add them to a question with the + in Vera’s box: they are read with that question and not kept.';
     out.append(p, later);
   });
   const back = el('button', 'go ghost');
@@ -3752,7 +3752,7 @@ function drawSecWatch(v) {
     }
     mount.appendChild(ul);
   }
-  secNote(mount, "Alerts show here and in the box when you open the Tool. Alerts by email are not built yet.");
+  secNote(mount, "Alerts show here. Alerts by email are not built yet.");
 }
 
 function drawSecExtras(v) {
@@ -3825,7 +3825,7 @@ const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count
 // IS SHE STILL IN SETUP? One promise, settled once by the opening below (true: Getting Started is the page; false: the Tool is open).
 // A function declaration, so whatever calls it first finds it (seat ready-alive 2026-11-14).
 function setupGate() { if (!window.toolSetupGate) { let res; const p = new Promise((r) => { res = r; }); window.toolSetupGate = { p, res }; } return window.toolSetupGate; }
-const READY_JS = './ready.js?v=2026-11-14-day-one-fixes';   // seat getting-ready-screen; token seat setup-screens-2
+const READY_JS = './ready.js?v=2026-11-14-day-one-fixes-2';   // seat getting-ready-screen; token seat setup-screens-2
 let readyMod = null;
 // THE FRONT DOOR, How Verrandi Works (fill/setup.js, seat setup-front-door): from #how and the Brain at any time. Get started
 // opens Getting started at step 1; someone who is not the owner sees it without prices or Get started.
@@ -3836,7 +3836,7 @@ const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () =>
 const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
 // SETTINGS (seat setup-screens-2, decision 1138): after Ready, the same page becomes Settings (fill/settings.js, #s-settings,
 // #settings). The masthead carries one link: Getting started until Ready, Settings after (settings.js mastLink).
-const SETTINGS_JS = './settings.js?v=2026-11-14-day-one-fixes';
+const SETTINGS_JS = './settings.js?v=2026-11-14-day-one-fixes-2';
 let settingsMod = null;
 const setupLink = (notReady) => import(SETTINGS_JS).then((M) => M.mastLink(readyCtx(), notReady)).catch(() => { /* the Brain button still leads back */ });
 async function routeOnState(mode) {
@@ -3929,7 +3929,7 @@ function goto(id, key) {
   workPanel(id === 's-work');
   if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney(); showSubtabs($('#s-money'), 'money', shape?.viewer?.email);   // seat tab-split
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
-    import("./ledger.js?v=2026-11-14-tabs-style").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
+    import("./ledger.js?v=2026-11-14-day-one-fixes-2").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
   if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') { loadWork(); countOpenWork(); if (!workOrder && !$('#answer-in').children.length) workHelloShow(true); } if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY, name: BRAIN.name }); loadChats(); showSubtabs($('#s-chats'), 'chats', shape?.viewer?.email); }
   const tabNow = id === 's-lens' ? lensKey : id === 's-drives' ? 'drives' : id === 's-work' ? 'work' : id === 's-security' || id === 's-accessmap' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : id === 's-ready' ? 'ready' : 'brain';
@@ -4152,18 +4152,18 @@ function drawLens() {
   }
   // SIGNALS AND OUTREACH (seat job-alerts, 2026-10-30): companies hiring where the business knows someone, a note per person, Hand to a colleague.
   if (lensKey === 'marketing') {
-    import('./marketing.js?v=2026-11-14-day-one-fixes').then((M) => M.drawMarketing(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, viewer: () => shape?.viewer }))
+    import('./marketing.js?v=2026-11-14-day-one-fixes-2').then((M) => M.drawMarketing(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, viewer: () => shape?.viewer }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Marketing and sales tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
   // THE AGENTS TAB (seat agents-tab, 2026-11-05): the team, making an agent, each expert's page. Keeps its own state (OWN_STATE).
   if (lensKey === 'agents') {
-    import('./agents.js?v=2026-11-14-tabs-style').then((G) => G.drawAgents(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, followSteps, renderAsk, ask, isOwner: () => !!shape?.viewer?.all_access, goTab }))
+    import('./agents.js?v=2026-11-14-day-one-fixes-2').then((G) => G.drawAgents(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, followSteps, renderAsk, ask, isOwner: () => !!shape?.viewer?.all_access, goTab }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Agents tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
   if (lensKey === 'contacts') {
-    import('./contacts.js?v=2026-11-14-tabs-style').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, askBody, renderAsk, isOwner: () => !!shape?.viewer?.all_access }))
+    import('./contacts.js?v=2026-11-14-day-one-fixes-2').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, askBody, renderAsk, isOwner: () => !!shape?.viewer?.all_access }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Contacts tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
