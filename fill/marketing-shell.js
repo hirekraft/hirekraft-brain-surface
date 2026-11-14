@@ -14,16 +14,16 @@
 import { screenLang } from './words.js?v=2026-10-29-thinkrooms-3';
 
 const PARTS = [
-  { key: 'foundation', label: 'Foundation', step: 1, file: './marketing-foundation.js?v=2026-11-02-marketing-vault' }, /* seat marketing-vault's entry (decision 1060): the foundation comes first */ { key: 'plan', label: 'Plan', step: 2, file: './marketing-plan.js?v=2026-11-02-marketing-week-2' },
-  { key: 'send', label: 'Sending', step: 3, file: './marketing-send.js?v=2026-11-02-marketing-build-b', legacy: 'drawSend' },   // marketing-build-b's line
-  { key: 'back', label: 'What came back', step: 4, file: './marketing-back.js?v=2026-11-02-marketing-build-b', legacy: 'drawBack' }, // marketing-build-b's line
+  { key: 'foundation', label: 'Foundation', step: 1, file: './marketing-foundation.js?v=2026-11-14-tabs-style' }, /* seat marketing-vault's entry (decision 1060): the foundation comes first */ { key: 'plan', label: 'Plan', step: 2, file: './marketing-plan.js?v=2026-11-14-tabs-style' },
+  { key: 'send', label: 'Sending', step: 3, file: './marketing-send.js?v=2026-11-14-tabs-style', legacy: 'drawSend' },   // marketing-build-b's line
+  { key: 'back', label: 'What Came Back', step: 4, file: './marketing-back.js?v=2026-11-14-tabs-style', legacy: 'drawBack' }, // marketing-build-b's line
   { key: 'signals', label: 'Signals', step: 5 },
-  { key: 'lists', label: 'Lists', file: './marketing-lists.js?v=2026-11-02-marketing-build-b' },                                    // marketing-build-b's line
-  { key: 'website', label: 'Website', file: './marketing-website.js?v=2026-11-02-marketing-week-2' },
-  { key: 'reads', label: 'What this reads' },
+  { key: 'lists', label: 'Lists', file: './marketing-lists.js?v=2026-11-14-tabs-style' },                                    // marketing-build-b's line
+  { key: 'website', label: 'Website', file: './marketing-website.js?v=2026-11-14-tabs-style' },
+  { key: 'reads', label: 'What This Reads' },
 ];
 
-const WEEK = './marketing-week.js?v=2026-11-03-screen-rollback'; let C = null, S = null;   // WEEK: this week's finished pieces above the Plan board (seat marketing-week, decision 1060). C: the tab's context from lens.js; S: { week, data, who, part, handoff, own, note }
+const WEEK = './marketing-week.js?v=2026-11-14-tabs-style'; let C = null, S = null;   // WEEK: this week's finished pieces above the Plan board (seat marketing-week, decision 1060). C: the tab's context from lens.js; S: { week, data, who, part, handoff, own, note }
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
 const data_ = (tag, cls, text) => { const n = mk(tag, cls, text); n.translate = false; return n; };
 const plural = (k, one, many) => (Number(k) === 1 ? one : many);
@@ -84,11 +84,11 @@ export async function drawShell(body, ctx, own) {
   const top = mk('div', 'mk2-top');
   const status = mk('p', 'mk2-status'); status.setAttribute('aria-live', 'polite');
   const viewing = mk('label', 'mk2-viewing');
-  viewing.appendChild(mk('span', null, 'Viewing as'));
-  const sel = C.el('select'); sel.className = 'mk-hand-pick'; sel.setAttribute('aria-label', 'Viewing as');
+  viewing.appendChild(mk('span', null, 'Viewing As'));
+  const sel = C.el('select'); sel.className = 'mk-hand-pick'; sel.setAttribute('aria-label', 'Viewing As');
   viewing.appendChild(sel);
   top.append(status, viewing);
-  const path = mk('nav', 'mk2-path'); path.setAttribute('aria-label', 'Marketing and sales');
+  const path = mk('nav', 'mk2-path'); path.setAttribute('aria-label', 'Marketing and Sales');
   const next = mk('section', 'mk2-next'); next.setAttribute('aria-live', 'polite');
   const stage = mk('div', 'mk-stage');
   const weekBox = mk('div', 'mk-week-host'); wrap.append(top, path, next, weekBox, stage);   // weekBox: seat marketing-week
@@ -157,7 +157,7 @@ function drawNext() {
   const d = S.data;
   const n = nextStep(d, S.who);
   if (!n) return;
-  next.appendChild(mk('p', 'eyebrow', 'Next step'));
+  next.appendChild(mk('p', 'eyebrow', 'Next Step'));
   if (S.note) { next.appendChild(mk('p', S.note.bad ? 'stalled' : 'state', S.note.text)); S.note = null; }
   if (!n.it) {
     next.appendChild(mk('p', 'mk2-next-line', S.who ? 'Nothing open for ' + S.who + ' this week.' : 'Nothing open this week.'));
