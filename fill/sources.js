@@ -12,6 +12,7 @@
 //     else). Prices come from lens-ask {read_estimate}, which only the owner gets; anyone else sees the line, no choices.
 // Dates go through lens.js's fmtWindow, which is fill/dates.js. No regex literals (STANDING-CLAUSES: the write tool).
 
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 export function removeControl(sourceKey, name, { sb, el, refreshBrain }) {
   const wrap = el('div', 'remove-src');
   const open = el('button', 'a-fix');
@@ -44,7 +45,7 @@ export function removeControl(sourceKey, name, { sb, el, refreshBrain }) {
       if (data?.ok) await refreshBrain(); else both(false);
     } catch (e) {
       note.className = 'quiet';
-      note.textContent = `Could not remove it: ${e?.message ?? e}`;
+      note.textContent = `Could not remove it: ${plainWords(String(e?.message ?? e))}`;
       both(false);
     }
   });
@@ -83,7 +84,7 @@ export function removeControl(sourceKey, name, { sb, el, refreshBrain }) {
       await refreshBrain();
     } catch (e) {
       note.className = 'quiet';
-      note.textContent = `Could not finish here: ${e?.message ?? e}. What is left is removed in the background.`;
+      note.textContent = `Could not finish here: ${plainWords(String(e?.message ?? e))}. What is left is removed in the background.`;
     }
   });
   wrap.append(open, box);
@@ -188,7 +189,7 @@ export function readChooser(sourceKey, name, { sb, el, readEstimate, refreshBrai
           else buttons.forEach((x, i) => { x.disabled = known && choices[i].price > balance; });
         } catch (e) {
           out.className = 'quiet';
-          out.textContent = `It did not start: ${e?.message ?? e}`;
+          out.textContent = `It did not start: ${plainWords(String(e?.message ?? e))}`;
           buttons.forEach((x, i) => { x.disabled = known && choices[i].price > balance; });
         }
       });
