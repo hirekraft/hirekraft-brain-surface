@@ -86,12 +86,12 @@ function draw() {
   else {
     note(mount, "Across " + ctx.countOf(cs.length) + (cs.length === 1 ? " contractor" : " contractors") + ": we still owe them " + money(b.all_contractors.owed_to_contractors)
       + " in unpaid bills, and the client still owes us " + money(b.all_contractors.client_still_owes) + " for their hours.");
-    mount.appendChild(table(["Contractor", "Last month billed to the client", "Last bill from them", "We still owe them", "Client still owes us", "Bills not in yet", "Sources disagree"],
+    mount.appendChild(table(["Contractor", "Last Month Billed to the Client", "Last Bill from Them", "We Still Owe Them", "Client Still Owes Us", "Bills Not in Yet", "Sources Disagree"],
       cs.map((c) => [c.name, mon(c.wind_down.last_month_billed_to_client), mon(c.wind_down.last_contractor_bill), money(c.wind_down.owed_to_contractor),
         money(c.wind_down.client_still_owes), (c.wind_down.bills_not_in_yet ?? []).map(mon).join(", "), (c.disagreements ?? []).length ? String(c.disagreements.length) : ""])));
     for (const c of cs) {
       mount.appendChild(fold(c.name + ": month by month, " + ctx.countOf(c.totals.hours) + " hours, margin " + money(c.totals.margin), (d) => {
-        d.appendChild(table(["Month", "Hours", "Billed to client", "Client still owes", "Their bill", "Paid in the books", "Sent by Wise", "Still owed to them", "Margin"],
+        d.appendChild(table(["Month", "Hours", "Billed to Client", "Client Still Owes", "Their Bill", "Paid in the Books", "Sent by Wise", "Still Owed to Them", "Margin"],
           c.months.map((m) => [mon(m.month), m.hours ? String(m.hours) : "", money(m.billed_to_client), m.client_still_owes ? money(m.client_still_owes) : "",
             money(m.contractor_billed), money(m.paid_in_books), money(m.sent_by_wise), m.still_owed_to_contractor ? money(m.still_owed_to_contractor) : "", money(m.margin)])));
         const inv = [...new Set(c.months.flatMap((m) => m.client_invoices ?? []))];
@@ -110,7 +110,7 @@ function draw() {
   const rs = data.relationships ?? [];
   mount.appendChild(fold("Every customer and supplier (" + rs.length + "): invoiced, paid and owed, either way", (d) => {
     note(d, "Owed to us in total " + money(data.totals.owed_to_us) + "; owed by us in total " + money(data.totals.owed_by_us) + ".");
-    d.appendChild(table(["Who", "Invoiced to them", "Received", "They owe us", "Billed to us", "Paid in the books", "Sent by Wise", "We owe them", "From", "To"],
+    d.appendChild(table(["Who", "Invoiced to Them", "Received", "They Owe Us", "Billed to Us", "Paid in the Books", "Sent by Wise", "We Owe Them", "From", "To"],
       rs.map((r) => [r.name, money(r.totals.invoiced), money(r.totals.received), money(r.totals.owed_to_us), money(r.totals.billed), money(r.totals.paid_books),
         money(r.totals.paid_wise), money(r.totals.owed_by_us), mon(r.first_month), mon(r.last_month)])));
     const dis = rs.filter((r) => (r.disagreements ?? []).length || r.note);
