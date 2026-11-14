@@ -36,6 +36,7 @@
 // (seat contacts-match) is retired: the summary at the top is that reading, done once and kept.
 
 import { fmtDate } from "./dates.js?v=2026-10-22-dates";
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 
 let ctx = null;   // { sb, el, $, countOf, ask, isOwner }
 let mount = null;
@@ -91,7 +92,7 @@ async function read(args) {
     const msg = String(e?.message ?? e);
     return { ok: false, reason: msg.includes("Could not find the function")
       ? "This part is not switched on yet: one change to the brain is waiting to be applied."
-      : "The card could not be read, so nothing here is known: " + msg };
+      : "The card could not be read, so nothing here is known: " + plainWords(msg) };
   }
 }
 
@@ -268,8 +269,8 @@ function maybeSame(c) {
             ? ctx.sb.rpc("contact_join", same ? { p_person: c.person, p_addresses: p.addresses ?? [p.address] } : { p_person: c.person, p_not_addresses: p.addresses ?? [p.address] })
             : ctx.sb.rpc("contact_same_set", { p_a: c.person, p_b: p.person, p_same: same, p_evidence: (same ? "Yes" : "No") + " from the card: " + (p.evidence ?? "") });
           const { data, error } = await call;
-          r = error ? { ok: false, note: "Not kept: " + error.message } : data;
-        } catch (e) { r = { ok: false, note: "Not kept: " + String(e?.message ?? e) }; }
+          r = error ? { ok: false, note: "Not kept: " + plainWords(error.message) } : data;
+        } catch (e) { r = { ok: false, note: "Not kept: " + plainWords(String(e?.message ?? e)) }; }
         said.className = "quiet"; said.textContent = String(r?.note ?? r?.reason ?? "");
         if (r?.ok && same) setTimeout(() => find("", c.person), 600);
       };
@@ -527,7 +528,7 @@ function correct(c, act) {
     e.preventDefault();
     const said = line("quiet working", "Keeping it."); form.replaceWith(said);
     const { data, error } = await ctx.sb.rpc("contact_fact_set", { p_person: c.person, p_fact: sel.value, p_value: val.value });
-    said.className = "quiet"; said.textContent = error ? "Not kept: " + error.message : (data?.note ?? data?.reason ?? "");
+    said.className = "quiet"; said.textContent = error ? "Not kept: " + plainWords(error.message) : (data?.note ?? data?.reason ?? "");
     if (!error && data?.ok) setTimeout(() => find("", c.person), 600);
   });
 }
