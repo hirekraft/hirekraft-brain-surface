@@ -79,7 +79,7 @@ export function drawContacts(body, c) {
   let last = null;
   try { last = localStorage.getItem(KEEP); } catch (_) { last = null; }
   if (last) { input.value = last; find(last); }
-  else mount.appendChild(line("quiet", "Ask the box too: prep me for my call with someone, or who do we know at a company."));
+  else mount.appendChild(line("quiet", "Ask Vera too: prep me for my call with someone, or who do we know at a company."));
 }
 
 async function read(args) {
