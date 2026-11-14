@@ -33,6 +33,8 @@
 // SUPERSEDED 2026-11-12, decision 1164: the turning sign (.working) on the chip whenever something was in the list, moving
 // or not; the chip now carries the mark, which moves only on a live reading.
 
+import { todayLine } from './today.js?v=2026-11-14-keeping-up';   // one line of Today in the list (seat keeping-up, decision 1176)
+
 let C = null;
 let W = null;            // the latest good answer
 let failed = null;       // why the latest reading failed, while there is something to show
@@ -231,6 +233,8 @@ function paint() {
   }
   if (!its.length && !finished.length) ul.appendChild(el('li', 'wk-item', 'Nothing is running right now.'));
   list.appendChild(ul);
+  const td = todayLine(C.sb, () => { if (open) paint(); });   // the owner's Today, from keeping_up (seat keeping-up); nothing for anyone else
+  if (td) list.appendChild(td);
   list.appendChild(el('p', 'wk-note', 'Counts and pace are measured as the work runs. A time is given only once the pace is measured.'));
 }
 
