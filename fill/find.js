@@ -52,7 +52,7 @@ function familyLine(ctx, main, it) {
   main.appendChild(line);
   const o = f.other;
   if (!o || !Array.isArray(o.piece_ids) || !o.piece_ids.length) return;
-  const b = el("button", "go ghost find-changed"); b.type = "button"; b.textContent = "What changed";
+  const b = el("button", "go ghost find-changed"); b.type = "button"; b.textContent = "What Changed";
   const out = el("div", "find-changes"); out.setAttribute("aria-live", "polite");
   b.addEventListener("click", async () => {
     b.disabled = true;
@@ -60,7 +60,7 @@ function familyLine(ctx, main, it) {
     out.replaceChildren(wait);
     const mine = { key: it.key, kind: it.kind, what: it.what, title: it.title, where: it.where, date: it.date,
       piece_ids: Array.isArray(f.self_piece_ids) && f.self_piece_ids.length ? f.self_piece_ids : it.piece_ids };
-    const theirs = { key: o.key, kind: it.kind, what: it.what, title: (o.newer ? "The newer copy" : "The earlier copy"), where: it.where, date: o.date, piece_ids: o.piece_ids };
+    const theirs = { key: o.key, kind: it.kind, what: it.what, title: (o.newer ? "The Newer Copy" : "The Earlier Copy"), where: it.where, date: o.date, piece_ids: o.piece_ids };
     const res = await ctx.askBody({ question: "What changed between these two copies?", over: { ask: "changes", items: o.newer ? [theirs, mine] : [mine, theirs] } });
     b.disabled = false;
     const sub = el("div", "find-answer");
@@ -171,7 +171,7 @@ export function foundCard(slot, body, ctx) {
   wrap.appendChild(acts);
   const own = el("div", "find-own");
   const input = el("input"); input.type = "text"; input.placeholder = "Or ask something about these"; input.setAttribute("aria-label", "Ask something about the checked items");
-  const go = el("button", "go ghost"); go.type = "button"; go.textContent = "Ask about these"; buttons.push(go);
+  const go = el("button", "go ghost"); go.type = "button"; go.textContent = "Ask About These"; buttons.push(go);
   go.addEventListener("click", () => { const w = input.value.trim(); if (!w) { input.focus(); return; } run(w, w); });
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go.click(); } });
   own.append(input, go);
@@ -179,7 +179,7 @@ export function foundCard(slot, body, ctx) {
   wrap.appendChild(out);
 
   const foot = el("div", "find-foot");
-  const watch = el("button", "go ghost find-watch"); watch.type = "button"; watch.textContent = "Tell me when new ones arrive";
+  const watch = el("button", "go ghost find-watch"); watch.type = "button"; watch.textContent = "Tell Me When New Ones Arrive";
   watch.addEventListener("click", async () => {
     watch.disabled = true;
     let r = null;
@@ -189,7 +189,7 @@ export function foundCard(slot, body, ctx) {
       : "Not saved: " + String(r?.reason || "no reason was given") + ".";
     watch.replaceWith(p);
   });
-  const learned = el("button", "go ghost find-learned-open"); learned.type = "button"; learned.textContent = "What it learned from you";
+  const learned = el("button", "go ghost find-learned-open"); learned.type = "button"; learned.textContent = "What It Learned from You";
   learned.addEventListener("click", () => learnedList(ctx, foot, learned));
   foot.append(watch, learned);
   wrap.appendChild(foot);
@@ -229,12 +229,12 @@ async function learnedList(ctx, foot, btn) {
   const ul = el("ul", "find-learned-list");
   for (const r of rows) {
     const li = el("li"); const t = el("span"); t.textContent = String(r.line || "");
-    const rm = el("button", "go ghost"); rm.type = "button"; rm.textContent = "Forget this";
+    const rm = el("button", "go ghost"); rm.type = "button"; rm.textContent = "Forget This";
     rm.addEventListener("click", async () => {
       rm.disabled = true;
       let ok = false;
       try { const x = await ctx.rpc("find_learned_remove", { p_id: r.id }); ok = !x.error && x.data?.ok === true; } catch (_) { ok = false; }
-      if (ok) li.remove(); else { rm.disabled = false; rm.textContent = "Not removed. Try again"; }
+      if (ok) li.remove(); else { rm.disabled = false; rm.textContent = "Not Removed. Try Again"; }
     });
     li.append(t, rm); ul.appendChild(li);
   }
