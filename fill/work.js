@@ -16,7 +16,7 @@
 // made in her browser and not kept anywhere (fill/outputs.js), so there is nothing true to list yet; agents have no engine
 // in the brain yet (seat agents-tab is building it). Each comes back when its back end exists.
 // No regex literals and no backslashes in this file (STANDING-CLAUSES).
-import { drawBench } from './bench.js?v=2026-11-02-mail-clean';   // Bench (staffing): Who we have, on top of an order, only where the business has it
+import { drawBench } from './bench.js?v=2026-11-14-tabs-style';   // Bench (staffing): Who we have, on top of an order, only where the business has it
 
 let C = null;            // { sb, el, $, fmtDate, openEmail, openOrder, ask }
 let shownClosed = false; // Show closed pressed
@@ -56,7 +56,7 @@ export async function countOpenWork() {
 // and its state. A press opens it as its conversation. Show closed reads every order, and lists Done and Closed apart.
 export async function drawOpenWork(host) {
   host.innerHTML = '';
-  host.appendChild(mk('h1', 'work-h1', 'Open work'));
+  host.appendChild(mk('h1', 'work-h1', 'Open Work'));
   host.appendChild(mk('p', 'work-sub', 'Everything that still needs closing.'));
   const said = mk('p', 'quiet working', 'Reading your open work.');
   host.appendChild(said);
@@ -78,12 +78,12 @@ export async function drawOpenWork(host) {
   if (shownClosed) {
     const done = orders.filter((o) => o.state === 'done'), closed = orders.filter((o) => o.state === 'closed');
     if (done.length) { host.appendChild(mk('h2', 'work-h2', 'Done')); const l = mk('div', 'work-rows'); for (const o of done) l.appendChild(orderRow(o, word)); host.appendChild(l); }
-    if (closed.length) { host.appendChild(mk('h2', 'work-h2', 'Closed without being done')); const l = mk('div', 'work-rows'); for (const o of closed) l.appendChild(orderRow(o, word)); host.appendChild(l); }
+    if (closed.length) { host.appendChild(mk('h2', 'work-h2', 'Closed Without Being Done')); const l = mk('div', 'work-rows'); for (const o of closed) l.appendChild(orderRow(o, word)); host.appendChild(l); }
     if (!done.length && !closed.length) host.appendChild(mk('p', 'quiet work-none', 'Nothing done or closed yet.'));
   }
   if (r.held_back > 0) host.appendChild(mk('p', 'quiet', r.held_back + ' more rest on mail you may not open.'));
   const acts = mk('div', 'work-acts');
-  const sc = mk('button', 'go ghost', shownClosed ? 'Hide closed' : 'Show closed'); sc.type = 'button';
+  const sc = mk('button', 'go ghost', shownClosed ? 'Hide Closed' : 'Show Closed'); sc.type = 'button';
   sc.addEventListener('click', () => { shownClosed = !shownClosed; drawOpenWork(host); });
   acts.appendChild(sc);
   host.appendChild(acts);
@@ -132,10 +132,10 @@ function orderDetails(o, onChanged) {
   d.appendChild(s);
   const dl = mk('dl', 'work-order-facts');
   const fact = (k, v, keep) => { if (!v) return null; dl.appendChild(mk('dt', null, k)); const dd = mk('dd', null, String(v)); if (!keep) dd.translate = false; dl.appendChild(dd); return dd; };
-  fact('What they asked', o.what);
-  fact('For', o.for_whom); fact('Their client', o.end_client);
+  fact('What They Asked', o.what);
+  fact('For', o.for_whom); fact('Their Client', o.end_client);
   fact('Contact', [o.contact_name, o.contact_email].filter(Boolean).join(', '));
-  fact('Wanted by', o.by_when); fact('Contract', o.terms);
+  fact('Wanted By', o.by_when); fact('Contract', o.terms);
   if (o.open_source && o.open_id) {
     dl.appendChild(mk('dt', null, 'Email'));
     const dd = mk('dd', null, '');
@@ -148,10 +148,10 @@ function orderDetails(o, onChanged) {
   const st = mk('dd', 'work-order-status', '');
   st.appendChild(mk('span', null, o.state_words || ''));
   const out = mk('p', 'quiet work-order-out', ''); out.setAttribute('aria-live', 'polite');
-  const next = { open: [['in_progress', 'In progress'], ['delivered', 'Being delivered'], ['done', 'Done']],
-    in_progress: [['delivered', 'Being delivered'], ['done', 'Done'], ['open', 'Back to new']],
-    delivered: [['done', 'Done'], ['in_progress', 'Back to in progress']],
-    done: [['in_progress', 'Open again']], closed: [['open', 'Open again']] }[o.state] || [];
+  const next = { open: [['in_progress', 'In Progress'], ['delivered', 'Being Delivered'], ['done', 'Done']],
+    in_progress: [['delivered', 'Being Delivered'], ['done', 'Done'], ['open', 'Back to New']],
+    delivered: [['done', 'Done'], ['in_progress', 'Back to in Progress']],
+    done: [['in_progress', 'Open Again']], closed: [['open', 'Open Again']] }[o.state] || [];
   const ch = mk('button', 'work-link', 'Change'); ch.type = 'button';
   ch.addEventListener('click', () => {
     if (st.querySelector('.work-order-states')) return;
@@ -166,7 +166,7 @@ function orderDetails(o, onChanged) {
       cl.addEventListener('click', () => {
         if (row.querySelector('input')) return;
         const inp = mk('input', null); inp.type = 'text'; inp.placeholder = 'Why is it closed?'; inp.setAttribute('aria-label', 'Why is it closed?');
-        const ok = mk('button', 'go', 'Close it'); ok.type = 'button';
+        const ok = mk('button', 'go', 'Close It'); ok.type = 'button';
         ok.addEventListener('click', () => setState(o, 'closed', inp.value, ok, out, onChanged));
         row.append(inp, ok); inp.focus();
       });
@@ -195,7 +195,7 @@ async function setState(o, code, reason, btn, out, onChanged) {
 // What a question asked inside an order is anchored to: the order's email, as the brain read it into the order. lens-ask
 // checks that she may open that mailbox before it answers (its anchor check) and weights this text in the answer.
 export function orderAnchor(o) {
-  const facts = [['Order', o.what], ['For', o.for_whom], ['Their client', o.end_client], ['Wanted by', o.by_when], ['Terms', o.terms], ['State', o.state_words]]
+  const facts = [['Order', o.what], ['For', o.for_whom], ['Their Client', o.end_client], ['Wanted By', o.by_when], ['Terms', o.terms], ['State', o.state_words]]
     .filter((x) => x[1]).map((x) => x[0] + ': ' + x[1]).join(NL);
   return { source_key: o.open_source || '', thread_id: '', from_email: o.contact_email || '', from_name: o.contact_name || '',
     subject: o.subject || '', date: o.last_out || '', text: (facts + NL + NL + String(o.words || '')).slice(0, 6000) };
@@ -233,11 +233,11 @@ export function draftCard(slot, body, o) {
   slot.appendChild(box);
   const acts = mk('div', 'work-chips');
   if (o && o.open_source && o.open_id) {
-    const om = mk('button', 'chip chip-p', 'Open in Mail to send'); om.type = 'button';
+    const om = mk('button', 'chip chip-p', 'Open in Mail to Send'); om.type = 'button';
     om.addEventListener('click', () => C.openEmail(o.open_source, o.open_id));
     acts.appendChild(om);
   }
-  const cp = mk('button', 'chip', 'Copy the draft'); cp.type = 'button';
+  const cp = mk('button', 'chip', 'Copy the Draft'); cp.type = 'button';
   cp.addEventListener('click', async () => { try { await navigator.clipboard.writeText(String(dr.text || '')); cp.textContent = 'Copied'; } catch (_) { cp.textContent = 'Could not copy'; } });
   acts.appendChild(cp);
   slot.appendChild(acts);
