@@ -16,7 +16,7 @@
 let C = null, host = null, D = null, picked = null, lists = null;
 const CSS = './marketing-week.css?v=2026-11-02-marketing-week-2';
 const OPEN_AT = { linkedin: 'https://www.linkedin.com/feed/?shareActive=true', company_page: 'https://www.linkedin.com/feed/', group: 'https://www.linkedin.com/groups/' };
-const CH = { linkedin: 'LinkedIn', company_page: 'Company page', group: 'LinkedIn group', email: 'Email', profile: 'LinkedIn message' };
+const CH = { linkedin: 'LinkedIn', company_page: 'Company Page', group: 'LinkedIn Group', email: 'Email', profile: 'LinkedIn Message' };
 const CUT = 210;   // LinkedIn shows about three lines (some 210 characters) before "see more"
 
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
@@ -72,7 +72,7 @@ function draw() {
   const box = mk('section', 'mkw');
   host.appendChild(box);
   const head = mk('div', 'mkw-head');
-  head.appendChild(mk('h2', 'mk-title', 'Ready to go this week'));
+  head.appendChild(mk('h2', 'mk-title', 'Ready to Go This Week'));
   box.appendChild(head);
   if (!D || D.ok !== true) {
     box.appendChild(mk('p', 'notice flagged', 'This week’s finished pieces could not be read just now: ' + String((D && D.reason) || 'no reason was given') + '. Nothing here is a claim either way.'));
@@ -90,7 +90,7 @@ function draw() {
   // decision 1068 (2), seat rulings-1068: a draft the Tool's own check objects to is written again, not shown; it is counted here
   if (Number(D.still_writing)) box.appendChild(mk('p', 'state', D.still_writing + ' ' + plural(D.still_writing, 'draft', 'drafts') + ' still being written.'));
   if (Number(D.held_back)) box.appendChild(mk('p', 'state', D.held_back + ' finished ' + plural(D.held_back, 'piece', 'pieces') + ' this week ' + plural(D.held_back, 'is', 'are') + ' not shown to you. ' + (D.held_back_why || '')));
-  const saved = mk('div', 'mkw-saved-box'); box.appendChild(saved); savedBox(saved); const outbox = mk('div', 'mkw-out'); box.appendChild(outbox); import('./marketing-outreach.js?v=2026-11-03-screen-rollback').then((M) => M.mount(outbox, C, (D && D.week_of) || null)).catch((e) => outbox.appendChild(mk('p', 'notice flagged', 'The LinkedIn messages could not be shown: ' + String((e && e.message) || e) + '.')));   // seat marketing-week-3: the week's LinkedIn messages
+  const saved = mk('div', 'mkw-saved-box'); box.appendChild(saved); savedBox(saved); const outbox = mk('div', 'mkw-out'); box.appendChild(outbox); import('./marketing-outreach.js?v=2026-11-14-tabs-style').then((M) => M.mount(outbox, C, (D && D.week_of) || null)).catch((e) => outbox.appendChild(mk('p', 'notice flagged', 'The LinkedIn messages could not be shown: ' + String((e && e.message) || e) + '.')));   // seat marketing-week-3: the week's LinkedIn messages
   if (!ps.length && !Number(D.held_back)) { box.appendChild(mk('p', 'quiet', 'No finished posts or emails are kept for this week yet. The plan below says what is planned.')); return; }
   if (!ps.length) return;
   const strip = mk('div', 'mkw-strip');
@@ -149,7 +149,7 @@ function linkedinLook(p) {
   card_.appendChild(img);
   if (p.first_comment) {
     const c = mk('div', 'mkw-li-cmt');
-    c.appendChild(mk('span', 'eyebrow', 'First comment'));
+    c.appendChild(mk('span', 'eyebrow', 'First Comment'));
     c.appendChild(data_('span', null, p.first_comment));
     card_.appendChild(c);
   }
@@ -202,7 +202,7 @@ function drawPanel(panel, p) {
     return;
   }
   if (p.state === 'approved' && p.kind !== 'email') {
-    const go = mk('button', 'go', p.channel === 'group' ? 'Copy and open the group' : p.channel === 'company_page' ? 'Copy and open the company page' : 'Copy and open LinkedIn'); go.type = 'button';
+    const go = mk('button', 'go', p.channel === 'group' ? 'Copy and Open the Group' : p.channel === 'company_page' ? 'Copy and Open the Company Page' : 'Copy and Open LinkedIn'); go.type = 'button';
     go.addEventListener('click', async () => {
       const copying = copyText(String(p.post_text || ''));
       const win = window.open(OPEN_AT[p.channel] || OPEN_AT.linkedin, '_blank', 'noopener');
@@ -214,11 +214,11 @@ function drawPanel(panel, p) {
     });
     acts.appendChild(go);
     if (p.first_comment) {
-      const c = mk('button', 'go ghost', 'Copy the first comment'); c.type = 'button';
+      const c = mk('button', 'go ghost', 'Copy the First Comment'); c.type = 'button';
       c.addEventListener('click', async () => { const ok = await copyText(p.first_comment); say(said, ok ? 'state' : 'stalled', ok ? 'The first comment is copied.' : 'It could not be copied here; select it above.'); });
       acts.appendChild(c);
     }
-    const done = mk('button', 'go ghost', 'Done, I posted it'); done.type = 'button';
+    const done = mk('button', 'go ghost', 'Done, I Posted It'); done.type = 'button';
     done.addEventListener('click', () => press(p, 'out', null, done, said, 'Marking it posted'));
     acts.appendChild(done);
     acts.appendChild(undo(p, said));
@@ -244,7 +244,7 @@ function drawPanel(panel, p) {
 }
 
 function undo(p, said) {
-  const u = mk('button', 'go ghost', 'Take back the approval'); u.type = 'button';
+  const u = mk('button', 'go ghost', 'Take Back the Approval'); u.type = 'button';
   u.addEventListener('click', () => press(p, 'unapproved', null, u, said, 'Taking back the approval'));
   return u;
 }
@@ -258,8 +258,8 @@ async function savedBox(el) {
   if (!S || S.ok !== true) return;
   const un = S.unsure || [], mine = S.mine_marketing || [];
   if (un.length) el.appendChild(savedList(un.length + ' saved ' + plural(un.length, 'item', 'items') + ' may be marketing work. '
-    + plural(un.length, 'It stays', 'They stay') + ' private until you say.', un, 'marketing', 'This is marketing'));
-  if (mine.length) el.appendChild(savedList(mine.length + ' of your saved chats ' + plural(mine.length, 'is', 'are') + ' open to the marketing team.', mine, 'personal', 'Keep private'));
+    + plural(un.length, 'It stays', 'They stay') + ' private until you say.', un, 'marketing', 'This Is Marketing'));
+  if (mine.length) el.appendChild(savedList(mine.length + ' of your saved chats ' + plural(mine.length, 'is', 'are') + ' open to the marketing team.', mine, 'personal', 'Keep Private'));
 }
 
 const noDot = (t) => (t.endsWith('.') ? t.slice(0, -1) : t);
