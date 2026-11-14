@@ -26,6 +26,7 @@
 // (3) An older answer of the brain can no longer overwrite a newer one (two readings in flight after two quick presses).
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 let S = null;          // the latest source_pictures_state answer
 let err = null;        // why it could not be read
 let loading = null;    // the reading in flight
@@ -164,7 +165,7 @@ function press(ctx, wrap, host, keys, mode, word, say) {
         const notes = []; let ok = true;
         for (const k of keys) {
           try { const r = await call(k, true); if (r.error) throw r.error; notes.push(r.data?.note ?? 'No answer was given.'); if (!r.data?.ok) ok = false; else if (mode === 'pictures') started.set(k, Date.now()); }
-          catch (e) { notes.push('It did not start: ' + (e?.message ?? e)); ok = false; }
+          catch (e) { notes.push('It did not start: ' + plainWords(String(e?.message ?? e))); ok = false; }
         }
         row.remove();
         out.className = 'br-small sc-out';
@@ -178,7 +179,7 @@ function press(ctx, wrap, host, keys, mode, word, say) {
         repaint();
         if (page && page.body.isConnected) refresh(page.body, page.ctx);
       });
-    } catch (e) { out.className = 'br-small sc-out'; out.textContent = 'It did not start: ' + (e?.message ?? e); b.disabled = false; free(); }
+    } catch (e) { out.className = 'br-small sc-out'; out.textContent = 'It did not start: ' + plainWords(String(e?.message ?? e)); b.disabled = false; free(); }
   });
 }
 
