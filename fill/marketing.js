@@ -15,7 +15,7 @@
 // see or do what. Built so the coming parts of the tab (lists, campaigns, what came back) sit beside it as more sub-parts.
 // No colour, size or font here: the looks' tokens in skin.css under SIGNALS AND OUTREACH. No regex literals, no backslashes.
 
-import { draftHash } from './answer.js?v=2026-10-29-mail-invites';
+import { draftHash } from './answer.js?v=2026-11-14-day-one-fixes';
 import { openZip } from './chats.js?v=2026-11-14-tabs-style'; import { sourcePicture, badges, quickHand } from './marketing-signals.js?v=2026-11-14-tabs-style';   // the one zip opener on the screen (same token as lens.js); then Signals' one picture (seat marketing-build-a)
 
 let C = null;
@@ -49,7 +49,7 @@ async function post(path, body) {
   } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; }
 }
 
-export function drawMarketing(body, ctx) { C = ctx; import('./marketing-shell.js?v=2026-11-14-tabs-style').then((M) => M.drawShell(body, ctx, { signals: (s) => { C = ctx; load(s); }, reads: (s) => { C = ctx; drawReads(s); } })).catch((e) => { body.innerHTML = ''; body.appendChild(mk('p', 'notice flagged', 'The Marketing and sales tab could not be loaded: ' + String((e && e.message) || e))); }); return;   // THE SHELL (seat marketing-build-a, 2026-11-02, decision 1059): the tab opens through fill/marketing-shell.js; the round-1 part row below (seat marketing-parts, with marketing-build-b's Lists button) is superseded by Alex's approval of the round 2 design and no longer runs; it goes at the next whole edit of this file.
+export function drawMarketing(body, ctx) { C = ctx; import('./marketing-shell.js?v=2026-11-14-day-one-fixes').then((M) => M.drawShell(body, ctx, { signals: (s) => { C = ctx; load(s); }, reads: (s) => { C = ctx; drawReads(s); } })).catch((e) => { body.innerHTML = ''; body.appendChild(mk('p', 'notice flagged', 'The Marketing and sales tab could not be loaded: ' + String((e && e.message) || e))); }); return;   // THE SHELL (seat marketing-build-a, 2026-11-02, decision 1059): the tab opens through fill/marketing-shell.js; the round-1 part row below (seat marketing-parts, with marketing-build-b's Lists button) is superseded by Alex's approval of the round 2 design and no longer runs; it goes at the next whole edit of this file.
   C = ctx;
   body.innerHTML = '';
   const wrap = mk('div', 'mk');
