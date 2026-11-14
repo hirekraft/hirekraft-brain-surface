@@ -47,8 +47,8 @@ const line = (cls, text) => { const p = ctx.el("p", cls); p.textContent = text; 
 const head4 = (text) => { const h = ctx.el("h4"); h.textContent = text; h.style.margin = "calc(var(--u) * 4) 0 var(--u)"; return h; };
 const day = (d) => fmtDate(d, "day", "undated");
 const ago = (n) => n == null ? "" : Number(n) === 0 ? "today" : Number(n) === 1 ? "yesterday" : ctx.countOf(Number(n)) + " days ago";
-const FACT_WORDS = { title: "Title", employer: "Works at", location: "Where", status: "Status", stage: "Stage in HubSpot",
-  left_company: "Has left the company", email: "Email", phone: "Phone", skills: "Skills" };
+const FACT_WORDS = { title: "Title", employer: "Works At", location: "Where", status: "Status", stage: "Stage in HubSpot",
+  left_company: "Has Left the Company", email: "Email", phone: "Phone", skills: "Skills" };
 const FACT_ORDER = ["title", "employer", "location", "status", "stage", "left_company", "email", "phone", "skills"];
 const MANY = new Set(["email", "phone"]);   // several can be true at once; the rest have one current value
 const asList = (v) => Array.isArray(v) ? v : (v ? [v] : []);   // one shape: a list of observations, newest first
@@ -193,7 +193,7 @@ function factsTable(facts) {
     if (Array.isArray(top.also) && top.also.length) notes.push("Also said: " + top.also.map((a) => a.value + " (" + a.source + ", " + day(a.at) + ")").join("; "));
     if (notes.length) flag.appendChild(document.createTextNode(notes.join(". ") + ". "));
     if (older.length) {
-      const d = ctx.el("details"); const s = ctx.el("summary"); s.textContent = "history (" + older.length + ")"; s.style.cursor = "pointer"; d.appendChild(s);
+      const d = ctx.el("details"); const s = ctx.el("summary"); s.textContent = "History (" + older.length + ")"; s.style.cursor = "pointer"; d.appendChild(s);
       for (const r of older) d.appendChild(line("quiet", String(r.value) + " (" + [r.source, r.at ? day(r.at) : ""].filter(Boolean).join(", ") + (r.stale ? ", old" : "") + ")"));
       flag.appendChild(d);
     }
@@ -213,7 +213,7 @@ function timeline(rows) {
   rows.slice(0, SHOW_FIRST).forEach(put);
   mount.appendChild(ul);
   if (rows.length > SHOW_FIRST) {
-    const more = ctx.el("button", "go ghost"); more.type = "button"; more.textContent = "Show all " + ctx.countOf(rows.length);
+    const more = ctx.el("button", "go ghost"); more.type = "button"; more.textContent = "Show All " + ctx.countOf(rows.length);
     more.addEventListener("click", () => { rows.slice(SHOW_FIRST).forEach(put); more.remove(); });
     mount.appendChild(more);
   }
@@ -299,7 +299,7 @@ function conversations(c) {
   for (const t of v.threads) {
     const li = ctx.el("li"); li.style.padding = "calc(var(--u) * 1) 0"; li.style.borderTop = "1px solid var(--line-2)";
     const span = t.from && t.to && day(t.from) !== day(t.to) ? day(t.from) + " to " + day(t.to) : day(t.to ?? t.from);
-    li.textContent = String(t.thread ?? "(no subject)") + " · " + [span, ctx.countOf(t.messages ?? 0) + (Number(t.messages) === 1 ? " message" : " messages"),
+    li.textContent = String(t.thread ?? "(No subject)") + " · " + [span, ctx.countOf(t.messages ?? 0) + (Number(t.messages) === 1 ? " message" : " messages"),
       t.newest_by ? "last " + t.newest_by : "", t.role === "copied" ? "they were copied" : ""].filter(Boolean).join(" · ");
     ul.appendChild(li);
   }
@@ -359,7 +359,7 @@ async function build(c, slot, replaceNote, refresh) {
   if (!res || res.ok !== true || !res.card?.card) {
     wait.className = "notice flagged";
     wait.textContent = res?.answer || res?.error || "The summary could not be written just now.";
-    if (!c.kept?.card) { slot.querySelectorAll(".actions").forEach((x) => x.remove()); buildButton(c, slot, "Try again"); }
+    if (!c.kept?.card) { slot.querySelectorAll(".actions").forEach((x) => x.remove()); buildButton(c, slot, "Try Again"); }
     return;
   }
   slot.replaceChildren();
@@ -405,7 +405,7 @@ function drawSummary(slot, k, owner, c, paid) {
   if (s.missing) slot.appendChild(line("ai2-small", String(s.missing)));
   // where each number came from, one press down
   const src = ctx.el("details", "whatis");
-  const sm = ctx.el("summary"); sm.style.padding = "calc(var(--u) * 3) 0"; sm.textContent = "Where the numbers come from (" + ctx.countOf((s.citations ?? []).length) + ")"; src.appendChild(sm);
+  const sm = ctx.el("summary"); sm.style.padding = "calc(var(--u) * 3) 0"; sm.textContent = "Where the Numbers Come From (" + ctx.countOf((s.citations ?? []).length) + ")"; src.appendChild(sm);
   for (const x of s.citations ?? []) {
     const p = ctx.el("p", "quiet");
     const t = "[" + x.n + "] " + String(x.doc ?? "") + " · " + String(x.where ?? "") + (x.date ? " · " + day(x.date) : "");
@@ -435,7 +435,7 @@ const KIND_WORDS = { invoice: "Invoice", bill: "Bill to pay", "credit memo": "Cr
 function moneyItems(c) {
   const m = c.money;
   if (!m || (!(m.open ?? []).length && !(m.findings ?? []).length)) return;
-  mount.appendChild(head4("Money (from your books)"));
+  mount.appendChild(head4("Money (from Your Books)"));
   const ul = ctx.el("ul", "members");
   for (const o of m.open ?? []) {
     const li = ctx.el("li"); li.style.padding = "calc(var(--u) * 1) 0"; li.style.borderTop = "1px solid var(--line-2)";
@@ -456,7 +456,7 @@ function moneyItems(c) {
 function notYet(c) {
   const rows = (c.not_yet ?? []).filter(Boolean);
   if (!rows.length) return;
-  mount.appendChild(head4("Not read or not matched yet"));
+  mount.appendChild(head4("Not Read or Not Matched Yet"));
   const ul = ctx.el("ul", "members");
   for (const r of rows) { const li = ctx.el("li"); li.className = "quiet"; li.textContent = String(r); ul.appendChild(li); }
   mount.appendChild(ul);
@@ -481,27 +481,27 @@ function drawPerson(c, ms) {
   lastContact(c);
   meetings(c);
   const act = ctx.el("div", "actions");
-  const prep = ctx.el("button", "go"); prep.type = "button"; prep.textContent = "Prep me for a call";
+  const prep = ctx.el("button", "go"); prep.type = "button"; prep.textContent = "Prep Me for a Call";
   prep.addEventListener("click", () => ctx.ask("Prep me for my call with " + c.name));
   act.appendChild(prep);
   if (ctx.isOwner() && c.person) {
-    const fix = ctx.el("button", "go ghost"); fix.type = "button"; fix.textContent = "Correct a fact";
+    const fix = ctx.el("button", "go ghost"); fix.type = "button"; fix.textContent = "Correct a Fact";
     fix.addEventListener("click", () => correct(c, act));
     act.appendChild(fix);
   }
   mount.appendChild(act);
 
   const nSame = (c.maybe_same ?? []).length;
-  const back = below("Conversations, records and sources" + (nSame ? " · Same person? (" + nSame + ")" : ""));
+  const back = below("Conversations, Records and Sources" + (nSame ? " · Same person? (" + nSame + ")" : ""));
   conversations(c);
   maybeSame(c);
-  if (Object.keys(f).length) { mount.appendChild(head4("What their records say")); mount.appendChild(factsTable(f)); }
+  if (Object.keys(f).length) { mount.appendChild(head4("What Their Records Say")); mount.appendChild(factsTable(f)); }
   moneyItems(c);
   if ((c.holders ?? []).length) mount.appendChild(line("quiet", "Who here holds the relationship: " + c.holders.map((h) => h.who + (h.messages ? " (" + ctx.countOf(h.messages) + " emails)" : "") + (h.in ? " (owner in " + h.in + ")" : "")).join("; ") + "."));
   const named = (c.files?.lines ?? []).filter((l) => l.role === "mentioned").length;
   if (named) mount.appendChild(line("quiet", ctx.countOf(named) + (named === 1 ? " file or message only mentions" : " files or messages only mention") + " their name (a list, a register, a message about them); they are not in the timeline or the summary."));
 
-  mount.appendChild(head4("Everything that happened (newest first)"));
+  mount.appendChild(head4("Everything That Happened (Newest First)"));
   // Older cards carried no timeline: build one from the parts they have, so nothing is left out.
   const rows = Array.isArray(c.timeline) ? c.timeline : [].concat(
     (c.history?.lines ?? []).map((l) => ({ at: l.at, where: sourceOf(l.source), what: l.line })),
@@ -563,10 +563,10 @@ function drawCompany(c, ms) {
     li.appendChild(b); ul.appendChild(li);
   }
   mount.appendChild(ul);
-  const back = below("Conversations, records and sources");
+  const back = below("Conversations, Records and Sources");
   conversations(c);
   moneyItems(c);
-  mount.appendChild(head4("Everything that happened (newest first)"));
+  mount.appendChild(head4("Everything That Happened (Newest First)"));
   const m = c.mail ?? {};
   // seat contact-card: one line per conversation and one per older subject, never one per message
   const threadKey = (s) => { let t = String(s ?? "").toLowerCase().trim(); for (;;) { const p = ["re:", "fw:", "fwd:", "aw:"].find((x) => t.startsWith(x)); if (!p) return t; t = t.slice(p.length).trim(); } };
