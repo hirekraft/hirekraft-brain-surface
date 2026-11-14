@@ -9,13 +9,20 @@
 // data-vera-column, drawn by the Getting ready screen), the one panel element MOVES into it and stays open there, as lens.js
 // moves it into Work; leaving that screen it goes back to the right edge. One renderer, the same element, never a copy.
 // The column is fill/ready.js's #gr-vera (seat getting-ready-screen) or any element carrying data-vera-column.
-// WHAT SHE IS LOOKING AT GOES WITH THE QUESTION (seat vera-guide). A question asked in her conversation carries the screen as
-// drawn now (the tab, the setup step, its numbers and prices, the open panel), read from what the screen drew, never a second
-// count; lens-ask hears it in its first look and its about-the-Tool answer only (lens-ask v66 screenOf). It is added on the
-// way out by a small wrapper round fetch, ONLY for a question sent from her conversation, because lens.js (which builds the
-// question) is being changed by a parallel seat tonight. LIVE OBJECTION, said so the next reader does not re-argue it: the
-// clean end is one line in lens.js ask() sending screen: veraScreen(); move it there when lens.js is next owned, and delete
-// the wrapper.
+// SHE IS THE ONE DOOR, ON EVERY TAB (seat vera-one-door, 2026-11-14; decision 1175 and its picture RxLG1Ec8Zs6LCmhiEMk8dj, with
+// 1113, 1116, 1123, 1130). The box at the top of the page is gone (skin.css); the one conversation panel IS her column: open
+// beside every tab on a wide screen unless the person put her away (remembered in this browser), one tap on her button on a
+// phone. After a reload the conversation the person was in today comes back (lens.js toolLens.latest). Answers there are
+// short with More (lens.js drawAsk), and Teach / Save as test are not drawn in her column (skin.css; they stay in Work and at
+// full screen, where Alex keeps his stored tests).
+// WHAT SHE IS LOOKING AT GOES WITH THE QUESTION. fill/point.js (the one shared helper, decision 1130) hands her what the person
+// pointed at: she names it in her first line, shows it in her "looking at" line with a way to drop it, and lens.js ask() reads
+// it from window.veraContext: an email goes as lens-ask's anchor (so "tell him Monday" comes back as a draft), anything else
+// as one line in front of the question. Leaving the tab drops it. A DRAFT IS HER ONE-OFF ACTION (1175.2): fill/act.js draws it
+// with Send, Change, Not Now; only the person's press sends.
+// SUPERSEDED 2026-11-14, removed with its rationale: the wrapper round fetch that added a field named screen to a question
+// (seat vera-guide). The deployed lens-ask reads no such field (read at source 2026-11-14), so what she was looking at never
+// reached the answer; window.veraScreen stays only as the words of the "looking at" line's source.
 // YOUR BUSINESS (step 3) IS A CONVERSATION WITH HER (1121, 1122). One section at a time; after each answer only "Thank you.
 // Anything else you want to add?"; she never restates, infers or guesses; at the end a summary made of HER words, section by
 // section, and "Is this right, and is there anything else you want to say?". Her yes keeps each section in the one profile
@@ -47,6 +54,9 @@
 // the one greeting for all steps. Her name is changed from Settings (window.veraRename).
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
+import { startPoint } from './point.js?v=2026-11-14-vera-one-door';
+import { draftCard } from './act.js?v=2026-11-14-vera-one-door';
+
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
 const DOT = String.fromCharCode(183);
@@ -55,7 +65,8 @@ let greeted = '';
 let bypass = false;       // a typed question she could not answer for free is on its way to the box
 let btn = null;
 let home = null;          // where the panel lives when it is not in her column
-let fromPanel = 0;        // when a question last left her conversation (ms)
+let pointed = null;       // what the person pointed at (fill/point.js): { kind, label, text, anchor, about, turns, card, tab }
+let dressed = '';         // the name her column was last dressed with
 let talk = null;          // the business conversation while it runs
 let lastKey = null;       // the Getting ready step her box was last on (her box empties when it changes)
 const NAME = () => String(document.body.dataset.guide || '').trim() || 'Vera';
@@ -117,6 +128,7 @@ function stepKey(t) {
 
 // Where she is: the tab, and on the Brain its part and the open side panel.
 function looking() {
+  if (pointed) return pointed.label;
   const r = readyNow();
   if (r) return r.step ? 'step ' + r.step : 'Getting started';
   const tab = document.body.dataset.tab || '';
@@ -157,9 +169,15 @@ function drawLook() {
   let p = $('#vera-look');
   if (!p) { p = el('p', 'vera-look'); p.id = 'vera-look'; p.setAttribute('aria-live', 'polite'); body.prepend(p); }
   const t = ' ' + DOT + ' looking at: ' + looking();
-  if (p.dataset.t === t) return;   // unchanged: drawing it again would wake the watcher below for nothing
-  p.dataset.t = t;
-  p.replaceChildren(el('b', null, NAME()), document.createTextNode(t));
+  const sig = NAME() + t + (pointed ? '|p' : '');
+  if (p.dataset.t === sig) return;   // unchanged: drawing it again would wake the watcher below for nothing
+  p.dataset.t = sig;
+  if (!pointed) { p.replaceChildren(el('b', null, NAME()), document.createTextNode(t)); return; }
+  // What she was pointed at is the person's own material: shown as written, with one press to stop looking at it.
+  const what = el('span', 'vera-look-what', pointed.label); what.translate = false;
+  const x = el('button', 'vera-look-x', String.fromCharCode(215)); x.type = 'button'; x.setAttribute('aria-label', 'Stop looking at this'); x.title = 'Stop looking at this';
+  x.addEventListener('click', () => { pointed = null; drawLook(); drawSug(); });
+  p.replaceChildren(el('b', null, NAME()), document.createTextNode(' ' + DOT + ' looking at: '), what, x);
 }
 
 function paintDot() {
@@ -229,7 +247,8 @@ function suggestions() {
     understand: ['What does understood mean?', 'Can I do 6 months first?', 'What does it cost every month after this?'],
     ready: ['What happens after ready?', 'Can I use Mail yet?'],
   };
-  const list = ['Where are we?'].concat(S[key] || (b && !b.ready ? ['What does searchable mean?', 'Can I stop here?', 'Can I use Mail yet?'] : []));
+  // On the tabs of a brain that is Ready she offers no stock questions (seat vera-one-door: a chip is a question the person did not ask, and each costs).
+  const list = !r && (!b || b.ready) ? [] : ['Where are we?'].concat(S[key] || (b && !b.ready ? ['What does searchable mean?', 'Can I stop here?', 'Can I use Mail yet?'] : []));
   return { key, list };
 }
 function drawSug() {
@@ -240,7 +259,7 @@ function drawSug() {
   const { key, list } = suggestions();
   let taps = !talk || talk.inPlace ? (readyNow() ? stepTaps() || [] : null) : null;   // on Getting started: the step's two questions and nothing else (none where no step card is shown, as for someone who is not the owner)
   if (taps && $('#dock-turns .vera-free')) taps = [];     // under a free answer its own follow-ups are the taps: two at most on the screen
-  const sig = talk && !talk.inPlace ? 'talk|' + talk.stage + '|' + talk.i : taps ? 'step|' + key + '|' + taps.map((t) => t[0]).join('|') : key + '|' + list.join('|') + '|' + (readyNow() ? 1 : 0);
+  const sig = talk && !talk.inPlace ? 'talk|' + talk.stage + '|' + talk.i : taps ? 'step|' + key + '|' + taps.map((t) => t[0]).join('|') : key + '|' + list.join('|') + '|' + (readyNow() ? 1 : 0) + (pointed ? '|p:' + pointed.kind + pointed.label : '');
   if (box.dataset.sig === sig) return;   // unchanged: see drawLook
   box.dataset.sig = sig;
   box.replaceChildren();
@@ -254,9 +273,11 @@ function drawSug() {
     const t = el('button', 'vera-chip vera-chip-main', key === 'business' ? 'Start: tell me about your business' : 'Your business: tell me in your words');
     t.type = 'button'; t.addEventListener('click', startTalk); box.appendChild(t);
   }
-  for (const q of list) {
+  // Pointed at an email: the two things people do with one, as taps. They are asked like anything typed.
+  const mine = pointed && pointed.anchor ? ['What is this about?', 'Draft a reply'] : [];
+  for (const q of mine.concat(list)) {
     const c = el('button', 'vera-chip', q); c.type = 'button';
-    c.addEventListener('click', () => askIt(q));
+    c.addEventListener('click', () => askIt(c.textContent || q));   // as the tap reads now: in her language when the screen is
     box.appendChild(c);
   }
 }
