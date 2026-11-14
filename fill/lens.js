@@ -15,9 +15,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 // ONE WAY THE SCREEN WRITES A DATE, and the one time zone (seat calendar-contacts, 2026-10-22): fill/dates.js.
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
-import { removeControl, readChooser } from "./sources.js?v=2026-11-14-tabs-style"; // remove a source, choose how older mail is read (seat sources-basics)
-import { readSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-14-tabs-style"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
-import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-14-day-one-fixes-2"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
+import { removeControl, readChooser } from "./sources.js?v=2026-11-14-day-one-fixes-3"; // remove a source, choose how older mail is read (seat sources-basics)
+import { readSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-14-day-one-fixes-3"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
+import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-14-day-one-fixes-3"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 // BRAIN AND DRIVES FROM ONE READING (seat brain-and-drives, 2026-10-28, decision 1030): sources_view, asked once per brain
 // reading (fresh) and shared by the counts, the Sources list, the count under Brain's heading and the Drives tab.
@@ -45,7 +45,7 @@ async function sourceAct(r, details, btn) {
       say(`${r.name}: ${data.note}`);
       await refreshBrain();
     } catch (e) {
-      if (btn) { btn.disabled = false; btn.classList.remove('working', 'no-late'); btn.textContent = `It did not start: ${e?.message ?? e}`; }
+      if (btn) { btn.disabled = false; btn.classList.remove('working', 'no-late'); btn.textContent = `It did not start: ${plainWords(String(e?.message ?? e))}`; }
     }
     return;
   }
@@ -76,22 +76,22 @@ function drawBrain(fresh) {
 }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-14-day-one-fixes-2";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-14-day-one-fixes-3";
 import { initWords } from "./words.js?v=2026-10-29-thinkrooms-3"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initLooks } from "./looks.js?v=2026-10-29-looks"; // the Look switch beside the language switch (seat looks, decision 1036)
 import { initHead, headOut } from "./head.js?v=2026-11-14-ready-alive"; // the header, cleaned up: her initial opens name, Language, Look, Settings, Sign Out (seat setup-clean, decision 1172.1)
-import { initWorking } from "./working.js?v=2026-11-14-day-one-fixes-2"; // all running work, one small indicator in the header (seat work-indicator, decision 1152 point 1)
+import { initWorking } from "./working.js?v=2026-11-14-day-one-fixes-3"; // all running work, one small indicator in the header (seat work-indicator, decision 1152 point 1)
 import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-11-14-tabs-style";
-import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-11-14-tabs-style"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
+import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-11-14-day-one-fixes-3"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-11-14-tabs-style"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-11-14-tabs-style";
 import { initWorkTab, drawOpenWork, countOpenWork, findOrder, orderTop, orderAnchor, hello as workHello, draftCard } from "./work.js?v=2026-11-14-tabs-style"; // Work's own pages: Open work, an order's details, the greeting (seat work-tab)
 import { foundCard } from "./find.js?v=2026-11-14-tabs-style"; // find first, then work on what was found (seat find-first)
 import { closeCard } from "./close.js?v=2026-11-14-tabs-style"; // the month-end check, corrected cell by cell (seat month-end)
-import { initPanel, loadPanel, setLive } from "./security.js?v=2026-11-14-day-one-fixes-2"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-11-14-tabs-style"; // sub-tab row and People and access (seat people-and-access)
+import { initPanel, loadPanel, setLive } from "./security.js?v=2026-11-14-day-one-fixes-3"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-11-14-day-one-fixes-3"; // sub-tab row and People and access (seat people-and-access)
 import { initChats, loadChats, connectPart } from "./chats.js?v=2026-11-14-tabs-style"; // Chats tab (seat chat-import)
-import { initMoney, loadMoney } from "./money.js?v=2026-11-14-day-one-fixes-2"; // Money tab (seat runway)
-import { initProfile, loadProfile } from "./profile.js?v=2026-11-14-tabs-style"; // what the Tool thinks the business is (seat know-the-business)
+import { initMoney, loadMoney } from "./money.js?v=2026-11-14-day-one-fixes-3"; // Money tab (seat runway)
+import { initProfile, loadProfile } from "./profile.js?v=2026-11-14-day-one-fixes-3"; // what the Tool thinks the business is (seat know-the-business)
 
 // WHICH BRAIN (seat any-brain round 2, 2026-11-05, decision 1097 shape A): the address and the public key come from
 // fill/brain.js, the one place the screen learns its brain (the business she signed in to through the one door). They
@@ -655,7 +655,7 @@ function drawMembers(key, body, pfx = "") {
     } else if (key === "email" && mbxError) {
       const st = el("div", "state stalled");
       st.innerHTML = `<span class="dot"></span>Its state could not be read just now `
-        + `(${escape(mbxError)}), so this line is not a claim either way.`;
+        + `(${escape(plainWords(String(mbxError)))}), so this line is not a claim either way.`;
       li.appendChild(st);
     } else if (key === 'systems' || key === 'calendar' || key === 'contacts') {
       // seat sources-basics 2026-10-23: calendar and contacts are kept systems with their own walk line (the brain
@@ -814,7 +814,7 @@ function resumeControl(s, fn = "source_resume") {
       await refreshBrain();
     } catch (e) {
       b.disabled = false;
-      b.textContent = `Could Not Start It: ${e?.message ?? e}`;
+      b.textContent = `Could Not Start It: ${plainWords(String(e?.message ?? e))}`;
     }
   });
   return b;
@@ -1104,7 +1104,7 @@ function forgetControl(item, redraw) {
       redraw(false);
     } catch (e) {
       b.disabled = false; armed = false;
-      b.textContent = `Could Not Remove: ${e?.message ?? e}`;
+      b.textContent = `Could Not Remove: ${plainWords(String(e?.message ?? e))}`;
     }
   });
   return b;
@@ -1139,7 +1139,7 @@ async function stageDrivePicker(accountKey) {
     stage.innerHTML = "";
     const n = el("div", "notice flagged");
     n.innerHTML = `<b>The list could not be read, so nothing below is a claim about your Drive.</b> `
-      + escape(e?.message ?? e);
+      + escape(plainWords(String(e?.message ?? e)));
     stage.appendChild(n);
     return;
   }
@@ -1315,7 +1315,7 @@ async function fillAdoptable(justDone) {
         // Re-render, but carry the result through it rather than losing it.
         fillAdoptable(r.address);
       } catch (e) {
-        sub.textContent = `Could not bind: ${e?.message ?? e}`;
+        sub.textContent = `Could not bind: ${plainWords(String(e?.message ?? e))}`;
         b.disabled = false;
       }
     });
@@ -1677,7 +1677,7 @@ function stageKey(groupKey, o) {
     } catch (e) {
       out.innerHTML = "";
       const msg = el("div", "notice flagged");
-      msg.textContent = `Not connected: ${e?.message ?? e}. Nothing was kept.`;
+      msg.textContent = `Not connected: ${plainWords(String(e?.message ?? e))}. Nothing was kept.`;
       out.appendChild(msg);
     } finally { btn.disabled = false; btn.textContent = "Connect"; }
   });
@@ -1921,7 +1921,7 @@ async function beginConnect(provider, scope, mailbox, btn, restore, hint) {
       + (hint ? `&login_hint=${encodeURIComponent(hint)}` : "");
   } catch (e) {
     giveBack();
-    stageStopped(`The connect could not be started: ${e?.message ?? e}`);
+    stageStopped(`The connect could not be started: ${plainWords(String(e?.message ?? e))}`);
   }
 }
 
@@ -2720,7 +2720,7 @@ function renderAsk(slot, body, opts) {
   drawAsk(slot, body);
   dropEchoHeading(slot);
   try { attachOutputs(slot, body, OUT_CTX); }
-  catch (e) { const p = el("p", "quiet"); p.textContent = `The chart or the file buttons could not be drawn: ${e?.message ?? e}`; slot.appendChild(p); }
+  catch (e) { const p = el("p", "quiet"); p.textContent = `The chart or the file buttons could not be drawn: ${plainWords(String(e?.message ?? e))}`; slot.appendChild(p); }
   wideButtons(slot);
   markNote(slot);
   costLine(slot, body);
@@ -2832,7 +2832,7 @@ async function askBody(payload) {
       body: JSON.stringify(Object.assign({ tz: zone() }, payload)),
     });
     return (await r.json().catch(() => null)) ?? { ok: false, error: "The Tool did not answer. Nothing was changed; try again in a moment." };
-  } catch (e) { return { ok: false, error: `The Tool could not be reached: ${e?.message ?? e}` }; }
+  } catch (e) { return { ok: false, error: `The Tool could not be reached: ${plainWords(String(e?.message ?? e))}` }; }
 }
 // One teaching exchange. teach_readback: her words read back with Yes / Not quite. Yes keeps it (teach_kept) and
 // offers to save her known answer as a test, linked to what she taught (teach_attach). Every other teach_ state is
@@ -3461,7 +3461,7 @@ function saveForm(q, follows, onSaved) {
     } else {
       labelSaid.textContent = `${s?.error ?? "No label was suggested."} Write one.`;
     }
-  }).catch((e) => { labelSaid.textContent = `No label was suggested (${e?.message ?? e}). Write one.`; });
+  }).catch((e) => { labelSaid.textContent = `No label was suggested (${plainWords(String(e?.message ?? e))}). Write one.`; });
 
   box.querySelector(".t-save").addEventListener("click", async (e) => {
     const btn = e.currentTarget, said = box.querySelector(".t-said");
@@ -3560,7 +3560,7 @@ async function loadTests() {
   } catch (e) {
     mount.innerHTML = "";
     const n = el("p", "notice flagged");
-    n.textContent = `The tests could not be read, so nothing here is known: ${e?.message ?? e}`;
+    n.textContent = `The tests could not be read, so nothing here is known: ${plainWords(String(e?.message ?? e))}`;
     mount.appendChild(n);
   }
 }
@@ -3591,7 +3591,7 @@ async function loadTests() {
         if (now && now !== before) said.textContent = `Results arriving. Last result ${fmtWindow(now)}.`;
       }
     } catch (e) {
-      said.textContent = `The tests did not start: ${e?.message ?? e}`;
+      said.textContent = `The tests did not start: ${plainWords(String(e?.message ?? e))}`;
     } finally { btn.disabled = false; }
   });
 })();
@@ -3629,7 +3629,7 @@ function changeCard(p, mount) {
   (async () => {
     let v;
     try { v = await call(false); }
-    catch (e) { said.textContent = `What this would change could not be worked out, so nothing is offered: ${e?.message ?? e}`; return; }
+    catch (e) { said.textContent = `What this would change could not be worked out, so nothing is offered: ${plainWords(String(e?.message ?? e))}`; return; }
     if (!v?.ok) { said.textContent = v?.note ?? "This cannot be changed, and no reason was given."; return; }
     said.textContent = v.words;
     const yes = el("button", "go"); yes.type = "button"; yes.textContent = "Confirm";
@@ -3640,7 +3640,7 @@ function changeCard(p, mount) {
       yes.disabled = true; no.disabled = true;
       let d;
       try { d = await call(true); }
-      catch (e) { yes.disabled = false; no.disabled = false; said.textContent = `Not changed: ${e?.message ?? e}`; return; }
+      catch (e) { yes.disabled = false; no.disabled = false; said.textContent = `Not changed: ${plainWords(String(e?.message ?? e))}`; return; }
       acts.innerHTML = "";
       if (!d?.ok) { said.textContent = d?.note ?? "Not changed, and no reason was given."; return; }
       said.textContent = d.words;
