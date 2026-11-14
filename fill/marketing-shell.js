@@ -16,14 +16,14 @@ import { screenLang } from './words.js?v=2026-10-29-thinkrooms-3';
 const PARTS = [
   { key: 'foundation', label: 'Foundation', step: 1, file: './marketing-foundation.js?v=2026-11-14-tabs-style' }, /* seat marketing-vault's entry (decision 1060): the foundation comes first */ { key: 'plan', label: 'Plan', step: 2, file: './marketing-plan.js?v=2026-11-14-tabs-style' },
   { key: 'send', label: 'Sending', step: 3, file: './marketing-send.js?v=2026-11-14-tabs-style', legacy: 'drawSend' },   // marketing-build-b's line
-  { key: 'back', label: 'What Came Back', step: 4, file: './marketing-back.js?v=2026-11-14-tabs-style', legacy: 'drawBack' }, // marketing-build-b's line
+  { key: 'back', label: 'What Came Back', step: 4, file: './marketing-back.js?v=2026-11-14-day-one-fixes-2', legacy: 'drawBack' }, // marketing-build-b's line
   { key: 'signals', label: 'Signals', step: 5 },
   { key: 'lists', label: 'Lists', file: './marketing-lists.js?v=2026-11-14-tabs-style' },                                    // marketing-build-b's line
   { key: 'website', label: 'Website', file: './marketing-website.js?v=2026-11-14-tabs-style' },
   { key: 'reads', label: 'What This Reads' },
 ];
 
-const WEEK = './marketing-week.js?v=2026-11-14-day-one-fixes'; let C = null, S = null;   // WEEK: this week's finished pieces above the Plan board (seat marketing-week, decision 1060). C: the tab's context from lens.js; S: { week, data, who, part, handoff, own, note }
+const WEEK = './marketing-week.js?v=2026-11-14-day-one-fixes-2'; let C = null, S = null;   // WEEK: this week's finished pieces above the Plan board (seat marketing-week, decision 1060). C: the tab's context from lens.js; S: { week, data, who, part, handoff, own, note }
 const mk = (tag, cls, text) => { const n = C.el(tag, cls); if (text !== undefined && text !== null) n.textContent = String(text); return n; };
 const data_ = (tag, cls, text) => { const n = mk(tag, cls, text); n.translate = false; return n; };
 const plural = (k, one, many) => (Number(k) === 1 ? one : many);
