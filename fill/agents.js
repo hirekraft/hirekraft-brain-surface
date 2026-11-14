@@ -52,7 +52,6 @@ const EX = {
 const ORDER = ['consultant', 'cfo', 'marketing', 'admin', 'legal', 'hr', 'security'];
 const TAB_WORDS = { money: 'Accounting', marketing: 'Marketing and Sales', work: 'Work', security: 'Security', contacts: 'Contacts', brain: 'Brain', agents: 'Agents' };
 const EXAMPLE = "At month-end, check each consultant's approved timesheet against what the client was invoiced and what they paid. Draft invoices for anything missing, and tell me which contractors I can pay.";
-const STANDING = ['every ', 'each ', 'weekly', 'monthly', 'daily', 'month-end', 'month end', 'whenever', 'each morning', 'on the '];
 
 const node = (tag, cls, text) => { const n = C.el(tag, cls); if (text != null) n.textContent = text; return n; };
 const btn = (cls, text, fn) => { const b = node('button', cls, text); b.type = 'button'; if (fn) b.addEventListener('click', fn); return b; };
@@ -197,7 +196,7 @@ async function drawExpert(main, k) {
   const jobs = node('div', 'ag-blk');
   jobs.appendChild(node('h4', 'ag-lab', 'What It Does for You'));
   const mine = mineFor(k);
-  if (!mine.length) jobs.appendChild(node('p', 'ag-meta', 'Nothing yet. Tell it what you need below, or press Make an agent.'));
+  if (!mine.length) jobs.appendChild(node('p', 'ag-meta', 'Nothing yet. Ask Vera, or press Make It a Job below.'));
   for (const g of mine) jobs.appendChild(jobRow(g));
   main.appendChild(jobs);
   // work waiting
@@ -211,17 +210,15 @@ async function drawExpert(main, k) {
   // give it something to do
   const give = node('div', 'ag-blk');
   give.appendChild(node('h4', 'ag-lab', 'Give It Something to Do'));
+  // FOLDED INTO VERA (seat day-one-fixes 2026-11-14, decision 1175 (1), morning-audit-2 fix 4): this page had its own typing box;
+  // a one-off question now goes to Vera, the one conversation beside every tab, looking at this agent; something to do again
+  // and again opens Making an Agent with this agent chosen (the same path the box's "every Friday..." words took).
   const box = node('div', 'ag-box');
-  const ta = node('textarea'); ta.rows = 2; ta.placeholder = e.ex; ta.setAttribute('aria-label', 'Tell your ' + e.t + ' what you need');
-  const send = btn('go', 'Send', () => {
-    const t = ta.value.trim(); if (!t) { ta.focus(); return; }
-    const low = ' ' + t.toLowerCase();
-    if (STANDING.some((s) => low.includes(s))) { making = { expert: k, id: null, ask: t, adjust: [], run: null }; sel = 'make'; draw(); startTry(); return; }
-    C.ask(t);
-  });
-  box.append(ta, send);
+  box.append(
+    btn('go', 'Ask Vera', () => { if (typeof window.veraPoint === 'function') window.veraPoint({ kind: 'thing', label: 'Your ' + e.t, text: 'Your ' + e.t + ' on the Agents tab: ' + (e.d || e.small || ''), where: 'Agents' }); else C.ask('Your ' + e.t + ': '); }),
+    btn('go ghost', 'Make It a Job', () => { making = { expert: k, id: null, ask: '', adjust: [], run: null }; sel = 'make'; draw(); }));
   give.appendChild(box);
-  give.appendChild(node('p', 'ag-src', 'A one-off question opens as a conversation. Something it should do again and again ("every Friday...") becomes a job: you see what it would have found first.'));
+  give.appendChild(node('p', 'ag-src', 'A one-off question goes to Vera, beside every tab. Something it should do again and again ("every Friday...") becomes a job: press Make It a Job, and you see what it would have found first.'));
   main.appendChild(give);
   await seesLines(lines, k);
 }
