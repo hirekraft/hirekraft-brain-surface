@@ -15,9 +15,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 // ONE WAY THE SCREEN WRITES A DATE, and the one time zone (seat calendar-contacts, 2026-10-22): fill/dates.js.
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
-import { removeControl, readChooser } from "./sources.js?v=2026-11-13-setup-polish"; // remove a source, choose how older mail is read (seat sources-basics)
-import { readSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-05-brain-tab-room"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
-import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-14-ready-alive"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
+import { removeControl, readChooser } from "./sources.js?v=2026-11-14-tabs-style"; // remove a source, choose how older mail is read (seat sources-basics)
+import { readSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-14-tabs-style"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
+import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-14-tabs-style"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 // BRAIN AND DRIVES FROM ONE READING (seat brain-and-drives, 2026-10-28, decision 1030): sources_view, asked once per brain
 // reading (fresh) and shared by the counts, the Sources list, the count under Brain's heading and the Drives tab.
@@ -76,29 +76,29 @@ function drawBrain(fresh) {
 }
 import { onBrainChange } from "../doorbell.js";
 // The Mail tab (seat mail-redesign, 2026-10-07). Its token moves with this file's own.
-import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-14-vera-one-door";
+import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-14-tabs-style";
 import { initWords } from "./words.js?v=2026-10-29-thinkrooms-3"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initLooks } from "./looks.js?v=2026-10-29-looks"; // the Look switch beside the language switch (seat looks, decision 1036)
 import { initHead, headOut } from "./head.js?v=2026-11-14-ready-alive"; // the header, cleaned up: her initial opens name, Language, Look, Settings, Sign Out (seat setup-clean, decision 1172.1)
 import { initWorking } from "./working.js?v=2026-11-14-ready-alive"; // all running work, one small indicator in the header (seat work-indicator, decision 1152 point 1)
-import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-29-thinkrooms-b";
-import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-10-30-rulings-small"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
-import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
-import { attachOutputs } from "./outputs.js?v=2026-10-22-dates";
-import { initWorkTab, drawOpenWork, countOpenWork, findOrder, orderTop, orderAnchor, hello as workHello, draftCard } from "./work.js?v=2026-11-05-work-tab-2"; // Work's own pages: Open work, an order's details, the greeting (seat work-tab)
-import { foundCard } from "./find.js?v=2026-10-29-thinkrooms"; // find first, then work on what was found (seat find-first)
-import { closeCard } from "./close.js?v=2026-10-26-month-end-2"; // the month-end check, corrected cell by cell (seat month-end)
-import { initPanel, loadPanel, setLive } from "./security.js?v=2026-10-27-people-and-access"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-10-27-people-and-access"; // sub-tab row and People and access (seat people-and-access)
-import { initChats, loadChats, connectPart } from "./chats.js?v=2026-11-06-brain-status-2"; // Chats tab (seat chat-import)
-import { initMoney, loadMoney } from "./money.js?v=2026-11-03-screen-rollback"; // Money tab (seat runway)
-import { initProfile, loadProfile } from "./profile.js?v=2026-10-22-dates"; // what the Tool thinks the business is (seat know-the-business)
+import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-11-14-tabs-style";
+import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-11-14-tabs-style"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
+import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-11-14-tabs-style"; // the Tool tells her first (seat watches)
+import { attachOutputs } from "./outputs.js?v=2026-11-14-tabs-style";
+import { initWorkTab, drawOpenWork, countOpenWork, findOrder, orderTop, orderAnchor, hello as workHello, draftCard } from "./work.js?v=2026-11-14-tabs-style"; // Work's own pages: Open work, an order's details, the greeting (seat work-tab)
+import { foundCard } from "./find.js?v=2026-11-14-tabs-style"; // find first, then work on what was found (seat find-first)
+import { closeCard } from "./close.js?v=2026-11-14-tabs-style"; // the month-end check, corrected cell by cell (seat month-end)
+import { initPanel, loadPanel, setLive } from "./security.js?v=2026-11-14-tabs-style"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-11-14-tabs-style"; // sub-tab row and People and access (seat people-and-access)
+import { initChats, loadChats, connectPart } from "./chats.js?v=2026-11-14-tabs-style"; // Chats tab (seat chat-import)
+import { initMoney, loadMoney } from "./money.js?v=2026-11-14-tabs-style"; // Money tab (seat runway)
+import { initProfile, loadProfile } from "./profile.js?v=2026-11-14-tabs-style"; // what the Tool thinks the business is (seat know-the-business)
 
 // WHICH BRAIN (seat any-brain round 2, 2026-11-05, decision 1097 shape A): the address and the public key come from
 // fill/brain.js, the one place the screen learns its brain (the business she signed in to through the one door). They
 // were written out here for HireKraft until now. The key is public by design: it names the project, it grants nothing.
 // All authority is in the JWT. Nothing remembered and no stored sign-in: she goes to sign in. A brain that no longer
 // opens: its reason, drawn before any tab.
-import { resolveBrain, drawNoBrain } from "./brain.js?v=2026-11-05-any-brain";
+import { resolveBrain, drawNoBrain } from "./brain.js?v=2026-11-14-tabs-style";
 const BRAIN = await (async () => {
   const r = await resolveBrain();
   if (r.ok) return r.brain;
@@ -159,11 +159,11 @@ let mbxError = null;
 //    immediately and the reading can land into reserved space without moving it.
 const GROUPS = [
   { key: "email",    label: "Email",             icon: "i-mail" },
-  { key: "drives",   label: "Drives & folders",  icon: "i-drive" },
+  { key: "drives",   label: "Drives & Folders",  icon: "i-drive" },
   { key: "calendar", label: "Calendar",          icon: "i-cal" },
   { key: "contacts", label: "Contacts",          icon: "i-people" },
   { key: "systems",  label: "Systems",           icon: "i-system" },
-  { key: "loose",    label: "Loose files",       icon: "i-loose" },
+  { key: "loose",    label: "Loose Files",       icon: "i-loose" },
 ];
 
 // ── what can actually be connected today. `wired` is not a guess: it reflects
@@ -174,7 +174,7 @@ const PICKERS = {
   // seat connect-by-address 2026-10-08). The Google / Microsoft / Yahoo / Enter your
   // address tiles are retired: she types her address and the Tool works out the provider.
   email: {
-    head: "Connect your email", sub: "Type your email address. You sign in on their page, not here.",
+    head: "Connect Your Email", sub: "Type your email address. You sign in on their page, not here.",
     address: true,
   },
   drives: {
@@ -209,7 +209,7 @@ const PICKERS = {
               { name: "Google Analytics and Search Console", gm: true, account: true }],
   },
   loose: {
-    head: "Drop in files", sub: "A one-off set of documents that does not live in a connected drive.",
+    head: "Drop In Files", sub: "A one-off set of documents that does not live in a connected drive.",
     options: [], loose: true,
   },
 };
@@ -513,7 +513,7 @@ function fillTree(sel = "#tree", pfx = "") {
     } else {
       const live = data.live ?? (data.members ?? []).filter((m) => m.health === "reading").length;
       alive = data.kind === "reached"
-        ? "reached when asked"
+        ? "Reached When Asked"
         : (live === total ? "all reading live"
            : live === 0 ? "none reading live" : `${live} of ${total} reading live`);
     }
@@ -562,7 +562,7 @@ function drawMembers(key, body, pfx = "") {
   if (key === "drives") {
     const choose = el("button", "go");
     choose.type = "button";
-    choose.textContent = "Choose what comes in";
+    choose.textContent = "Choose What Comes In";
     choose.style.marginBottom = "1.2rem";
     choose.addEventListener("click", () => stageDrivePicker(driveAccountKey()));
     body.appendChild(choose);
@@ -572,7 +572,7 @@ function drawMembers(key, body, pfx = "") {
   if (key === "email") {
     const add = el("button", "go");
     add.type = "button";
-    add.textContent = "Add a mailbox";
+    add.textContent = "Add a Mailbox";
     add.style.marginBottom = "1.2rem";
     add.addEventListener("click", () => openConnect("email"));
     body.appendChild(add);
@@ -695,18 +695,18 @@ function driveStateFor(target) {
 // The word is chosen from the STATE the brain decided (drive_state, mailbox_state, brain_shape), never from a color,
 // and green is used only where the brain says the thing is up to date. The brain's own sentence opens on click.
 const DRIVE_WORD = {
-  ready: ['Up to date', 'green'], filling: ['Reading', 'blue'], gaps: ['Needs you', 'orange'],
-  needs_signin: ['Needs you', 'orange'], shut_out: ['Needs you', 'orange'], paused: ['Needs you', 'orange'],
-  unread: ['Not read', 'grey'], failed: ['Stopped', 'orange'], behind: ['Behind', 'orange'],
-  empty: ['Empty', 'grey'], stopped: ['Stopped', 'grey'], left_out: ['Not read', 'grey'],
+  ready: ['Up to Date', 'green'], filling: ['Reading', 'blue'], gaps: ['Needs You', 'orange'],
+  needs_signin: ['Needs You', 'orange'], shut_out: ['Needs You', 'orange'], paused: ['Needs You', 'orange'],
+  unread: ['Not Read', 'grey'], failed: ['Stopped', 'orange'], behind: ['Behind', 'orange'],
+  empty: ['Empty', 'grey'], stopped: ['Stopped', 'grey'], left_out: ['Not Read', 'grey'],
 };
 const MAIL_WORD = {
-  reading: ['Reading', 'blue'], closed_to_you: ['Not yours', 'grey'], unread: ['Not read', 'grey'],
-  stopped: ['Needs you', 'orange'], off: ['Off', 'grey'], not_yours: ['Not yours', 'grey'],
+  reading: ['Reading', 'blue'], closed_to_you: ['Not Yours', 'grey'], unread: ['Not Read', 'grey'],
+  stopped: ['Needs You', 'orange'], off: ['Off', 'grey'], not_yours: ['Not Yours', 'grey'],
 };
 const HEALTH_WORD = {
   reading: ['Reading', 'blue'], behind: ['Behind', 'orange'], paused: ['Not kept up to date', 'grey'],
-  never: ['Not read', 'grey'], refused: ['Needs you', 'orange'], unconnected: ['Not connected', 'grey'],
+  never: ['Not Read', 'grey'], refused: ['Needs You', 'orange'], unconnected: ['Not Connected', 'grey'],
 };
 function badge(word, kind) { const b = el('span', 'badge b-' + kind); b.textContent = word; return b; }
 // Puts the badge first and folds the line's existing sentence behind it. Call before any action button is added:
@@ -776,14 +776,14 @@ function systemLine(m, group) {
     // seat records-in 2026-10-12: a KEPT system is read into the brain on a schedule, not read when asked.
     // walk_line is the walk's own sentence (first read under way, up to date, paused for the cost check, or stopped and why).
     if (m.last_read) wrap.className = 'state live';
-    word = m.last_read ? ['Reading', 'blue'] : ['Not read', 'grey'];
+    word = m.last_read ? ['Reading', 'blue'] : ['Not Read', 'grey'];
     text = m.last_read ? `Kept, last read ${fmtWindow(m.last_read)}` : 'Kept, first read not started yet';
     if (m.items) text += ` &middot; ${Number(m.items).toLocaleString('en-US')} pieces kept`;
     if (m.walk_line) text += ` &middot; ${escape(m.walk_line)}`;
   } else {
     const since = m.connected_at ? `Connected ${fmtDay(m.connected_at)}` : 'Connected';
     if (m.last_read) wrap.className = 'state live';
-    word = m.last_read ? ['Read live', 'blue'] : ['Not read', 'grey'];
+    word = m.last_read ? ['Read live', 'blue'] : ['Not Read', 'grey'];
     text = m.last_read
       ? `${since}, read when you ask, last asked ${fmtWindow(m.last_read)}`
       : `${since}, not read yet`;
@@ -798,12 +798,12 @@ function resumeControl(s, fn = "source_resume") {
   const b = el("button", "a-fix");
   b.type = "button";
   b.style.marginLeft = ".7rem";
-  b.textContent = s.action_label ?? "Start reading it again";
+  b.textContent = s.action_label ?? "Start Reading It Again";
   b.addEventListener("click", async (ev) => {
     ev.stopPropagation();
     b.disabled = true;
     const was = b.textContent;
-    b.textContent = "starting\u2026";
+    b.textContent = "Starting\u2026";
     try {
       const { data, error } = await sb.rpc(fn, { p_source_key: s.source_key });
       if (error) throw error;
@@ -814,7 +814,7 @@ function resumeControl(s, fn = "source_resume") {
       await refreshBrain();
     } catch (e) {
       b.disabled = false;
-      b.textContent = `Could not start it: ${e?.message ?? e}`;
+      b.textContent = `Could Not Start It: ${e?.message ?? e}`;
     }
   });
   return b;
@@ -847,7 +847,7 @@ function mailboxLine(mb) {
   b.addEventListener("click", (ev) => {
     ev.stopPropagation();
     const was = b.textContent;
-    b.textContent = "opening Google";
+    b.textContent = "Opening Google";
     // Individual scope, always. The administrator path writes a firm-property
     // posture - the one the mail lens refuses - so that consent would complete
     // and this row would not move.
@@ -1039,7 +1039,7 @@ function signInAgainControl(s) {
   const b = el("button", "a-fix");
   b.type = "button";
   b.style.marginLeft = ".7rem";
-  b.textContent = s.action_label ?? "Sign in again";
+  b.textContent = s.action_label ?? "Sign In Again";
   b.addEventListener("click", (ev) => {
     ev.stopPropagation();
     const drive = PICKERS.drives.options.find((o) => o.type === "drive");
@@ -1076,18 +1076,18 @@ function forgetControl(item, redraw) {
   const b = el("button", "a-fix");
   b.type = "button";
   b.style.marginLeft = ".7rem";
-  b.textContent = "Remove what it read";
+  b.textContent = "Remove What It Read";
   let armed = false;
 
   b.addEventListener("click", async (ev) => {
     ev.stopPropagation();
     if (!armed) {
       armed = true;
-      b.textContent = `Yes, remove ${item.files_read} ${item.files_read === 1 ? "file" : "files"}`;
+      b.textContent = `Yes, Remove ${item.files_read} ${item.files_read === 1 ? "file" : "files"}`;
       return;
     }
     b.disabled = true;
-    b.textContent = "removing\u2026";
+    b.textContent = "Removing\u2026";
     try {
       const { data, error } = await sb.rpc("source_forget", { p_source_key: item.source_key });
       if (error) throw error;
@@ -1104,7 +1104,7 @@ function forgetControl(item, redraw) {
       redraw(false);
     } catch (e) {
       b.disabled = false; armed = false;
-      b.textContent = `Could not remove: ${e?.message ?? e}`;
+      b.textContent = `Could Not Remove: ${e?.message ?? e}`;
     }
   });
   return b;
@@ -1114,7 +1114,7 @@ async function stageDrivePicker(accountKey) {
   userMoved = true;
   goto("s-connect");
   const stage = $("#connect-stage");
-  $("#connect-eyebrow").textContent = "Drives and folders";
+  $("#connect-eyebrow").textContent = "Drives and Folders";
   $("#connect-head").textContent = "Which of these should come in?";
   $("#connect-sub").textContent = "";
   stage.innerHTML = `<p class="quiet">Reading the names of your drives and folders.</p>`;
@@ -1166,9 +1166,9 @@ async function stageDrivePicker(accountKey) {
     stage.appendChild(ul);
   };
 
-  section("Shared drives", "The company's own drives. Everyone on them already sees what is in them.",
+  section("Shared Drives", "The company's own drives. Everyone on them already sees what is in them.",
           data.items.filter((i) => i.kind === "shared_drive"));
-  section("In your own Drive", "Nothing here comes in unless you say so. Choosing a folder brings "
+  section("In Your Own Drive", "Nothing here comes in unless you say so. Choosing a folder brings "
           + "everything inside it, now and later.",
           data.items.filter((i) => i.kind === "my_drive_folder"));
 
@@ -1437,7 +1437,7 @@ function drawReconnect() {
   head.textContent = `${rows.length} ${rows.length === 1 ? 'source' : 'sources'} cannot be opened right now. `;
   const show = el('button', 'work-add');
   show.type = 'button';
-  show.textContent = 'See each one and what would open it';
+  show.textContent = 'See Each One and What Would Open It';
   const ul = el('ul', 'members');
   ul.hidden = true;
   for (const r of rows) {
@@ -1478,7 +1478,7 @@ function openConnect(groupKey) {
 }
 
 function stageTypes() {
-  $("#connect-eyebrow").textContent = "Connect a source";
+  $("#connect-eyebrow").textContent = "Connect a Source";
   $("#connect-head").textContent = "What should Tool read?";
   $("#connect-sub").textContent = "Pick one. The steps are the same every time, whichever you choose.";
   const stage = $("#connect-stage");
@@ -1487,7 +1487,7 @@ function stageTypes() {
   for (const g of GROUPS) {
     const b = el("button", "tile");
     b.type = "button";
-    const kind = g.key === "systems" ? "reached when asked" : "read and remembered";
+    const kind = g.key === "systems" ? "Reached When Asked" : "Read and Remembered";
     b.innerHTML = icon(g.icon)
       + `<span class="t-name">${g.label}</span><span class="t-sub">${kind}</span>`;
     b.addEventListener("click", () => openConnect(g.key));
@@ -1497,7 +1497,7 @@ function stageTypes() {
 }
 
 function stageProviders(groupKey, p) {
-  $("#connect-eyebrow").textContent = "Connect a source";
+  $("#connect-eyebrow").textContent = "Connect a Source";
   $("#connect-head").textContent = p.head;
   $("#connect-sub").textContent = p.sub;
   const stage = $("#connect-stage");
@@ -1524,7 +1524,7 @@ function stageProviders(groupKey, p) {
   stage.appendChild(grid);
 
   const back = el("button", "go ghost");
-  back.type = "button"; back.textContent = "Back to all sources";
+  back.type = "button"; back.textContent = "Back to All Sources";
   back.addEventListener("click", stageTypes);
   stage.appendChild(back);
 }
@@ -1592,7 +1592,7 @@ const SLACK_STEPS = [
 function connectedSaid(kind, b) {
   const n = (x) => Number(x ?? 0).toLocaleString("en-US");
   if (kind === "elasticemail") return `It has ${n(b.domains)} sending ${b.domains === 1 ? "domain" : "domains"}: ${n(b.verified)} verified, `
-    + `${n(b.spf)} passing SPF, ${n(b.dkim)} passing DKIM and ${n(b.dmarc)} with DMARC. Your sending history is being read in; it shows under Marketing and sales, What came back, within minutes. It sends only campaigns you approve, and none until you switch sending on. `;
+    + `${n(b.spf)} passing SPF, ${n(b.dkim)} passing DKIM and ${n(b.dmarc)} with DMARC. Your sending history is being read in; it shows under Marketing and Sales, What Came Back, within minutes. It sends only campaigns you approve, and none until you switch sending on. `;
   if (kind === "wordpress") return `${b.can_edit ? "" : "That user cannot see drafts, so only published pages and posts are read. "}${b.forms_note ?? ""} Nothing is published. `;
   return "";
 }
@@ -1619,7 +1619,7 @@ function stageGoogleMarketing(o) {
     const btn = form.querySelector('button[type=submit]');
     const a = form.querySelector('#gm-in').value.trim().toLowerCase();
     btn.textContent = 'Opening Google…';
-    beginConnect({ name: o.name, type: 'google_marketing' }, 'individual', a, btn, () => { btn.textContent = 'Sign in with Google'; }, a);
+    beginConnect({ name: o.name, type: 'google_marketing' }, 'individual', a, btn, () => { btn.textContent = 'Sign In with Google'; }, a);
   });
   stage.append(n, form);
 }
@@ -1658,7 +1658,7 @@ function stageKey(groupKey, o) {
       : input.value.trim();
     input.value = "";
     const btn = form.querySelector("button[type=submit]");
-    btn.disabled = true; btn.textContent = "Checking the key";
+    btn.disabled = true; btn.textContent = "Checking the Key";
     try {
       const { data } = await sb.auth.getSession();
       const jwt = data?.session?.access_token;
@@ -1670,7 +1670,7 @@ function stageKey(groupKey, o) {
       out.innerHTML = "";
       const msg = el("div", body?.ok ? "notice" : "notice flagged");
       msg.textContent = body?.ok
-        ? `${o.name} is connected. ${connectedSaid(o.key, body)}${o.key === "wordpress" ? "The box does not read it yet: answering from it is the next step." : o.key === "elasticemail" ? "The box learns your sending history next; until then it is all on What came back." : "Ask the box about it in your own words."}`
+        ? `${o.name} is connected. ${connectedSaid(o.key, body)}${o.key === "wordpress" ? "The box does not read it yet: answering from it is the next step." : o.key === "elasticemail" ? "The box learns your sending history next; until then it is all on What Came Back." : "Ask the box about it in your own words."}`
         : `Not connected: ${body?.reason ?? body?.error ?? "no reason was given"} Nothing was kept.`;
       out.appendChild(msg);
       if (body?.ok) await refreshBrain();
@@ -1698,7 +1698,7 @@ function stageKey(groupKey, o) {
     nameIn.addEventListener("input", () => { ta.value = slackManifest(nameIn.value); });
     extra.push(nameLab, nameIn, steps);
     ta.style.cssText = "display:block;width:100%;max-width:28rem;font:12px/1.4 ui-monospace,monospace;padding:.6rem;border:1px solid currentColor;border-radius:6px;background:none;color:inherit";
-    const copy = el("button", "go ghost"); copy.type = "button"; copy.textContent = "Copy the manifest";
+    const copy = el("button", "go ghost"); copy.type = "button"; copy.textContent = "Copy the Manifest";
     copy.addEventListener("click", async () => { try { await navigator.clipboard.writeText(ta.value); copy.textContent = "Copied"; } catch (_) { ta.select(); } });
     extra.push(ta, copy);
   }
@@ -1791,7 +1791,7 @@ function stageAddress(stage) {
   stage.append(form, out);
 
   const back = el("button", "go ghost");
-  back.type = "button"; back.textContent = "Back to all sources";
+  back.type = "button"; back.textContent = "Back to All Sources";
   back.addEventListener("click", stageTypes);
   stage.appendChild(back);
   form.querySelector("#addr-in").focus();
@@ -1862,7 +1862,7 @@ function startMailConnect(out, address, btn, restore) {
 function askMailProvider(out, address, why) {
   const n = addrSay(out, `${why} Which company handles this mail?`);
   const box = el("div", "choices");
-  for (const [key, name] of Object.entries({ google: "Google", microsoft: "Microsoft", other: "Someone else" })) {
+  for (const [key, name] of Object.entries({ google: "Google", microsoft: "Microsoft", other: "Someone Else" })) {
     const b = el("button", "choice");
     b.type = "button";
     b.innerHTML = `<span aria-hidden="true"></span><span><span class="c-name">${name}</span></span>`;
@@ -1994,7 +1994,7 @@ function stageLoose(stage) {
   n.innerHTML = `<b>See what reading a set of files costs, before anything is read.</b> Pick the files: they are counted `
     + `here, on this computer, and nothing is sent or read to count them.`;
   const pick = el('input', ''); pick.type = 'file'; pick.multiple = true; pick.hidden = true;
-  const go = el('button', 'go'); go.type = 'button'; go.textContent = 'Pick files to count';
+  const go = el('button', 'go'); go.type = 'button'; go.textContent = 'Pick Files to Count';
   go.addEventListener('click', () => pick.click());
   const out = el('div', '');
   pick.addEventListener('change', async () => {
@@ -2023,7 +2023,7 @@ function stageLoose(stage) {
     out.append(p, later);
   });
   const back = el('button', 'go ghost');
-  back.type = 'button'; back.textContent = 'Back to all sources';
+  back.type = 'button'; back.textContent = 'Back to All Sources';
   back.addEventListener('click', stageTypes);
   const acts = el('div', 'actions'); acts.append(go, back);
   stage.append(n, pick, acts, out);
@@ -2051,7 +2051,7 @@ let panelScroll = 0;
 function panelTitle(t) {
   if (!$("#panel")) return;
   const s = String(t || "").trim();
-  const name = s ? (s.length > 48 ? s.slice(0, 46).trimEnd() + "..." : s) : "New conversation";
+  const name = s ? (s.length > 48 ? s.slice(0, 46).trimEnd() + "..." : s) : "New Conversation";
   $("#panel-title").textContent = name;
   $("#panel-tab-name").textContent = name;
   $("#panel-tab").setAttribute("aria-label", "Open the conversation: " + name);
@@ -2637,7 +2637,7 @@ function emailList(mails) {
     const b = el("button", "ans-email");
     b.type = "button";
     b.title = "Open this email";
-    const t = el("span", "ans-email-subj"); t.textContent = m.title || "(no subject)";
+    const t = el("span", "ans-email-subj"); t.textContent = m.title || "(No subject)";
     const w = el("span", "ans-email-box"); w.textContent = m.mailbox;
     b.append(t, w);
     const sn = m.snippet.split(String.fromCharCode(10)).map((s) => s.trim()).filter(Boolean).join(" ").slice(0, 140);
@@ -2741,7 +2741,7 @@ function reusedLine(slot, body, opts) {
   if (q.trim()) {
     const b = el("button", "go ghost");
     b.type = "button";
-    b.textContent = "Ask fresh";
+    b.textContent = "Ask Fresh";
     b.title = "Work this answer out again from your records";
     b.addEventListener("click", async () => {
       b.disabled = true;
@@ -2845,8 +2845,8 @@ function teachAnswer(slot, body, onRetry) {
   slot.appendChild(lead);
   if (body.state !== "teach_readback" || !body.teach) return;
   const acts = el("div", "actions");
-  const yes = el("button", "go"); yes.type = "button"; yes.textContent = "Yes, keep it";
-  const no = el("button", "go ghost"); no.type = "button"; no.textContent = "Not quite";
+  const yes = el("button", "go"); yes.type = "button"; yes.textContent = "Yes, Keep It";
+  const no = el("button", "go ghost"); no.type = "button"; no.textContent = "Not Quite";
   acts.append(yes, no);
   slot.appendChild(acts);
   const said = el("div", "t-said"); said.setAttribute("aria-live", "polite"); slot.appendChild(said);
@@ -2924,7 +2924,7 @@ function planCard(slot, body, opts) {
   if (plan.find_first && plan.find) {
     const cheap = el("div", "plan-find");
     const t = el("p", "plan-v"); t.textContent = "Cheaper first: I can bring together " + plan.find_first + ", then answer from that.";
-    const b = el("button", "go ghost"); b.type = "button"; b.textContent = "Bring it together first";
+    const b = el("button", "go ghost"); b.type = "button"; b.textContent = "Bring It Together First";
     b.addEventListener("click", async () => {
       stopAuto(); b.disabled = true; go.disabled = true;
       const wait = el("p", "answer-wait working"); wait.textContent = "Bringing it together."; slot.replaceChildren(wait);
@@ -2983,8 +2983,8 @@ function learnedLine(where, teach) {
   if (!where || !teach) return;
   const p = el("p", "plan-learned"); p.textContent = teach.learned; where.appendChild(p);
   const acts = el("div", "actions");
-  const keep = el("button", "go ghost"); keep.type = "button"; keep.textContent = "Keep it for next time";
-  const once = el("button", "go ghost"); once.type = "button"; once.textContent = "Just this once";
+  const keep = el("button", "go ghost"); keep.type = "button"; keep.textContent = "Keep It for Next Time";
+  const once = el("button", "go ghost"); once.type = "button"; once.textContent = "Just This Once";
   acts.append(keep, once); where.appendChild(acts);
   once.addEventListener("click", () => { acts.remove(); p.textContent = "Used for this question only. Nothing was kept."; });
   keep.addEventListener("click", async () => {
@@ -3096,13 +3096,13 @@ function drawAsk(slot, body) {
     if (typeof body.reach === "string" && body.reach) notes.push(body.reach);
     const taught = Array.isArray(body.about?.taught) ? body.about.taught.filter(Boolean) : [];
     if (taught.length) notes.push("I looked first where you taught me to look for " + taught.join(", ") + ".");
-    slot.appendChild(recordList(ev, answered && state === "answered" ? "Where this comes from" : "What came back", notes));
+    slot.appendChild(recordList(ev, answered && state === "answered" ? "Where this comes from" : "What Came Back", notes));
   }
 
   // 5. THE WEB (lens-ask v17): each page this answer's search used, by its title, opening in a new tab.
   if (Array.isArray(body.web) && body.web.length) {
     const box = el("details", "recs");
-    const sum = el("summary"); sum.textContent = "From the web (" + body.web.length + ")"; box.appendChild(sum);
+    const sum = el("summary"); sum.textContent = "From the Web (" + body.web.length + ")"; box.appendChild(sum);
     const ol = el("ol", "record-list");
     for (const w of body.web) {
       const li = el("li"); li.dataset.webn = String(w.n);
@@ -3408,7 +3408,7 @@ function saveAsTest(q, follows, onSaved) {
   const wrap = el("div", "t-save-as");
   const open = el("button", "go ghost");
   open.type = "button";
-  open.textContent = "Save as test";
+  open.textContent = "Save as Test";
   open.addEventListener("click", () => { open.hidden = true; wrap.appendChild(saveForm(q, follows, onSaved)); }, { once: true });
   wrap.appendChild(open);
   return wrap;
@@ -3633,7 +3633,7 @@ function changeCard(p, mount) {
     if (!v?.ok) { said.textContent = v?.note ?? "This cannot be changed, and no reason was given."; return; }
     said.textContent = v.words;
     const yes = el("button", "go"); yes.type = "button"; yes.textContent = "Confirm";
-    const no = el("button", "go ghost"); no.type = "button"; no.textContent = "Leave it as it is";
+    const no = el("button", "go ghost"); no.type = "button"; no.textContent = "Leave It as It Is";
     acts.append(yes, no);
     no.addEventListener("click", () => { acts.innerHTML = ""; said.textContent = "Nothing was changed."; });
     yes.addEventListener("click", async () => {
@@ -3758,7 +3758,7 @@ function drawSecWatch(v) {
 function drawSecExtras(v) {
   const sends = $("#sec-sends"), door = $("#sec-door");
   sends.innerHTML = ""; door.innerHTML = "";
-  if (!v?.ok) { secRefused(sends, v, "The send record"); secRefused(door, v, "The Tool's own checks"); return; }
+  if (!v?.ok) { secRefused(sends, v, "The send record"); secRefused(door, v, "The Tool's Own Checks"); return; }
   const s = v.sends ?? {};
   if (!Number(s.total)) secNote(sends, "Nothing has been sent from the Tool yet.");
   else {
@@ -3807,7 +3807,7 @@ async function loadSecurity() {
   loadPanel();
   secCall("refusal_watch", { p_tz: zone() }).then((v) => { setLive("refused", v); drawSecWatch(v); }).catch(secFailed("#sec-watch", "Refused attempts"));
   secCall("security_watch_extras", { p_tz: zone() }).then((v) => { setLive("door", v); drawSecExtras(v); }).catch((e) => {
-    secFailed("#sec-sends", "The send record")(e); secFailed("#sec-door", "The Tool's own checks")(e);
+    secFailed("#sec-sends", "The send record")(e); secFailed("#sec-door", "The Tool's Own Checks")(e);
   });
 }
 
@@ -3825,7 +3825,7 @@ const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count
 // IS SHE STILL IN SETUP? One promise, settled once by the opening below (true: Getting Started is the page; false: the Tool is open).
 // A function declaration, so whatever calls it first finds it (seat ready-alive 2026-11-14).
 function setupGate() { if (!window.toolSetupGate) { let res; const p = new Promise((r) => { res = r; }); window.toolSetupGate = { p, res }; } return window.toolSetupGate; }
-const READY_JS = './ready.js?v=2026-11-14-ready-alive';   // seat getting-ready-screen; token seat setup-screens-2
+const READY_JS = './ready.js?v=2026-11-14-tabs-style';   // seat getting-ready-screen; token seat setup-screens-2
 let readyMod = null;
 // THE FRONT DOOR, How Verrandi Works (fill/setup.js, seat setup-front-door): from #how and the Brain at any time. Get started
 // opens Getting started at step 1; someone who is not the owner sees it without prices or Get started.
@@ -3836,7 +3836,7 @@ const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () =>
 const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
 // SETTINGS (seat setup-screens-2, decision 1138): after Ready, the same page becomes Settings (fill/settings.js, #s-settings,
 // #settings). The masthead carries one link: Getting started until Ready, Settings after (settings.js mastLink).
-const SETTINGS_JS = './settings.js?v=2026-11-14-ready-alive';
+const SETTINGS_JS = './settings.js?v=2026-11-14-tabs-style';
 let settingsMod = null;
 const setupLink = (notReady) => import(SETTINGS_JS).then((M) => M.mastLink(readyCtx(), notReady)).catch(() => { /* the Brain button still leads back */ });
 async function routeOnState(mode) {
@@ -3929,7 +3929,7 @@ function goto(id, key) {
   workPanel(id === 's-work');
   if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney(); showSubtabs($('#s-money'), 'money', shape?.viewer?.email);   // seat tab-split
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
-    import("./ledger.js?v=2026-10-22-dates").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
+    import("./ledger.js?v=2026-11-14-tabs-style").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
   if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') { loadWork(); countOpenWork(); if (!workOrder && !$('#answer-in').children.length) workHelloShow(true); } if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY, name: BRAIN.name }); loadChats(); showSubtabs($('#s-chats'), 'chats', shape?.viewer?.email); }
   const tabNow = id === 's-lens' ? lensKey : id === 's-drives' ? 'drives' : id === 's-work' ? 'work' : id === 's-security' || id === 's-accessmap' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : id === 's-ready' ? 'ready' : 'brain';
@@ -3963,11 +3963,11 @@ function room() {
     drawDrives: (box, d) => drawDrives(box, { ...d, choose: () => stageDrivePicker(driveAccountKey()) }), drawOrganize,
     stageLoose: (host) => stageLoose(host),
     connectAssistant: (host) => { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY, name: BRAIN.name }); return connectPart(host); },
-    googleSignin: (host) => import('./google.js?v=2026-10-22-dates').then((G) => G.drawGoogleSignin(host, { sb, el, connect: googleConnect })).catch((e) => { host.textContent = 'Your Google sign-in could not be shown: ' + String(e?.message ?? e); }),
+    googleSignin: (host) => import('./google.js?v=2026-11-14-tabs-style').then((G) => G.drawGoogleSignin(host, { sb, el, connect: googleConnect })).catch((e) => { host.textContent = 'Your Google sign-in could not be shown: ' + String(e?.message ?? e); }),
     adopt: () => fillAdoptable(),
     onState: drawEngine });
   // the AI tab's own blocks (the three lines, the limit, the balance), so the room's money pages are the AI tab's
-  import('./ai.js?v=2026-11-05-brain-tab-room').then((A) => { Object.assign(roomBlocks, { boughtLines: A.boughtLines, limitBlock: A.limitBlock, balance: A.balance }); }).catch(() => { /* the pages say so */ });
+  import('./ai.js?v=2026-11-14-tabs-style').then((A) => { Object.assign(roomBlocks, { boughtLines: A.boughtLines, limitBlock: A.limitBlock, balance: A.balance }); }).catch(() => { /* the pages say so */ });
 }
 // THE BRAIN BUTTON IN THE MASTHEAD AND THE LINE UNDER THE TABS (seat brain-status-build, decision 1110). The engine light:
 // on every screen and the phone, its state in words and a ring that fills (Ready green; Learning, step N of 4 yellow; Needs
@@ -4003,7 +4003,7 @@ function drawEngine(st) {
   if (st.kind !== 'ready') {
     const lead = el('b');
     lead.textContent = st.kind === 'stopped' ? 'Your Tool has stopped, so answers are not reliable.' : 'Your Tool is still learning, so it is only half running.';
-    const go = el('button', 'brain-banner-go'); go.type = 'button'; go.textContent = 'See what is left';
+    const go = el('button', 'brain-banner-go'); go.type = 'button'; go.textContent = 'See What Is Left';
     go.addEventListener('click', () => { userMoved = true; goTab('brain'); });
     line.replaceChildren(lead, document.createTextNode(' Search works. Answers that count, total or compare will be incomplete until it is ready. '), go);
   }
@@ -4053,7 +4053,7 @@ const GROUP_TAB = (k, label) => ({ key: k, label: label ?? GROUPS.find((g) => g.
 // BRAIN IS A TAB AGAIN, FROM READY (seat setup-one-path, 2026-11-11, decision 1150.1, over the row part of 1110): until Ready it is
 // not in the row (skin.css body.gr-pending); at Ready it appears as its own tab. The masthead button stays.
 const TABS = [GROUP_TAB('email', 'Mail'), GROUP_TAB('drives', 'Drive'), GROUP_TAB('calendar'), GROUP_TAB('contacts'), { key: 'thoughts', label: 'Thinkrooms' }, { key: 'work', label: 'Work' }, { key: 'money', label: 'Accounting', owner: true },
-  { key: 'marketing', label: 'Marketing and sales' },   // Marketing and sales: seat job-alerts, 2026-10-30, decision 1039 (fill/marketing.js)
+  { key: 'marketing', label: 'Marketing and Sales' },   // Marketing and sales: seat job-alerts, 2026-10-30, decision 1039 (fill/marketing.js)
   // THE AGENTS TAB (seat agents-tab, 2026-11-05, decisions 1092-1102): her team of seven experts, between Marketing and sales and Brain; drawn by fill/agents.js.
   { key: 'agents', label: 'Agents' },
   { key: 'brain', label: 'Brain' }, { key: 'chats', label: 'Chats' }, { key: 'security', label: 'Security', owner: true },
@@ -4138,7 +4138,7 @@ function drawLens() {
   if (lensKey === 'systems' || lensKey === 'calendar') {
     const g = el('div');
     body.appendChild(g);
-    import('./google.js?v=2026-10-22-dates').then((G) => G.drawGoogleSignin(g, { sb, el, connect: googleConnect }))
+    import('./google.js?v=2026-11-14-tabs-style').then((G) => G.drawGoogleSignin(g, { sb, el, connect: googleConnect }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'Your Google sign-in could not be shown: ' + String(e?.message ?? e); g.appendChild(p); });
     if (lensKey === 'calendar') return;
   }
@@ -4146,24 +4146,24 @@ function drawLens() {
   // one press to change. Owner only (lens-ask refuses anyone else; the tab is hidden for them too). Keeps its own state:
   // a reading does not redraw it (OWN_STATE), so an open choice is not lost.
   if (lensKey === 'ai') {
-    import('./ai.js?v=2026-11-05-brain-tab-room').then((A) => A.drawAI(body, { el, askBody, ask, isOwner: () => !!shape?.viewer?.all_access }))
+    import('./ai.js?v=2026-11-14-tabs-style').then((A) => A.drawAI(body, { el, askBody, ask, isOwner: () => !!shape?.viewer?.all_access }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The AI tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
   // SIGNALS AND OUTREACH (seat job-alerts, 2026-10-30): companies hiring where the business knows someone, a note per person, Hand to a colleague.
   if (lensKey === 'marketing') {
-    import('./marketing.js?v=2026-11-03-screen-rollback').then((M) => M.drawMarketing(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, viewer: () => shape?.viewer }))
+    import('./marketing.js?v=2026-11-14-tabs-style').then((M) => M.drawMarketing(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, viewer: () => shape?.viewer }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Marketing and sales tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
   // THE AGENTS TAB (seat agents-tab, 2026-11-05): the team, making an agent, each expert's page. Keeps its own state (OWN_STATE).
   if (lensKey === 'agents') {
-    import('./agents.js?v=2026-11-05-agents-tab').then((G) => G.drawAgents(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, followSteps, renderAsk, ask, isOwner: () => !!shape?.viewer?.all_access, goTab }))
+    import('./agents.js?v=2026-11-14-tabs-style').then((G) => G.drawAgents(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, followSteps, renderAsk, ask, isOwner: () => !!shape?.viewer?.all_access, goTab }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Agents tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
   if (lensKey === 'contacts') {
-    import('./contacts.js?v=2026-11-03-screen-rollback').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, askBody, renderAsk, isOwner: () => !!shape?.viewer?.all_access }))
+    import('./contacts.js?v=2026-11-14-tabs-style').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, askBody, renderAsk, isOwner: () => !!shape?.viewer?.all_access }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Contacts tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
     return;
   }
@@ -4181,7 +4181,7 @@ function drawLens() {
     line.textContent = 'Nothing connected here yet.';
     const b = el('button', 'go ghost');
     b.type = 'button';
-    b.textContent = 'Connect it in Brain';
+    b.textContent = 'Connect It in Brain';
     b.addEventListener('click', () => { userMoved = true; openConnect(lensKey); });
     body.append(line, b);
     return;
@@ -4330,7 +4330,7 @@ function wideButtons(slot) {
   const asked = slot.closest('.answer-turn')?.querySelector('.answer-asked')?.textContent || '';
   for (const box of slot.querySelectorAll('.ans-table-wrap, .out-chart')) {
     if (box.nextElementSibling?.classList.contains('wide-open')) continue;
-    const b = el('button', 'wide-open'); b.type = 'button'; b.textContent = 'Open wide';
+    const b = el('button', 'wide-open'); b.type = 'button'; b.textContent = 'Open Wide';
     b.addEventListener('click', () => showWide(asked, box.cloneNode(true)));
     box.after(b);
   }
@@ -4473,7 +4473,7 @@ function chatMenu(li, c, projects) {
   for (const p of projects.filter((x) => x.id !== c.project_id)) {
     item(`Move to ${p.name}`, () => moveChat(c.id, p.id));
   }
-  if (c.project_id) item('Take out of the project', () => moveChat(c.id, null));
+  if (c.project_id) item('Take Out of the Project', () => moveChat(c.id, null));
   item('Delete', async () => {
     if (!window.confirm(`Delete "${c.title}"? It leaves your chats and is kept in the archive.`)) return;
     const { data, error } = await sb.rpc('work_discard', { p_chat: c.id });
@@ -4519,8 +4519,8 @@ function dayGroup(iso, now) {
   const diff = Math.round((Date.parse(key(now)) - Date.parse(key(d))) / 86400000);
   if (diff <= 0) return 'Today';
   if (diff === 1) return 'Yesterday';
-  if (diff <= 7) return 'Previous 7 days';
-  if (diff <= 30) return 'Previous 30 days';
+  if (diff <= 7) return 'Previous 7 Days';
+  if (diff <= 30) return 'Previous 30 Days';
   return fmtDate(d, 'monthLong', key(d).slice(0, 7));
 }
 
@@ -4538,7 +4538,7 @@ function openProject(id) {
   const v = $('#work-project-view');
   if (!p) { workView = null; v.hidden = true; markOpen(); return; } v.hidden = false; v.innerHTML = '';
   const h = el('h2'); h.textContent = p.name;
-  const go = el('button', 'go'); go.type = 'button'; go.textContent = `New chat in ${p.name}`;
+  const go = el('button', 'go'); go.type = 'button'; go.textContent = `New Chat in ${p.name}`;
   go.addEventListener('click', () => newChat(id));
   const ul = el('ul', 'work-chats');
   const mine = workRead.chats.filter((c) => c.project_id === id);
@@ -4689,7 +4689,7 @@ function drawClock() {
   clock.after(wrap);
   const TONE = { healthy: 'b-green', fixing: 'b-blue', needs_you: 'b-orange' };
   const AREA_TONE = { ok: 'b-green', fixing: 'b-blue', red: 'b-blue', needs_you: 'b-orange' };
-  const AREA_WORD = { ok: 'OK', fixing: 'Being fixed', red: 'Being fixed', needs_you: 'Needs you' };
+  const AREA_WORD = { ok: 'OK', fixing: 'Being Fixed', red: 'Being Fixed', needs_you: 'Needs You' };
   const close = () => { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
   btn.addEventListener('click', () => { panel.hidden = !panel.hidden; btn.setAttribute('aria-expanded', String(!panel.hidden)); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) { close(); btn.focus(); } });
@@ -4702,7 +4702,7 @@ function drawClock() {
     wrap.hidden = false;
     panel.innerHTML = '';
     if (error || !data) {
-      badge.className = 'badge b-grey'; badge.textContent = 'Not checked'; wrap.dataset.state = '';
+      badge.className = 'badge b-grey'; badge.textContent = 'Not Checked'; wrap.dataset.state = '';
       btn.title = 'How the Tool is doing: not checked';
       const p = el('p', 'health-head');
       p.textContent = 'The Tool could not read its own health just now. It will try again in a few minutes.';
@@ -4721,7 +4721,7 @@ function drawClock() {
     for (const a of data.areas || []) {
       const li = el('li', 'health-area');
       const b = el('span', 'badge ' + (AREA_TONE[a.state] || 'b-grey'));
-      b.textContent = AREA_WORD[a.state] || 'Not checked';
+      b.textContent = AREA_WORD[a.state] || 'Not Checked';
       const name = el('b'); name.textContent = a.name;
       const say = el('span', 'health-say'); say.textContent = a.say;
       li.append(b, name, say);
@@ -4730,7 +4730,7 @@ function drawClock() {
     panel.appendChild(ul);
     const fixed = data.repairs || [];
     if (fixed.length) {
-      const h = el('p', 'health-sub'); h.textContent = 'Fixed on its own in the last day';
+      const h = el('p', 'health-sub'); h.textContent = 'Fixed on Its Own in the Last Day';
       const ul2 = el('ul', 'health-fixed');
       for (const r of fixed.slice(0, 5)) { const li = el('li'); li.textContent = r.what + (r.at ? ', ' + at(r.at) : ''); ul2.appendChild(li); }
       panel.append(h, ul2);
@@ -4791,8 +4791,8 @@ let limitItem = null;
 function limitWarn(L) {
   const level = L.state === 'near' ? 'near' : (L.state === 'reached' || L.state === 'stopped') ? 'limit' : null;
   const was = limitItem;
-  limitItem = level ? { kind: 'ai_limit', title: level === 'near' ? 'Your AI limit is close' : 'Your AI limit is reached',
-    detail: String(L.say || ''), fix: 'Open the AI tab' } : null;
+  limitItem = level ? { kind: 'ai_limit', title: level === 'near' ? 'Your AI Limit Is Close' : 'Your AI Limit Is Reached',
+    detail: String(L.say || ''), fix: 'Open the AI Tab' } : null;
   if ((was ? was.detail : '') !== (limitItem ? limitItem.detail : '') && shape) fillAttention();
   if (!level) return;
   const key = 'tool.ai-limit-said.' + String(L.month || '') + '.' + level;
@@ -4802,7 +4802,7 @@ function limitWarn(L) {
   const box = el('div', 'news-item');
   const t = el('b'); t.textContent = limitItem.title;
   const p = el('p'); p.textContent = limitItem.detail;
-  const go = el('button', 'go ghost'); go.type = 'button'; go.textContent = 'Open the AI tab';
+  const go = el('button', 'go ghost'); go.type = 'button'; go.textContent = 'Open the AI Tab';
   go.addEventListener('click', () => { userMoved = true; goTab('ai'); });
   box.append(t, p, go); turn.appendChild(box); log.appendChild(turn);
   if (level === 'limit') openPanel();
