@@ -46,7 +46,7 @@
 // presses. Your Gmail starts folded; a mailbox can be hidden from Mail. SUPERSEDES on the open email: What you didn't know, Where
 // this stands and Belongs with it shown unasked, Answer, Ask about this, and Add a thought (Alex: no "add a thought" and no
 // unrequested "what else bears" block in the pane; a thought is added from the + in the box or on the Thinkrooms tab).
-import { conversation, composer, askDraft } from './answer.js?v=2026-10-29-mail-invites';
+import { conversation, composer, askDraft, SEND_LOCKED, LOCK_ANSWER } from './answer.js?v=2026-11-14-day-one-fixes';
 import { fmtDate } from './dates.js?v=2026-10-22-dates';
 import { plainWords } from './plain.js?v=2026-10-27-mail-views';
 import { drawBench } from './bench.js?v=2026-11-14-tabs-style';   // Bench (staffing): Who we have on a requirement, only where the business has it
@@ -2774,6 +2774,8 @@ function inviteCard(inv, opts) {
     b('Decline', 'go ghost', (x) => rsvp(inv, 'DECLINED', x, out));
     b('Suggest Another Time', 'go ghost', () => opts && opts.onSuggest && opts.onSuggest());
     if (inv.on_calendar === false) b('Add to My Calendar', 'go ghost', (x) => calendarAdd(inv, x, out));
+    // The lock said BEFORE the press (seat day-one-fixes, audit fix 1): Accept, Maybe and Decline are held by mail-send while it holds.
+    if (SEND_LOCKED) card.appendChild(mk('p', 'mailx-invite-lock', LOCK_ANSWER));
     card.appendChild(row);
   }
   card.appendChild(out);
