@@ -8,6 +8,7 @@
 // 2026-10-06), which sat folded at the bottom of the tab: its people list, its Undo and its "Exactly what,
 // and why" now live here, in one list.
 
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 let c = null;          // { sb, el, $, countOf, personDetail, changeCard, signinUrl }
 let read = null;
 
@@ -26,7 +27,7 @@ function card(mount, call, after) {
   box.append(said, acts); mount.appendChild(box);
   (async () => {
     let v;
-    try { v = await call(false); } catch (e) { said.textContent = "What this would change could not be worked out, so nothing is offered. " + (e?.message ?? ""); return; }
+    try { v = await call(false); } catch (e) { said.textContent = "What this would change could not be worked out, so nothing is offered. " + plainWords(String(e?.message ?? "")); return; }
     if (!v?.ok) { said.textContent = v?.note ?? "This cannot be changed, and no reason was given."; return; }
     said.textContent = v.words;
     const yes = button("Confirm"), no = button("Leave It as It Is", true);
@@ -35,7 +36,7 @@ function card(mount, call, after) {
     yes.addEventListener("click", async () => {
       yes.disabled = no.disabled = true;
       let d;
-      try { d = await call(true); } catch (e) { yes.disabled = no.disabled = false; said.textContent = "Not changed. " + (e?.message ?? ""); return; }
+      try { d = await call(true); } catch (e) { yes.disabled = no.disabled = false; said.textContent = "Not changed. " + plainWords(String(e?.message ?? "")); return; }
       acts.innerHTML = "";
       if (!d?.ok) { said.textContent = d?.note ?? "Not changed, and no reason was given."; return; }
       said.textContent = d.words;
@@ -63,7 +64,7 @@ export async function loadPeople() {
     mount.innerHTML = "";
     const msg = String(e?.message ?? e);
     say(mount, msg.includes("Could not find the function") ? "Who is in: this part is not switched on yet."
-      : "Who is in could not be read, so nothing here is known. " + msg, "notice flagged");
+      : "Who is in could not be read, so nothing here is known. " + plainWords(msg), "notice flagged");
     return;
   }
   draw(mount, read);
@@ -129,7 +130,7 @@ function personRow(p, v) {
     const cancel = button("Cancel the Invitation", true);
     cancel.addEventListener("click", async () => {
       slot.innerHTML = "";
-      let d; try { d = await rpc("person_invite_cancel", { p_identity: p.id }); } catch (e) { say(slot, "Not cancelled. " + (e?.message ?? "")); return; }
+      let d; try { d = await rpc("person_invite_cancel", { p_identity: p.id }); } catch (e) { say(slot, "Not cancelled. " + plainWords(String(e?.message ?? ""))); return; }
       keep(d?.ok ? d.words : (d?.note ?? "Not cancelled.")); loadPeople();
     });
     acts.append(again, cancel);
@@ -223,7 +224,7 @@ function allAccess(v, others) {
     const blk = button(s.block_others ? "Let Others Connect It Too" : "Block Others from Connecting It", true);
     blk.addEventListener("click", async () => {
       slot.innerHTML = "";
-      let d; try { d = await rpc("all_access_block", { p_source_type: s.source_type, p_block: !s.block_others }); } catch (e) { say(slot, "Not changed. " + (e?.message ?? "")); return; }
+      let d; try { d = await rpc("all_access_block", { p_source_type: s.source_type, p_block: !s.block_others }); } catch (e) { say(slot, "Not changed. " + plainWords(String(e?.message ?? ""))); return; }
       keep(d?.ok ? d.words : (d?.note ?? "Not changed.")); loadPeople();
     });
     acts.appendChild(blk);
