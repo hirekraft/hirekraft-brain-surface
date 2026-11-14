@@ -16,7 +16,7 @@
 // No colour, size or font here: the looks' tokens in skin.css under SIGNALS AND OUTREACH. No regex literals, no backslashes.
 
 import { draftHash } from './answer.js?v=2026-10-29-mail-invites';
-import { openZip } from './chats.js?v=2026-10-30-linkedin-whole'; import { sourcePicture, badges, quickHand } from './marketing-signals.js?v=2026-11-02-marketing-build-a';   // the one zip opener on the screen (same token as lens.js); then Signals' one picture (seat marketing-build-a)
+import { openZip } from './chats.js?v=2026-11-14-tabs-style'; import { sourcePicture, badges, quickHand } from './marketing-signals.js?v=2026-11-14-tabs-style';   // the one zip opener on the screen (same token as lens.js); then Signals' one picture (seat marketing-build-a)
 
 let C = null;
 let data = null;
@@ -49,24 +49,24 @@ async function post(path, body) {
   } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; }
 }
 
-export function drawMarketing(body, ctx) { C = ctx; import('./marketing-shell.js?v=2026-11-03-screen-rollback').then((M) => M.drawShell(body, ctx, { signals: (s) => { C = ctx; load(s); }, reads: (s) => { C = ctx; drawReads(s); } })).catch((e) => { body.innerHTML = ''; body.appendChild(mk('p', 'notice flagged', 'The Marketing and sales tab could not be loaded: ' + String((e && e.message) || e))); }); return;   // THE SHELL (seat marketing-build-a, 2026-11-02, decision 1059): the tab opens through fill/marketing-shell.js; the round-1 part row below (seat marketing-parts, with marketing-build-b's Lists button) is superseded by Alex's approval of the round 2 design and no longer runs; it goes at the next whole edit of this file.
+export function drawMarketing(body, ctx) { C = ctx; import('./marketing-shell.js?v=2026-11-14-tabs-style').then((M) => M.drawShell(body, ctx, { signals: (s) => { C = ctx; load(s); }, reads: (s) => { C = ctx; drawReads(s); } })).catch((e) => { body.innerHTML = ''; body.appendChild(mk('p', 'notice flagged', 'The Marketing and sales tab could not be loaded: ' + String((e && e.message) || e))); }); return;   // THE SHELL (seat marketing-build-a, 2026-11-02, decision 1059): the tab opens through fill/marketing-shell.js; the round-1 part row below (seat marketing-parts, with marketing-build-b's Lists button) is superseded by Alex's approval of the round 2 design and no longer runs; it goes at the next whole edit of this file.
   C = ctx;
   body.innerHTML = '';
   const wrap = mk('div', 'mk');
   const parts = mk('div', 'mk-parts');
   parts.setAttribute('role', 'tablist');
-  const p1 = mk('button', 'mk-part', 'Signals and outreach'); p1.type = 'button'; p1.setAttribute('aria-selected', 'true'); p1.setAttribute('role', 'tab');
-  const p2 = mk('button', 'mk-part', 'What this reads'); p2.type = 'button'; p2.setAttribute('aria-selected', 'false'); p2.setAttribute('role', 'tab');
+  const p1 = mk('button', 'mk-part', 'Signals and Outreach'); p1.type = 'button'; p1.setAttribute('aria-selected', 'true'); p1.setAttribute('role', 'tab');
+  const p2 = mk('button', 'mk-part', 'What This Reads'); p2.type = 'button'; p2.setAttribute('aria-selected', 'false'); p2.setAttribute('role', 'tab');
   // Plan, Sending and What came back (seat marketing-parts, 2026-10-30, decisions 1039, 1044): each part lives in its own file.
   const part = (label) => { const b = mk('button', 'mk-part', label); b.type = 'button'; b.setAttribute('aria-selected', 'false'); b.setAttribute('role', 'tab'); return b; };
-  const p3 = part('Plan'), p4 = part('Sending'), p5 = part('What came back'), p6 = part('Lists'); p6.addEventListener('click', () => pick(p6, (s) => import('./marketing-lists.js?v=2026-11-02-marketing-build-b').then((M) => M.drawLists(s, C))));   // Lists: seat marketing-build-b, until build-a's shell mounts it
+  const p3 = part('Plan'), p4 = part('Sending'), p5 = part('What Came Back'), p6 = part('Lists'); p6.addEventListener('click', () => pick(p6, (s) => import('./marketing-lists.js?v=2026-11-14-tabs-style').then((M) => M.drawLists(s, C))));   // Lists: seat marketing-build-b, until build-a's shell mounts it
   parts.append(p1, p3, p4, p6, p5, p2);
   const pick = (b, go) => { for (const x of [p1, p2, p3, p4, p5, p6]) x.setAttribute('aria-selected', x === b ? 'true' : 'false'); go(parts.nextElementSibling); };
   p1.addEventListener('click', () => pick(p1, load));
   p2.addEventListener('click', () => pick(p2, drawReads));
-  p3.addEventListener('click', () => pick(p3, (s) => import('./marketing-plan.js?v=2026-10-31-rulings-1049').then((M) => M.drawPlan(s, C))));
-  p4.addEventListener('click', () => pick(p4, (s) => import('./marketing-send.js?v=2026-11-02-marketing-build-b').then((M) => M.drawSend(s, C))));
-  p5.addEventListener('click', () => pick(p5, (s) => import('./marketing-back.js?v=2026-11-02-marketing-build-b').then((M) => M.drawBack(s, C))));
+  p3.addEventListener('click', () => pick(p3, (s) => import('./marketing-plan.js?v=2026-11-14-tabs-style').then((M) => M.drawPlan(s, C))));
+  p4.addEventListener('click', () => pick(p4, (s) => import('./marketing-send.js?v=2026-11-14-tabs-style').then((M) => M.drawSend(s, C))));
+  p5.addEventListener('click', () => pick(p5, (s) => import('./marketing-back.js?v=2026-11-14-tabs-style').then((M) => M.drawBack(s, C))));
   const stage = mk('div', 'mk-stage');
   wrap.append(parts, stage);
   body.appendChild(wrap);
@@ -93,7 +93,7 @@ let li = null;   // the dropped download, in memory only: { name, on, by, files:
 async function drawReads(stage) {
   stage.innerHTML = '';
   const head = mk('div', 'mk-head');
-  head.append(mk('h2', 'mk-title', 'What this reads'));
+  head.append(mk('h2', 'mk-title', 'What This Reads'));
   head.append(mk('p', 'mk-lede', 'What the Tool reads for marketing and sales, and what you can bring in yourself.'));
   stage.appendChild(head);
   const who = mk('section', 'mk-reads');
@@ -106,7 +106,7 @@ async function drawReads(stage) {
   box.append(mk('p', 'quiet', 'To get your download: on LinkedIn, open Me, then Settings and Privacy, then Data privacy, then Get a copy of your data. Choose the larger download with everything. When LinkedIn emails you that it is ready, download the zip and drop it here.'));
   const drop = mk('label', 'notice');
   drop.style.display = 'block'; drop.style.cursor = 'pointer'; drop.style.textAlign = 'center'; drop.style.padding = '24px';
-  drop.textContent = 'Drop your LinkedIn download here, or click to choose it';
+  drop.textContent = 'Drop Your LinkedIn Download Here, or Click to Choose It';
   const input = C.el('input'); input.type = 'file'; input.accept = '.zip'; input.hidden = true;
   drop.appendChild(input);
   box.append(drop, mk('p', 'quiet', 'The file is opened on your computer first. You see every file in it with its rows, and nothing is sent until you press Bring in. What you bring in is private to you.'));
@@ -126,14 +126,14 @@ async function drawReads(stage) {
 // decided in the brain (marketing_may_why), never here. A colleague without access reads her own reason.
 async function drawWhoSees(host) {
   host.innerHTML = '';
-  host.appendChild(mk('h3', 'mk-co', 'Who can see the marketing data'));
+  host.appendChild(mk('h3', 'mk-co', 'Who Can See the Marketing Data'));
   const w = mk('p', 'working no-late', 'Reading who has access to your Marketing folder');
   host.appendChild(w);
   const r = await rpc('marketing_access', {});
   w.remove();
   if (!r || r.ok !== true) { host.appendChild(mk('p', 'notice flagged', 'Who can see this could not be read just now: ' + String((r && r.reason) || 'no reason was given') + '.')); return; }
   const names = (r.who || []).map((x) => x.name + (x.owner ? ' (owner)' : ''));
-  const line = mk('p', 'state');
+  const line = mk('p', 'state mk-who-sees');   // a long folder name wraps on a phone (seat tabs-style: it scrolled the page sideways at 390)
   line.append(mk('span', null, 'Who can see this: '), data_('span', null, names.join(', ') || 'only the owner'),
     mk('span', null, ', because they have access to '), data_('span', null, r.folder || 'your Marketing folder'), mk('span', null, ' in Google Drive.'));
   host.appendChild(line);
@@ -142,15 +142,15 @@ async function drawWhoSees(host) {
     + (r.fresh ? '' : ' Until it is read again, only the owner sees the marketing data.') + ' To change who sees it, change who has access to the folder in Google Drive.'));
   if (r.mine) host.appendChild(mk('p', 'notice flagged', r.mine));
   if (!r.owner || !(r.choices || []).length) return;
-  const label = mk('label', 'mk-hand-label', 'Your Marketing folder');
-  const sel = C.el('select'); sel.className = 'mk-why'; sel.setAttribute('aria-label', 'Your Marketing folder');
+  const label = mk('label', 'mk-hand-label', 'Your Marketing Folder');
+  const sel = C.el('select'); sel.className = 'mk-why'; sel.setAttribute('aria-label', 'Your Marketing Folder');
   for (const c of r.choices) {
     const o = C.el('option'); o.value = c.id; o.textContent = c.label + ' (' + n0(c.members) + ' ' + plural(c.members, 'person', 'people') + ')';
     if (c.id === r.folder_id) o.selected = true;
     sel.appendChild(o);
   }
   label.appendChild(sel);
-  const go = mk('button', 'go ghost', 'Use this folder'); go.type = 'button';
+  const go = mk('button', 'go ghost', 'Use This Folder'); go.type = 'button';
   const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
   go.addEventListener('click', async () => {
     go.disabled = true; said.textContent = '';
@@ -230,12 +230,12 @@ function partWords(x, prevOn) {
   return { line, use };
 }
 
-const CHOICES = [['marketing', 'Use for marketing'], ['me', 'Only for me'], ['out', 'Leave out']];
+const CHOICES = [['marketing', 'Use for Marketing'], ['me', 'Only for Me'], ['out', 'Leave Out']];
 const CHOSEN = { marketing: 'Used for marketing: the people who work on marketing see it.', me: 'Only for you.', out: 'Left out: not kept in the Tool, now or in later downloads.' };
 
 async function drawExplain(ex) {
   ex.innerHTML = '';
-  ex.appendChild(mk('h3', 'mk-sub', 'Your LinkedIn, explained'));
+  ex.appendChild(mk('h3', 'mk-sub', 'Your LinkedIn, Explained'));
   const w = mk('p', 'working no-late', 'Going through your download part by part');
   ex.appendChild(w);
   const r = await rpc('linkedin_explain', {});
@@ -257,7 +257,7 @@ async function drawExplain(ex) {
     li.append(top, said);
     if (x.part === 'articles' && ((x.facts || {}).list || []).length > 1) {
       const det = C.el('details');
-      const sm = mk('summary', null, 'All your articles'); sm.style.minHeight = '44px'; sm.style.display = 'flex'; sm.style.alignItems = 'center'; sm.style.cursor = 'pointer';
+      const sm = mk('summary', null, 'All Your Articles'); sm.style.minHeight = '44px'; sm.style.display = 'flex'; sm.style.alignItems = 'center'; sm.style.cursor = 'pointer';
       det.appendChild(sm);
       const al = mk('ul', 'mk-role-list');
       for (const a of x.facts.list) { const ai = mk('li', 'mk-role'); ai.append(data_('span', 'mk-role-title', a.title || '')); if (a.published) ai.append(document.createTextNode(' · ' + dayOnly(a.published))); al.appendChild(ai); }
@@ -298,7 +298,7 @@ async function drawExplain(ex) {
   // WHO OPENED WHAT SHE SHARES (seat linkedin-share, 2026-10-30, decision 1045 (3)): every opening by someone else, as the brain
   // logged it (linkedin_opened, written where the opening happens: Signals and the shared list). Nothing here decides who may see.
   if ((r.parts || []).some((p) => p.choice === 'marketing')) {
-    ex.appendChild(mk('h3', 'mk-sub', 'Who opened what you share'));
+    ex.appendChild(mk('h3', 'mk-sub', 'Who Opened What You Share'));
     const names = {}; for (const p of (r.parts || [])) names[p.part] = p.name;
     if (!(r.opened || []).length) ex.appendChild(mk('p', 'quiet', 'Nobody else has opened what you share yet. Each time someone does, it is listed here: who, which part, how much and when.'));
     else {
@@ -328,7 +328,7 @@ async function drawShared(ex, r) {
   if (r.may_share) {
     const sh = await rpc('linkedin_shared', {});
     if (sh && sh.ok && (sh.shared || []).length) {
-      ex.appendChild(mk('h3', 'mk-sub', 'Shared with you by colleagues'));
+      ex.appendChild(mk('h3', 'mk-sub', 'Shared with You by Colleagues'));
       const sl = mk('ul', 'mk-role-list');
       for (const s1 of sh.shared) {
         const si = mk('li', 'mk-role');
@@ -430,7 +430,7 @@ async function openDownload(file, said, pick, last) {
     row.append(data_('div', 'a-title', f.path), mk('div', 'a-detail', f.kind === 'table' ? n0(f.rows) + ' ' + plural(f.rows, 'row', 'rows') : (f.kind === 'text' ? 'a text file, kept whole' : 'a file, kept whole')));
     ul.appendChild(row);
   }
-  const go = mk('button', 'go', 'Bring in'); go.type = 'button';
+  const go = mk('button', 'go', 'Bring In'); go.type = 'button';
   const out = mk('div'); out.setAttribute('aria-live', 'polite');
   pick.append(ul, go, out);
   go.addEventListener('click', () => bringIn(go, out, said, last));
@@ -497,7 +497,7 @@ async function load(stage) {
   stage.innerHTML = '';
   if (!r || r.ok !== true) {
     stage.append(mk('p', 'notice flagged', 'This could not be read just now: ' + String((r && (r.reason || r.error)) || 'no reason was given') + '. Nothing here is a claim either way.'));
-    const again = mk('button', 'go ghost', 'Try again'); again.type = 'button'; again.addEventListener('click', () => load(stage));
+    const again = mk('button', 'go ghost', 'Try Again'); again.type = 'button'; again.addEventListener('click', () => load(stage));
     stage.appendChild(again);
     return;
   }
@@ -594,7 +594,7 @@ function drawItem(stage, key) {
   if (!it) { drawList(stage); return; }
   openKey = key;
   stage.innerHTML = '';
-  const back = mk('button', 'go ghost mk-back', 'Back to the list'); back.type = 'button';
+  const back = mk('button', 'go ghost mk-back', 'Back to the List'); back.type = 'button';
   back.addEventListener('click', () => drawList(stage));
   const title = mk('h2', 'mk-title');
   title.append(data_('span', 'mk-co', it.company), document.createTextNode(' '), mk('span', null, 'is hiring ' + it.roles_n + (it.roles_n === 1 ? ' role.' : ' roles.')));
@@ -604,7 +604,7 @@ function drawItem(stage, key) {
 
   // The roles, each with its own job page where the alert gave one.
   const roles = mk('section', 'mk-roles');
-  roles.append(mk('h3', 'mk-sub', 'What they are hiring for'));
+  roles.append(mk('h3', 'mk-sub', 'What They Are Hiring For'));
   const rl = mk('ul', 'mk-role-list');
   for (const r of (it.roles || []).slice(0, 12)) {
     const li = mk('li', 'mk-role');
@@ -614,7 +614,7 @@ function drawItem(stage, key) {
     if (r.sources && r.sources.length) li.append(document.createTextNode(' · '), mk('span', 'mk-role-where', 'Seen on'), document.createTextNode(' '), data_('span', 'mk-role-where', r.sources.join(', ')));
     // seat job-search-helper: an opening the daily web search found says which of the business's own words it searched for
     if (r.found && r.found.length) li.append(document.createTextNode(' · '), mk('span', 'mk-role-where', 'Found by the daily web search for'), document.createTextNode(' '), data_('span', 'mk-role-where', r.found.map((f) => f.term).join(', ')));
-    if (r.link) { const a = mk('a', 'mk-role-link', 'Open the job'); a.href = r.link; a.target = '_blank'; a.rel = 'noopener'; li.append(document.createTextNode(' '), a); }
+    if (r.link) { const a = mk('a', 'mk-role-link', 'Open the Job'); a.href = r.link; a.target = '_blank'; a.rel = 'noopener'; li.append(document.createTextNode(' '), a); }
     // seat bench-match-2 (decision 1056): who of ours fits this opening, the same match as Who we have (bench_fit_show in the brain).
     // Held back, being worked out or nobody is said in words, never an empty list. Bench classes in skin.css; no styling here.
     if (r.fit && r.fit.line) {
@@ -662,7 +662,7 @@ function drawItem(stage, key) {
   }
 
   const ppl = mk('section', 'mk-people');
-  ppl.append(mk('h3', 'mk-sub', 'People you know there'));
+  ppl.append(mk('h3', 'mk-sub', 'People You Know There'));
   const ul = mk('ul', 'mk-person-list');
   for (const p of it.people) ul.appendChild(personRow(it, p, stage));
   ppl.appendChild(ul);
@@ -707,7 +707,7 @@ function giveBox(stage, it, key) {
   box.append(row);
   if (rest.length) {
     const more = mk('details', 'mk-give-more');
-    more.appendChild(mk('summary', 'mk-hand-label', 'Someone else'));
+    more.appendChild(mk('summary', 'mk-hand-label', 'Someone Else'));
     const sel = mk('select', 'mk-hand-pick'); sel.setAttribute('aria-label', 'Who');
     for (const x of rest) { const o = document.createElement('option'); o.value = x.id; o.textContent = x.name; o.translate = false; sel.appendChild(o); }
     const go = mk('button', 'go ghost', 'Give'); go.type = 'button';
@@ -777,11 +777,11 @@ function personRow(it, p, stage) {
   status.hidden = !status.textContent;
   const acts = mk('div', 'mk-acts');
   const note = mk('div', 'mk-note'); note.hidden = true;
-  const write = mk('button', 'go', p.draft ? 'See the note' : 'Write a note'); write.type = 'button';
+  const write = mk('button', 'go', p.draft ? 'See the Note' : 'Write a Note'); write.type = 'button';
   write.addEventListener('click', () => { note.hidden = false; write.hidden = true; fillNote(note, it, p, false, status); });
   acts.appendChild(write);
   if (p.profile) {
-    const prof = mk('a', 'go ghost', 'Open profile'); prof.href = p.profile; prof.target = '_blank'; prof.rel = 'noopener';
+    const prof = mk('a', 'go ghost', 'Open Profile'); prof.href = p.profile; prof.target = '_blank'; prof.rel = 'noopener';
     prof.addEventListener('click', () => { rpc('job_alert_step', { p_key: it.key, p_person: p.id, p_step: 'profile', p_why: null }); });
     acts.appendChild(prof);
   }
@@ -791,7 +791,7 @@ function personRow(it, p, stage) {
   skip.addEventListener('click', () => {
     if (acts.querySelector('.mk-why')) return;
     const why = mk('input', 'mk-why'); why.type = 'text'; why.placeholder = 'Why skip this person?'; why.setAttribute('aria-label', 'Why skip this person?');
-    const ok = mk('button', 'go ghost', 'Skip with this reason'); ok.type = 'button';
+    const ok = mk('button', 'go ghost', 'Skip with This Reason'); ok.type = 'button';
     ok.addEventListener('click', async () => {
       const s = await rpc('job_alert_step', { p_key: it.key, p_person: p.id, p_step: 'skipped', p_why: why.value });
       if (s.ok) { status.textContent = stepWords({ step: 'skipped', why: why.value, at: new Date().toISOString(), by: 'you' }); status.hidden = false; why.remove(); ok.remove(); skipSaid.textContent = ''; li.classList.add('mk-done'); }
@@ -837,7 +837,7 @@ async function fillNote(box, it, p, again, status, opts) {
   const other = channel === 'email' ? 'linkedin' : 'email';
   const swap = () => {
     if (!channels.includes(other)) return null;
-    const b = mk('button', 'go ghost', other === 'email' ? 'Write an email instead' : 'Write a LinkedIn message instead'); b.type = 'button';
+    const b = mk('button', 'go ghost', other === 'email' ? 'Write an Email Instead' : 'Write a LinkedIn Message Instead'); b.type = 'button';
     b.addEventListener('click', () => fillNote(box, it, p, false, status, { channel: other, tone: (r && r.tone) || opts.tone }));
     return b;
   };
@@ -845,7 +845,7 @@ async function fillNote(box, it, p, again, status, opts) {
     const why = String((r && r.reason) || 'no reason was given');
     box.append(mk('p', 'stalled', (why.startsWith('No note') ? why : 'No note: ' + why) + '.'));
     const row = mk('div', 'mk-acts');
-    const t = mk('button', 'go ghost', 'Write it again'); t.type = 'button'; t.addEventListener('click', () => fillNote(box, it, p, true, status, { channel, tone: (r && r.tone) || opts.tone }));
+    const t = mk('button', 'go ghost', 'Write It Again'); t.type = 'button'; t.addEventListener('click', () => fillNote(box, it, p, true, status, { channel, tone: (r && r.tone) || opts.tone }));
     row.appendChild(t);
     const s2 = swap(); if (s2) row.appendChild(s2);
     box.appendChild(row);
@@ -866,7 +866,7 @@ async function fillNote(box, it, p, again, status, opts) {
     const to = mk('p', 'mk-note-to'); to.append(mk('span', null, 'To '), data_('span', null, p.email));
     const subj = mk('input', 'mk-subject'); subj.type = 'text'; subj.value = d.subject || ''; subj.setAttribute('aria-label', 'Subject');
     const text = mk('textarea', 'mk-text'); text.rows = 6; text.value = d.email || ''; text.setAttribute('aria-label', 'Your email');
-    const send = mk('button', 'go', 'Send from my mailbox'); send.type = 'button';
+    const send = mk('button', 'go', 'Send from My Mailbox'); send.type = 'button';
     send.addEventListener('click', async () => {
       const mailbox = String((C.viewer && C.viewer().email) || '').toLowerCase();
       if (!mailbox) { said.className = 'mk-said stalled'; said.textContent = 'Your mailbox is not known on this page, so nothing was sent.'; return; }
@@ -887,7 +887,7 @@ async function fillNote(box, it, p, again, status, opts) {
     li.append(mk('p', 'mk-note-kind', 'LinkedIn message: you paste it, the Tool never posts on LinkedIn'));
     const text = mk('textarea', 'mk-text'); text.rows = 4; text.value = d.note || ''; text.setAttribute('aria-label', 'Your LinkedIn message');
     const row = mk('div', 'mk-acts');
-    const go = mk('button', 'go', 'Copy and open LinkedIn'); go.type = 'button';
+    const go = mk('button', 'go', 'Copy and Open LinkedIn'); go.type = 'button';
     go.addEventListener('click', () => {
       // both inside the press itself, so the browser allows the copy and the new tab
       const copied = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text.value) : Promise.reject(new Error('no clipboard'));
@@ -896,14 +896,14 @@ async function fillNote(box, it, p, again, status, opts) {
         .catch(() => { text.select(); said.className = 'mk-said state'; said.textContent = 'LinkedIn is open in a new tab. The message is selected: copy it, paste it there, send it, then press Done.'; });
       mark('copied'); rpc('job_alert_step', { p_key: it.key, p_person: p.id, p_step: 'profile', p_why: null });
     });
-    const done = mk('button', 'go ghost', 'Done, I sent it'); done.type = 'button';
+    const done = mk('button', 'go ghost', 'Done, I Sent It'); done.type = 'button';
     done.addEventListener('click', async () => { if (await mark('sent')) { said.className = 'mk-said state'; said.textContent = 'Logged as sent on LinkedIn by you.'; } });
     row.append(go, done);
     li.append(text, row);
     box.appendChild(li);
   } else box.append(mk('p', 'state', 'There is no email address or LinkedIn profile on file for this person.'));
   const row = mk('div', 'mk-acts');
-  const redo = mk('button', 'go ghost', 'Write it again'); redo.type = 'button';
+  const redo = mk('button', 'go ghost', 'Write It Again'); redo.type = 'button';
   redo.addEventListener('click', () => fillNote(box, it, p, true, status, { channel, tone: r.tone }));
   row.appendChild(redo);
   const s2 = swap(); if (s2) row.appendChild(s2);
