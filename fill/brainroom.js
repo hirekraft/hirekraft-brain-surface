@@ -19,7 +19,7 @@
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
 import { filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-14-tabs-style';   // the files press and the reading's progress (seat brain-status-2; understandBlock retired here by seat audit-fix-screen)
-const READY_FOR_STEP = './ready.js?v=2026-11-14-tabs-style';   // the same module instance lens.js loads (step 4 opens there)
+const READY_FOR_STEP = './ready.js?v=2026-11-14-day-one-fixes';   // the same module instance lens.js loads (step 4 opens there)
 import { drawToday } from './today.js?v=2026-11-14-keeping-up';   // Today: what came in and whether the Tool is keeping up (seat keeping-up, decision 1176)
 
 let C = null;   // { sb, el, $, askBody, isOwner, viewDeps, readSources, drawGroup, aiBlocks, door, goto, openAdd, closeAdd, connectSystem, me }
@@ -90,6 +90,10 @@ const SQUARES = [
   { key: 'loose', title: 'Loose Files', icon: 'file', keep: (r) => r.group === 'loose', one: 'file set', many: 'file sets' },
   { key: 'add', title: 'Add a Source', icon: 'plus' },
 ];
+
+// A square is found BY ITS KEY, never by its place in the list (seat day-one-fixes, audit fix 2: SQUARES[6] was Chats, so Downloads
+// opened blank, and SQUARES[4] was QuickBooks, so Systems opened titled QuickBooks after the QuickBooks square was put in).
+const sq = (key) => SQUARES.find((x) => x.key === key);
 
 export function initRoom(c) { C = c; }
 
@@ -750,7 +754,7 @@ const PAGES = {
   // each mailbox with Details (Read further, with the understanding prices), Open in Mail and Remove.
   async mail(body) {
     const R = reading || {};
-    const s = SQUARES[0];
+    const s = sq('mail');
     const mine = rowsOf(R).filter(s.keep);
     const lv = mine.length ? level(s, mine, R) : null;
     const d = R.road;
@@ -782,7 +786,7 @@ const PAGES = {
   },
   // QUICKBOOKS (picture): the books arrive as records (amounts, dates and customers are fields), as of the last check.
   async books(body) {
-    await groupPage(body, SQUARES.find((x) => x.key === 'books'), 'Invoices, payments and bills arrive as records from QuickBooks, as they are kept there. QuickBooks stays the record; nothing is written back.');
+    await groupPage(body, sq('books'), 'Invoices, payments and bills arrive as records from QuickBooks, as they are kept there. QuickBooks stays the record; nothing is written back.');
   },
   chats(body) {
     const c = reading?.conn;
@@ -803,10 +807,10 @@ const PAGES = {
     const h = C.el('div', 'br-rows'); body.appendChild(h);
     if (C.connectAssistant) C.connectAssistant(h); else h.appendChild(txt('p', 'quiet', 'This part could not be loaded.'));
   },
-  calendar(body) { return groupPage(body, SQUARES[2]); },
-  contacts(body) { return groupPage(body, SQUARES[3], 'Business contacts are kept. Only you see your own address book.'); },
+  calendar(body) { return groupPage(body, sq('calendar')); },
+  contacts(body) { return groupPage(body, sq('contacts'), 'Business contacts are kept. Only you see your own address book.'); },
   async systems(body) {
-    await groupPage(body, SQUARES[4], 'Connected now. To add one, choose it below.');
+    await groupPage(body, sq('systems'), 'Connected now. To add one, choose it below.');
     body.appendChild(txt('h3', 'br-h3', 'Add a System'));
     const q = panel(body);
     for (const [kind, ready, coming] of SYSTEM_KINDS) {
@@ -826,7 +830,7 @@ const PAGES = {
     all.addEventListener('click', () => { closePage(); C.door('systems'); });
     body.appendChild(all);
   },
-  downloads(body) { return groupPage(body, SQUARES[6], 'A whole download from a system, read once: the Tool recognizes what it is and files everything in the right place.'); },
+  downloads(body) { return groupPage(body, sq('downloads'), 'A whole download from a system, read once: the Tool recognizes what it is and files everything in the right place.'); },
   add(body) {
     title(body, 'Add a Source');
     body.appendChild(txt('p', 'br-lede', 'Choose what to add. You sign in on their page, not ours, and see the price before anything is read.'));
