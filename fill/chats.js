@@ -45,7 +45,7 @@ async function call(body) {
 }
 async function rpc(fn, args) {
   const { data, error } = await ctx.sb.rpc(fn, args);
-  if (error) return { ok: false, reason: "error", note: error.message || "Could not be read." };
+  if (error) return { ok: false, reason: "error", note: "The Tool could not reach your brain just now (" + String(error.message || "no reason was given") + ")." };   // what and why, never the bare error (seat tabs-style, decisions 1178, 1169, 1030)
   return data;
 }
 
@@ -143,17 +143,17 @@ function part(host, key, label, what, hidden) {
 function build(root) {
   root.dataset.built = "1";
   root.innerHTML = "";
-  const mine = part(root, "mine", "Your chats", null);
-  const host = part(root, "bring", "Bring in a chat", null, true);
+  const mine = part(root, "mine", "Your Chats", null);
+  const host = part(root, "bring", "Bring In a Chat", null, true);
   host.appendChild(el("p", "sub-what", "Bring in the thinking you did in your own Claude or ChatGPT. Chats you bring in are private to you until you share them with the company."));
 
   // export and pick
   const ex = el("details", "chats-way"); ex.open = true;
-  ex.appendChild(el("summary", null, "Bring in from an export"));
+  ex.appendChild(el("summary", null, "Bring In from an Export"));
   ex.appendChild(el("p", "quiet", "In Claude: Settings, Privacy, Export data. In ChatGPT: Settings, Data controls, Export. Then drop the file here."));
   const drop = el("label", "notice");
   drop.style.display = "block"; drop.style.cursor = "pointer"; drop.style.textAlign = "center"; drop.style.padding = "24px";
-  drop.textContent = "Drop the export file here, or click to choose it";
+  drop.textContent = "Drop the Export File Here, or Click to Choose It";
   const input = el("input"); input.type = "file"; input.accept = ".zip,.json"; input.hidden = true;
   drop.appendChild(input);
   ex.appendChild(drop);
@@ -173,11 +173,11 @@ function build(root) {
 
   // paste
   const pa = el("details", "chats-way");
-  pa.appendChild(el("summary", null, "Paste one chat"));
+  pa.appendChild(el("summary", null, "Paste One Chat"));
   const title = el("input", "work-search"); title.placeholder = "Title (leave empty and the Tool proposes one)";
   title.style.width = "100%";
   const box = el("textarea"); box.rows = 8; box.style.width = "100%"; box.placeholder = "Paste the chat here";
-  const keepBtn = el("button", "go", "Keep this chat"); keepBtn.type = "button";
+  const keepBtn = el("button", "go", "Keep This Chat"); keepBtn.type = "button";
   const pasteSaid = el("div");
   keepBtn.addEventListener("click", async () => {
     const text = box.value.trim();
@@ -194,12 +194,12 @@ function build(root) {
 
   // forward
   const fw = el("details", "chats-way");
-  fw.appendChild(el("summary", null, "Send one by email"));
+  fw.appendChild(el("summary", null, "Send One by Email"));
   fw.appendChild(el("p", null, "From your company address, email yourself with a subject that starts with “keep this” and the chat in the body. It appears here within a few minutes, private to you. A chat sent as an attachment is not read."));
   host.appendChild(fw);
 
   // connect your own Claude (seat chat-connector fills this); its own part since seat tab-split, open, not folded
-  const cn = part(root, "connect", "Connect your Claude", null, true);
+  const cn = part(root, "connect", "Connect Your Claude", null, true);
   const cnHost = el("div"); cnHost.id = "chats-connector";
   drawConnector(cnHost);
   cn.appendChild(cnHost);
@@ -231,7 +231,7 @@ async function drawConnector(host) {
   const addr = el("div"); addr.style.display = "flex"; addr.style.gap = "8px"; addr.style.alignItems = "center";
   const code = el("code", null, CONNECTOR_URL); code.style.wordBreak = "break-all";
   const copy = el("button", "go ghost", "Copy"); copy.type = "button";
-  copy.addEventListener("click", async () => { try { await navigator.clipboard.writeText(CONNECTOR_URL); copy.textContent = "Copied"; } catch (e) { copy.textContent = "Select and copy it"; } });
+  copy.addEventListener("click", async () => { try { await navigator.clipboard.writeText(CONNECTOR_URL); copy.textContent = "Copied"; } catch (e) { copy.textContent = "Select and Copy It"; } });
   addr.append(code, copy); host.appendChild(addr);
   const ol = el("ol");
   for (const s of ["In your Claude: Settings, Connectors, Add custom connector. Paste the address above.",
@@ -279,8 +279,8 @@ async function openExport(file, pick, pickSaid) {
     txt.appendChild(mk);
     lab.append(cb, txt); li.appendChild(lab); ul.appendChild(li); boxes.push(cb);
   });
-  const go = el("button", "go", "Keep the checked chats"); go.type = "button";
-  const count = () => { const n = boxes.filter((b) => b.checked).length; go.textContent = n ? `Keep ${n} checked chat${n === 1 ? "" : "s"}` : "Keep the checked chats"; go.disabled = !n; };
+  const go = el("button", "go", "Keep the Checked Chats"); go.type = "button";
+  const count = () => { const n = boxes.filter((b) => b.checked).length; go.textContent = n ? `Keep ${n} checked chat${n === 1 ? "" : "s"}` : "Keep the Checked Chats"; go.disabled = !n; };
   boxes.forEach((b) => b.addEventListener("change", count)); count();
   // CHECK ALL (Alex 2026-10-11: a long export should not need one click per chat). Only chats not yet in the
   // Tool can be checked: the Tool says which it already has (chat-import action known), so a second drop of
@@ -288,9 +288,9 @@ async function openExport(file, pick, pickSaid) {
   const marks = new Map();
   const open = () => boxes.filter((b) => !b.disabled);
   const bar = el("div"); bar.style.display = "flex"; bar.style.gap = "8px"; bar.style.flexWrap = "wrap"; bar.style.margin = "8px 0";
-  const allB = el("button", "go ghost", "Check all"); allB.type = "button";
-  const bizB = el("button", "go ghost", "Check business only"); bizB.type = "button";
-  const noneB = el("button", "go ghost", "Uncheck all"); noneB.type = "button";
+  const allB = el("button", "go ghost", "Check All"); allB.type = "button";
+  const bizB = el("button", "go ghost", "Check Business Only"); bizB.type = "button";
+  const noneB = el("button", "go ghost", "Uncheck All"); noneB.type = "button";
   allB.addEventListener("click", () => { open().forEach((b) => { b.checked = true; }); count(); });
   noneB.addEventListener("click", () => { boxes.forEach((b) => { b.checked = false; }); count(); });
   bizB.addEventListener("click", () => { open().forEach((b) => { b.checked = marks.get(Number(b.dataset.i)) === "business"; }); count(); });
@@ -316,8 +316,8 @@ async function openExport(file, pick, pickSaid) {
   if (already) {
     const line = el("p", "quiet");
     line.appendChild(document.createTextNode(`${already} chat${already === 1 ? " is" : "s are"} already in the Tool and not listed. `));
-    const sh = el("button", "go ghost", "Show them"); sh.type = "button";
-    sh.addEventListener("click", () => { const show = sh.textContent === "Show them"; keptRows.forEach((li) => { li.hidden = !show; }); sh.textContent = show ? "Hide them" : "Show them"; });
+    const sh = el("button", "go ghost", "Show Them"); sh.type = "button";
+    sh.addEventListener("click", () => { const show = sh.textContent === "Show Them"; keptRows.forEach((li) => { li.hidden = !show; }); sh.textContent = show ? "Hide Them" : "Show Them"; });
     line.appendChild(sh);
     ul.before(line);
   }
@@ -379,9 +379,9 @@ function buildMine(host) {
   const root = el("div", "cs"); root.dataset.view = "list";
   const top = el("div", "cs-top");
   const words = el("div", "cs-top-words");
-  words.append(el("h3", "cs-h", "Your work with Claude, kept whole"),
+  words.append(el("h3", "cs-h", "Your Work with Claude, Kept Whole"),
     el("p", "quiet", "Every chat you or your team saved, sorted by what it is about. In Claude, just say “save this to {business}”. The whole chat and every file it made come here, word for word."));
-  const howB = btn("go ghost cs-how-b", "How it works");
+  const howB = btn("go ghost cs-how-b", "How It Works");
   top.append(words, howB);
   const how = el("div", "cs-how"); how.hidden = true;
   for (const [h, p] of [["Save it", "Say “save this”, “keep this” or “put this in {business}”. Any of these works, in any language."],
@@ -389,7 +389,7 @@ function buildMine(host) {
     ["Pick it back up", "Open any chat here and press Continue in Claude. Claude starts where you left off, with everything that came out of it."]]) {
     const c = el("div", "cs-how-card"); c.append(el("b", null, h), el("p", "quiet", p)); how.appendChild(c);
   }
-  howB.addEventListener("click", () => { how.hidden = !how.hidden; howB.textContent = how.hidden ? "How it works" : "Hide how it works"; });
+  howB.addEventListener("click", () => { how.hidden = !how.hidden; howB.textContent = how.hidden ? "How It Works" : "Hide How It Works"; });
   const said = el("div", "cs-said"); said.setAttribute("aria-live", "polite");
   const search = el("input", "work-search cs-search"); search.type = "search"; search.placeholder = "Search your chats";
   search.setAttribute("aria-label", "Search your chats");
@@ -442,7 +442,7 @@ function drawSubjects() {
     const b = btn("cs-subject" + (s.id === cs.sel ? " on" : ""), null);
     b.setAttribute("aria-pressed", s.id === cs.sel ? "true" : "false");
     b.dataset.place = s.place || "normal";
-    const name = s.id === NOT_SORTED ? el("span", "cs-subject-name", "Not sorted yet") : txt("span", "cs-subject-name", s.name, true);
+    const name = s.id === NOT_SORTED ? el("span", "cs-subject-name", "Not Sorted Yet") : txt("span", "cs-subject-name", s.name, true);
     b.append(el("span", "cs-dot"), name, txt("span", "cs-count", String(s.chats ?? 0), true));
     b.addEventListener("click", () => { cs.sel = s.id; cs.root.dataset.view = "list"; drawMine(); });
     row.appendChild(b);
@@ -452,7 +452,7 @@ function drawSubjects() {
   const s = cs.subs.find((x) => x.id === cs.sel);
   const head = el("div", "cs-list-head");
   if (s) {
-    head.appendChild(s.id === NOT_SORTED ? el("h3", "cs-h", "Not sorted yet") : txt("h3", "cs-h", s.name, true));
+    head.appendChild(s.id === NOT_SORTED ? el("h3", "cs-h", "Not Sorted Yet") : txt("h3", "cs-h", s.name, true));
     if (s.id === NOT_SORTED) head.appendChild(el("p", "quiet", "The Tool has not put these in a subject yet."));
     else if (s.line) head.appendChild(txt("p", "quiet", s.line, true));
   } else head.appendChild(el("p", "quiet", "You have not saved any chats yet. In Claude, say “save this to {business}”."));
@@ -467,7 +467,7 @@ function drawSubjects() {
 
 function drawFound() {
   const head = el("div", "cs-list-head");
-  head.appendChild(el("h3", "cs-h", "Chats that mention your words"));
+  head.appendChild(el("h3", "cs-h", "Chats That Mention Your Words"));
   cs.list.appendChild(head);
   cs.subjects.appendChild(el("p", "quiet", "Searching every subject."));
   const ul = el("ul", "cs-chats");
@@ -478,8 +478,8 @@ function drawFound() {
 
 function keptChip(c) {
   if (c.kind === "tool") return el("span", "cs-chip tool", "Asked in the Tool");
-  if (c.kind === "document") return el("span", "cs-chip whole", "A document");
-  return c.exact ? el("span", "cs-chip whole", "Whole chat") : el("span", "cs-chip summary", "Only a summary");
+  if (c.kind === "document") return el("span", "cs-chip whole", "A Document");
+  return c.exact ? el("span", "cs-chip whole", "Whole Chat") : el("span", "cs-chip summary", "Only a Summary");
 }
 function metaOf(c) {
   const m = el("span", "cs-meta");
@@ -563,7 +563,7 @@ async function openItem(c) {
   const meta = el("p", "quiet cs-meta");
   meta.append(r.mine ? el("span", null, "Saved by you") : txt("span", null, r.brought_by || "", true), document.createTextNode(" · "),
     txt("span", null, day(r.started_at || r.brought_in_at), true), document.createTextNode(" · "),
-    r.kind === "document" ? el("span", null, "A document") : r.exact ? el("span", null, `${(r.messages || []).length} messages, whole`) : el("span", null, "Only a summary"),
+    r.kind === "document" ? el("span", null, "A Document") : r.exact ? el("span", null, `${(r.messages || []).length} messages, whole`) : el("span", null, "Only a Summary"),
     document.createTextNode(" · "), el("span", null, r.mine ? (r.shared_at ? "Shared with the company" : "Private to you") : "Shared with you"));
   v.appendChild(meta);
   if (r.title_written && r.original_title) {
@@ -587,12 +587,12 @@ async function openItem(c) {
   }
   // WHAT CAME OUT OF IT: the documents saved with it, then what the chat itself shows was made. Nothing invented.
   const outs = el("section", "cs-outs");
-  outs.appendChild(el("div", "eyebrow", "What came out of it"));
+  outs.appendChild(el("div", "eyebrow", "What Came Out of It"));
   const docs = Array.isArray(r.came_out_of_it) ? r.came_out_of_it : [];
   const named = Array.isArray(r.named_outs) ? r.named_outs : [];
   for (const d of docs) {
     const card = btn("cs-out", null);
-    card.append(el("span", "cs-kind", "Doc"), outWords(d.title, "Saved with the chat"));
+    card.append(el("span", "cs-kind", "Doc"), outWords(d.title, "Saved with the Chat"));
     card.addEventListener("click", () => openItem({ t: "chat_import", id: d.id }));
     outs.appendChild(card);
   }
@@ -615,7 +615,7 @@ function outWords(name, line, lineIsTools) {
   return w;
 }
 function back(v) {
-  const b = btn("go ghost cs-back", "Back to the list");
+  const b = btn("go ghost cs-back", "Back to the List");
   b.addEventListener("click", () => { cs.root.dataset.view = "list"; cs.open = null; cs.root.scrollIntoView({ block: "start" }); });
   v.appendChild(b);
 }
@@ -623,12 +623,12 @@ function back(v) {
 function actions(v, r, c) {
   const row = el("div", "cs-actions");
   const cont = btn("go", "Continue in Claude");
-  const whole = btn("go ghost", "Read the whole chat");
-  const move = btn("go ghost", "Move to");
+  const whole = btn("go ghost", "Read the Whole Chat");
+  const move = btn("go ghost", "Move To");
   row.append(cont, whole, move);
   let share = null, rm = null;
   if (r.mine) {
-    share = btn("go ghost", r.shared_at ? "Stop sharing" : "Share with the company");
+    share = btn("go ghost", r.shared_at ? "Stop Sharing" : "Share with the Company");
     rm = btn("go ghost cs-remove", "Remove");
     row.append(share, rm);
   }
@@ -648,8 +648,8 @@ function actions(v, r, c) {
     box.querySelector("b").textContent = ok ? "Copied. Paste this into a new Claude chat:" : "Select and copy this, then paste it into a new Claude chat:";
   });
   whole.addEventListener("click", () => {
-    if (slot.querySelector(".cs-whole")) { slot.innerHTML = ""; whole.textContent = "Read the whole chat"; return; }
-    slot.innerHTML = ""; whole.textContent = "Hide the conversation";
+    if (slot.querySelector(".cs-whole")) { slot.innerHTML = ""; whole.textContent = "Read the Whole Chat"; return; }
+    slot.innerHTML = ""; whole.textContent = "Hide the Conversation";
     slot.appendChild(wholeChat(r));
   });
   move.addEventListener("click", () => {
@@ -672,7 +672,7 @@ function wholeChat(r) {
   const box = el("div", "cs-whole");
   const msgs = Array.isArray(r.messages) ? r.messages : [];
   const head = el("div", "cs-whole-head");
-  head.appendChild(el("div", "eyebrow", "The whole conversation"));
+  head.appendChild(el("div", "eyebrow", "The Whole Conversation"));
   const find = el("input", "work-search"); find.type = "search"; find.placeholder = "Search inside this chat"; find.setAttribute("aria-label", "Search inside this chat");
   const count = el("p", "quiet");
   head.append(find, count);
@@ -735,7 +735,7 @@ async function shareFlow(r, sh, msg) {
     box.appendChild(ul);
   }
   const row2 = el("div", "cs-actions");
-  const yes = btn("go", "Share anyway"); const no = btn("go ghost", "Keep it private");
+  const yes = btn("go", "Share Anyway"); const no = btn("go ghost", "Keep It Private");
   yes.addEventListener("click", async () => {
     yes.disabled = true; no.disabled = true;
     const t = await rpc("chat_share", { p_chat: r.id, p_share: true, p_confirm: true });
@@ -757,19 +757,19 @@ async function openToolChat(c, v) {
   v.appendChild(meta);
   if (String(data.chat.about || "").startsWith("mail:")) v.appendChild(el("p", "quiet", "Started from an email."));
   const outs = el("section", "cs-outs");
-  outs.appendChild(el("div", "eyebrow", "What came out of it"));
+  outs.appendChild(el("div", "eyebrow", "What Came Out of It"));
   const turns = Array.isArray(data.turns) ? data.turns : [];
   outs.appendChild(el("p", "quiet", turns.length ? "The answers, with their sources, are on the Work tab." : "Nothing saved from this chat yet."));
   v.appendChild(outs);
   const row = el("div", "cs-actions");
-  const go = btn("go", "Open it on the Work tab");
+  const go = btn("go", "Open It on the Work Tab");
   go.addEventListener("click", () => { const t = document.querySelector('#tabs .tab[data-tab="work"]'); if (t) t.click(); });
-  const move = btn("go ghost", "Move to");
+  const move = btn("go ghost", "Move To");
   row.append(go, move); v.appendChild(row);
   const slot = el("div", "cs-slot"); v.appendChild(slot);
   move.addEventListener("click", () => { if (slot.querySelector(".cs-move")) { slot.innerHTML = ""; return; } slot.innerHTML = ""; slot.appendChild(moveTo("work_chat", c.id, c.subject_id)); });
   const qs = el("div", "cs-whole");
-  qs.appendChild(el("div", "eyebrow", "What you asked"));
+  qs.appendChild(el("div", "eyebrow", "What You Asked"));
   for (const t of turns) { const d = el("div", "cs-msg me"); d.appendChild(txt("div", "cs-msg-text", t.question, true)); qs.appendChild(d); }
   v.appendChild(qs);
 }
