@@ -6,7 +6,7 @@
 // Shown on the Systems tab and the Calendar tab. Owner and everyone else see the same thing:
 // their own sign-in, never anyone else's. Every date goes through fill/dates.js.
 
-import { fmtDate } from './dates.js?v=2026-10-22-dates';
+import { fmtDate, zone } from './dates.js?v=2026-10-22-dates';
 
 const WORDS = {
   'calendar.readonly': 'your calendar',
@@ -41,6 +41,9 @@ export async function drawGoogleSignin(box, { sb, el, connect }) {
     return;
   }
   card.innerHTML = '';
+  // THE NEXT 7 DAYS (seat calendar-in, 2026-11-14): on the Calendar tab only, under this card. Its own reading, so it
+  // shows whatever the sign-in card says. body.dataset.tab is read here, after the wait, when the tab has settled.
+  if (s?.ok && document.body.dataset.tab === 'calendar') drawWeek(box, { sb, el });
   if (!s?.ok) {
     const p = el('p', '');
     p.textContent = 'Nobody is signed in on this browser, so there is no Google sign-in to show.';
@@ -107,4 +110,79 @@ export async function drawGoogleSignin(box, { sb, el, connect }) {
     actions.appendChild(b);
     card.appendChild(actions);
   }
+}
+
+// THE NEXT 7 DAYS (seat calendar-in, 2026-11-14; brief: one plain list proves the calendar read on her screen, the
+// Calendar tab picture comes later). Read from the brain's my_week(): her own kept meetings from today, each through
+// the door, with invitations in her mail that are not on her calendar yet, and what is known of each meeting's notes.
+// A plain list: day, time, title, who, where, notes. Nothing here can change a meeting. Titles, people and places are
+// hers and are never translated (translate="no"); the Tool's own words stand alone so words.js can find them.
+const NOTES = {
+  notes: 'Notes were kept.',
+  unsure: 'Notes that may be of this call were kept.',
+  reading: 'Notes are being read now.',
+  none: 'No notes were taken.',
+};
+const dayOf = (r) => (r.all_day ? String(r.start).slice(0, 10) : new Date(r.start).toLocaleDateString('en-CA', { timeZone: zone() }));
+
+async function drawWeek(box, { sb, el }) {
+  const card = el('div', 'notice');
+  const h = el('h3', '');
+  h.textContent = 'The Next 7 Days';
+  card.appendChild(h);
+  const wait = el('p', 'working');
+  wait.textContent = 'Reading your calendar.';
+  card.appendChild(wait);
+  box.appendChild(card);
+  const say = (text, cls) => { const p = el('p', cls || 'quiet'); p.textContent = text; card.appendChild(p); return p; };
+  let w;
+  try {
+    const { data, error } = await sb.rpc('my_week', { p_tz: zone() });
+    if (error) throw error;
+    w = data;
+  } catch (e) {
+    wait.remove();
+    say('Your next 7 days could not be read just now: ' + String(e?.message ?? e), 'notice flagged');
+    return;
+  }
+  wait.remove();
+  if (!w?.ok) { say(w?.note || 'Your next 7 days are not shown.'); return; }
+  if (w.refused) { say(w.reason || 'Your next 7 days could not be read.', 'notice flagged'); return; }
+  const rows = Array.isArray(w.rows) ? w.rows : [];
+  if (!rows.length) {
+    say(w.calendar === false ? (w.reason || 'Your calendar is not read yet.') : 'Nothing on your calendar in the next 7 days.');
+    return;
+  }
+  if (w.calendar === false) say('Your calendar is not read yet. These are invitations in your mail.');
+  let day = null;
+  for (const r of rows) {
+    const d = dayOf(r);
+    if (d !== day) {
+      day = d;
+      const dh = el('p', '');
+      const b = el('b', '');
+      b.textContent = fmtDate(d, 'long');
+      dh.appendChild(b);
+      card.appendChild(dh);
+    }
+    const p = el('p', '');
+    p.style.overflowWrap = 'anywhere';
+    const part = (text, keep) => { const sp = el('span', ''); if (keep) sp.setAttribute('translate', 'no'); sp.textContent = text; p.appendChild(sp); return sp; };
+    if (r.all_day) part('All day'); else part(fmtDate(r.start, 'time') + (r.end ? ' to ' + fmtDate(r.end, 'timeZone') : ''), true);
+    part(' · ', true);
+    part(r.title || '(no title)', true).style.fontWeight = '600';
+    card.appendChild(p);
+    const who = (Array.isArray(r.attendees) ? r.attendees : []).filter((a) => typeof a === 'string' && a);
+    const lines = [];
+    if (who.length) lines.push([who.slice(0, 6).join(', ') + (who.length > 6 ? ', and ' + (who.length - 6) + ' more' : ''), true]);
+    if (r.where && !String(r.where).startsWith('http')) lines.push([String(r.where), true]);
+    if (r.from_invitation) lines.push(['An invitation in your mail, not on your calendar yet.', false]);
+    if (NOTES[r.notes]) lines.push([NOTES[r.notes], false]);
+    for (const [text, keep] of lines) {
+      const q = say(text);
+      q.style.overflowWrap = 'anywhere';
+      if (keep) q.setAttribute('translate', 'no');
+    }
+  }
+  say('From your own calendar, which only you see. Read only: nothing here changes a meeting.');
 }
