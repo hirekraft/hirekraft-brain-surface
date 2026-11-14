@@ -55,7 +55,7 @@
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
 import { startPoint } from './point.js?v=2026-11-14-vera-one-door';
-import { draftCard } from './act.js?v=2026-11-14-vera-one-door';
+import { draftCard } from './act.js?v=2026-11-14-day-one-fixes';
 
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
