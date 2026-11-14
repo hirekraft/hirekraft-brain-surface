@@ -2695,6 +2695,11 @@ body.br-panel-open { overflow: hidden; }
   .vera-acts .go { flex: 1 1 100%; }
   /* seat vera-guide: in Getting ready's column on a phone she sits under the step, not over it. */
   .panel.in-vera { min-height: 0; max-height: none; }   /* seat setup-vera 2026-11-12: was 460px to 82vh, a scroll box under the step */
+  /* seat vera-one-door 2026-11-14: her offer on the open email and her draft's buttons are a full tap; More too. */
+  body .ask-vera-pin { min-height: 44px; padding: 0 16px; margin: 0; }
+  body .ans-more { min-height: 44px; min-width: 44px; }
+  body .vera-look-x { width: 44px; height: 44px; }
+  body .vera-draft .vera-acts .go { flex: 1 1 auto; justify-content: center; text-align: center; }
   .vera-sug { padding-left: calc(var(--u) * 3); padding-right: calc(var(--u) * 3); }
   /* The conversation and its "put away" tab sit over the bar, never under it. */
   .panel-tab { top: auto; bottom: calc(64px + 96px + env(safe-area-inset-bottom)); transform: none; }
@@ -3486,3 +3491,33 @@ body.hd-out .hd-date { display: none; }
 .td-vline { color: var(--ink-2); }
 .wk-today { padding: calc(var(--u) * 2) 0 0; margin-top: calc(var(--u) * 2); border-top: 1px solid var(--line); min-width: 0; }
 .wk-today .td-line { font-size: var(--t-small); }
+/* ── VERA IS THE ONE DOOR (seat vera-one-door, 2026-11-14; decision 1175 and its picture RxLG1Ec8Zs6LCmhiEMk8dj, with 1130; fill/vera.js, fill/point.js, fill/act.js). The box at the top of every page is gone: the conversation panel is her column, on every tab (SUPERSEDES the one box of seat one-box, 2026-10-08, as the place to ask; its markup stays in index.html because box.js wires the panel's box in the same pass). In her column an answer is short with More, and Teach and Save as test are not drawn (they stay in Work and at full screen). Ask Vera is one offer for the whole Tool (point.js): over a marked box, pinned on the open email, and over selected words. Her draft is a card with Send, Change, Not Now. Tokens only. Phone rules in A PHONE IS A FIRST-CLASS SIZE. ── */
+#onebox { display: none; }
+.panel:not(.in-work):not(.full) .ans-rest { display: none; }
+.panel:not(.in-work):not(.full) .answer-slot.more-open .ans-rest { display: block; }
+.panel.in-work .ans-more, .panel.full .ans-more { display: none; }
+.ans-more { display: inline-flex; align-items: center; min-height: 32px; margin: calc(var(--u) * 1) 0; padding: 0; border: 0; background: none; color: var(--act); font: inherit; font-size: var(--t-small); font-weight: var(--w-mid); text-decoration: underline; cursor: pointer; }
+.panel:not(.in-work):not(.full) .ans-actions { display: none; }
+.ask-vera { position: absolute; z-index: 44; display: inline-flex; align-items: center; min-height: 28px; padding: 0 calc(var(--u) * 3); border: 0; border-radius: 999px; background: var(--act); color: var(--on-act); font: inherit; font-size: var(--t-micro); font-weight: var(--w-strong); white-space: nowrap; box-shadow: 0 2px 8px var(--shadow-c); cursor: pointer; }
+.ask-vera[hidden] { display: none; }
+.ask-vera:hover, .ask-vera:focus-visible { filter: brightness(1.08); }
+.ask-vera-pin { position: static; vertical-align: middle; margin-left: calc(var(--u) * 3); box-shadow: none; font-family: var(--font, inherit); letter-spacing: 0; text-transform: none; }
+.vera-look { display: flex; flex-wrap: wrap; align-items: center; gap: 0 calc(var(--u) * 1); position: sticky; top: calc(var(--u) * -5); z-index: 2; margin: calc(var(--u) * -5) calc(var(--u) * -4.5) var(--gap); padding: calc(var(--u) * 3) calc(var(--u) * 4.5); background: var(--paper); border-bottom: 1px solid var(--line-2); }
+.panel.in-vera .vera-look, .panel.in-work .vera-look { position: static; margin: 0 0 var(--gap); padding: 0; border-bottom: 0; }
+.vera-look-what { color: var(--ink); font-weight: var(--w-mid); min-width: 0; overflow-wrap: anywhere; }
+.vera-look-x { flex: none; width: 28px; height: 28px; border: 0; border-radius: 50%; background: none; color: var(--ink-3); font: inherit; font-size: var(--t-body); line-height: 1; cursor: pointer; }
+.vera-look-x:hover, .vera-look-x:focus-visible { background: var(--act-soft); color: var(--ink); }
+.vera-flow .vera-turn { margin: 0; }
+.vera-draft { display: grid; gap: calc(var(--u) * 2); margin: calc(var(--u) * 2) 0; padding: calc(var(--u) * 3.5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper); min-width: 0; overflow-wrap: anywhere; }
+.vera-draft p { margin: 0; }
+.vera-draft-f { font-size: var(--t-small); color: var(--ink-3); }
+.vera-draft-f b { color: var(--ink); font-weight: var(--w-mid); }
+.vera-draft-text { white-space: pre-wrap; }
+.vera-draft-edit { width: 100%; min-width: 0; box-sizing: border-box; padding: calc(var(--u) * 2.5); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); color: var(--ink); font: inherit; resize: vertical; }
+.vera-draft-edit[hidden], .vera-draft-text[hidden] { display: none; }
+.vera-draft-lock { padding: calc(var(--u) * 2.5) calc(var(--u) * 3); border-radius: var(--radius); background: var(--act-soft); color: var(--ink-2); font-size: var(--t-small); }
+.vera-draft-lock:empty { display: none; }
+.vera-draft-out { font-size: var(--t-small); color: var(--ink-2); }
+.vera-draft-out:empty { display: none; }
+.vera-draft-ok { color: var(--ok-ink); font-weight: var(--w-mid); }
+.vera-draft-held { color: var(--ink); font-weight: var(--w-mid); }
