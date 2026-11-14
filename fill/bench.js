@@ -6,7 +6,7 @@
 // said here, never shown as an empty list. No colour, size or spacing here; those are in skin.css under BENCH.
 
 let here = null;   // one question per page: does this business have Bench, and is someone signed in
-const STATES = [['submitted', 'Submitted'], ['interviewing', 'Interviewing'], ['placed', 'Placed'], ['not_a_fit', 'Not a fit']];
+const STATES = [['submitted', 'Submitted'], ['interviewing', 'Interviewing'], ['placed', 'Placed'], ['not_a_fit', 'Not a Fit']];
 
 // ON TOP, NOT BEHIND A PRESS (seat mail-clean, 2026-11-02; Alex 13:11 PT: "where's all the job requirements coming in and then the
 // match with what we have"). On an open requirement the card opens with Who we have already asked: the count, then the first three
@@ -20,7 +20,7 @@ export function drawBench(card, row, it, h) {
     if (!yes) return;
     const out = h.mk('div', 'bench-out bench-top-out');
     const wrap = h.mk('section', 'bench-press bench-first');
-    wrap.setAttribute('aria-label', 'Who we have');
+    wrap.setAttribute('aria-label', 'Who We Have');
     wrap.appendChild(out);
     card.appendChild(wrap);
     first(it, out, h);
@@ -47,7 +47,7 @@ function first(it, out, h) {
 }
 function drawTop(it, r, out, h) {
   out.innerHTML = ''; out.className = 'bench-out bench-top-out';
-  const hd = h.mk('h3', 'mailx-matter-h', 'Who we have');
+  const hd = h.mk('h3', 'mailx-matter-h', 'Who We Have');
   out.append(hd, h.mk('p', 'bench-count', String(r.line || '')));
   const rows = Array.isArray(r.rows) ? r.rows.slice(0, 3) : [];
   const ul = h.mk('ul', 'bench-list bench-three');
@@ -69,7 +69,7 @@ function drawTop(it, r, out, h) {
   }
   if (ul.childNodes.length) out.appendChild(ul);
   if ((r.count || 0) > rows.length) {
-    const more = h.mk('button', 'go ghost', 'Show all ' + r.count); more.type = 'button';
+    const more = h.mk('button', 'go ghost', 'Show All ' + r.count); more.type = 'button';
     more.addEventListener('click', () => load(it, more, out, h, (r.count || 0) > (r.shown || 0)));
     out.appendChild(more);
   }
@@ -92,7 +92,7 @@ async function load(it, btn, out, h, all) {
 
 function draw(it, r, btn, out, h) {
   out.innerHTML = ''; out.className = 'bench-out';
-  out.appendChild(h.mk('h3', 'mailx-matter-h', 'Who we have'));
+  out.appendChild(h.mk('h3', 'mailx-matter-h', 'Who We Have'));
   out.appendChild(h.mk('p', 'bench-count', String(r.line || '')));
   const lines = Array.isArray(r.lines) ? r.lines : [];
   if (lines.length) {
@@ -104,7 +104,7 @@ function draw(it, r, btn, out, h) {
   for (const p of (Array.isArray(r.rows) ? r.rows : [])) ul.appendChild(person(it, p, out, h));
   if (ul.childNodes.length) out.appendChild(ul);
   if ((r.count || 0) > (r.shown || 0)) {
-    const more = h.mk('button', 'go ghost', 'Show all ' + r.count); more.type = 'button';
+    const more = h.mk('button', 'go ghost', 'Show All ' + r.count); more.type = 'button';
     more.addEventListener('click', () => load(it, more, out, h, true));
     out.appendChild(more);
   }
@@ -161,6 +161,6 @@ async function setState(it, p, s, reason, btn, st, said, h) {
   catch (e) { r = { ok: false, reason: String((e && e.message) || e) }; }
   btn.disabled = false;
   if (!r || r.ok !== true) { said.className = 'bench-said mailx-att-out state stalled'; said.textContent = 'Not kept. ' + h.plainWords(String((r && r.reason) || '')); return; }
-  p.state = s; st.textContent = { submitted: 'Submitted', interviewing: 'Interviewing', placed: 'Placed', not_a_fit: 'Not a fit' }[s] || s;
+  p.state = s; st.textContent = { submitted: 'Submitted', interviewing: 'Interviewing', placed: 'Placed', not_a_fit: 'Not a Fit' }[s] || s;
   said.className = 'bench-said find-lesson'; said.textContent = String(r.line || 'Kept.');
 }
