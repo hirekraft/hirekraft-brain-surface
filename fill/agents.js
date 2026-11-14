@@ -50,7 +50,7 @@ const EX = {
     ex: 'Ask: who outside the company can open our contracts?' },
 };
 const ORDER = ['consultant', 'cfo', 'marketing', 'admin', 'legal', 'hr', 'security'];
-const TAB_WORDS = { money: 'Accounting', marketing: 'Marketing and sales', work: 'Work', security: 'Security', contacts: 'Contacts', brain: 'Brain', agents: 'Agents' };
+const TAB_WORDS = { money: 'Accounting', marketing: 'Marketing and Sales', work: 'Work', security: 'Security', contacts: 'Contacts', brain: 'Brain', agents: 'Agents' };
 const EXAMPLE = "At month-end, check each consultant's approved timesheet against what the client was invoiced and what they paid. Draft invoices for anything missing, and tell me which contractors I can pay.";
 const STANDING = ['every ', 'each ', 'weekly', 'monthly', 'daily', 'month-end', 'month end', 'whenever', 'each morning', 'on the '];
 
@@ -99,9 +99,9 @@ function draw() {
   page.appendChild(head);
   page.appendChild(statusLine());
   const how = node('ol', 'ag-how');
-  [['Say what you need', 'In your own words. Long and specific is fine.'],
-   ['See what you would have got', "It runs on last month's real data first, so you judge the result, not settings."],
-   ['Adjust by talking', '"Not quite, also show..." It changes and runs again.'],
+  [['Say What You Need', 'In your own words. Long and specific is fine.'],
+   ['See What You Would Have Got', "It runs on last month's real data first, so you judge the result, not settings."],
+   ['Adjust by Talking', '"Not quite, also show..." It changes and runs again.'],
    ['Start', 'It runs when you said. Its work waits for your yes.']].forEach(([b, s], i) => {
     const li = node('li', 'ag-how-step'); li.append(node('span', 'ag-num', String(i + 1)), node('b', null, b), node('span', null, s)); how.appendChild(li);
   });
@@ -125,10 +125,10 @@ function statusLine() {
 }
 
 function teamPane() {
-  const nav = node('nav', 'ag-team'); nav.setAttribute('aria-label', 'Your team');
-  const mk = btn('ag-make' + (sel === 'make' ? ' on' : ''), '+ Make an agent', () => { sel = 'make'; if (!making || making.run) making = null; draw(); });
+  const nav = node('nav', 'ag-team'); nav.setAttribute('aria-label', 'Your Team');
+  const mk = btn('ag-make' + (sel === 'make' ? ' on' : ''), '+ Make an Agent', () => { sel = 'make'; if (!making || making.run) making = null; draw(); });
   nav.appendChild(mk);
-  nav.appendChild(node('div', 'ag-team-h', 'Your team'));
+  nav.appendChild(node('div', 'ag-team-h', 'Your Team'));
   for (const k of ORDER) {
     const e = EX[k];
     const b = btn('ag-ex' + (sel === k ? ' on' : ''), null, () => { sel = k; draw(); });
@@ -137,7 +137,7 @@ function teamPane() {
     const jobs = mineFor(k).filter((g) => g.state !== 'draft' || g.mine);
     const running = jobs.filter((g) => g.state === 'running').length;
     const w = workFor(k).length;
-    const cnt = w ? (w === 1 ? '1 waiting' : w + ' waiting') : k === 'consultant' && !running ? 'Ask any time' : running ? (running === 1 ? '1 job' : running + ' jobs') : 'None yet';
+    const cnt = w ? (w === 1 ? '1 waiting' : w + ' waiting') : k === 'consultant' && !running ? 'Ask Any Time' : running ? (running === 1 ? '1 job' : running + ' jobs') : 'None Yet';
     b.append(node('span', 'ag-av', e.av), txt, node('span', 'ag-cnt', cnt));
     nav.appendChild(b);
   }
@@ -182,7 +182,7 @@ async function drawExpert(main, k) {
   main.appendChild(node('p', 'ag-meta', e.d));
   if (legalKind(k) && !agreed()) { drawAgreement(main); return; }
   const sees = node('div', 'ag-blk');
-  sees.appendChild(node('h4', 'ag-lab', 'What it sees in your business today'));
+  sees.appendChild(node('h4', 'ag-lab', 'What It Sees in Your Business Today'));
   const lines = node('div', 'ag-watch');
   lines.appendChild(node('p', 'quiet working', 'Reading.'));
   sees.appendChild(lines);
@@ -195,7 +195,7 @@ async function drawExpert(main, k) {
   }
   // what it does for you
   const jobs = node('div', 'ag-blk');
-  jobs.appendChild(node('h4', 'ag-lab', 'What it does for you'));
+  jobs.appendChild(node('h4', 'ag-lab', 'What It Does for You'));
   const mine = mineFor(k);
   if (!mine.length) jobs.appendChild(node('p', 'ag-meta', 'Nothing yet. Tell it what you need below, or press Make an agent.'));
   for (const g of mine) jobs.appendChild(jobRow(g));
@@ -204,13 +204,13 @@ async function drawExpert(main, k) {
   const w = workFor(k);
   if (w.length) {
     const wb = node('div', 'ag-blk');
-    wb.appendChild(node('h4', 'ag-lab', 'Waiting for your yes'));
+    wb.appendChild(node('h4', 'ag-lab', 'Waiting for Your Yes'));
     for (const it of w) wb.appendChild(workCard(it));
     main.appendChild(wb);
   }
   // give it something to do
   const give = node('div', 'ag-blk');
-  give.appendChild(node('h4', 'ag-lab', 'Give it something to do'));
+  give.appendChild(node('h4', 'ag-lab', 'Give It Something to Do'));
   const box = node('div', 'ag-box');
   const ta = node('textarea'); ta.rows = 2; ta.placeholder = e.ex; ta.setAttribute('aria-label', 'Tell your ' + e.t + ' what you need');
   const send = btn('go', 'Send', () => {
@@ -273,15 +273,15 @@ function jobRow(g) {
   const t = node('div', 'ag-job-t');
   t.append(node('b', null, g.name || 'An agent being made'),
     node('span', 'ag-src', (g.when || '') + (g.tab && TAB_WORDS[g.tab] && g.tab !== 'agents' ? ' · shows on ' + TAB_WORDS[g.tab] : '') + (g.last_run_at ? ' · last ran ' + when(g.last_run_at) : '') + (g.mine ? '' : ' · made by ' + (g.maker_name || 'someone on your team'))));
-  const pill = node('span', 'ag-pill ' + (g.state === 'running' ? 'ag-run' : 'ag-off'), g.state === 'running' ? 'Running' : g.state === 'stopped' ? 'Stopped' : 'Not started');
+  const pill = node('span', 'ag-pill ' + (g.state === 'running' ? 'ag-run' : 'ag-off'), g.state === 'running' ? 'Running' : g.state === 'stopped' ? 'Stopped' : 'Not Started');
   row.append(t, pill);
   const acts = node('div', 'ag-acts');
   if (g.mine) {
     acts.appendChild(btn('go ghost', 'Adjust', () => { making = { expert: g.expert, id: g.id, ask: g.ask, adjust: (g.adjust ?? []).slice(), run: null, agent: g }; sel = 'make'; draw(); }));
-    if (g.state === 'running') acts.appendChild(btn('go ghost', 'Run now', (ev) => runNow(g, ev.currentTarget, row)));
+    if (g.state === 'running') acts.appendChild(btn('go ghost', 'Run Now', (ev) => runNow(g, ev.currentTarget, row)));
   }
   if (g.state === 'running') acts.appendChild(btn('go ghost', 'Stop', async (ev) => { ev.currentTarget.disabled = true; const r = await rpc('agent_stop', { p_id: g.id }); if (!r.ok) { row.appendChild(node('p', 'notice flagged', 'Not stopped: ' + (r.reason ?? 'no answer'))); return; } team = await rpc('agent_list'); draw(); }));
-  else if (g.mine && g.state === 'stopped') acts.appendChild(btn('go ghost', 'Start again', async (ev) => { ev.currentTarget.disabled = true; const r = await rpc('agent_start', { p_id: g.id }); if (!r.ok) { row.appendChild(node('p', 'notice flagged', 'Not started: ' + (r.reason ?? 'no answer'))); return; } team = await rpc('agent_list'); draw(); }));
+  else if (g.mine && g.state === 'stopped') acts.appendChild(btn('go ghost', 'Start Again', async (ev) => { ev.currentTarget.disabled = true; const r = await rpc('agent_start', { p_id: g.id }); if (!r.ok) { row.appendChild(node('p', 'notice flagged', 'Not started: ' + (r.reason ?? 'no answer'))); return; } team = await rpc('agent_list'); draw(); }));
   row.appendChild(acts);
   if (Number(g.dismissed_in_row) >= 3) row.appendChild(node('p', 'notice', 'Its last three results were dismissed. If it is not helping, stop it with one press.'));
   if (g.cap_usd_month != null && Number(g.spent_this_month) > 0) row.appendChild(node('p', 'ag-src', 'Spent this month ' + cost(g.spent_this_month) + ' of a limit of ' + cost(g.cap_usd_month) + '.'));
@@ -327,10 +327,10 @@ function workCard(it) {
 function drawMake(main) {
   if (!making) making = { expert: 'cfo', id: null, ask: '', adjust: [], run: null };
   const m = making;
-  main.appendChild(node('span', 'ag-badge', 'Making an agent'));
+  main.appendChild(node('span', 'ag-badge', 'Making an Agent'));
   main.appendChild(node('h3', 'ag-h2', m.run?.agent?.name || m.agent?.name || 'What do you need?'));
   const who = node('div', 'ag-who');
-  who.appendChild(node('span', 'ag-lab', 'Belongs to'));
+  who.appendChild(node('span', 'ag-lab', 'Belongs To'));
   for (const k of ORDER) {
     const c = btn('ag-chip' + (m.expert === k ? ' on' : ''), EX[k].t, () => { if (m.id) return; m.expert = k; draw(); });
     c.setAttribute('aria-pressed', String(m.expert === k));
@@ -342,13 +342,13 @@ function drawMake(main) {
   const chat = node('div', 'ag-chat');
   if (!m.run && !m.busy) {
     const box = node('div', 'ag-box ag-box-big');
-    const ta = node('textarea'); ta.rows = 4; ta.value = m.ask; ta.placeholder = 'For example: ' + EXAMPLE; ta.setAttribute('aria-label', 'Say what you need');
+    const ta = node('textarea'); ta.rows = 4; ta.value = m.ask; ta.placeholder = 'For example: ' + EXAMPLE; ta.setAttribute('aria-label', 'Say What You Need');
     ta.addEventListener('input', () => { m.ask = ta.value; });
     box.appendChild(ta);
     main.appendChild(box);
     const acts = node('div', 'ag-acts');
-    acts.appendChild(btn('go ag-go', 'See what you would have got', () => { if (!m.ask.trim()) { ta.focus(); return; } startTry(); }));
-    if (!m.ask) acts.appendChild(btn('go ghost', 'Use the month-end example', () => { m.ask = EXAMPLE; m.expert = 'cfo'; draw(); }));
+    acts.appendChild(btn('go ag-go', 'See What You Would Have Got', () => { if (!m.ask.trim()) { ta.focus(); return; } startTry(); }));
+    if (!m.ask) acts.appendChild(btn('go ghost', 'Use the Month-End Example', () => { m.ask = EXAMPLE; m.expert = 'cfo'; draw(); }));
     main.appendChild(acts);
     main.appendChild(node('p', 'ag-src', "It runs once on " + lastMonthWords() + "'s real records, as you: it sees only what you can see. Nothing is sent, invoiced or paid."));
     if (m.error) main.appendChild(node('p', 'notice flagged', m.error));
@@ -394,7 +394,7 @@ function drawMake(main) {
     team = await rpc('agent_list');
     sel = m.expert; making = null; draw();
   });
-  acts.append(start, btn('go ghost', 'Not now', () => { making = null; sel = m.expert; draw(); }));
+  acts.append(start, btn('go ghost', 'Not Now', () => { making = null; sel = m.expert; draw(); }));
   main.append(acts, said);
 }
 
@@ -404,7 +404,7 @@ function card(run) {
   const c = node('dl', 'ag-card');
   const row = (k, v) => { c.append(node('dt', null, k), node('dd', null, v)); };
   row('Name', g.name || 'Your agent');
-  row('Belongs to', 'Your ' + (EX[g.expert]?.t ?? '') + (g.tab && TAB_WORDS[g.tab] && g.tab !== 'agents' ? ' · shows on ' + TAB_WORDS[g.tab] : ''));
+  row('Belongs To', 'Your ' + (EX[g.expert]?.t ?? '') + (g.tab && TAB_WORDS[g.tab] && g.tab !== 'agents' ? ' · shows on ' + TAB_WORDS[g.tab] : ''));
   row('When', g.schedule?.kind === 'on_demand' ? 'Only when you ask. To have it run by itself, say when below, for example: every Friday.' : (g.when || ''));
   row('Does', 'Gathers, compares, calculates and drafts');
   row('Never', 'Sends, invoices or pays without your yes');
