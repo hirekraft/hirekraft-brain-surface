@@ -20,6 +20,7 @@
 
 import { filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-13-setup-polish';   // the files press and the reading's progress (seat brain-status-2; understandBlock retired here by seat audit-fix-screen)
 const READY_FOR_STEP = './ready.js?v=2026-11-14-ready-alive';   // the same module instance lens.js loads (step 4 opens there)
+import { drawToday } from './today.js?v=2026-11-14-keeping-up';   // Today: what came in and whether the Tool is keeping up (seat keeping-up, decision 1176)
 
 let C = null;   // { sb, el, $, askBody, isOwner, viewDeps, readSources, drawGroup, aiBlocks, door, goto, openAdd, closeAdd, connectSystem, me }
 let reading = null;   // the latest set of readings, so a page opens on what the room shows
@@ -125,6 +126,9 @@ export async function drawRoom(fresh) {
     // per mailbox and drive: in line, waiting for your yes, minutes left (seat findable-all's source_read_progress)
     C.sb.rpc('source_read_progress').then(({ data, error }) => { if (!error) R.prog = data ?? []; }, () => { /* the panels say the per-mailbox lines could not be read */ }),
   ];
+  // TODAY (seat keeping-up, decision 1176): the owner's card first on the tab; keeping_up refuses anyone else, and the card stays hidden
+  if (owner) jobs.push(drawToday(C.$('#br-today'), C.sb, fresh).then(() => {}, () => { /* the card says a failed reading itself */ }));
+  else { const t = C.$('#br-today'); if (t) t.hidden = true; }
   if (owner) jobs.push(C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) R.ai = r.ai; else R.aiErr = r?.error ?? r?.ai?.error ?? 'no reason was given'; }, (e) => { R.aiErr = e?.message ?? e; }));
   // each part is painted as its reading lands, so the slow AI reading never holds the sources back
   reading = R;
@@ -157,6 +161,7 @@ function build(host) {
   }
   // ---- YOUR BRAIN
   const mine = C.el('div', 'br-pane'); mine.id = 'br-p-brain';
+  const today = C.el('section', 'br-card br-today'); today.id = 'br-today'; today.hidden = true;   // seat keeping-up: Today, drawn by fill/today.js
   const road = C.el('section', 'br-card br-road'); road.id = 'br-road';
   road.appendChild(txt('p', 'br-small', 'Reading your brain'));
   const needH = txt('h3', 'br-h', 'Needs you'); needH.id = 'br-need-h';
@@ -177,7 +182,7 @@ function build(host) {
   // A mailbox the Tool could read but that is not yet allowed here: the offer to adopt it, as a Needs you item (inventory
   // row 34; lens.js fillAdoptable draws into it on every reading). Moved here from the retired #brain-old (seat brain-status-2).
   const adopt = C.el('div', 'br-adopt'); adopt.id = 'adopt'; adopt.setAttribute('aria-live', 'polite');
-  mine.append(road, needH, need, adopt, conn, asst, hl, who);
+  mine.append(today, road, needH, need, adopt, conn, asst, hl, who);
   // ---- AI AND COSTS (owner)
   const ai = C.el('div', 'br-pane'); ai.id = 'br-p-ai'; ai.hidden = true;
   ai.appendChild(txt('p', 'br-cent', 'Every cent you spend on AI goes to the AI makers. We add nothing. AI work costs money, like electricity for a machine. Our only fee is the flat monthly price of the Tool.'));
