@@ -1928,6 +1928,7 @@ function drawList() {
     if (xw) warnTag(b, xw);
     withAvatar(b, x.from_name || x.from_email, xw ? 'scam' : 'people');
     b.addEventListener('click', () => openThread(x.thread_id, null, x.id));
+    if (!x.details_unavailable) askMark(b, chosen, x.thread_id, x, x.subject, x.snippet);
     li.appendChild(b);
     ul.appendChild(li);
   }
@@ -1942,6 +1943,24 @@ function drawList() {
   } else {
     list.appendChild(mk('p', 'quiet', 'That is the whole inbox.'));
   }
+}
+
+// POINT AND ASK (seat vera-one-door, 2026-11-14, decision 1130): an email only MARKS itself; fill/point.js, the one shared helper,
+// offers Ask Vera on it and hands her exactly this email (the mailbox key and conversation, which lens-ask checks at the door).
+function askMark(node, key, threadId, m, subject, words, pin) {
+  const who = String(m.from_name || m.from_email || '').trim();
+  Object.assign(node.dataset, { ask: 'email', askLabel: [who, String(subject || '').trim()].filter(Boolean).join(' ' + String.fromCharCode(183) + ' ').slice(0, 90), askSource: String(key || ''), askThread: String(threadId || ''),
+    askMsg: String(m.id || ''), askFrom: String(m.from_email || ''), askName: String(m.from_name || ''), askSubject: String(subject || ''), askDate: String(m.date || ''), askText: String(words || '').slice(0, 1500) });
+  if (pin) node.dataset.askPin = '1';
+}
+// The reading pane and an email's own frame carry the same mark quietly (no offer on hover): words selected in the open email
+// are then asked about as words of THAT email.
+function askQuiet(node, on) {
+  if (!on) { for (const k of Object.keys(node.dataset)) if (k.startsWith('ask')) delete node.dataset[k]; return; }
+  const from = parts && parts.read ? parts.read.querySelector('[data-ask-pin]') : null;
+  if (!from) return;
+  for (const k of Object.keys(from.dataset)) if (k.startsWith('ask') && k !== 'askPin' && k !== 'askPinned') node.dataset[k] = from.dataset[k];
+  node.dataset.askQuiet = '1';
 }
 
 // ── right: the open email ────────────────────────────────────────────────────
@@ -2014,6 +2033,7 @@ function whereItStands(t) {
 function drawRead() {
   const read = parts.read;
   read.innerHTML = '';
+  askQuiet(read, false);
   setBar();
   if (changeSaid) drawChangeSaid(read);
   if (!open && pick && view && (view.kind === 'attention' || view.kind === 'following' || view.kind === 'questions')) { drawAttnCard(read, pick); return; }
@@ -2058,6 +2078,8 @@ function drawRead() {
   }
   read.appendChild(who);
   const subj = mk('h2', 'mailx-subject', t.subject || '(no subject)'); subj.translate = false;
+  { const mine = boxAddress(); const toAsk = String(latest.from_email || '').toLowerCase() === mine ? ([...msgs].reverse().find((m) => String(m.from_email || '').toLowerCase() !== mine) || latest) : latest;   // her own reply open: the email to ask about is the other person's
+    askMark(who, chosen, t.thread_id, toAsk, t.subject, toAsk.body || toAsk.snippet || '', true); askQuiet(read, true); }   // on the sender row, not the subject: the subject is the customer's own words and is never put in another language, and the offer must be
   read.appendChild(subj);
   openedInWork(read, t);
   const tIds = msgs.map((m) => m.id).concat([t.thread_id]);
@@ -2396,6 +2418,7 @@ function htmlMessage(wrap, m) {
   }
   fitFrame(frame);
   fill();
+  askQuiet(frame, true);   // point and ask: words selected inside the email's own frame (fill/point.js listens there)
   wrap.appendChild(frame);
 }
 
