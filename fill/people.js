@@ -29,7 +29,7 @@ function card(mount, call, after) {
     try { v = await call(false); } catch (e) { said.textContent = "What this would change could not be worked out, so nothing is offered. " + (e?.message ?? ""); return; }
     if (!v?.ok) { said.textContent = v?.note ?? "This cannot be changed, and no reason was given."; return; }
     said.textContent = v.words;
-    const yes = button("Confirm"), no = button("Leave it as it is", true);
+    const yes = button("Confirm"), no = button("Leave It as It Is", true);
     acts.append(yes, no);
     no.addEventListener("click", () => { acts.innerHTML = ""; said.textContent = "Nothing was changed."; });
     yes.addEventListener("click", async () => {
@@ -75,7 +75,7 @@ function draw(mount, v) {
   const people = v.people ?? [];
   const others = people.filter((p) => !p.is_owner);
 
-  const h = c.el("h3"); h.textContent = "Who is in"; mount.appendChild(h);
+  const h = c.el("h3"); h.textContent = "Who Is In"; mount.appendChild(h);
   say(mount, "Everyone who can sign in to the Tool, or has been invited. Mail, drives, calendars and contacts follow Google: each person sees what their own Google account opens, with nothing to set up.");
   const ul = c.el("ul", "attn people");
   for (const p of people) ul.appendChild(personRow(p, v));
@@ -93,7 +93,7 @@ function personRow(p, v) {
   const t = c.el("p", "a-title");
   t.textContent = p.name + (p.is_you ? " (you)" : "") + (p.email && p.email !== p.name ? " · " + p.email : "");
   const st = c.el("span", "chip " + (p.state === "signed_in" ? "chip-on" : "chip-wait"));
-  st.textContent = p.is_owner ? "Owner" : p.state === "signed_in" ? "Signed in" : "Invited, not signed in yet";
+  st.textContent = p.is_owner ? "Owner" : p.state === "signed_in" ? "Signed In" : "Invited, Not Signed In Yet";
   t.append(" ", st);
   li.appendChild(t);
   say(li, p.is_owner ? "Sees everything, as the owner." : p.sees_line ? "Sees " + p.sees_line + "." : "Sees nothing yet: none of the connected sources opens anything to this address.", "a-detail");
@@ -115,18 +115,18 @@ function personRow(p, v) {
 
   if (p.is_owner) return li;
   const acts = c.el("div", "actions"); const slot = c.el("div");
-  const open = button("Open something to " + firstName(p), true);
+  const open = button("Open Something to " + firstName(p), true);
   open.addEventListener("click", () => openPicker(p, v, slot));
   acts.appendChild(open);
   if (p.state === "signed_in" && c.personDetail) {
-    const more = button("Exactly what, and why", true);
+    const more = button("Exactly What, and Why", true);
     more.addEventListener("click", () => { if (slot.childElementCount) { slot.innerHTML = ""; return; } c.personDetail({ id: p.id, name: p.name }, slot); });
     acts.appendChild(more);
   }
   if (p.state === "invited") {
-    const again = button("Send the sign-in email again", true);
+    const again = button("Send the Sign-In Email Again", true);
     again.addEventListener("click", () => sendSignIn(p.email, slot));
-    const cancel = button("Cancel the invitation", true);
+    const cancel = button("Cancel the Invitation", true);
     cancel.addEventListener("click", async () => {
       slot.innerHTML = "";
       let d; try { d = await rpc("person_invite_cancel", { p_identity: p.id }); } catch (e) { say(slot, "Not cancelled. " + (e?.message ?? "")); return; }
@@ -167,7 +167,7 @@ function openPicker(p, v, slot) {
 
 function inviteForm() {
   const wrap = c.el("div", "invite");
-  const h = c.el("h3"); h.textContent = "Invite someone"; wrap.appendChild(h);
+  const h = c.el("h3"); h.textContent = "Invite Someone"; wrap.appendChild(h);
   say(wrap, "Type their work email. They get an ordinary sign-in email, and on first sign-in they see what their own accounts open. You see what that is before anything is sent.");
   const row = c.el("div", "invite-row");
   const email = c.el("input"); email.type = "email"; email.autocomplete = "off"; email.placeholder = "Their email address"; email.setAttribute("aria-label", "Their email address");
@@ -199,7 +199,7 @@ async function sendSignIn(addr, mount, said) {
 
 function allAccess(v, others) {
   const wrap = c.el("div", "all-access");
-  const h = c.el("h3"); h.textContent = "Systems that show everything to whoever connects them"; wrap.appendChild(h);
+  const h = c.el("h3"); h.textContent = "Systems That Show Everything to Whoever Connects Them"; wrap.appendChild(h);
   say(wrap, "Some systems connect with one company login that sees everything, so the Tool cannot tell people apart there. Only you see them here unless you open one to someone. Everyone else keeps using the app with their own login.");
   const ul = c.el("ul", "attn");
   for (const s of v.all_access ?? []) {
@@ -220,7 +220,7 @@ function allAccess(v, others) {
       b.addEventListener("click", () => card(slot, (confirm) => rpc("access_open", { p_identity: p.id, p_source_key: s.source_key, p_confirm: confirm })));
       acts.appendChild(b);
     }
-    const blk = button(s.block_others ? "Let others connect it too" : "Block others from connecting it", true);
+    const blk = button(s.block_others ? "Let Others Connect It Too" : "Block Others from Connecting It", true);
     blk.addEventListener("click", async () => {
       slot.innerHTML = "";
       let d; try { d = await rpc("all_access_block", { p_source_type: s.source_type, p_block: !s.block_others }); } catch (e) { say(slot, "Not changed. " + (e?.message ?? "")); return; }
