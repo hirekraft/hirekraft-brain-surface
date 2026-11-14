@@ -284,7 +284,7 @@ function drawSug() {
 function askIt(q) {
   const i = $('#panel-input'), s = $('#panel-send');
   if (!i || !s) return;
-  i.value = q; fromPanel = Date.now(); s.click();
+  i.value = q; s.click();
 }
 
 function greet() {
@@ -577,7 +577,7 @@ function intercept(e) {
     typed(v);
     return;
   }
-  if (!talk || talk.inPlace) { fromPanel = Date.now(); emptyAfter(); return; }
+  if (!talk || talk.inPlace) { emptyAfter(); return; }
   e.preventDefault(); e.stopImmediatePropagation();
   if (!v) return;
   i.value = ''; grow();
@@ -845,7 +845,7 @@ async function typed(q) {
   if (r) { setupAsk(q, r.ids, r.about); return; }
   const i = $('#panel-input'), s = $('#panel-send');
   if (!i || !s) return;
-  bypass = true; i.value = q; fromPanel = Date.now();
+  bypass = true; i.value = q;
   try { s.click(); } finally { bypass = false; }
   emptyAfter();
 }
@@ -881,8 +881,7 @@ function placeColumn() {
 function openPanel() {
   if (!inColumn() && readyNow()) placeColumn();   // on Getting ready she opens IN PLACE, in her column; nothing navigates
   if (!inColumn() && !readyNow()) {
-    const ask = $('#tabs .tab-ask');
-    if (ask) ask.click(); else { const p = $('#panel'); if (p) { p.hidden = false; document.body.dataset.panel = 'open'; } }
+    if (window.toolLens) window.toolLens.open(); else { const p = $('#panel'); if (p) { p.hidden = false; document.body.dataset.panel = 'open'; } }
   }
 }
 function open() {
@@ -895,24 +894,103 @@ function open() {
   $('#panel-input')?.focus({ preventScroll: true });
 }
 
-// What she is looking at, on the way out, for a question from her conversation only (see the header).
-function wrapFetch() {
-  const real = window.fetch.bind(window);
-  window.fetch = (u, o) => {
-    try {
-      if (typeof u === 'string' && u.endsWith('/functions/v1/lens-ask') && o && typeof o.body === 'string'
-          && o.body.startsWith('{"question"') && Date.now() - fromPanel < 4000) {
-        const b = JSON.parse(o.body);
-        if (b && typeof b.question === 'string' && b.screen === undefined) {
-          b.screen = screenText();
-          o = Object.assign({}, o, { body: JSON.stringify(b) });
-        }
-        fromPanel = 0;
-      }
-    } catch (e) { /* the question goes as it was */ }
-    return real(u, o);
-  };
+// ---- THE ONE DOOR ON EVERY TAB (seat vera-one-door, 2026-11-14; decision 1175) ----
+// HER COLUMN IS DRESSED AS HERS: her name on the panel, her own words where the panel was empty, and one box to ask or tell.
+// Read aloud (box.js) moves from the box at the top, which is gone, into her box: the same button, so its switch still works.
+function dress() {
+  const n = NAME();
+  if (dressed === n) return;
+  dressed = n;
+  const p = $('#panel'), i = $('#panel-input'), e = $('#panel .panel-empty');
+  if (p) p.setAttribute('aria-label', n + ', your guide');
+  if (i) { const ph = 'Ask ' + n; i.dataset.ph = ph; i.placeholder = ph; i.setAttribute('aria-label', 'Ask ' + n + ' anything, or tell ' + n + ' what to do'); }   // short: it must fit her box beside the buttons at 390 px
+  if (e) {
+    e.replaceChildren(el('span', null, 'Ask me anything about your business or about the Tool, or tell me what to do. Point at an email and press Ask ' + n + ' to ask about that one.'),
+      document.createTextNode(' '), el('span', null, 'Nothing is sent, moved or changed without your yes.'));
+  }
+  const speak = $('#ask-speak'), mic = $('#panel-mic');
+  if (speak && mic && speak.parentElement !== mic.parentElement) mic.before(speak);
 }
+// OPEN BESIDE EVERY TAB ON A WIDE SCREEN, unless the person put her away (her choice is kept in this browser and holds on every
+// tab until she opens her again). Narrower than 1101 px the panel would cover the tab, so there she waits behind her button.
+// Never on Getting started (she is in the step's column) and never on Work (the conversation is the page).
+const AWAY = 'tool.vera.away';
+const wide = () => window.matchMedia('(min-width: 1101px)').matches;
+const isAway = () => { try { return localStorage.getItem(AWAY) === '1'; } catch (_) { return false; } };
+const setAway = (on) => { try { if (on) localStorage.setItem(AWAY, '1'); else localStorage.removeItem(AWAY); } catch (_) { /* not remembered */ } };
+let cameBack = false;
+function dock() {
+  const p = $('#panel');
+  if (!p || !window.toolLens || inColumn() || p.classList.contains('in-work') || readyNow()) return;
+  const tab = document.body.dataset.tab || '';
+  if (!tab || tab === 'ready' || tab === 'work' || !$('#tabs .tab')) return;   // not signed in, still reading, or a page of its own
+  dress();
+  if (pointed && pointed.tab !== tab) { pointed = null; drawLook(); drawSug(); }   // she left the tab the thing was on
+  if (p.hidden && wide() && !isAway()) { window.toolLens.open(); drawLook(); drawSug(); }
+  if (!cameBack) { cameBack = true; Promise.resolve(window.toolLens.latest()).then(() => { drawLook(); }).catch(() => { /* a new conversation */ }); }
+}
+function awayOrBack(e) {
+  if (inColumn()) return;
+  if (e.type === 'keydown') { if (e.key === 'Escape' && window.toolLens && window.toolLens.isOpen() && !e.defaultPrevented && !$('.work-menu')) setAway(true); return; }
+  const t = e.target.closest ? e.target.closest('#panel-away, #panel-tab, #vera-btn') : null;
+  if (t) setAway(t.id === 'panel-away');
+}
+
+// ---- POINT AND ASK (decision 1130; fill/point.js offers it, she takes it) ----
+// Her words go into the conversation where it now stands (under the last answer), not above it.
+function flow(parts, chips) {
+  const mount = $('#answer-in'), sec = $('#s-answer');
+  if (!mount || !sec) return;
+  sec.hidden = false;
+  const t = el('div', 'answer-turn vera-flow'), d = el('div', 'vera-turn');
+  d.appendChild(el('p', 'vera-who', NAME()));
+  const p = el('p');
+  for (const x of parts) { if (typeof x === 'string') p.appendChild(el('span', null, x)); else { const b = el('b', null, x.own); b.translate = false; p.appendChild(b); } }
+  d.appendChild(p);
+  if (chips && chips.length) {
+    const row = el('div', 'vera-follow');
+    for (const q of chips) { const c = el('button', 'vera-chip', q); c.type = 'button'; c.addEventListener('click', () => askIt(c.textContent || q)); row.appendChild(c); }
+    d.appendChild(row);
+  }
+  t.appendChild(d); mount.appendChild(t);
+  t.scrollIntoView?.({ block: 'nearest' });
+  speak(p.textContent);
+}
+window.veraPoint = (c) => {
+  if (!c) return;
+  const a = c.anchor || null;
+  pointed = { kind: c.kind, label: String(c.label || 'this'), text: String(c.text || ''), anchor: a, turns: [], card: null, tab: document.body.dataset.tab || '', where: String(c.where || ''), selected: !!c.selected,
+    about: a ? { source_key: a.source_key, thread_id: a.thread_id, to: a.from_email, to_name: a.from_name, label: String(c.label || '') } : null };
+  setAway(false);
+  open();
+  if (pointed.selected) { const w = pointed.text.length > 140 ? pointed.text.slice(0, 137) + '...' : pointed.text;
+    flow((pointed.anchor ? ['I am looking at the words you selected in the email ', { own: pointed.label }, ': '] : ['I am looking at the words you selected: ']).concat([{ own: String.fromCharCode(8220) + w + String.fromCharCode(8221) }, ' What would you like to know about them?'])); }
+  else if (pointed.anchor) flow(['I am looking at the email ', { own: pointed.label }, '. Ask me about it, or tell me what to answer and I will write the reply for you to check.']);
+  else flow(['I am looking at ', { own: pointed.label }, '. What would you like to know about it?']);
+  drawSug();
+};
+// lens.js ask() reads this for every question asked outside an order. An email: the anchor, the turns about it, and the draft
+// on screen when one is open (so "make it shorter" changes that draft). Anything else: one line in front of the question.
+window.veraContext = () => {
+  if (!pointed) return null;
+  const q = String.fromCharCode(34);
+  if (pointed.anchor) {
+    const cur = pointed.card && !pointed.card.closed() ? { subject: pointed.card.subject(), text: pointed.card.text() } : null;
+    return { anchor: pointed.anchor, turns: pointed.turns, draft: cur, about: pointed.about,
+      lead: pointed.selected ? 'This is about these words, which I selected in the email: ' + q + pointed.text.split(q).join(AP) + q : '' };
+  }
+  return { lead: 'This question is about something on my screen in the Tool' + (pointed.where ? ' (the ' + pointed.where + ' tab)' : '') + (pointed.selected ? ', which I selected' : '') + ': '
+    + (pointed.label && pointed.label !== 'this' && !pointed.text.startsWith(pointed.label) ? pointed.label + ': ' : '') + q + pointed.text.split(q).join(AP) + q };
+};
+window.veraHeard = (q, body) => {
+  if (pointed && pointed.anchor) pointed.turns.push({ q: String(q), a: String((body && (body.answer || body.state_reason || (body.draft && body.draft.text))) || '').slice(0, 1500) });
+};
+// A draft that came back (lens.js renderAsk): her card. body.pointed says which email it answers (kept with the answer).
+window.veraDraft = (slot, body, live) => {
+  const about = live ? ((body && body.pointed) || (pointed && pointed.about) || null) : null;   // a kept draft opened again is shown, never sendable from here
+  const card = draftCard(slot, body, about, { post: (path, b) => window.toolLens.post(path, b) });
+  if (pointed && pointed.about && about && about.thread_id === pointed.about.thread_id) pointed.card = card;
+};
 
 function start() {
   if ($('#vera-btn')) return;
@@ -921,7 +999,10 @@ function start() {
   btn.append(el('span', 'vera-name', 'Vera'), el('i', 'vera-dot'));
   btn.addEventListener('click', open);
   document.body.appendChild(btn);
-  wrapFetch();
+  startPoint();
+  document.addEventListener('click', awayOrBack, true);
+  document.addEventListener('keydown', awayOrBack, true);
+  document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('#panel-new')) { pointed = null; drawLook(); drawSug(); } }, true);
   document.addEventListener('click', stay, true);
   document.addEventListener('click', intercept, true);
   document.addEventListener('keydown', intercept, true);
@@ -930,7 +1011,7 @@ function start() {
   const later = () => {
     if (due) return;
     due = requestAnimationFrame(() => {
-      due = 0; paintDot(); placeColumn();
+      due = 0; paintDot(); placeColumn(); dock(); dress();
       // her box is empty when the step changes
       const k = readyNow()?.key ?? null;
       if (k !== lastKey) { if (lastKey !== null && k !== null) { const i = $('#panel-input'); if (i) { i.value = ''; grow(); } } lastKey = k; }
@@ -949,6 +1030,8 @@ function start() {
   new MutationObserver(later).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'aria-current', 'data-vera-column'] });
   paintDot();
   placeColumn();
+  dock();
+  dress();
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
