@@ -33,7 +33,7 @@
 // SUPERSEDED 2026-11-12, decision 1164: the turning sign (.working) on the chip whenever something was in the list, moving
 // or not; the chip now carries the mark, which moves only on a live reading.
 
-import { todayLine } from './today.js?v=2026-11-14-keeping-up';   // one line of Today in the list (seat keeping-up, decision 1176)
+import { todayLine } from './today.js?v=2026-11-14-day-one-fixes-3';   // one line of Today in the list (seat keeping-up, decision 1176)
 
 let C = null;
 let W = null;            // the latest good answer
