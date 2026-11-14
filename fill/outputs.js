@@ -493,7 +493,7 @@ function outputTurn(slot, body, ctx) {
     return make(o.kind, turns, ctx, said, o.slides, questionOf(slot));
   };
   if (body._built) {
-    const b = mk("button", "out-btn", "Make it again");
+    const b = mk("button", "out-btn", "Make It Again");
     b.type = "button";
     b.addEventListener("click", async () => { b.disabled = true; await run(); b.disabled = false; });
     const row = mk("div", "out-row"); row.appendChild(b);
