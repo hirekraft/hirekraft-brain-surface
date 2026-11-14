@@ -152,7 +152,7 @@ async function showCritical(p, li) {
     ul.appendChild(it);
   }
   box.appendChild(ul);
-  if (Number(data.more) > 0) note(box, plural(data.more, "more critical file is", "more critical files are") + " not listed. Ask the box about a file by name to see who can open it.");
+  if (Number(data.more) > 0) note(box, plural(data.more, "more critical file is", "more critical files are") + " not listed. Ask Vera about a file by name to see who can open it.");
 }
 
 function drawOpenings() {
