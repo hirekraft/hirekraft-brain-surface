@@ -29,7 +29,7 @@ try {
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
 <title>Tool — your brain</title>
 <meta name="description" content="Your business's own memory.">
-<link rel="stylesheet" href="skin.css?v=2026-11-14-vera-one-door">
+<link rel="stylesheet" href="skin.css?v=2026-11-14-tabs-style">
 <script>
 // THE FRONT DOOR, before anything is drawn (seat front-door, 2026-10-13): no stored sign-in on this
 // browser means she goes to sign in, and comes back to this tab after. lens.js makes the real check
@@ -172,7 +172,7 @@ try {
     <p class="pull">Audit us with infrastructure we don't own. Every claim points back into your
       accounts, not ours.</p>
 
-    <h3 style="margin-top:2.5rem">What happens next</h3>
+    <h3 style="margin-top:2.5rem">What Happens Next</h3>
     <p class="quiet">You connect what your business runs on, one source at a time. A few minutes
       each. You can stop after any one of them, and what is connected already works.</p>
 
@@ -186,7 +186,7 @@ try {
 
     <div class="kinds">
       <div class="kind">
-        <h3>Read and remembered</h3>
+        <h3>Read and Remembered</h3>
         <p>Mail, files, calendar and contacts, and the records of systems the Tool keeps a copy of,
           like your books, CRM or applicant tracker. Tool reads these and keeps them current, so what
           is in them becomes part of the memory: what happened, when, who was involved, and how one
@@ -196,7 +196,7 @@ try {
           across. Depth comes from here.</p>
       </div>
       <div class="kind secondary">
-        <h3>Reached and used</h3>
+        <h3>Reached and Used</h3>
         <!-- tidy-truth 2026-10-24: this said QuickBooks is never copied; since seat records-match (2026-10-23)
              the Tool keeps a copy of QuickBooks, CATS, HubSpot and Slack. Banks are still asked live. -->
         <p>Bank accounts, and any system the Tool does not keep a copy of. Tool reaches these at the
@@ -229,11 +229,11 @@ try {
     <p class="quiet">Each line is the Tool's guess from your own records. Say whether it is right, wrong,
       or put it in your own words; only what you answer is relied on. Only you, as the owner, see this.</p>
     <div id="profile" aria-live="polite"></div>
-    <h3 style="margin-top:2.5rem">What is connected</h3>
+    <h3 style="margin-top:2.5rem">What Is Connected</h3>
     <ul class="recog" id="recog" aria-live="polite"></ul>
     <div class="actions">
-      <button class="go" data-goto="s-summary">This is us</button>
-      <button class="go ghost" data-goto="s-connect">Something is missing</button>
+      <button class="go" data-goto="s-summary">This Is Us</button>
+      <button class="go ghost" data-goto="s-connect">Something Is Missing</button>
     </div>
   </section>
 
@@ -250,8 +250,8 @@ try {
          which the room's Add a source page moves into the side panel and back (lens.js openAdd / closeAdd). -->
     <div id="brain-room" aria-live="polite"></div>
     <div id="live-state" class="br-live" aria-live="polite"></div>
-    <div data-sub="add" data-label="Add a source" hidden>
-      <p class="eyebrow" id="connect-eyebrow">Connect a source</p>
+    <div data-sub="add" data-label="Add a Source" hidden>
+      <p class="eyebrow" id="connect-eyebrow">Connect a Source</p>
     <h2 id="connect-head">What should Tool read?</h2>
     <p class="quiet" id="connect-sub">Pick one. The steps are the same every time, whichever you
       choose.</p>
@@ -274,7 +274,7 @@ try {
   <section class="step" id="s-drives" hidden>
     <div class="tab-top"><h2>Drives</h2></div>
     <nav data-subtabs="drives"></nav>
-    <div data-sub="places" data-label="Drives and folders" id="drives-places" aria-live="polite"></div>
+    <div data-sub="places" data-label="Drives and Folders" id="drives-places" aria-live="polite"></div>
     <div data-sub="organize" data-label="Organize" id="drives-organize" aria-live="polite"></div>
   </section>
 
@@ -289,7 +289,7 @@ try {
           Surface's at once.</p></details>
     </div>
     <div class="actions">
-      <button class="go ghost" data-goto="s-summary">Back to your brain</button>
+      <button class="go ghost" data-goto="s-summary">Back to Your Brain</button>
     </div>
     <div id="totest" aria-live="polite"></div>
   </section>
@@ -305,7 +305,7 @@ try {
     </div>
     <div class="actions">
       <button class="go" id="tests-run" type="button" hidden>Run the tests now</button>
-      <button class="go ghost" data-goto="s-summary">Back to your brain</button>
+      <button class="go ghost" data-goto="s-summary">Back to Your Brain</button>
     </div>
     <p class="quiet" id="tests-said" aria-live="polite"></p>
     <div id="tests" aria-live="polite"></div>
@@ -330,24 +330,24 @@ try {
        apart is now one sentence there plus the list of systems that cannot). -->
   <section class="step" id="s-security" hidden>
     <div class="tab-top">
-      <h2>Who can see what in your business.</h2> <!-- seat access-map-page 2026-11-05 (decision 1085): the door to the Access Map story. --> <button class='go ghost am-door' type='button' data-goto='s-accessmap'><span class='am-ic' aria-hidden='true'><svg><use href='#i-am-shield'/></svg></span><span>How your Access Map works</span></button>
+      <h2>Who Can See What in Your Business</h2> <!-- seat access-map-page 2026-11-05 (decision 1085): the door to the Access Map story. --> <button class='go ghost am-door' type='button' data-goto='s-accessmap'><span class='am-ic' aria-hidden='true'><svg><use href='#i-am-shield'/></svg></span><span>How Your Access Map Works</span></button>
       <details class="whatis"><summary>What is this?</summary>
-        <p class="quiet">Only you, as the owner, see this tab. People and access is who is in and what each person sees. What is open is where your files and mail are open wider than you may mean. Checks is what the Tool refused, sent and checked on itself.</p></details>
+        <p class="quiet">Only you, as the owner, see this tab. People and Access is who is in and what each person sees. What Is Open is where your files and mail are open wider than you may mean. Checks is what the Tool refused, sent and checked on itself.</p></details>
     </div>
     <nav data-subtabs="security"></nav>
 
-    <div data-sub="people" data-label="People and access">
+    <div data-sub="people" data-label="People and Access">
       <p class="sub-what">Who can sign in, what each person sees, and what you or they added. Invite someone here.</p>
       <div id="people" aria-live="polite"></div>
     </div>
 
-    <div data-sub="audit" data-label="What is open" hidden>
+    <div data-sub="audit" data-label="What Is Open" hidden>
       <p class="sub-what">Where your drives and mailboxes are open to more people than you may mean, worst first. Each number opens its part.</p>
       <div id="sec-gauges" aria-live="polite"></div>
       <h3 style="margin-top:2.5rem">Openings</h3>
       <p class="quiet">Each line is a folder or drive open beyond the people it was shared with, worst first. Mark it on purpose, or close it in Google.</p>
       <div id="sec-openings" aria-live="polite"></div>
-      <h3 style="margin-top:2.5rem">Who sees what</h3>
+      <h3 style="margin-top:2.5rem">Who Sees What</h3>
       <p class="quiet">People and outside parties down, mailboxes and drives across, and how each one gets in.</p>
       <div id="sec-grid" aria-live="polite"></div>
       <h3 style="margin-top:2.5rem">Conflicts</h3>
@@ -358,11 +358,11 @@ try {
 
     <div data-sub="checks" data-label="Checks" hidden>
       <p class="sub-what">What the Tool refused to show someone, what it sent, and its own checks every 15 minutes.</p>
-      <h3 style="margin-top:1.5rem">Questions refused</h3>
+      <h3 style="margin-top:1.5rem">Questions Refused</h3>
       <div id="sec-watch" aria-live="polite"></div>
       <h3 style="margin-top:2.5rem">Sent from the Tool</h3>
       <div id="sec-sends" aria-live="polite"></div>
-      <h3 style="margin-top:2.5rem">The Tool's own checks</h3>
+      <h3 style="margin-top:2.5rem">The Tool's Own Checks</h3>
       <div id="sec-door" aria-live="polite"></div>
     </div>
   </section>
@@ -380,12 +380,12 @@ try {
          headed Conversations with the search field and the projects list always open. -->
     <aside class='work-side' aria-label='Work'>
       <nav class='work-nav' aria-label='Work'>
-        <button class='work-nav-b work-nav-new' id='work-new' type='button'>+ New conversation</button>
+        <button class='work-nav-b work-nav-new' id='work-new' type='button'>+ New Conversation</button>
         <button class='work-nav-b' id='work-nav-search' type='button' aria-expanded='false'>Search</button>
         <input class='work-search' id='work-search' type='search' autocomplete='off' hidden
                placeholder='Search your conversations' aria-label='Search your conversations'>
         <button class='work-nav-b' id='work-nav-projects' type='button' data-wpage='projects'>Projects</button>
-        <button class='work-nav-b' id='work-nav-open' type='button' data-wpage='open'><span>Open work</span><span class='work-nav-c' id='work-open-count'></span></button>
+        <button class='work-nav-b' id='work-nav-open' type='button' data-wpage='open'><span>Open Work</span><span class='work-nav-c' id='work-open-count'></span></button>
       </nav>
       <div class='work-list' id='work-list'>
         <div id='work-pinned'></div>
@@ -403,7 +403,7 @@ try {
         <div id='work-page-projects' hidden>
           <h1 class='work-h1'>Projects</h1>
           <ul class='work-chats work-projects' id='work-projects'></ul>
-          <div class='work-acts'><button class='go ghost' id='work-project-new' type='button'>New project</button></div>
+          <div class='work-acts'><button class='go ghost' id='work-project-new' type='button'>New Project</button></div>
           <div id='work-project-view' hidden></div>
         </div>
       </section>
@@ -430,18 +430,18 @@ try {
        and covers all three. Nothing was removed; the three headings became the row's words. -->
   <section class="step" id="s-money" hidden>
     <div class="tab-top">
-      <h2>What you are owed, how long we can go, and what we pay for.</h2>
+      <h2>What You Are Owed, How Long We Can Go, and What We Pay For</h2>
       <details class="whatis"><summary>What is this?</summary>
         <p class="quiet">Only you, as the owner, see this tab. Every figure opens the record it came from.</p></details>
     </div>
     <nav data-subtabs="money"></nav>
 
-    <!-- seat books-truth-2 (2026-11-02, decision 1063 part 1): Owed to you is the first part: what the books say beside what the Tool believes from the mail, and the clean-up list; each fix is checked in QuickBooks and written only on the owner's press. --> <div data-sub="owed" data-label="Owed to you"><p class="sub-what">What your clients owe you: what your books say, what we believe, and what to clean up in the books.</p><div id="money-owed" aria-live="polite"></div></div> <div data-sub="runway" data-label="How long we can go" hidden>
+    <!-- seat books-truth-2 (2026-11-02, decision 1063 part 1): Owed to you is the first part: what the books say beside what the Tool believes from the mail, and the clean-up list; each fix is checked in QuickBooks and written only on the owner's press. --> <div data-sub="owed" data-label="Owed to You"><p class="sub-what">What your clients owe you: what your books say, what we believe, and what to clean up in the books.</p><div id="money-owed" aria-live="polite"></div></div> <div data-sub="runway" data-label="How Long We Can Go" hidden>
       <p class="sub-what">Cash in the bank, what goes out each month, and how many months that lasts.</p>
       <div id="money-runway" aria-live="polite"></div>
     </div>
 
-    <div data-sub="pay" data-label="What we pay for" hidden>
+    <div data-sub="pay" data-label="What We Pay For" hidden>
       <p class="sub-what">Every company that bills the business regularly, how often, the last charge, the card, and when the next one is due.</p>
       <div id="money-commitments" aria-live="polite"></div>
     </div>
@@ -451,7 +451,7 @@ try {
       <div id="money-ledger" aria-live="polite"></div>
     </div>
 
-    <h3 style="margin-top:2.5rem">What was not read</h3>
+    <h3 style="margin-top:2.5rem">What Was Not Read</h3>
     <p class="quiet">What this tab could not use, and how that changes the answer.</p>
     <div id="money-notread" aria-live="polite"></div>
   </section>
@@ -480,7 +480,7 @@ try {
   <div class="panel-handle" id="panel-handle" aria-hidden="true"><span></span></div>
   <div class="panel-head">
     <button class="panel-btn panel-list" id="panel-list" type="button" aria-label="Your conversations" title="Your conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
-    <h2 class="panel-title" id="panel-title">New conversation</h2>
+    <h2 class="panel-title" id="panel-title">New Conversation</h2>
     <button class="panel-btn" id="panel-new" type="button" aria-label="New conversation" title="New conversation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
     <button class="panel-btn panel-to-work" id="panel-work" type="button" aria-label="Open in Work" title="Open in Work, full size"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14"/></svg></button>
     <button class="panel-btn panel-wide" id="panel-full" type="button" aria-pressed="false" aria-label="Full screen" title="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
@@ -515,9 +515,9 @@ try {
      invisible at the same time - which is the worst state for a surface we are
      deliberately iterating on many times a day. Bump this on any change to
      lens.js and the old copy becomes unreachable rather than merely stale. -->
-<script type="module" src="lens.js?v=2026-11-14-vera-one-door"></script>
+<script type="module" src="lens.js?v=2026-11-14-tabs-style"></script>
 <!-- Vera, the guide (seat vera-on-brain-2, decisions 1113, 1115, 1116): one button bottom right on every screen, opening the
      conversation panel above with what she is looking at; replaces the round phone Ask button. -->
-<script type="module" src="vera.js?v=2026-11-14-vera-one-door"></script>
+<script type="module" src="vera.js?v=2026-11-14-tabs-style"></script>
 </body>
 </html>
