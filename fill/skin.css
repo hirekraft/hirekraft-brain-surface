@@ -2883,6 +2883,11 @@ body.br-panel-open { overflow: hidden; }
   .engine { padding-right: 12px; }
   .engine-t small { display: none; }
   .brain-banner-go { min-height: 44px; }
+  /* seat ready-alive 2026-11-14 (decisions 1173, 1174): on a phone the date and zone sit on their own short line under the header (read only there; the zone is changed from her initials); the marks' words wrap; Continue Anyway is a full tap. */
+  body.hd-on header.masthead { flex-wrap: wrap; row-gap: 0; }
+  body.hd-on header.masthead > .hd-date { order: 9; flex: 1 0 100%; margin: 0; padding: 0 0 4px; text-align: center; pointer-events: none; min-height: 0; font-size: var(--t-micro); }
+  body #gr .gs-marks { font-size: var(--t-micro); }
+  body #gs-anyway, body .news-more { min-height: 44px; }
 }
 /* ── NO TOOL TO OPEN (seat any-brain round 2, 2026-11-05, decision 1097): fill/brain.js draws this in place of the whole screen,
    before any tab, when the brain this browser points to no longer opens. One sentence, one way on. Tokens only. ── */
@@ -3443,3 +3448,15 @@ body.hd-on .masthead > .health { order: 1; } body.hd-on .masthead > .wk { order:
 .gs-exrow .gs-fold { border-top: 0; padding-top: 0; margin-top: 4px; }
 .gs-moreq { margin-top: calc(var(--u) * 2); }
 body.hd-out .masthead { flex-wrap: wrap; } body.hd-out .masthead > .whoami { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
+
+/* ── READY, ALIVE (seat ready-alive, 2026-11-14; decisions 1173 and 1174). The date and time zone back in the header on one compact line (hd-date; a button: it opens her menu on the time zone); the stepper's marks said in words under the row of steps (gs-marks; amber while one waits for her, green once settled, explained or set aside); step 5 settles what is open in place (gs-openput: step 3's own press inside the card; Continue Anyway). Tokens only. Phone rules in A PHONE IS A FIRST-CLASS SIZE. ── */
+.hd-date { order: 0; margin-right: auto; flex: 0 1 auto; min-width: 0; border: 0; background: none; padding: 6px 10px; border-radius: var(--radius); font: inherit; font-size: var(--t-small); color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.hd-date:hover { color: var(--ink); background: var(--paper-2); }
+body.hd-out .hd-date { display: none; }
+.gs-marks { display: flex; flex-wrap: wrap; gap: 4px calc(var(--u) * 4); margin: calc(var(--u) * 2) 0 0; font-size: var(--t-small); color: var(--ok-ink); max-width: none; overflow-wrap: anywhere; }
+.gs-markw { min-width: 0; overflow-wrap: anywhere; }
+.gs-markw-open { color: var(--warn); }
+#gr .gs-mark.gs-mark-ok { background: var(--money-soft); color: var(--ok-ink); }
+.gs-openput { display: grid; gap: calc(var(--u) * 3); padding: calc(var(--u) * 3) 0 0; border-top: 1px solid var(--line); min-width: 0; }
+.gs-anyact { margin-top: calc(var(--u) * 2); padding-top: calc(var(--u) * 3); border-top: 1px solid var(--line); }
+.news-more { align-self: flex-start; }
