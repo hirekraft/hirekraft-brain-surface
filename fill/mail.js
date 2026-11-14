@@ -3028,7 +3028,7 @@ function drawFound(list) {
     + ', newest first.';
   box.appendChild(mk('p', 'mailx-found-line', said));
   const q = done.find((p) => p.query);
-  if (f.view) box.appendChild(mk('p', 'quiet', 'Read live from Gmail just now. Nothing in your mailboxes is changed. Ask the box about these, for example ' + String.fromCharCode(8220) + (f.title === 'Starred' ? 'what did I star about invoices last month?' : 'what is waiting under ' + f.title + '?') + String.fromCharCode(8221) + '.'));
+  if (f.view) box.appendChild(mk('p', 'quiet', 'Read live from Gmail just now. Nothing in your mailboxes is changed. Ask Vera about these, for example ' + String.fromCharCode(8220) + (f.title === 'Starred' ? 'what did I star about invoices last month?' : 'what is waiting under ' + f.title + '?') + String.fromCharCode(8221) + '.'));
   else if (q) box.appendChild(mk('p', 'quiet', 'Gmail was searched for: ' + q.query + (byMeaning ? '. ' + byMeaning + ' more found by meaning in what the company has read.' : '.')));
   else if (byMeaning) box.appendChild(mk('p', 'quiet', byMeaning + ' found by meaning in what the company has read.'));
   if (f.note) box.appendChild(mk('p', 'quiet', f.note));
