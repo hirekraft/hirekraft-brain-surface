@@ -56,6 +56,7 @@
 
 import { startPoint } from './point.js?v=2026-11-14-vera-one-door';
 import { draftCard } from './act.js?v=2026-11-14-day-one-fixes';
+import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
@@ -527,7 +528,7 @@ window.veraPropose = (P) => {
   yes.addEventListener('click', async () => {
     yes.disabled = true; no.disabled = true; out.className = 'vera-small working no-late'; out.textContent = 'Doing it';
     let r;
-    try { r = await P.yes(); } catch (e) { r = { ok: false, note: 'Not changed: ' + String(e?.message ?? e) + '.' }; }
+    try { r = await P.yes(); } catch (e) { r = { ok: false, note: 'Not changed: ' + plainWords(String(e?.message ?? e)) + '.' }; }
     out.className = 'vera-small'; out.textContent = String(r?.note || (r?.ok ? 'Done.' : 'Not changed.'));
     if (r?.ok) acts.remove(); else { yes.disabled = false; no.disabled = false; }
   });
