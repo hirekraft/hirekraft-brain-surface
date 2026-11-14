@@ -25,6 +25,13 @@
 import { fmtDate } from './dates.js?v=2026-10-22-dates';
 const ASK = '/functions/v1/lens-ask';
 const SEND = '/functions/v1/mail-send';
+// THE SCREEN'S ONE COPY OF mail-send's TEST LOCK (seat day-one-fixes 2026-11-14; was act.js SEND_LOCKED, moved here so the reply and
+// forward box, Vera's card and the invitation answers say the same thing BEFORE the press). It decides nothing: mail-send refuses
+// any recipient but the sending mailbox on its own. HQ turns it to false in the same recorded change that lifts mail-send's lock.
+export const SEND_LOCKED = true;
+// What the reply and forward box and the invitation answers say BEFORE the press while the lock holds (customer words, no person's name).
+export const LOCK_COMPOSE = 'While the Tool' + String.fromCharCode(8217) + 's sending is being tested, a reply or forward to anyone but your own mailbox is held, not sent. Reply from Gmail or Outlook for now.';
+export const LOCK_ANSWER = 'While the Tool' + String.fromCharCode(8217) + 's sending is being tested, an answer pressed here is held and does not go out. Answer in Gmail or Outlook for now.';
 const NL = String.fromCharCode(10);
 const BRIEF_Q = 'What does the company know that bears on this email?';
 
@@ -178,7 +185,9 @@ export function composer(C, o) {
   const discard = mk('button', 'go ghost', 'Discard'); discard.type = 'button';
   const said = mk('p', 'mailx-compose-said'); said.setAttribute('aria-live', 'polite');
   row.append(send, discard, said);
-  box.append(head, drafted, whoRow, toF.row, ccF.row, subjL, hint, bodyI, fwdNote, fwdPre, row);
+  // The lock said BEFORE the press (seat day-one-fixes, audit fix 1): mail-send holds a reply or forward to anyone but this mailbox.
+  const lock = mk('p', 'mailx-compose-lock', LOCK_COMPOSE); lock.hidden = !SEND_LOCKED;
+  box.append(head, drafted, whoRow, toF.row, ccF.row, subjL, hint, bodyI, fwdNote, fwdPre, lock, row);
 
   let to = [], cc = [], added = [];
   const drawChips = () => {
