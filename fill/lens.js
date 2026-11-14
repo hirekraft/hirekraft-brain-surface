@@ -3672,7 +3672,7 @@ async function personDetail(p, mount) {
   mount.innerHTML = `<p class="quiet">Reading.</p>`;
   let v;
   try { v = await accessCall("access_person", { p_identity: p.id }); }
-  catch (e) { mount.innerHTML = ""; const n = el("p", "quiet"); n.textContent = `This could not be read: ${e?.message ?? e}`; mount.appendChild(n); return; }
+  catch (e) { mount.innerHTML = ""; const n = el("p", "quiet"); n.textContent = `This could not be read: ${plainWords(String(e?.message ?? e))}`; mount.appendChild(n); return; }
   mount.innerHTML = "";
   if (!v?.ok) { const n = el("p", "quiet"); n.textContent = v?.note ?? "Not shown, and no reason was given."; mount.appendChild(n); return; }
   const part = (head, lines) => {
@@ -3825,7 +3825,7 @@ const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count
 // IS SHE STILL IN SETUP? One promise, settled once by the opening below (true: Getting Started is the page; false: the Tool is open).
 // A function declaration, so whatever calls it first finds it (seat ready-alive 2026-11-14).
 function setupGate() { if (!window.toolSetupGate) { let res; const p = new Promise((r) => { res = r; }); window.toolSetupGate = { p, res }; } return window.toolSetupGate; }
-const READY_JS = './ready.js?v=2026-11-14-day-one-fixes-2';   // seat getting-ready-screen; token seat setup-screens-2
+const READY_JS = './ready.js?v=2026-11-14-day-one-fixes-3';   // seat getting-ready-screen; token seat setup-screens-2
 let readyMod = null;
 // THE FRONT DOOR, How Verrandi Works (fill/setup.js, seat setup-front-door): from #how and the Brain at any time. Get started
 // opens Getting started at step 1; someone who is not the owner sees it without prices or Get started.
@@ -3836,7 +3836,7 @@ const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () =>
 const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
 // SETTINGS (seat setup-screens-2, decision 1138): after Ready, the same page becomes Settings (fill/settings.js, #s-settings,
 // #settings). The masthead carries one link: Getting started until Ready, Settings after (settings.js mastLink).
-const SETTINGS_JS = './settings.js?v=2026-11-14-day-one-fixes-2';
+const SETTINGS_JS = './settings.js?v=2026-11-14-day-one-fixes-3';
 let settingsMod = null;
 const setupLink = (notReady) => import(SETTINGS_JS).then((M) => M.mastLink(readyCtx(), notReady)).catch(() => { /* the Brain button still leads back */ });
 async function routeOnState(mode) {
@@ -3916,12 +3916,12 @@ function goto(id, key) {
     showSubtabs(sec, 'drives', shape?.viewer?.email);
     drawBrain(false);
   }
-  if (id === 's-ready') import(READY_JS).then((G) => { readyMod = G; return G.mount(readyCtx()); }).catch((e) => { const m = $('#gr-left'); if (m) m.textContent = 'Getting ready could not be loaded: ' + String(e?.message ?? e); });   // seat getting-ready-screen
+  if (id === 's-ready') import(READY_JS).then((G) => { readyMod = G; return G.mount(readyCtx()); }).catch((e) => { const m = $('#gr-left'); if (m) m.textContent = 'Getting ready could not be loaded: ' + plainWords(String(e?.message ?? e)); });   // seat getting-ready-screen
   else if (readyMod) readyMod.unmount();
-  if (id === 's-settings') import(SETTINGS_JS).then((M) => { settingsMod = M; M.mount(readyCtx()); }).catch((e) => { const m = $('#st'); if (m) m.textContent = 'Settings could not be loaded: ' + String(e?.message ?? e); });   // seat setup-screens-2
+  if (id === 's-settings') import(SETTINGS_JS).then((M) => { settingsMod = M; M.mount(readyCtx()); }).catch((e) => { const m = $('#st'); if (m) m.textContent = 'Settings could not be loaded: ' + plainWords(String(e?.message ?? e)); });   // seat setup-screens-2
   else if (settingsMod) settingsMod.unmount();
   if (id === "s-tests") loadTests();
-  if (id === "s-totest") import("./totest.js?v=2026-10-29-ask-agent").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + String(e?.message ?? e); });   // seat test-list
+  if (id === "s-totest") import("./totest.js?v=2026-10-29-ask-agent").then((T) => { T.initToTest({ sb, el, $ }); T.loadToTest(); }).catch((e) => { const m = $("#totest"); if (m) m.textContent = "The test list could not be loaded: " + plainWords(String(e?.message ?? e)); });   // seat test-list
   if (id === "s-security") loadSecurity();
   if (id === 's-lens') { lensKey = key ?? lensKey; drawLens(); }
   onMail = id === 's-lens' && lensKey === 'email';
@@ -3929,7 +3929,7 @@ function goto(id, key) {
   workPanel(id === 's-work');
   if (id === 's-money') { initMoney({ sb, el, $, countOf, zone }); loadMoney(); showSubtabs($('#s-money'), 'money', shape?.viewer?.email);   // seat tab-split
     // seat contractor-ledger 2026-10-12: where we stand with each contractor, drawn into #money-ledger (runway's mount).
-    import("./ledger.js?v=2026-11-14-day-one-fixes-2").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + String(e?.message ?? e); }); }
+    import("./ledger.js?v=2026-11-14-day-one-fixes-3").then((L) => { L.initLedger({ sb, el, $, countOf }); L.loadLedger(); }).catch((e) => { const m = $("#money-ledger"); if (m) m.textContent = "Where we stand with each contractor could not be loaded: " + plainWords(String(e?.message ?? e)); }); }
   if (id === 's-recognition') { initProfile({ sb, el, $, countOf }); loadProfile(); }
   if (id === 's-thoughts') loadThoughts(key); if (id === 's-work') { loadWork(); countOpenWork(); if (!workOrder && !$('#answer-in').children.length) workHelloShow(true); } if (id === 's-chats') { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY, name: BRAIN.name }); loadChats(); showSubtabs($('#s-chats'), 'chats', shape?.viewer?.email); }
   const tabNow = id === 's-lens' ? lensKey : id === 's-drives' ? 'drives' : id === 's-work' ? 'work' : id === 's-security' || id === 's-accessmap' ? 'security' : id === 's-money' ? 'money' : id === 's-chats' ? 'chats' : id === 's-thoughts' ? 'thoughts' : id === 's-ready' ? 'ready' : 'brain';
@@ -3963,11 +3963,11 @@ function room() {
     drawDrives: (box, d) => drawDrives(box, { ...d, choose: () => stageDrivePicker(driveAccountKey()) }), drawOrganize,
     stageLoose: (host) => stageLoose(host),
     connectAssistant: (host) => { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY, name: BRAIN.name }); return connectPart(host); },
-    googleSignin: (host) => import('./google.js?v=2026-11-14-tabs-style').then((G) => G.drawGoogleSignin(host, { sb, el, connect: googleConnect })).catch((e) => { host.textContent = 'Your Google sign-in could not be shown: ' + String(e?.message ?? e); }),
+    googleSignin: (host) => import('./google.js?v=2026-11-14-day-one-fixes-3').then((G) => G.drawGoogleSignin(host, { sb, el, connect: googleConnect })).catch((e) => { host.textContent = 'Your Google sign-in could not be shown: ' + plainWords(String(e?.message ?? e)); }),
     adopt: () => fillAdoptable(),
     onState: drawEngine });
   // the AI tab's own blocks (the three lines, the limit, the balance), so the room's money pages are the AI tab's
-  import('./ai.js?v=2026-11-14-tabs-style').then((A) => { Object.assign(roomBlocks, { boughtLines: A.boughtLines, limitBlock: A.limitBlock, balance: A.balance }); }).catch(() => { /* the pages say so */ });
+  import('./ai.js?v=2026-11-14-day-one-fixes-3').then((A) => { Object.assign(roomBlocks, { boughtLines: A.boughtLines, limitBlock: A.limitBlock, balance: A.balance }); }).catch(() => { /* the pages say so */ });
 }
 // THE BRAIN BUTTON IN THE MASTHEAD AND THE LINE UNDER THE TABS (seat brain-status-build, decision 1110). The engine light:
 // on every screen and the phone, its state in words and a ring that fills (Ready green; Learning, step N of 4 yellow; Needs
@@ -4138,33 +4138,33 @@ function drawLens() {
   if (lensKey === 'systems' || lensKey === 'calendar') {
     const g = el('div');
     body.appendChild(g);
-    import('./google.js?v=2026-11-14-tabs-style').then((G) => G.drawGoogleSignin(g, { sb, el, connect: googleConnect }))
-      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'Your Google sign-in could not be shown: ' + String(e?.message ?? e); g.appendChild(p); });
+    import('./google.js?v=2026-11-14-day-one-fixes-3').then((G) => G.drawGoogleSignin(g, { sb, el, connect: googleConnect }))
+      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'Your Google sign-in could not be shown: ' + plainWords(String(e?.message ?? e)); g.appendChild(p); });
     if (lensKey === 'calendar') return;
   }
   // THE AI TAB (seat ai-tab, 2026-10-23): which AI does each kind of work, its test score, its cost, the other choices,
   // one press to change. Owner only (lens-ask refuses anyone else; the tab is hidden for them too). Keeps its own state:
   // a reading does not redraw it (OWN_STATE), so an open choice is not lost.
   if (lensKey === 'ai') {
-    import('./ai.js?v=2026-11-14-tabs-style').then((A) => A.drawAI(body, { el, askBody, ask, isOwner: () => !!shape?.viewer?.all_access }))
-      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The AI tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
+    import('./ai.js?v=2026-11-14-day-one-fixes-3').then((A) => A.drawAI(body, { el, askBody, ask, isOwner: () => !!shape?.viewer?.all_access }))
+      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The AI tab could not be loaded: ' + plainWords(String(e?.message ?? e)); body.appendChild(p); });
     return;
   }
   // SIGNALS AND OUTREACH (seat job-alerts, 2026-10-30): companies hiring where the business knows someone, a note per person, Hand to a colleague.
   if (lensKey === 'marketing') {
     import('./marketing.js?v=2026-11-14-day-one-fixes-2').then((M) => M.drawMarketing(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, viewer: () => shape?.viewer }))
-      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Marketing and sales tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
+      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Marketing and sales tab could not be loaded: ' + plainWords(String(e?.message ?? e)); body.appendChild(p); });
     return;
   }
   // THE AGENTS TAB (seat agents-tab, 2026-11-05): the team, making an agent, each expert's page. Keeps its own state (OWN_STATE).
   if (lensKey === 'agents') {
     import('./agents.js?v=2026-11-14-day-one-fixes-2').then((G) => G.drawAgents(body, { sb, el, $, url: SUPABASE_URL, key: PUBLISHABLE_KEY, followSteps, renderAsk, ask, isOwner: () => !!shape?.viewer?.all_access, goTab }))
-      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Agents tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
+      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Agents tab could not be loaded: ' + plainWords(String(e?.message ?? e)); body.appendChild(p); });
     return;
   }
   if (lensKey === 'contacts') {
-    import('./contacts.js?v=2026-11-14-day-one-fixes-2').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, askBody, renderAsk, isOwner: () => !!shape?.viewer?.all_access }))
-      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Contacts tab could not be loaded: ' + String(e?.message ?? e); body.appendChild(p); });
+    import('./contacts.js?v=2026-11-14-day-one-fixes-3').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, askBody, renderAsk, isOwner: () => !!shape?.viewer?.all_access }))
+      .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Contacts tab could not be loaded: ' + plainWords(String(e?.message ?? e)); body.appendChild(p); });
     return;
   }
   const data = groupsFor().find((x) => x.key === lensKey);
@@ -4370,7 +4370,7 @@ async function keepTurn(slot, q, body, into) {
     workInto = null;
     if (!$('#s-work').hidden) loadWork();
   } catch (e) {
-    const p = el('p', 'quiet'); p.textContent = `This answer was not kept in Work: ${e?.message ?? e}`;
+    const p = el('p', 'quiet'); p.textContent = `This answer was not kept in Work: ${plainWords(String(e?.message ?? e))}`;
     slot.appendChild(p);
   }
 }
@@ -4416,7 +4416,7 @@ async function openChat(id, order) {
     const slot = el('div', 'answer-slot');
     turn.append(asked, slot); mount.appendChild(turn);
     if (t.withheld || t.answer?.state === 'withheld') { const p = el('p', 'quiet'); p.textContent = t.answer?.note ?? 'No longer shown.'; slot.appendChild(p); }
-    else { try { renderAsk(slot, t.answer); } catch (e) { const p = el('p', 'quiet'); p.textContent = `This kept answer could not be drawn: ${e?.message ?? e}`; slot.appendChild(p); } }
+    else { try { renderAsk(slot, t.answer); } catch (e) { const p = el('p', 'quiet'); p.textContent = `This kept answer could not be drawn: ${plainWords(String(e?.message ?? e))}`; slot.appendChild(p); } }
     const when = el('p', 'quiet work-when');
     when.textContent = `As shown on ${fmtDate(t.asked_at, 'when')}. Not asked again.`;
     slot.appendChild(when);
@@ -4753,7 +4753,9 @@ function drawClock() {
   const long = el('span', 'ai-long'); const short = el('span', 'ai-short');
   badge.append(long, short); btn.appendChild(badge); wrap.appendChild(btn);
   after.after(wrap);
-  const money = (n) => { const x = Number(n); return '$' + (Math.abs(x) < 10 ? x.toFixed(2) : Math.round(x).toLocaleString('en-US')); };
+  // ONE ROUNDING FOR CREDIT (seat day-one-fixes 2026-11-14, decision 1172 (5), morning-audit-2 fix 5): dollars and cents, as
+  // Getting Started and Settings show it (ready.js usd2). SUPERSEDED: whole dollars above $10 here, cents there.
+  const money = (n) => { const x = Number(n); return Number.isFinite(x) ? '$' + x.toFixed(2) : 'not read'; };
   btn.addEventListener('click', () => ask('What has the Tool cost this month, and for what?'));
   async function read() {
     const r = await askBody({ costs: true });
@@ -4762,6 +4764,7 @@ function drawClock() {
     let tone = 'b-grey';
     if (b.state === 'stopped_at_zero') { long.textContent = 'Credit Used Up: Reading Stopped'; short.textContent = 'Credit $0'; tone = 'b-red'; }
     else if (b.state === 'no_prepaid_account' || b.balance_left_usd === undefined || b.balance_left_usd === null) {
+      if (v.this_month_usd === undefined || v.this_month_usd === null || !Number.isFinite(Number(v.this_month_usd))) { wrap.hidden = true; return; }   // nothing to say is said by nothing, never $NaN (seat day-one-fixes)
       long.textContent = 'AI ' + money(v.this_month_usd) + ' this month'; short.textContent = 'AI ' + money(v.this_month_usd);
     } else {
       long.textContent = 'Credit ' + money(b.balance_left_usd); short.textContent = 'Credit ' + money(b.balance_left_usd);   /* ONE WORD: Credit (decision 1172.4). SUPERSEDED 2026-11-13: AI balance $N left */
@@ -4771,8 +4774,8 @@ function drawClock() {
     // monthly AI limit, the badge says so in words, the attention list carries it, and the conversation says it once.
     // The limit is enforced in the brain's gate (studio-core ai_gate), never here.
     const L = v.limit || {};
-    if (L.state === 'near') { long.textContent = 'AI limit ' + L.percent + '% used'; short.textContent = 'AI ' + L.percent + '%'; if (tone === 'b-grey') tone = 'b-orange'; }
-    else if (L.state === 'reached' || L.state === 'stopped') { long.textContent = 'AI limit reached: new items wait'; short.textContent = 'AI limit'; tone = 'b-red'; }
+    if (L.state === 'near') { long.textContent = 'AI Limit ' + L.percent + '% Used'; short.textContent = 'AI ' + L.percent + '%'; if (tone === 'b-grey') tone = 'b-orange'; }
+    else if (L.state === 'reached' || L.state === 'stopped') { long.textContent = 'AI Limit Reached: New Items Wait'; short.textContent = 'AI Limit'; tone = 'b-red'; }
     limitWarn(L);
     badge.className = 'badge ' + tone;
     btn.title = 'What the Tool has cost: ' + money(v.this_month_usd) + ' this month'
@@ -4952,7 +4955,7 @@ readBrain();                     // then the live reading lands into the frame
         + `${data?.note ?? data?.reason ?? "the reason was not given"}`);
     }
   } catch (e) {
-    say(`It is connected, but making it readable by you did not complete: ${e?.message ?? e}`);
+    say(`It is connected, but making it readable by you did not complete: ${plainWords(String(e?.message ?? e))}`);
   }
   fillAdoptable();
 
