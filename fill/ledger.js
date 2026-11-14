@@ -125,5 +125,5 @@ function draw() {
   if (read.length) note(mount, "Read live just now: " + read.join("; ") + ".");
   for (const x of data.not_read ?? []) note(mount, "Not read: " + x.what + ". " + x.why);
   if (data.wise?.cancelled_or_returned) note(mount, ctx.countOf(data.wise.cancelled_or_returned) + " Wise transfers were canceled or returned and are not counted as paid.");
-  note(mount, data.months_note + " Ask the box: where are we with a contractor by name?");
+  note(mount, data.months_note + " Ask Vera: where are we with a contractor by name?");
 }
