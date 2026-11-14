@@ -81,7 +81,7 @@ async function drawDetail(stage) {
 
   const what = mk('section', 'mk-people');
   if ((r.by_list || []).length || (r.by_kind || []).length) {
-    what.appendChild(mk('h3', 'mk-sub', 'What brought replies'));
+    what.appendChild(mk('h3', 'mk-sub', 'What Brought Replies'));
     for (const k of (r.by_kind || [])) what.appendChild(mk('p', 'state', (k.piece === 'note' ? 'Personal notes' : 'Campaign emails') + ': ' + n0(k.replies) + ' of ' + n0(k.sent) + ' brought a reply, a call or an opening.'));
     for (const l of (r.by_list || [])) {
       const p = mk('p', 'state');
@@ -90,7 +90,7 @@ async function drawDetail(stage) {
     }
   }
   if ((r.by_campaign || []).length) {
-    what.appendChild(mk('h3', 'mk-sub', 'Each campaign, from your email engine'));
+    what.appendChild(mk('h3', 'mk-sub', 'Each Campaign, from Your Email Engine'));
     for (const k of r.by_campaign) {
       const p = mk('p', 'state');
       p.append(data_('span', null, k.subject), mk('span', null, ': sent ' + n0(k.sent) + ', delivered ' + n0(k.delivered) + ', opened ' + n0(k.opened) + ', clicked ' + n0(k.clicked) + ', bounced ' + n0(k.bounced) + ', marked as spam ' + n0(k.complaints) + ', unsubscribed ' + n0(k.unsubscribed) + '.'));
@@ -114,7 +114,7 @@ function counts(x) {
 function drawHistory(stage, h) {
   const name = h.name || 'your email engine';
   const sec = mk('section', 'mk-people');
-  sec.appendChild(mk('h3', 'mk-sub', 'Everything you sent through ' + name));
+  sec.appendChild(mk('h3', 'mk-sub', 'Everything You Sent Through ' + name));
   const t = h.totals || {};
   if (t.since) sec.appendChild(mk('p', 'mk-item-line', 'Since ' + month(String(t.since).slice(0, 7)) + ': ' + counts(t) + '.'));
   const pp = h.people || {};
@@ -127,7 +127,7 @@ function drawHistory(stage, h) {
   const ms = h.months || [];
   if (ms.length) {
     const line = (m) => mk('p', 'state', month(m.month) + ': ' + counts(m) + '.');
-    sec.appendChild(mk('h3', 'mk-sub', 'Month by month'));
+    sec.appendChild(mk('h3', 'mk-sub', 'Month by Month'));
     for (const m of ms.slice(0, 12)) sec.appendChild(line(m));
     if (ms.length > 12) {
       const det = mk('details', 'mk-hand');
@@ -138,7 +138,7 @@ function drawHistory(stage, h) {
   }
   const cs = h.campaigns || [];
   if (cs.length) {
-    sec.appendChild(mk('h3', 'mk-sub', 'Each campaign'));
+    sec.appendChild(mk('h3', 'mk-sub', 'Each Campaign'));
     for (const c of cs) {
       const p = mk('p', 'state');
       p.append(data_('span', null, c.subject || c.name), mk('span', null, (c.last_at ? ', ' + day(c.first_at) + (day(c.first_at) !== day(c.last_at) ? ' to ' + day(c.last_at) : '') : '') + ': '
@@ -148,7 +148,7 @@ function drawHistory(stage, h) {
   }
   const op = h.openers || [];
   if (op.length) {
-    sec.appendChild(mk('h3', 'mk-sub', 'Who opened your last ' + ((h.openers_of || []).length === 1 ? 'campaign' : n0((h.openers_of || []).length) + ' campaigns')));
+    sec.appendChild(mk('h3', 'mk-sub', 'Who Opened Your Last ' + ((h.openers_of || []).length === 1 ? 'campaign' : n0((h.openers_of || []).length) + ' campaigns')));
     const ul = mk('ul', 'mk-person-list');
     for (const o of op.slice(0, 10)) {
       const li = mk('li', 'mk-person');
@@ -160,7 +160,7 @@ function drawHistory(stage, h) {
   }
   const ds = Array.isArray(h.domains) ? h.domains : [];
   if (ds.length) {
-    sec.appendChild(mk('h3', 'mk-sub', 'Sending domains'));
+    sec.appendChild(mk('h3', 'mk-sub', 'Sending Domains'));
     for (const d of ds) {
       const p = mk('p', 'state');
       const checks = ['SPF', 'DKIM', 'DMARC'].map((k) => k + (d[k.toLowerCase()] ? ' passes' : ' does not pass')).join(', ');
@@ -185,7 +185,7 @@ export async function mount(stage, ctx) {
   C = Object.assign({ el: (t, c) => { const n = document.createElement(t); if (c) n.className = c; return n; } }, ctx || {});
   stage.innerHTML = '';
   const head = mk('div', 'mk-head');
-  head.append(mk('h2', 'mk-title', 'What came back'), mk('p', 'mk-lede', 'Who is listening, and who came forward first?'));
+  head.append(mk('h2', 'mk-title', 'What Came Back'), mk('p', 'mk-lede', 'Who is listening, and who came forward first?'));
   stage.appendChild(head);
   const w = mk('p', 'working no-late', 'Reading twelve months of what you sent');
   stage.appendChild(w);
@@ -198,7 +198,7 @@ export async function mount(stage, ctx) {
   stage.appendChild(chart(r.months || []));
   stage.appendChild(forward(stage, r));
   const det = mk('details', 'mk-hand');
-  det.appendChild(mk('summary', 'mk-hand-label', 'The full record: every month, every campaign, every reply'));
+  det.appendChild(mk('summary', 'mk-hand-label', 'The Full Record: Every Month, Every Campaign, Every Reply'));
   const host = mk('div');
   det.appendChild(host);
   let drawn = false;
@@ -247,7 +247,7 @@ function chart(ms) {
 
 function forward(stage, r) {
   const sec = mk('section', 'mk-people');
-  sec.appendChild(mk('h3', 'mk-sub', 'Who came forward first'));
+  sec.appendChild(mk('h3', 'mk-sub', 'Who Came Forward First'));
   const ps = r.forward || [];
   if (!ps.length) sec.appendChild(mk('p', 'state', 'Nobody replied in the last 90 days or opened in the last 30.'));
   const ul = mk('ul', 'mk-person-list');
@@ -263,7 +263,7 @@ function forward(stage, r) {
     const said = mk('p', 'mk-said'); said.setAttribute('aria-live', 'polite');
     if (x.action === 'none') li.appendChild(mk('p', 'stalled', x.dns === 'bounced' ? 'Do not email: the address bounced.' : 'Do not email: they unsubscribed or marked an email as spam.'));
     else if (x.action === 'note') {
-      const a = mk('a', 'go', 'Write a note');
+      const a = mk('a', 'go', 'Write a Note');
       a.href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(x.address); a.target = '_blank'; a.rel = 'noopener';
       acts.appendChild(a);
     } else if (lists.length) {
