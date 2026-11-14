@@ -74,7 +74,7 @@ export function drawNoBrain(words, signinHref) {
   box.setAttribute("role", "alert");
   const h = document.createElement("h1"); h.textContent = "No Tool to open";
   const p = document.createElement("p"); p.textContent = words;
-  const a = document.createElement("a"); a.href = signinHref; a.className = "go"; a.textContent = "Sign in again";
+  const a = document.createElement("a"); a.href = signinHref; a.className = "go"; a.textContent = "Sign In Again";
   box.append(h, p, a);
   document.body.appendChild(box);
 }
