@@ -1860,7 +1860,7 @@ async function loadInbox(more) {
     askUnseen(key, (j.messages || []).map((x) => x.id));
   } catch (e) {
     if (key !== chosen) return;
-    inbox.error = String((e && e.message) || e);
+    inbox.error = plainWords(String((e && e.message) || e));
   }
   inbox.loading = false; inbox.more = false;
   drawList();
@@ -1989,8 +1989,8 @@ async function openThread(threadId, from, msgId) {
     open.related = r;
   } catch (e) {
     if (!open || open.id !== threadId) return;
-    if (!open.thread) open.error = String((e && e.message) || e);
-    else open.related = { error: String((e && e.message) || e) };
+    if (!open.thread) open.error = plainWords(String((e && e.message) || e));
+    else open.related = { error: plainWords(String((e && e.message) || e)) };
   }
   drawRead();
 }
@@ -2936,7 +2936,7 @@ export function findMail(text, keys, opts) {
         query: j.query_used || '', estimate: j.total_estimate || null, more: !!j.next_page_token });
     }).catch((e) => {
       if (!mine()) return;
-      found.per.set(k, { state: 'error', error: String((e && e.message) || e) });
+      found.per.set(k, { state: 'error', error: plainWords(String((e && e.message) || e)) });
     }).finally(() => { if (mine() && parts) drawList(); });
   }
   if (!o.view) live('meaning', { text }).then((j) => {
@@ -2945,7 +2945,7 @@ export function findMail(text, keys, opts) {
       docs: (j.documents && j.documents.docs) || [], docsGate: (j.documents && j.documents.gate) || {} };
   }).catch((e) => {
     if (!mine()) return;
-    found.meaning = { state: 'error', error: String((e && e.message) || e) };
+    found.meaning = { state: 'error', error: plainWords(String((e && e.message) || e)) };
   }).finally(() => { if (mine() && parts) drawList(); });
 }
 
