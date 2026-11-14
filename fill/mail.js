@@ -51,7 +51,7 @@ import { fmtDate } from './dates.js?v=2026-10-22-dates';
 import { plainWords } from './plain.js?v=2026-10-27-mail-views';
 import { drawBench } from './bench.js?v=2026-11-14-tabs-style';   // Bench (staffing): Who we have on a requirement, only where the business has it
 import { screenLang, screenLangName } from './words.js?v=2026-10-29-thinkrooms-3';   // See it in <language> (seat language-and-nudge)
-import { initAi, drawQuestions, drawCleanup, drawTeach, questionCounts, cleanupCount, loadCleanup } from './mailai.js?v=2026-11-14-tabs-style';   // the AI view's six questions, Clean-up, Teach the Tool (seat mail-tab-build round 2)
+import { initAi, drawQuestions, drawCleanup, drawTeach, questionCounts, cleanupCount, loadCleanup } from './mailai.js?v=2026-11-14-mail-questions';   // the AI view's six questions, Clean-up, Teach the Tool (seat mail-tab-build round 2)
 
 // VIEWS IN THE LEFT COLUMN (seat mail-views, 2026-10-27; Alex 14:41 PT: "Worth your attention should be ... on the left-hand
 // side instead of an email, like a label ... worth your attention, and the other would be starred"). At the top of the left
@@ -359,7 +359,7 @@ async function markAll(btn, out) {
   btn.disabled = true;
   out.className = 'working'; out.textContent = 'Marking everything as seen. Gmail is not changed.';
   let r = null;
-  try { const x = await C.sb.rpc('mail_seen_all', { p_attention: attnItems().concat(attnMore()).map((it) => it.key) }); r = x.error ? { ok: false, reason: x.error.message } : x.data; } catch (e) { r = { ok: false, reason: String((e && e.message) || e) }; }
+  try { const x = await C.sb.rpc('mail_seen_all', { p_attention: attnItems().concat(attnMore(), attn && attn.data && Array.isArray(attn.data.threats) ? attn.data.threats : []).map((it) => it.key) }); r = x.error ? { ok: false, reason: x.error.message } : x.data; } catch (e) { r = { ok: false, reason: String((e && e.message) || e) }; }
   btn.disabled = false;
   if (!r || r.ok !== true) { markAllSaid = { line: 'Nothing was marked. ' + plainWords(String((r && r.reason) || '')) }; if (parts) drawSide(); return; }
   markAllSaid = { line: String(r.line || 'Everything is marked as seen.'), id: r.id, until: r.undo_until };
@@ -657,7 +657,7 @@ function drawFollowList(list) {
 const cardMail = new Map();   // source|id -> Promise of the thread read, once per page per email
 function isMailItem(it) {
   return !!(it && it.open_source && it.open_id && !it.invite && !it.following && !String(it.key || '').startsWith('invite:')
-    && ['new_business', 'work_order', 'email'].includes(it.kind));
+    && ['new_business', 'work_order', 'email', 'complaint'].includes(it.kind));   // complaint: a dispute raised from outside (seat mail-questions)
 }
 function cardThread(it) {
   const k = it.open_source + '|' + it.open_id;
@@ -764,7 +764,7 @@ function drawMailCard(read, it, eyebrow) {
 function drawAttnCard(read, it) {
   read.appendChild(navButton('Back to the List', 'list', ' mailx-back'));
   if (isMailItem(it)) {
-    return drawMailCard(read, it, it.kind === 'new_business' ? nbTag(it)[1] : it.kind === 'work_order' ? orderTag(it) : mode === 'ai' ? 'For You' : 'Worth Your Attention');
+    return drawMailCard(read, it, it.kind === 'new_business' ? nbTag(it)[1] : it.kind === 'work_order' ? orderTag(it) : it.kind === 'complaint' ? 'A Dispute or Problem Raised' : mode === 'ai' ? 'For You' : 'Worth Your Attention');
   }
   const card = mk('article', 'mailx-att-card mailx-matter-card' + (it.kind === 'thought' ? ' mailx-att-thought' : ''));
   const eyebrow = it.kind === 'thought' ? 'Left for you' : it.kind === 'money' ? 'Money' : it.following ? 'Following'
