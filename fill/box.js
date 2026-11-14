@@ -430,7 +430,7 @@ function openMenu(which) {
     i.addEventListener('click', () => { closeMenus(); act(); });
     m.appendChild(i);
   };
-  item('Add a thought', 'Say or type what you think, in any language. It goes to a Thinkroom: just for you, or with the people you choose', () => startThought(boxEmail() ? { email: boxEmail(), draft: '' } : {}, which));
+  item('Add a Thought', 'Say or type what you think, in any language. It goes to a Thinkroom: just for you, or with the people you choose', () => startThought(boxEmail() ? { email: boxEmail(), draft: '' } : {}, which));
   item('Add a file', 'A spreadsheet, document, PDF or slides', () => { addFrom = which; $('#add-file')?.click(); });
   item('Add a picture or screenshot', 'You can also paste a screenshot, or drop files on the conversation', () => { addFrom = which; $('#add-picture')?.click(); });
   item('Connect something', 'Mail, drives, calendar, or a system you use', () => { if (C.connect) C.connect(); });
@@ -508,7 +508,7 @@ function micLook(state) {
   b.dataset.state = state;
   b.setAttribute('aria-pressed', state === 'listening' || state === 'recording' ? 'true' : 'false');
   const label = state === 'listening' ? 'Stop listening' : state === 'recording' ? 'Stop recording'
-    : state === 'writing' ? 'Writing down what you said' : 'Speak instead of typing';
+    : state === 'writing' ? 'Writing down what you said' : 'Speak Instead of Typing';
   b.setAttribute('aria-label', label);
   b.title = label;
   b.disabled = state === 'writing';
