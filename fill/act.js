@@ -7,8 +7,8 @@
 // THE CARD: To, the subject and the words, then Send, Change, Not Now. Nothing leaves until Send is pressed, and Send is
 // never pressed by the Tool (1115).
 // WHILE THE TOOL'S SENDING IS BEING TESTED (mail-send's TEST LOCK) the card says so BEFORE the press: Send delivers the
-// email only back to the mailbox it is sent from (the person's own), as a new email, so they see it arrive; nobody else receives it; that changes on
-// Alex's word. SEND_LOCKED below is the screen's copy of that fact and decides nothing: mail-send refuses on its own
+// email only back to the mailbox it is sent from (the person's own), as a new email, so they see it arrive; nobody else receives it.
+// No person's name is said to the customer (seat day-one-fixes: "when Alex says so" removed). SEND_LOCKED (answer.js) is the screen's copy of that fact and decides nothing: mail-send refuses on its own
 // whatever the screen believes. If this says locked and the server is open, the email still goes only to the own address;
 // if this says open and the server is locked, the server's refusal is said as held and the own-address send is offered.
 // HQ turns this to false in the same recorded change that lifts mail-send's lock, and not before. A SECOND COPY OF ONE
@@ -17,9 +17,9 @@
 // Vera what to change, and a new draft comes under it.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
-import { draftHash } from './answer.js?v=2026-10-29-mail-invites';
+import { draftHash, SEND_LOCKED } from './answer.js?v=2026-11-14-day-one-fixes';   // the screen's one copy of the lock lives in answer.js
 
-export const SEND_LOCKED = true;
+export { SEND_LOCKED };
 const SEND = '/functions/v1/mail-send';
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 const clock = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -64,7 +64,7 @@ export function draftCard(slot, body, about, D) {
   const pieces = (node, cls, list) => { node.className = cls; node.replaceChildren(...list.map((x) => (typeof x === 'string' ? mk('span', null, x) : x))); };
   const them = about.to_name || about.to;
   const sayLock = () => pieces(lockLine, 'vera-draft-lock', ['While the Tool' + String.fromCharCode(8217) + 's sending is being tested, Send delivers this to your own mailbox only:', ' ', own(mailbox), ' ',
-    'It arrives as a new email, so you can see it. It does not go to', ' ', own(them), ' ', 'or to anyone else. Sending to other people is turned on when Alex says so.']);
+    'It arrives as a new email, so you can see it. It does not go to', ' ', own(them), ' ', 'or to anyone else.']);
   let locked = SEND_LOCKED;
   if (locked) sayLock();
   box.append(lockLine, acts, out);
