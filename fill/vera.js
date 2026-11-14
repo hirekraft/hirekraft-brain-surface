@@ -570,7 +570,7 @@ const OPEN = {
   db: 'Step 1 is your own database. Everything the Tool learns about your business is kept there, and it stays yours.',
   connect: 'Step 2 is connecting your mailboxes, drives and systems. Connecting and counting are free.',
   search: 'Step 3 makes what you connected searchable. It is the first step that costs money, and you see the price before you press.',
-  understand: 'Step 4 reads what you choose and notes the facts in it. A small sample measures the price on your own mail first.',
+  understand: 'Step 4 reads what you choose and notes the facts in it. You see its price and set your limit before anything is read.',   /* seat ready-alive 2026-11-14 (morning-audit fix 4): true in every state; SUPERSEDED: a line that promised a sample after the press was done */
   ready: 'Step 5 shows whether your brain is ready, and what the Tool costs each month.',
 };
 const TAPS = {
@@ -741,7 +741,7 @@ function answer(key, ids, about, h, f) {
   } else {
     const reading = key === 'search' && g && g.state === 'reading';
     if (ids.includes('time')) {
-      if (reading) { const L = lineOf((g.sources || [])); out.push(num(g.items_done) + ' of ' + num(g.items_total) + ' items are read. ' + (g.minutes_left !== null && g.minutes_left !== undefined && L.pm > 0 ? 'At ' + num(L.pm) + ' a minute that is ' + left(g.minutes_left) + ' left.' : paceWords(L)) + ' You can close this page; it keeps reading.'); }
+      if (reading) { const L = lineOf((g.sources || [])); out.push(num(g.items_done) + ' of ' + num(g.items_total) + ' items are read. ' + (g.minutes_left !== null && g.minutes_left !== undefined && L.pm > 0 ? 'At ' + num(L.pm) + ' a minute that is ' + left(g.minutes_left) + ' left.' : paceWords(L)) + ' It keeps reading by itself.'); }
       else out.push('Time for this step: ' + (h.time || 'not shown') + '.');
     }
     if (ids.includes('cost')) {
@@ -754,7 +754,7 @@ function answer(key, ids, about, h, f) {
     const st = $$('#gr-steps [data-step]');
     const cur = st.find((b) => b.getAttribute('aria-current') === 'step');
     const done = st.filter((b) => $('.gs-done', b)).map((b) => words($('b', b)));
-    out.push('You are on step ' + (cur ? words($('.gs-n', cur)) + ' of ' + st.length + ', ' + words($('b', cur)) : 'one of ' + st.length) + '. ' + (done.length ? 'Done: ' + done.join(', ') + '.' : 'No step is done yet.'));
+    out.push('You are on step ' + (cur ? String(st.indexOf(cur) + 1) + ' of ' + st.length + ', ' + words($('b', cur)) : 'one of ' + st.length) + '. ' + (done.length ? 'Done: ' + done.join(', ') + '.' : 'No step is done yet.'));
   }
   return out;
 }

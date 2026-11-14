@@ -17,7 +17,7 @@ import { installPlain, plainWords } from "./plain.js?v=2026-10-27-mail-views";
 import { fmtDate, zone, ownZone, TZ_KEY } from "./dates.js?v=2026-10-22-dates";
 import { removeControl, readChooser } from "./sources.js?v=2026-11-13-setup-polish"; // remove a source, choose how older mail is read (seat sources-basics)
 import { readSources, drawDrives, drawOrganize, drawGroup } from "./brainview.js?v=2026-11-05-brain-tab-room"; // Brain and Drives made legible (seat brain-and-drives, decision 1030); drawGroup for the engine room's pages (seat brain-tab-room)
-import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-13-setup-clean"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
+import { initRoom, drawRoom, openPage as roomPage, closePage as roomClose, pageOpen as roomPageOpen } from "./brainroom.js?v=2026-11-14-ready-alive"; // the Brain tab's running view (seat brain-tab-room, decision 1086)
 function srcDeps() { return { sb, el, escape, badgeLine, fmtWindow, refreshBrain, readEstimate }; }
 // BRAIN AND DRIVES FROM ONE READING (seat brain-and-drives, 2026-10-28, decision 1030): sources_view, asked once per brain
 // reading (fresh) and shared by the counts, the Sources list, the count under Brain's heading and the Drives tab.
@@ -79,8 +79,8 @@ import { onBrainChange } from "../doorbell.js";
 import { initMail, drawMail, chooseMailbox, askFromMailBar, findMail, clearFind, doFromBox, mailScope, mailHints, openEmail, mailReading } from "./mail.js?v=2026-11-05-work-tab";
 import { initWords } from "./words.js?v=2026-10-29-thinkrooms-3"; // the screen in her language, the switch beside her name (seat language-and-nudge)
 import { initLooks } from "./looks.js?v=2026-10-29-looks"; // the Look switch beside the language switch (seat looks, decision 1036)
-import { initHead, headOut } from "./head.js?v=2026-11-13-setup-clean"; // the header, cleaned up: her initial opens name, Language, Look, Settings, Sign Out (seat setup-clean, decision 1172.1)
-import { initWorking } from "./working.js?v=2026-11-13-setup-clean"; // all running work, one small indicator in the header (seat work-indicator, decision 1152 point 1)
+import { initHead, headOut } from "./head.js?v=2026-11-14-ready-alive"; // the header, cleaned up: her initial opens name, Language, Look, Settings, Sign Out (seat setup-clean, decision 1172.1)
+import { initWorking } from "./working.js?v=2026-11-14-ready-alive"; // all running work, one small indicator in the header (seat work-indicator, decision 1152 point 1)
 import { initBox, drawBox, speakAnswer, startThought } from "./box.js?v=2026-10-29-thinkrooms-b";
 import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer, afterCall, loadThoughts, openComposer } from "./thoughts.js?v=2026-10-30-rulings-small"; // the Thinkrooms tab (seat thinkrooms-a; first built as Thoughts by seat thoughtgram)
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-10-23-watches"; // the Tool tells her first (seat watches)
@@ -409,7 +409,7 @@ function renderWho() {
   // seat brain-and-drives 2026-10-28: the count line is written by drawBrain from sources_view (one count everywhere, decision 1030).
   // The Tests and To test buttons left the customer's screen (seat brain-and-drives, decision 1030); #tests and #totest still open them.
   // What is new, said once by the consultant in the conversation (seat test-list round 2); nothing when nothing is new.
-  import("./news.js?v=2026-10-29-mail-inbox").then((N) => N.showNews({ sb, el, $, openPanel, owner: !!v.all_access })).catch(() => {});
+  import("./news.js?v=2026-11-14-ready-alive").then((N) => N.showNews({ sb, el, $, openPanel, owner: !!v.all_access, setupSaid: setupGate().p })).catch(() => {});
   // What her watches found since she last looked, said once in the conversation (seat watches); nothing when nothing is new.
   initWatches({ sb, el, $, openPanel });
   showWatches().catch(() => {});
@@ -3770,7 +3770,10 @@ let routed = false;
 // go straight to the Brain page, which during setup was the second page with the second numbering.
 let landedBack = null;
 const connectedCount = () => (shape?.groups ?? []).reduce((n, g) => n + (g.count ?? 0), 0);
-const READY_JS = './ready.js?v=2026-11-13-setup-clean';   // seat getting-ready-screen; token seat setup-screens-2
+// IS SHE STILL IN SETUP? One promise, settled once by the opening below (true: Getting Started is the page; false: the Tool is open).
+// A function declaration, so whatever calls it first finds it (seat ready-alive 2026-11-14).
+function setupGate() { if (!window.toolSetupGate) { let res; const p = new Promise((r) => { res = r; }); window.toolSetupGate = { p, res }; } return window.toolSetupGate; }
+const READY_JS = './ready.js?v=2026-11-14-ready-alive';   // seat getting-ready-screen; token seat setup-screens-2
 let readyMod = null;
 // THE FRONT DOOR, How Verrandi Works (fill/setup.js, seat setup-front-door): from #how and the Brain at any time. Get started
 // opens Getting started at step 1; someone who is not the owner sees it without prices or Get started.
@@ -3781,7 +3784,7 @@ const readyCtx = () => ({ sb, el, $, askBody, ask: (q) => ask(q), isOwner: () =>
 const readyGate = () => import(READY_JS).then((G) => { readyMod = G; return G.notReady(readyCtx()); }).catch(() => false);
 // SETTINGS (seat setup-screens-2, decision 1138): after Ready, the same page becomes Settings (fill/settings.js, #s-settings,
 // #settings). The masthead carries one link: Getting started until Ready, Settings after (settings.js mastLink).
-const SETTINGS_JS = './settings.js?v=2026-11-13-setup-clean';
+const SETTINGS_JS = './settings.js?v=2026-11-14-ready-alive';
 let settingsMod = null;
 const setupLink = (notReady) => import(SETTINGS_JS).then((M) => M.mastLink(readyCtx(), notReady)).catch(() => { /* the Brain button still leads back */ });
 async function routeOnState(mode) {
@@ -3808,11 +3811,12 @@ async function routeOnState(mode) {
   if (location.hash === "#how") openDoor();
   // #settings opens Settings directly, also before Ready (so an owner can look at it while setting up); the masthead link
   // still says Getting started until Ready (seat setup-screens-2).
-  if (location.hash === "#settings" && $("#s-settings") && connectedCount()) { goto('s-settings'); readyGate().then((nr) => setupLink(!!nr)); return; }
-  if (location.hash === "#setup" || !connectedCount()) { setupLink(true); goto('s-ready'); return; }
+  if (location.hash === "#settings" && $("#s-settings") && connectedCount()) { goto('s-settings'); readyGate().then((nr) => { setupGate().res(!!nr); setupLink(!!nr); }); return; }
+  if (location.hash === "#setup" || !connectedCount()) { setupGate().res(true); setupLink(true); goto('s-ready'); return; }
   // GETTING READY (seat getting-ready-screen, 2026-11-07, decision 1124): until the brain is Ready the Tool opens on the
   // Getting ready screen (fill/ready.js), not on a tab. A reading that fails opens the Tool as before.
-  if (await readyGate()) { setupLink(true); if (landedBack && readyMod?.stepAt) readyMod.stepAt('connect'); landedBack = null; goto('s-ready'); return; }
+  const stillSetup = !!(await readyGate()); setupGate().res(stillSetup);   // told to what speaks unasked (fill/news.js): nothing of the kind during setup (seat ready-alive 2026-11-14)
+  if (stillSetup) { setupLink(true); if (landedBack && readyMod?.stepAt) readyMod.stepAt('connect'); landedBack = null; goto('s-ready'); return; }
   setupLink(false);
   if (landedBack) { const g = landedBack; landedBack = null; if (g === 'google') goto('s-lens', 'systems'); else goto('s-summary'); return; }
   // THE TAB SHE USED LAST, in this browser; Mail the first time (seat conversation-panel, Alex 2026-10-12).

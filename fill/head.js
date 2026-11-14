@@ -1,6 +1,7 @@
 // fill/head.js - THE HEADER, CLEANED UP (seat setup-clean, 2026-11-13; decision 1172 point 1; picture HsJKa9JnsgmDza5dtX3gUH part 1;
 // Alex 18:51 PT: the header was "very bunched up": twelve things, two step counts, three money figures). Part of SHOW; no mechanism.
 //
+// SINCE 2026-11-14 (decision 1174 (4)) THE DATE AND TIME ZONE ARE BACK IN THE HEADER, one compact line (dateLine below).
 // THE HEADER NOW HOLDS FOUR THINGS: Verrandi and the company on the left (index.html, the wordmark); on the right Working (the one
 // indicator, fill/working.js), Credit (lens.js, the AI meter's balance) and the person's initial. THE INITIAL OPENS: her name and
 // role, Language, Look, Settings, Sign Out, and today's date with its time zone.
@@ -13,7 +14,28 @@
 // the setup money (ready.js no longer draws it; money is on the step that spends it).
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
-let C = null, me = null, menu = null, open = false;
+import { zone } from './dates.js?v=2026-10-22-dates';
+
+let C = null, me = null, menu = null, open = false, dateBtn = null;
+
+// THE DATE AND TIME ZONE, BACK IN THE HEADER (seat ready-alive 2026-11-14, decision 1174 (4), amending 1172 point 1; Alex 18:09 PT:
+// "I did like the date, time zone ... especially if we work across ... let's put that back in a nice spot up there"). One compact
+// line, "Fri, Nov 13 [dot] 6:09 PM Pacific", in the zone she chose (fill/dates.js zone(), the one every date on screen uses). A tap
+// opens her menu with the time zone list open: the list itself is index.html's #clock, still the only one.
+const MID = String.fromCharCode(183);
+export function dateLine(now) {
+  const z = zone(), d = now || new Date(), lang = document.documentElement.lang || 'en-US';
+  let day = '', time = '', zn = '';
+  try {
+    day = new Intl.DateTimeFormat(lang, { timeZone: z, weekday: 'short', month: 'short', day: 'numeric' }).format(d);
+    time = new Intl.DateTimeFormat(lang, { timeZone: z, hour: 'numeric', minute: '2-digit' }).format(d);
+  } catch (_) { return d.toDateString(); }
+  try { const pt = new Intl.DateTimeFormat('en-US', { timeZone: z, timeZoneName: 'longGeneric' }).formatToParts(d).find((x) => x.type === 'timeZoneName'); zn = pt ? String(pt.value) : ''; } catch (_) { zn = ''; }
+  if (zn.endsWith(' Time')) zn = zn.slice(0, zn.length - 5);
+  if (!zn) zn = z.split('/').pop().split('_').join(' ');
+  return day + ' ' + MID + ' ' + time + ' ' + zn;
+}
+function drawDate() { if (!dateBtn) return; const t = dateLine(); if (dateBtn.textContent !== t) dateBtn.textContent = t; dateBtn.title = 'Today, in your time zone (' + zone().split('_').join(' ') + '). Tap to change the time zone.'; }
 
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined && text !== null) e.textContent = text; return e; }
 
@@ -52,7 +74,12 @@ export function initHead(ctx) {
     });
     acts.append(set, out);
     menu.appendChild(acts);
-    head.append(me, menu);
+    dateBtn = el('button', 'hd-date'); dateBtn.type = 'button'; dateBtn.id = 'hd-date';
+    dateBtn.setAttribute('aria-label', 'Today and your time zone: open to change the time zone');
+    dateBtn.addEventListener('click', (e) => { e.stopPropagation(); toggle(true); const pick = document.querySelector('#clock-pick'), zb = document.querySelector('#clock-zone'); if (zb && pick && pick.hidden) zb.click(); });
+    head.append(dateBtn, me, menu);
+    setInterval(drawDate, 20000);
+    const pk = document.querySelector('#clock-pick'); if (pk) pk.addEventListener('change', () => setTimeout(drawDate, 0));
     me.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
     document.addEventListener('click', (e) => { if (open && !menu.contains(e.target) && !me.contains(e.target)) toggle(false); });
     document.addEventListener('keydown', (e) => { if (open && e.key === 'Escape') { toggle(false); me.focus(); } });
@@ -60,6 +87,7 @@ export function initHead(ctx) {
   if (who.parentNode !== menu) menu.prepend(who);
   const clock = document.querySelector('#clock');
   if (clock && clock.parentNode !== menu) menu.appendChild(clock);
+  drawDate();
   const ini = initials(ctx && ctx.name);
   me.textContent = ini || '?';
   me.setAttribute('aria-label', (ctx && ctx.name ? String(ctx.name) : 'You') + ': open your name, language, look, settings and sign out');
