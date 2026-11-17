@@ -2455,10 +2455,12 @@ function fitFrame(frame) {
 // oauth-start, the same two steps as every connect in lens.js beginConnect; here the way back is the Mail tab). Back from Google,
 // the box says it is done and asks once, per mailbox, "Mark suspected scams for you?" (scam_label_choice, decision 1087 item 2).
 // Every move says what happened, with Undo (mail-send move / move_undo; Gmail keeps Spam and Trash for 30 days).
-// HIDDEN WHILE CHANGE_OFFERED IS false: the Verrandi Google app does not yet list gmail.modify (Alex's console step, report of
-// 2026-11-05), so Google would refuse the consent; everything on screen works or is left out (decision 1075). HQ sets it true once
-// the console step is confirmed. Proven offline with it forced on (scripts/screen-harness/mail-tab-build, round 2).
-const CHANGE_OFFERED = false;
+// SHOWN SINCE 2026-11-17 (seat google-scopes, decision 1183). Until then CHANGE_OFFERED was false because Google refused gmail.modify;
+// that rationale is SUPERSEDED: Alex added gmail.modify to the company-wide delegation (Google Admin, hirekraft.ai) and the permission
+// maker's ceiling carries it, so change_ready answers yes for every hirekraft.ai mailbox without any consent (proven 23:37 UTC: mail-send
+// probe gmail.modify granted for alex@, refused for a mailbox whose Admin row lacks it). The press still asks change_ready first;
+// a mailbox Google refuses gets the one-time consent box, as before. Nothing moves unless she presses.
+const CHANGE_OFFERED = true;
 const changeReady = new Map();   // source key -> true | 'consent' | false
 const moveSaid = new Map();      // thread id -> { line, ids }
 let changeSaid = null;           // { source, step: 'done' | 'asked' | 'refused', line }
