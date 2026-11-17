@@ -43,7 +43,6 @@ export async function sendHeld(post, mailbox, addresses) {
 export const LOCK_COMPOSE_TO = 'While the Tool' + String.fromCharCode(8217) + 's sending is being tested, a reply or forward to these addresses is held, not sent:';
 export const LOCK_COMPOSE_AFTER = 'Reply to them from Gmail or Outlook for now.';
 export const LOCK_COMPOSE = 'While the Tool' + String.fromCharCode(8217) + 's sending is being tested, a reply or forward may be held, not sent. Reply from Gmail or Outlook for now.';
-export const SEND_LOCKED = true;   // TEMPORARY (seat send-open): kept for one commit while act.js and mail.js move to sendHeld; removed next.
 export const LOCK_ANSWER = 'While the Tool' + String.fromCharCode(8217) + 's sending is being tested, an answer pressed here is held and does not go out. Answer in Gmail or Outlook for now.';
 const NL = String.fromCharCode(10);
 const BRIEF_Q = 'What does the company know that bears on this email?';
