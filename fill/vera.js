@@ -55,7 +55,7 @@
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
 import { startPoint } from './point.js?v=2026-11-14-vera-one-door';
-import { draftCard } from './act.js?v=2026-11-14-day-one-fixes';
+import { draftCard } from './act.js?v=2026-11-17-send-open';
 import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 
 const $ = (s, r) => (r || document).querySelector(s);
