@@ -19,7 +19,7 @@
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
 import { filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-14-day-one-fixes-3';   // the files press and the reading's progress (seat brain-status-2; understandBlock retired here by seat audit-fix-screen)
-const READY_FOR_STEP = './ready.js?v=2026-11-14-day-one-fixes-3';   // the same module instance lens.js loads (step 4 opens there)
+const READY_FOR_STEP = './ready.js?v=2026-11-17-vera-flicker';   // the same module instance lens.js loads (step 4 opens there)
 import { drawToday } from './today.js?v=2026-11-14-day-one-fixes-3';   // Today: what came in and whether the Tool is keeping up (seat keeping-up, decision 1176)
 
 let C = null;   // { sb, el, $, askBody, isOwner, viewDeps, readSources, drawGroup, aiBlocks, door, goto, openAdd, closeAdd, connectSystem, me }
@@ -120,20 +120,20 @@ export async function drawRoom(fresh) {
   if (!host.dataset.built) build(host);
   if (scans === null) { scans = false; import('./scans.js').then((m) => { scans = m; paint(); }).catch(() => { scans = false; }); }
   const owner = C.isOwner();
-  const R = { owner };
+  const R = { owner }; for (const k of ['src', 'health', 'conn', 'road', 'prog', 'ai']) if (reading && reading.owner === owner && reading[k] !== undefined) R[k] = reading[k]; const fail = (k, e) => { delete R[k]; R[k + 'Err'] = e; };   // A NEW READING STARTS FROM THE LAST ONE (seat vera-flicker, 2026-11-17): every reading of the Tool redraws the room (lens.js drawBrain) and each part is painted as it lands; started empty, the first part to land painted a road with no sources and no counts, so a Ready brain said Learning in the masthead, showed the still-learning line under the tabs and put Vera's setup questions in her column until the rest landed, on every reading (Alex 2026-11-17: a flicker, very disturbing). Each part keeps what was last read until its new answer lands; a part that fails drops its old value and says why.
   const jobs = [
-    C.readSources(C.sb, fresh).then((v) => { R.src = v; }, (e) => { R.srcErr = e; }),
-    C.sb.rpc('tool_health').then(({ data, error }) => { if (error) R.healthErr = error; else R.health = data; }, (e) => { R.healthErr = e; }),
-    C.sb.rpc('connector_status').then(({ data, error }) => { if (error) R.connErr = error; else R.conn = data; }, (e) => { R.connErr = e; }),
+    C.readSources(C.sb, fresh).then((v) => { R.src = v; }, (e) => { fail('src', e); }),
+    C.sb.rpc('tool_health').then(({ data, error }) => { if (error) fail('health', error); else R.health = data; }, (e) => { fail('health', e); }),
+    C.sb.rpc('connector_status').then(({ data, error }) => { if (error) fail('conn', error); else R.conn = data; }, (e) => { fail('conn', e); }),
     // THE ROAD (seat brain-status-build, decisions 1106/1108/1114): findable and understood as counts, the what-it-knows test
-    C.sb.rpc('brain_road').then(({ data, error }) => { if (error || !data || data.ok !== true) R.roadErr = error?.message ?? data?.error ?? 'no reason was given'; else R.road = data; }, (e) => { R.roadErr = e?.message ?? e; }),
+    C.sb.rpc('brain_road').then(({ data, error }) => { if (error || !data || data.ok !== true) fail('road', error?.message ?? data?.error ?? 'no reason was given'); else R.road = data; }, (e) => { fail('road', e?.message ?? e); }),
     // per mailbox and drive: in line, waiting for your yes, minutes left (seat findable-all's source_read_progress)
     C.sb.rpc('source_read_progress').then(({ data, error }) => { if (!error) R.prog = data ?? []; }, () => { /* the panels say the per-mailbox lines could not be read */ }),
   ];
   // TODAY (seat keeping-up, decision 1176): the owner's card first on the tab; keeping_up refuses anyone else, and the card stays hidden
   if (owner) jobs.push(drawToday(C.$('#br-today'), C.sb, fresh).then(() => {}, () => { /* the card says a failed reading itself */ }));
   else { const t = C.$('#br-today'); if (t) t.hidden = true; }
-  if (owner) jobs.push(C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) R.ai = r.ai; else R.aiErr = r?.error ?? r?.ai?.error ?? 'no reason was given'; }, (e) => { R.aiErr = e?.message ?? e; }));
+  if (owner) jobs.push(C.askBody({ ai_tab: true }).then((r) => { if (r && r.ok === true && r.ai && r.ai.ok === true) R.ai = r.ai; else fail('ai', r?.error ?? r?.ai?.error ?? 'no reason was given'); }, (e) => { fail('ai', e?.message ?? e); }));
   // each part is painted as its reading lands, so the slow AI reading never holds the sources back
   reading = R;
   jobs.forEach((j) => j.then(() => { if (reading === R) paint(); }));
@@ -417,7 +417,7 @@ function paint() {
   const R = reading;
   if (!R) return;
   paintRoad(R); paintNeeds(R); paintTiles(R); paintSquares(R); paintAssist(R); paintLayers(R); paintHealth(R); paintStart(R);
-  if (C.onState) { try { C.onState(brainState(R)); } catch (_) { /* the masthead draws itself at the next reading */ } }
+  if (C.onState && ['src', 'health', 'road'].every((k) => R[k] !== undefined || R[k + 'Err'] !== undefined)) { try { C.onState(brainState(R)); } catch (_) { /* the masthead draws itself at the next reading */ } }   // the masthead (and so Vera, who reads it) is told the Brain's state only once sources, health and the road have each answered or failed with a reason: a state decided from half a reading is not the Brain's (seat vera-flicker)
 }
 
 function rowsOf(R) { return R.src?.ok ? (R.src.rows ?? []) : []; }
