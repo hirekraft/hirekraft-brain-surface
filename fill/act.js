@@ -6,20 +6,19 @@
 //
 // THE CARD: To, the subject and the words, then Send, Change, Not Now. Nothing leaves until Send is pressed, and Send is
 // never pressed by the Tool (1115).
-// WHILE THE TOOL'S SENDING IS BEING TESTED (mail-send's TEST LOCK) the card says so BEFORE the press: Send delivers the
-// email only back to the mailbox it is sent from (the person's own), as a new email, so they see it arrive; nobody else receives it.
-// No person's name is said to the customer (seat day-one-fixes: "when Alex says so" removed). SEND_LOCKED (answer.js) is the screen's copy of that fact and decides nothing: mail-send refuses on its own
-// whatever the screen believes. If this says locked and the server is open, the email still goes only to the own address;
-// if this says open and the server is locked, the server's refusal is said as held and the own-address send is offered.
-// HQ turns this to false in the same recorded change that lifts mail-send's lock, and not before. A SECOND COPY OF ONE
-// FACT, named: the clean end is mail-send answering "is the lock on" to a signed-in person, and this line removed.
+// WHILE THE TOOL'S SENDING IS BEING TESTED the card says so BEFORE the press when the address it goes to would be held: Send
+// then delivers the email only back to the mailbox it is sent from (the person's own), as a new email, so they see it arrive.
+// No person's name is said to the customer (seat day-one-fixes: "when Alex says so" removed). WHETHER IT WOULD BE HELD is asked
+// of the brain's one rule (answer.js sendHeld, the brain's send_held, the same rule mail-send obeys; seat send-open 2026-11-17,
+// decision 1181 (4)). SUPERSEDES the screen's own SEND_LOCKED copy, which is removed. Until the rule answers, the card treats the
+// address as held (the safe side); if the rule cannot be read it stays held. If the server holds what the rule here let through,
+// its refusal is said as held and the own-address send is offered.
 // Change makes the words editable in place (what is sent is what the card shows when Send is pressed); she can also tell
 // Vera what to change, and a new draft comes under it.
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
-import { draftHash, SEND_LOCKED } from './answer.js?v=2026-11-14-day-one-fixes';   // the screen's one copy of the lock lives in answer.js
+import { draftHash, sendHeld } from './answer.js?v=2026-11-17-send-open';   // who a send may reach: the brain's one rule
 
-export { SEND_LOCKED };
 const SEND = '/functions/v1/mail-send';
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 const clock = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -65,8 +64,12 @@ export function draftCard(slot, body, about, D) {
   const them = about.to_name || about.to;
   const sayLock = () => pieces(lockLine, 'vera-draft-lock', ['While the Tool' + String.fromCharCode(8217) + 's sending is being tested, Send delivers this to your own mailbox only:', ' ', own(mailbox), ' ',
     'It arrives as a new email, so you can see it. It does not go to', ' ', own(them), ' ', 'or to anyone else.']);
-  let locked = SEND_LOCKED;
-  if (locked) sayLock();
+  let locked = true;
+  sayLock();
+  sendHeld(D.post, about.source_key, [String(about.to).toLowerCase()]).then((g) => {
+    if (done || !g || g.held.length) return;
+    locked = false; lockLine.replaceChildren(); lockLine.hidden = true;
+  });
   box.append(lockLine, acts, out);
   slot.appendChild(box);
 
@@ -101,7 +104,7 @@ export function draftCard(slot, body, about, D) {
     send.disabled = false; no.disabled = false; change.disabled = !edit.hidden;
     if (!locked && why.startsWith('test lock')) {
       // The server holds the lock the screen did not know of: said as held, and the own-address send is what Send now does.
-      locked = true; sayLock();
+      locked = true; lockLine.hidden = false; sayLock();
       pieces(out, 'vera-draft-out vera-draft-held', ['Held, not sent. Nothing left your mailbox. Press Send again to deliver it to your own mailbox.']);
       return;
     }
