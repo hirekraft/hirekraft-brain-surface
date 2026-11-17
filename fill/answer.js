@@ -25,12 +25,25 @@
 import { fmtDate } from './dates.js?v=2026-10-22-dates';
 const ASK = '/functions/v1/lens-ask';
 const SEND = '/functions/v1/mail-send';
-// THE SCREEN'S ONE COPY OF mail-send's TEST LOCK (seat day-one-fixes 2026-11-14; was act.js SEND_LOCKED, moved here so the reply and
-// forward box, Vera's card and the invitation answers say the same thing BEFORE the press). It decides nothing: mail-send refuses
-// any recipient but the sending mailbox on its own. HQ turns it to false in the same recorded change that lifts mail-send's lock.
-export const SEND_LOCKED = true;
-// What the reply and forward box and the invitation answers say BEFORE the press while the lock holds (customer words, no person's name).
-export const LOCK_COMPOSE = 'While the Tool' + String.fromCharCode(8217) + 's sending is being tested, a reply or forward to anyone but your own mailbox is held, not sent. Reply from Gmail or Outlook for now.';
+// WHO A SEND MAY REACH, ASKED OF THE BRAIN (seat send-open 2026-11-17, decision 1181 (4)). SUPERSEDES the screen's own copy of the
+// lock (SEND_LOCKED = true, seat day-one-fixes 2026-11-14), which could disagree with mail-send. The reply and forward box, Vera's
+// card and the invitation answers now ask the brain's ONE rule, send_held (the same one mail-send obeys, as the person, pressed),
+// which of these addresses would be held, and say so BEFORE the press. It still decides nothing: mail-send asks the same rule on
+// its own. post is (path, body) -> { status, j } as the signed-in person. Returns { mode, held: [addresses] }, or null when the
+// rule could not be read (the screen then says a send may be held, never that it will go).
+export async function sendHeld(post, mailbox, addresses) {
+  try {
+    const { j } = await post('/rest/v1/rpc/send_held', { p_mailbox: String(mailbox || ''), p_to: (addresses || []).map(String), p_pressed: true });
+    if (!j || !Array.isArray(j.held)) return null;
+    return { mode: String(j.mode || 'self'), held: j.held.map(String) };
+  } catch (_) { return null; }
+}
+// What the reply and forward box and the invitation answers say BEFORE the press when something would be held (customer words,
+// no person's name). LOCK_COMPOSE_TO is followed by the held addresses, as written.
+export const LOCK_COMPOSE_TO = 'While the Tool' + String.fromCharCode(8217) + 's sending is being tested, a reply or forward to these addresses is held, not sent:';
+export const LOCK_COMPOSE_AFTER = 'Reply to them from Gmail or Outlook for now.';
+export const LOCK_COMPOSE = 'While the Tool' + String.fromCharCode(8217) + 's sending is being tested, a reply or forward may be held, not sent. Reply from Gmail or Outlook for now.';
+export const SEND_LOCKED = true;   // TEMPORARY (seat send-open): kept for one commit while act.js and mail.js move to sendHeld; removed next.
 export const LOCK_ANSWER = 'While the Tool' + String.fromCharCode(8217) + 's sending is being tested, an answer pressed here is held and does not go out. Answer in Gmail or Outlook for now.';
 const NL = String.fromCharCode(10);
 const BRIEF_Q = 'What does the company know that bears on this email?';
@@ -46,6 +59,8 @@ async function post(C, path, body) {
   });
   return { status: r.status, j: await r.json().catch(() => null) };
 }
+// The same call as the signed-in person, for the other screens that ask the brain's send rule (mail.js invitation answers).
+export const postAs = post;
 
 // Addresses from a header or a typed field: "Name <a@b.c>, d@e.f" -> ["a@b.c", "d@e.f"].
 export function addrs(s) {
@@ -185,9 +200,22 @@ export function composer(C, o) {
   const discard = mk('button', 'go ghost', 'Discard'); discard.type = 'button';
   const said = mk('p', 'mailx-compose-said'); said.setAttribute('aria-live', 'polite');
   row.append(send, discard, said);
-  // The lock said BEFORE the press (seat day-one-fixes, audit fix 1): mail-send holds a reply or forward to anyone but this mailbox.
-  const lock = mk('p', 'mailx-compose-lock', LOCK_COMPOSE); lock.hidden = !SEND_LOCKED;
+  // What would be held, said BEFORE the press (seat day-one-fixes, audit fix 1; since seat send-open asked of the brain's one rule
+  // each time To or Cc changes, so an address the rule lets through shows no warning and one it holds is named).
+  const lock = mk('p', 'mailx-compose-lock'); lock.hidden = true;
   box.append(head, drafted, whoRow, toF.row, ccF.row, subjL, hint, bodyI, fwdNote, fwdPre, lock, row);
+  let lockAsk = 0;
+  const checkLock = async () => {
+    const r = api.recipients(); const all = r.to.concat(r.cc); const n = ++lockAsk;
+    if (!all.length) { lock.hidden = true; return; }
+    const g = await sendHeld((p, b) => post(C, p, b), o.sourceKey || s.mailbox, all);
+    if (n !== lockAsk) return;
+    if (!g) { lock.replaceChildren(mk('span', null, LOCK_COMPOSE)); lock.hidden = false; return; }
+    if (!g.held.length) { lock.hidden = true; lock.replaceChildren(); return; }
+    const who = mk('b', null, g.held.join(', ')); who.translate = false;
+    lock.replaceChildren(mk('span', null, LOCK_COMPOSE_TO), document.createTextNode(' '), who, document.createTextNode(' '), mk('span', null, LOCK_COMPOSE_AFTER));
+    lock.hidden = false;
+  };
 
   let to = [], cc = [], added = [];
   const drawChips = () => {
@@ -207,6 +235,7 @@ export function composer(C, o) {
     const all = api.who === 'all';
     justB.setAttribute('aria-pressed', all ? 'false' : 'true');
     allB.setAttribute('aria-pressed', all ? 'true' : 'false');
+    checkLock();
   };
   const addTyped = () => {
     const v = addI.value.trim();
@@ -283,8 +312,8 @@ export function composer(C, o) {
         return;
       }
       const why = String((j && (j.reason || j.error)) || '');
-      // THE TEST LOCK (mail-send): while sending is being proven, it sends only to the mailbox itself. Said plainly, as held.
-      if (why.startsWith('test lock')) api.status('Held, not sent. While the Tool’s own sending is being tested, it only sends to ' + s.mailbox + ' itself. Your words stay here.', 'mailx-compose-held');
+      // HELD BY THE ONE RULE (mail-send asked send_held): said plainly, as held, and the warning above Send is asked again.
+      if (why.startsWith('test lock')) { api.status('Held, not sent. While the Tool’s own sending is being tested, some of these addresses are held. Your words stay here.', 'mailx-compose-held'); checkLock(); }
       else api.status('Not sent: ' + (why || ('the send came back with ' + status)) + '.', 'state stalled');
     } catch (e) {
       api.status('Not sent: the send could not be reached (' + ((e && e.message) || e) + ').', 'state stalled');
