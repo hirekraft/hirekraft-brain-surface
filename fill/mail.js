@@ -1655,6 +1655,36 @@ function viewButton(label, count, on, fn, title) {
 }
 const VIEW_WORDS = ['Worth Your Attention', 'Caught', 'Starred', 'Labels', 'All Labels', 'For You', 'Following', 'Six Questions', 'Clean-up', 'Teach the Tool'];
 const NOT_SEEN = 'Not yet seen by you in the Tool';
+// SEARCH IN MAIL (seat mail-basics, decision 1186 item 2; Alex, 15:50 PT: I think we had that before). WE HAD: until 2026-10-12 the one box
+// sent a find to findMail below (seat one-box); seat talk-to-the-tool retired those word rules so every question went to the
+// conversation, and Mail was left with no search of its own. findMail stayed (Starred and labels use it). This box is that same
+// search, not a second one: Gmail's own search in every mailbox she may open, through worklens-live (the door decides each
+// mailbox), plus the brain's meaning search beside it, newest first, each mailbox saying if it could not be searched. Built once and
+// kept, so what she typed survives the left column's redraws.
+let searchBox = null;
+function drawSearch(side, refocus) {
+  if (!searchBox) {
+    const form = mk('form', 'mailx-search');
+    form.setAttribute('role', 'search');
+    const input = mk('input', 'mailx-search-in');
+    input.type = 'search'; input.name = 'q'; input.autocomplete = 'off'; input.enterKeyHint = 'search';
+    input.placeholder = 'Search Your Mail';
+    input.setAttribute('aria-label', 'Search the mailboxes you can open');
+    const go = mk('button', 'go', 'Search'); go.type = 'submit';
+    form.append(input, go);
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = String(input.value || '').trim();
+      if (!text) { input.focus(); return; }
+      const keys = readingKeys().filter((k) => !hiddenBoxes.has(k));
+      findMail(text, keys, { title: 'Search Results' });
+      input.blur();
+    });
+    searchBox = { form, input };
+  }
+  side.appendChild(searchBox.form);
+  if (refocus) searchBox.input.focus();
+}
 // THE INBOX VIEW'S LEFT COLUMN (seat mail-inbox, decision 1033 item 1): Worth your attention as it was; Mark all as seen; Mailboxes;
 // Caught (the Suspicious view renamed); Starred and Labels under "Your Gmail". Every number is not yet seen by you.
 // SUPERSEDES the order of seat mail-views (Worth your attention, Suspicious, Starred, Labels above the mailboxes).
@@ -1715,8 +1745,10 @@ function drawLabels(side) {
 function drawSide() {
   const side = parts.side;
   const top = side.scrollTop;
+  const typing = searchBox && document.activeElement === searchBox.input;
   side.innerHTML = '';
   drawModeSwitch(side);
+  drawSearch(side, typing);
   const n = attn && attn.data ? attnUnseenCount() : null;
   if (mode === 'ai') { drawAiSide(side, n); side.scrollTop = top; return; }
   const you = viewButton('Worth Your Attention', n === null ? '' : n, view && view.kind === 'attention', () => chooseView({ kind: 'attention' }), NOT_SEEN);
@@ -1800,21 +1832,30 @@ function drawBoxes(side) {
     return;
   }
 
+  // YOUR OWN MAILBOX FIRST (seat mail-basics, decision 1186 item 1; Alex 15:50 PT). Her own address leads, marked Yours; the rest of
+  // her company's mailboxes follow alphabetically; then other companies, each alphabetically. SUPERSEDES the order the brain handed
+  // over within a company, and companies in alphabetical order with her own company wherever it fell.
+  const me = String((v && v.email) || '').toLowerCase();
+  const myDomain = me.split('@')[1] || '';
   const byDomain = new Map();
   for (const m of rows) {
     const d = String(m.address || '').split('@')[1] || '';
     if (!byDomain.has(d)) byDomain.set(d, []);
     byDomain.get(d).push(m);
   }
-  for (const [domain, list] of [...byDomain.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+  const mineFirst = (a, b) => (String(a.address).toLowerCase() === me ? -1 : 0) - (String(b.address).toLowerCase() === me ? -1 : 0) || String(a.address).localeCompare(String(b.address));
+  const domainOrder = (a, b) => (a[0] === myDomain ? -1 : 0) - (b[0] === myDomain ? -1 : 0) || a[0].localeCompare(b[0]);
+  for (const [domain, list] of [...byDomain.entries()].sort(domainOrder)) {
     side.appendChild(mk('h4', 'mailx-domain', domain));
     const ul = mk('ul', 'mailx-boxes');
-    for (const m of list) {
+    for (const m of list.slice().sort(mineFirst)) {
       const li = mk('li');
       const b = mk('button', 'mailx-box');
       b.type = 'button';
       if (m.source_key === chosen && view && view.kind === 'mailbox') b.setAttribute('aria-current', 'true');
-      b.appendChild(mk('span', 'mailx-addr', m.address));
+      const addr = mk('span', 'mailx-addr', m.address); addr.translate = false;
+      b.appendChild(addr);
+      if (me && String(m.address).toLowerCase() === me) { b.classList.add('mailx-box-yours'); b.appendChild(mk('span', 'mailx-yours', 'Yours')); }
       if (unread.has(m.source_key) && unread.get(m.source_key) > 0) {
         const n = mk('span', 'mailx-count', String(unread.get(m.source_key)));
         n.title = NOT_SEEN;
@@ -1866,6 +1907,87 @@ async function loadInbox(more) {
   drawList();
 }
 
+// DELETE A CHOSEN FEW (seat mail-basics, decision 1186 item 3). Choose Emails puts a box on every row of the open inbox; Delete moves
+// the chosen ones to Gmail's Trash through the one path that changes a mailbox (mail-send move, to 'trash', after change_ready, the
+// same as Delete on an open email: moveRow / pressMove), with Undo (move_undo puts back exactly the labels each had). Never a
+// permanent delete: Gmail empties its Trash after 30 days. At most 50 in one press (mail-send's own limit).
+const PICK_MAX = 50;
+let pickMany = { key: null, on: false, ids: new Set(), said: null, busy: false };
+function togglePick(id) {
+  const k = String(id);
+  if (pickMany.ids.has(k)) pickMany.ids.delete(k);
+  else if (pickMany.ids.size < PICK_MAX) pickMany.ids.add(k);
+  pickMany.said = null;
+  const top = parts.list.scrollTop; drawList(); parts.list.scrollTop = top;
+}
+function pickBox(x) {
+  const w = mk('label', 'mailx-pickwrap');   // the box's whole square chooses, so a thumb finds it (44 px on a phone)
+  const c = mk('input', 'mailx-pick'); c.type = 'checkbox';
+  c.checked = pickMany.ids.has(String(x.id));
+  c.setAttribute('aria-label', 'Choose this email');
+  c.addEventListener('change', () => togglePick(x.id));
+  w.appendChild(c);
+  return w;
+}
+function pickBar() {
+  const bar = mk('div', 'mailx-pickbar');
+  const out = mk('div', 'mailx-move-out'); out.setAttribute('aria-live', 'polite');
+  if (pickMany.on) {
+    const k = pickMany.ids.size;
+    bar.appendChild(mk('span', 'mailx-pickcount', k ? (k === 1 ? '1 email chosen' : k + ' emails chosen') + (k >= PICK_MAX ? ' (the most in one go)' : '') : 'Choose the emails to delete.'));
+    const d = mk('button', 'go ghost mailx-danger', 'Delete'); d.type = 'button';
+    d.disabled = !k || pickMany.busy;
+    d.title = 'Moves them to Trash in Gmail. Gmail empties Trash after 30 days. You can undo it.';
+    d.addEventListener('click', () => deletePicked(d, out));
+    bar.appendChild(d);
+  }
+  if (pickMany.said) showPickSaid(out);
+  bar.appendChild(out);
+  return bar;
+}
+async function deletePicked(btn, out) {
+  const key = chosen;
+  const ids = [...pickMany.ids].slice(0, PICK_MAX);
+  if (!ids.length) return;
+  btn.disabled = true; pickMany.busy = true;
+  out.className = 'mailx-move-out working'; out.textContent = 'Checking that the Tool may change this mailbox.';
+  const ready = await askChange(key);
+  if (ready === 'consent') { pickMany.busy = false; btn.disabled = false; consentBox(out, key); return; }
+  if (ready !== true) { pickMany.busy = false; btn.disabled = false; changeReady.delete(key); out.className = 'mailx-move-out state stalled'; out.textContent = 'Whether the Tool may change this mailbox could not be checked just now. Nothing was moved.'; return; }
+  out.textContent = ids.length === 1 ? 'Moving 1 email to Trash in Gmail.' : 'Moving ' + ids.length + ' emails to Trash in Gmail.';
+  let j = null;
+  try { j = await mailSend({ action: 'move', source_key: key, message_ids: ids, to: 'trash' }); } catch (e) { j = { ok: false, reason: String((e && e.message) || e) }; }
+  pickMany.busy = false;
+  if (key !== chosen) return;
+  if (j && j.needs_consent) { changeReady.set(key, 'consent'); btn.disabled = false; consentBox(out, key); return; }
+  const moved = Number((j && j.moved) || 0), failed = Number((j && j.failed) || 0);
+  pickMany.said = { line: moved
+    ? (moved === 1 ? 'Moved 1 email to Trash in Gmail.' : 'Moved ' + moved + ' emails to Trash in Gmail.') + ' Gmail empties Trash after 30 days.' + (failed ? ' ' + failed + ' could not be moved and ' + (failed === 1 ? 'is' : 'are') + ' still in the inbox.' : '')
+    : 'Nothing was moved. ' + plainWords(String((j && j.reason) || '')), ids: (j && j.action_ids) || [] };
+  pickMany.on = false; pickMany.ids.clear();
+  // What left the inbox leaves the list at once; with any failure the inbox is read again, so the list never claims a move that did not happen.
+  if (moved && !failed && inbox) { const gone = new Set(ids); inbox.pages = inbox.pages.filter((x) => !gone.has(String(x.id))); drawList(); }
+  else if (moved) loadInbox(false);
+  else drawList();
+}
+function showPickSaid(out) {
+  const said = pickMany.said;
+  out.innerHTML = ''; out.className = 'mailx-move-out find-lesson';
+  out.appendChild(mk('span', null, said.line));
+  if (said.ids && said.ids.length) {
+    const u = mk('button', 'go ghost', 'Undo'); u.type = 'button';
+    u.addEventListener('click', async () => {
+      u.disabled = true; out.classList.add('working');
+      let j = null;
+      try { j = await mailSend({ action: 'move_undo', action_ids: said.ids }); } catch (_) { j = null; }
+      const back = Number((j && j.restored) || 0);
+      pickMany.said = back === said.ids.length ? { line: back === 1 ? 'Put back in the inbox in Gmail.' : 'All ' + back + ' put back in the inbox in Gmail.', ids: [] }
+        : { line: 'Not all of it was put back. ' + plainWords(String((j && j.reason) || '')), ids: said.ids };
+      loadInbox(false);
+    });
+    out.appendChild(u);
+  }
+}
 function drawList() {
   const list = parts.list;
   list.innerHTML = '';
@@ -1900,13 +2022,23 @@ function drawList() {
   }
   const n = inbox.pages.length;
   head.appendChild(mk('p', 'mailx-list-sub', 'Newest first, read live from Gmail.'));
+  if (pickMany.key !== chosen) pickMany = { key: chosen, on: false, ids: new Set(), said: null, busy: false };
+  if (n) {
+    const sel = mk('button', 'mailx-textlink', pickMany.on ? 'Done Choosing' : 'Choose Emails'); sel.type = 'button';
+    sel.title = 'Choose a few emails to delete together.';
+    sel.setAttribute('aria-pressed', pickMany.on ? 'true' : 'false');
+    sel.addEventListener('click', () => { pickMany.on = !pickMany.on; pickMany.ids.clear(); drawList(); });
+    head.appendChild(sel);
+  }
+  if (pickMany.on || pickMany.said) list.appendChild(pickBar());
   if (!n) { list.appendChild(mk('p', 'quiet', 'Nothing in this inbox right now.')); return; }
 
   askWarnings(inbox.pages.map((x) => [chosen, x.id]));
   if (warnsError) list.appendChild(mk('p', 'state stalled', warnsError));
-  const ul = mk('ul', 'mailx-msgs');
+  const ul = mk('ul', 'mailx-msgs' + (pickMany.on ? ' mailx-picking' : ''));
   for (const x of inbox.pages) {
     const li = mk('li');
+    if (pickMany.on) li.appendChild(pickBox(x));
     // Bold means not yet seen by her in the Tool (mail_seen_state), not Gmail's unread (seat mail-inbox).
     const u = unseenIds.get(chosen);
     const b = mk('button', 'mailx-msg' + (u && u.has(String(x.id)) && !seenLocally('email', chosen, x.id) ? ' unread' : ''));
@@ -1927,7 +2059,9 @@ function drawList() {
     const xw = warnFor(chosen, [x.id]);
     if (xw) warnTag(b, xw);
     withAvatar(b, x.from_name || x.from_email, xw ? 'scam' : 'people');
-    b.addEventListener('click', () => openThread(x.thread_id, null, x.id));
+    // While she is choosing, pressing the row chooses it (a bigger target than the box on a phone); otherwise it opens.
+    b.addEventListener('click', () => { if (pickMany.on) togglePick(x.id); else openThread(x.thread_id, null, x.id); });
+    if (pickMany.on && pickMany.ids.has(String(x.id))) b.classList.add('mailx-picked');
     if (!x.details_unavailable) askMark(b, chosen, x.thread_id, x, x.subject, x.snippet);
     li.appendChild(b);
     ul.appendChild(li);
