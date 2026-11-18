@@ -463,6 +463,29 @@ function notYet(c) {
   mount.appendChild(ul);
 }
 
+// WHAT YOUR BUSINESS KNOWS (seat connect-joins-3, 2026-11-18, decisions 1194 and 1197): the company, roles, terms and other
+// names the Tool connected from the books and agreements, or the owner said, each with its source and date. What the owner
+// said reads "You told us". Read from the card's `known` (the brain's who_known, the one reader). Someone who may not see
+// these is told so in one line, never shown an empty part.
+function known(c) {
+  const k = c.known;
+  if (!k) return;
+  const rows = Array.isArray(k.lines) ? k.lines : [];
+  if (!rows.length) {
+    if (Number(k.refused ?? 0) > 0 && k.refused_reason) mount.appendChild(line("quiet", String(k.refused_reason)));
+    return;
+  }
+  mount.appendChild(head4("What Your Business Knows"));
+  const ul = ctx.el("ul", "members");
+  for (const r of rows) {
+    const li = ctx.el("li"); li.style.padding = "calc(var(--u) * 1) 0"; li.style.borderTop = "1px solid var(--line-2)"; li.style.overflowWrap = "anywhere";
+    li.appendChild(line("", String(r.text ?? "")));
+    li.appendChild(line("quiet", [r.you_told_us ? "You told us" : String(r.source ?? ""), r.at ? day(r.at) : "", r.why ? String(r.why) : ""].filter(Boolean).join(", ") + "."));
+    ul.appendChild(li);
+  }
+  mount.appendChild(ul);
+}
+
 // ONE PRESS DOWN: everything the summary was written from, and what the Tool did not read.
 function below(label) {
   const d = ctx.el("details", "whatis"); d.style.marginTop = "var(--gap-lg)";
@@ -474,13 +497,14 @@ function below(label) {
 
 function drawPerson(c, ms) {
   const f = c.facts ?? {};
-  const sub = [c.people_joined > 1 ? "one person across " + c.people_joined + " records (" + (c.joined_by ?? []).join(", ") + ")" : "", c.from_mail_only ? "known from mail only" : ""].filter(Boolean).join(" · ");
+  const sub = [c.people_joined > 1 ? "one person across " + c.people_joined + " records (" + (c.joined_by ?? []).join(", ") + ")" : "", c.from_mail_only ? "known from mail only" : "", c.from_known_only ? "known from your books or what you told us only" : ""].filter(Boolean).join(" · ");
   head(c.name, sub, ms, c.as_of);
   const slot = ctx.el("div"); slot.setAttribute("aria-live", "polite");
   mount.appendChild(slot);
   summary(c, slot);
   lastContact(c);
   meetings(c);
+  known(c);
   const act = ctx.el("div", "actions");
   const prep = ctx.el("button", "go"); prep.type = "button"; prep.textContent = "Prep Me for a Call";
   prep.addEventListener("click", () => ctx.ask("Prep me for my call with " + c.name));
@@ -543,6 +567,7 @@ function drawCompany(c, ms) {
   summary(c, slot);
   lastContact(c);
   meetings(c);
+  known(c);
   const t = c.history?.totals ?? {};
   const said = [["jobs", "jobs"], ["put_forward_per_older_job_records", "people put forward (older job records)"], ["pipeline_entries", "people in the pipeline"], ["contacts", "contacts"], ["activities", "logged calls, emails and meetings"]]
     .filter(([k]) => Number(t[k] ?? 0) > 0).map(([k, w]) => ctx.countOf(t[k]) + " " + w);
