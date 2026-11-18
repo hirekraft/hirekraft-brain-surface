@@ -1947,44 +1947,12 @@ async function deletePicked(btn, out) {
   const key = chosen;
   const ids = [...pickMany.ids].slice(0, PICK_MAX);
   if (!ids.length) return;
-  btn.disabled = true; pickMany.busy = true;
-  out.className = 'mailx-move-out working'; out.textContent = 'Checking that the Tool may change this mailbox.';
-  const ready = await askChange(key);
-  if (ready === 'consent') { pickMany.busy = false; btn.disabled = false; consentBox(out, key); return; }
-  if (ready !== true) { pickMany.busy = false; btn.disabled = false; changeReady.delete(key); out.className = 'mailx-move-out state stalled'; out.textContent = 'Whether the Tool may change this mailbox could not be checked just now. Nothing was moved.'; return; }
-  out.textContent = ids.length === 1 ? 'Moving 1 email to Trash in Gmail.' : 'Moving ' + ids.length + ' emails to Trash in Gmail.';
-  let j = null;
-  try { j = await mailSend({ action: 'move', source_key: key, message_ids: ids, to: 'trash' }); } catch (e) { j = { ok: false, reason: String((e && e.message) || e) }; }
-  pickMany.busy = false;
-  if (key !== chosen) return;
-  if (j && j.needs_consent) { changeReady.set(key, 'consent'); btn.disabled = false; consentBox(out, key); return; }
-  const moved = Number((j && j.moved) || 0), failed = Number((j && j.failed) || 0);
-  pickMany.said = { line: moved
-    ? (moved === 1 ? 'Moved 1 email to Trash in Gmail.' : 'Moved ' + moved + ' emails to Trash in Gmail.') + ' Gmail empties Trash after 30 days.' + (failed ? ' ' + failed + ' could not be moved and ' + (failed === 1 ? 'is' : 'are') + ' still in the inbox.' : '')
-    : 'Nothing was moved. ' + plainWords(String((j && j.reason) || '')), ids: (j && j.action_ids) || [] };
-  pickMany.on = false; pickMany.ids.clear();
-  // What left the inbox leaves the list at once; with any failure the inbox is read again, so the list never claims a move that did not happen.
-  if (moved && !failed && inbox) { const gone = new Set(ids); inbox.pages = inbox.pages.filter((x) => !gone.has(String(x.id))); drawList(); }
-  else if (moved) loadInbox(false);
-  else drawList();
-}
-function showPickSaid(out) {
-  const said = pickMany.said;
-  out.innerHTML = ''; out.className = 'mailx-move-out find-lesson';
-  out.appendChild(mk('span', null, said.line));
-  if (said.ids && said.ids.length) {
-    const u = mk('button', 'go ghost', 'Undo'); u.type = 'button';
-    u.addEventListener('click', async () => {
-      u.disabled = true; out.classList.add('working');
-      let j = null;
-      try { j = await mailSend({ action: 'move_undo', action_ids: said.ids }); } catch (_) { j = null; }
-      const back = Number((j && j.restored) || 0);
-      pickMany.said = back === said.ids.length ? { line: back === 1 ? 'Put back in the inbox in Gmail.' : 'All ' + back + ' put back in the inbox in Gmail.', ids: [] }
-        : { line: 'Not all of it was put back. ' + plainWords(String((j && j.reason) || '')), ids: said.ids };
-      loadInbox(false);
-    });
-    out.appendChild(u);
-  }
+  btn.disabled = true; pickMany.busy = true; out.innerHTML = '';
+  // The one move rule (moveOut): the chosen leave every list at once and the one bar at the bottom says what happened, with Undo.
+  // Only the chosen messages are moved, so only their own ids leave the lists (not the rest of their conversations).
+  const r = await moveOut(key, ids, 'trash', [], () => { pickMany.on = false; pickMany.ids.clear(); listsAgain(); });
+  pickMany.busy = false; btn.disabled = false;
+  if (r === 'consent' && key === chosen) { pickMany.on = true; drawList(); const o = parts.list.querySelector('.mailx-pickbar .mailx-move-out'); if (o) consentBox(o, key); }
 }
 function drawList() {
   const list = parts.list;
