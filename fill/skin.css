@@ -2512,6 +2512,25 @@ body.br-panel-open { overflow: hidden; }
 .mailx-perm-head { font-weight: var(--w-strong); color: var(--ink); }
 .mailx-move { display: grid; gap: calc(var(--u) * 2); margin-top: calc(var(--u) * 2); }
 .mailx-move-out { min-width: 0; overflow-wrap: anywhere; }
+/* ── MAIL BASICS (seat mail-basics, 2026-11-17, decision 1186): the search box at the top of the left column; Yours beside her own
+   mailbox; Choose Emails puts a box on each row and one bar with Delete above the list. Tokens only. Phone rules in A PHONE IS A
+   FIRST-CLASS SIZE. ── */
+.mailx-search { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); margin-bottom: var(--gap); min-width: 0; }
+.mailx-search-in { flex: 1 1 8rem; min-width: 0; min-height: var(--tap); padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); color: var(--ink); font: inherit; font-size: var(--t-small); }
+.mailx-search .go { margin-top: 0; flex: none; }
+.mailx-yours { flex: none; font-size: var(--t-micro); font-weight: var(--w-strong); color: var(--act); padding: 1px 8px; border-radius: 999px; background: var(--act-soft); }
+.mailx-box-yours { flex-wrap: wrap; }
+.mailx-box-yours .mailx-addr { flex: 1 0 auto; max-width: 100%; font-weight: var(--w-mid); color: var(--ink); }   /* the whole address; Yours goes under it when both do not fit */
+.mailx-pickbar { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 2) calc(var(--u) * 3); padding: calc(var(--u) * 3) calc(var(--u) * 4); border-bottom: 1px solid var(--line); background: var(--paper-2); font-size: var(--t-small); min-width: 0; }
+.mailx-pickbar .go { margin-top: 0; }
+.mailx-pickbar .mailx-move-out { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 2); }
+.mailx-pickbar .mailx-move-out:empty { display: none; }
+.mailx-pickcount { color: var(--ink-2); overflow-wrap: anywhere; }
+.mailx-picking > li { display: flex; align-items: stretch; }
+.mailx-picking > li > .mailx-msg { flex: 1 1 auto; min-width: 0; }
+.mailx-pickwrap { flex: none; display: flex; align-items: flex-start; justify-content: center; width: 40px; padding-top: calc(var(--u) * 3.5); cursor: pointer; }
+.mailx-pick { width: 20px; height: 20px; margin: 0; accent-color: var(--act); cursor: pointer; }
+.mailx-msg.mailx-picked { background: var(--act-soft); }
 
 /* ── THE AGENTS TAB (seat agents-tab, 2026-11-05, decisions 1092-1102; approved picture T4R7NokV8WeFqUPRwrd6mm): the team on the left, the
    making of an agent or one expert on the right. Tokens only, plus the brand saffron for agent marks (DESIGN-LANGUAGE 4), mixed with the
@@ -2756,6 +2775,11 @@ body.br-panel-open { overflow: hidden; }
   /* seat mail-views 2026-10-27: the left column is the first screen on a phone (views, then mailboxes), every row thumb-sized;
      an item's actions full width. SUPERSEDES seat attention's folded block rules (the block is gone). */
   .mailx-box, .mailx-back, .mailx-nav, .mailx-toggle { min-height: 44px; }
+  /* seat mail-basics: the search box, its button, the choose box and Delete at thumb size; 16px so the phone does not zoom in */
+  .mailx-search-in { min-height: 44px; font-size: 16px; }
+  .mailx-search .go, .mailx-pickbar .go, .mailx-head > .mailx-textlink { min-height: 44px; }
+  .mailx-pickwrap { width: 44px; min-height: 44px; align-items: center; padding-top: 0; }
+  .mailx-pick { width: 24px; height: 24px; }
   .mailx-list .mailx-nav, .mailx-read .mailx-back { display: inline-flex; align-items: center; }
   .mailx-att-acts .go { flex: 1 1 auto; justify-content: center; }
   .mailx-att-input { font-size: 16px; }
