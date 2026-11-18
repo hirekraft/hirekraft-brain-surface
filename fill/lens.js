@@ -3963,7 +3963,7 @@ function room() {
     drawDrives: (box, d) => drawDrives(box, { ...d, choose: () => stageDrivePicker(driveAccountKey()) }), drawOrganize,
     stageLoose: (host) => stageLoose(host),
     connectAssistant: (host) => { initChats({ sb, el, $, zone, url: SUPABASE_URL, key: PUBLISHABLE_KEY, name: BRAIN.name }); return connectPart(host); },
-    googleSignin: (host) => import('./google.js?v=2026-11-14-day-one-fixes-3').then((G) => G.drawGoogleSignin(host, { sb, el, connect: googleConnect })).catch((e) => { host.textContent = 'Your Google sign-in could not be shown: ' + plainWords(String(e?.message ?? e)); }),
+    googleSignin: (host) => import('./google.js?v=2026-11-18-calendar-walk-2').then((G) => G.drawGoogleSignin(host, { sb, el, connect: googleConnect })).catch((e) => { host.textContent = 'Your Google sign-in could not be shown: ' + plainWords(String(e?.message ?? e)); }),
     adopt: () => fillAdoptable(),
     onState: drawEngine });
   // the AI tab's own blocks (the three lines, the limit, the balance), so the room's money pages are the AI tab's
@@ -4138,7 +4138,7 @@ function drawLens() {
   if (lensKey === 'systems' || lensKey === 'calendar') {
     const g = el('div');
     body.appendChild(g);
-    import('./google.js?v=2026-11-14-day-one-fixes-3').then((G) => G.drawGoogleSignin(g, { sb, el, connect: googleConnect }))
+    import('./google.js?v=2026-11-18-calendar-walk-2').then((G) => G.drawGoogleSignin(g, { sb, el, connect: googleConnect }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'Your Google sign-in could not be shown: ' + plainWords(String(e?.message ?? e)); g.appendChild(p); });
     if (lensKey === 'calendar') return;
   }
