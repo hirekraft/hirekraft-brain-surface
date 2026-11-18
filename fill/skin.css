@@ -2528,6 +2528,20 @@ body.br-panel-open { overflow: hidden; }
 .mailx-pickcount { color: var(--ink-2); overflow-wrap: anywhere; }
 .mailx-picking > li { display: flex; align-items: stretch; }
 .mailx-picking > li > .mailx-msg { flex: 1 1 auto; min-width: 0; }
+/* ── THE ONE MOVE RULE (seat move-rule, 2026-11-18, decision 1187): one bar at the bottom of the screen says what a move did, with
+   Undo, as in Gmail (fill/mail.js showBar). Dark on the look's own ink, so it reads in every look. It sits left, clear of Vera's
+   button on the right. SUPERSEDES the Undo line under the open email's buttons and in the choose bar. Tokens only. Phone rules in
+   A PHONE IS A FIRST-CLASS SIZE. ── */
+.mailx-undobar { position: fixed; left: 24px; bottom: 24px; z-index: 45; display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 3); max-width: min(36rem, calc(100vw - 48px)); padding: calc(var(--u) * 2) calc(var(--u) * 2) calc(var(--u) * 2) calc(var(--u) * 4); border-radius: var(--radius); background: var(--ink); color: var(--paper); font-size: var(--t-small); box-shadow: 0 6px 20px var(--shadow-c); }
+.mailx-undobar[hidden], body:not(:has(.mailx)) .mailx-undobar, body:has(#s-lens[hidden]) .mailx-undobar { display: none; }   /* only while Mail is on screen */
+.mailx-undobar-line { flex: 1 1 14rem; min-width: 0; overflow-wrap: anywhere; }   /* long words (German) put Undo under the line, never squeeze it */
+.mailx-undobar-line.working { color: inherit; }
+.mailx-undobar-undo, .mailx-undobar-close { flex: none; min-height: var(--tap); padding: 0 calc(var(--u) * 3); border: 0; border-radius: var(--radius); background: none; color: inherit; font: inherit; cursor: pointer; }
+.mailx-undobar-undo { margin-left: auto; font-weight: var(--w-strong); text-decoration: underline; text-underline-offset: 3px; }
+.mailx-undobar-close { min-width: var(--tap); font-size: var(--t-read); opacity: .8; }
+.mailx-undobar-undo:hover, .mailx-undobar-close:hover { background: color-mix(in srgb, var(--paper) 14%, transparent); }
+.mailx-undobar-undo:focus-visible, .mailx-undobar-close:focus-visible { outline: var(--focus-w) solid var(--paper); outline-offset: 2px; }
+.mailx-undobar-bad { box-shadow: 0 6px 20px var(--shadow-c), inset 4px 0 0 var(--warn); }
 .mailx-pickwrap { flex: none; display: flex; align-items: flex-start; justify-content: center; width: 40px; padding-top: calc(var(--u) * 3.5); cursor: pointer; }
 .mailx-pick { width: 20px; height: 20px; margin: 0; accent-color: var(--act); cursor: pointer; }
 .mailx-msg.mailx-picked { background: var(--act-soft); }
@@ -2780,6 +2794,9 @@ body.br-panel-open { overflow: hidden; }
   .mailx-search .go, .mailx-pickbar .go, .mailx-head > .mailx-textlink { min-height: 44px; }
   .mailx-pickwrap { width: 44px; min-height: 44px; align-items: center; padding-top: 0; }
   .mailx-pick { width: 24px; height: 24px; }
+  /* seat move-rule: the one Undo bar sits above the bottom tab bar and left of Vera's button; Undo and close at thumb size */
+  .mailx-undobar { left: 16px; right: 96px; bottom: calc(64px + 12px + env(safe-area-inset-bottom)); max-width: none; }
+  .mailx-undobar-undo, .mailx-undobar-close { min-height: 44px; min-width: 44px; }
   .mailx-list .mailx-nav, .mailx-read .mailx-back { display: inline-flex; align-items: center; }
   .mailx-att-acts .go { flex: 1 1 auto; justify-content: center; }
   .mailx-att-input { font-size: 16px; }
