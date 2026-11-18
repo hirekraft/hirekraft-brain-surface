@@ -86,7 +86,7 @@ import { initThoughts, thoughtFromBox, keepThought, thoughtOnEmail, afterAnswer,
 import { initWatches, showWatches, watchFromBox } from "./watches.js?v=2026-11-14-tabs-style"; // the Tool tells her first (seat watches)
 import { attachOutputs } from "./outputs.js?v=2026-11-14-tabs-style";
 import { initWorkTab, drawOpenWork, countOpenWork, findOrder, orderTop, orderAnchor, hello as workHello, draftCard } from "./work.js?v=2026-11-14-tabs-style"; // Work's own pages: Open work, an order's details, the greeting (seat work-tab)
-import { foundCard } from "./find.js?v=2026-11-14-tabs-style"; // find first, then work on what was found (seat find-first)
+import { foundCard } from "./find.js?v=2026-11-18-who-is-on-it"; // find first, then work on what was found (seat find-first)
 import { closeCard } from "./close.js?v=2026-11-14-tabs-style"; // the month-end check, corrected cell by cell (seat month-end)
 import { initPanel, loadPanel, setLive } from "./security.js?v=2026-11-14-day-one-fixes-3"; import { showSubtabs, followHash, reveal } from "./subtabs.js?v=2026-10-27-people-and-access"; import { initPeople, loadPeople } from "./people.js?v=2026-11-14-day-one-fixes-3"; // sub-tab row and People and access (seat people-and-access)
 import { initChats, loadChats, connectPart } from "./chats.js?v=2026-11-14-tabs-style"; // Chats tab (seat chat-import)
