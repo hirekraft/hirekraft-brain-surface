@@ -124,6 +124,12 @@ export async function drawGoogleSignin(box, { sb, el, connect }) {
 // the door, with invitations in her mail that are not on her calendar yet, and what is known of each meeting's notes.
 // A plain list: day, time, title, who, where, notes. Nothing here can change a meeting. Titles, people and places are
 // hers and are never translated (translate="no"); the Tool's own words stand alone so words.js can find them.
+// EVERY CALENDAR SHE MAY SEE (seat calendar-walk-2, 2026-11-18, decision 1177): my_week now reads her own calendar and each
+// shared mailbox's she may open (Accounting, Admin, ...), all read company-wide with nobody signing in. With more than one
+// calendar each meeting says whose calendar it is on. A calendar not read yet, or refused, is said by name with the reason,
+// so an empty week never hides a calendar that was not read. A standing check-in (the daily check-in with Erin) is shown
+// ONCE at the top, not as a meeting on every day (decision 1177 (2)). SUPERSEDED 2026-11-18: the closing line said every
+// calendar here is one only she sees; a shared mailbox's is seen by everyone who may open that mailbox.
 const NOTES = {
   notes: 'Notes were kept.',
   unsure: 'Notes that may be of this call were kept.',
@@ -156,6 +162,45 @@ async function drawWeek(box, { sb, el }) {
   if (!w?.ok) { say(w?.note || 'Your next 7 days are not shown.'); return; }
   if (w.refused) { say(w.reason || 'Your next 7 days could not be read.', 'notice flagged'); return; }
   const rows = Array.isArray(w.rows) ? w.rows : [];
+  const cals = Array.isArray(w.calendars) ? w.calendars : [];
+  const shared = Array.isArray(w.shared) ? w.shared : [];
+  const many = cals.length > 1;
+  // what was not read, by name, with the reason (never an empty week)
+  for (const n of (Array.isArray(w.not_read) ? w.not_read : [])) {
+    const p = el('p', n.state === 'refused' ? 'notice flagged' : 'quiet');
+    p.style.overflowWrap = 'anywhere';
+    const lead = el('span', '');
+    lead.textContent = n.state === 'refused' ? 'Could not be read:' : 'Not read yet:';
+    p.appendChild(lead);
+    const box1 = el('span', '');
+    box1.setAttribute('translate', 'no');
+    box1.textContent = ' ' + String(n.mailbox || '') + ' ';
+    p.appendChild(box1);
+    const why = el('span', 'state');
+    why.textContent = plainWords(String(n.reason || ''));
+    p.appendChild(why);
+    card.appendChild(p);
+  }
+  // standing check-ins, once each
+  for (const s1 of (Array.isArray(w.standing) ? w.standing : [])) {
+    const p = el('p', '');
+    p.style.overflowWrap = 'anywhere';
+    const lead = el('span', '');
+    lead.textContent = 'Standing check-in:';
+    p.appendChild(lead);
+    const t = el('span', '');
+    t.setAttribute('translate', 'no');
+    t.textContent = ' ' + (s1.title || '(No title)') + ' ';
+    t.style.fontWeight = '600';
+    p.appendChild(t);
+    const how = el('span', '');
+    how.textContent = s1.weekdays_only ? '· weekdays' : '· most days';
+    p.appendChild(how);
+    card.appendChild(p);
+    const who = (Array.isArray(s1.attendees) ? s1.attendees : []).filter((a) => typeof a === 'string' && a);
+    if (who.length) { const q = say(who.join(', ')); q.setAttribute('translate', 'no'); q.style.overflowWrap = 'anywhere'; }
+    say('Shown once here, not as a meeting on each of its days.');
+  }
   if (!rows.length) {
     say(w.calendar === false ? (w.reason || 'Your calendar is not read yet.') : 'Nothing on your calendar in the next 7 days.');
     return;
@@ -183,6 +228,7 @@ async function drawWeek(box, { sb, el }) {
     const lines = [];
     if (who.length) lines.push([who.slice(0, 6).join(', ') + (who.length > 6 ? ', and ' + (who.length - 6) + ' more' : ''), true]);
     if (r.where && !String(r.where).startsWith('http')) lines.push([String(r.where), true]);
+    if (many && r.mailbox && !r.from_invitation) lines.push([String(r.mailbox), true]);
     if (r.from_invitation) lines.push(['An invitation in your mail, not on your calendar yet.', false]);
     if (NOTES[r.notes]) lines.push([NOTES[r.notes], false]);
     for (const [text, keep] of lines) {
@@ -191,5 +237,6 @@ async function drawWeek(box, { sb, el }) {
       if (keep) q.setAttribute('translate', 'no');
     }
   }
-  say('From your own calendar, which only you see. Read only: nothing here changes a meeting.');
+  if (shared.length) say('From your own calendar, which only you see, and the calendars of shared mailboxes you may open, which everyone who may open them sees. Read only: nothing here changes a meeting.');
+  else say('From your own calendar, which only you see. Read only: nothing here changes a meeting.');
 }
