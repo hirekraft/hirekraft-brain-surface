@@ -54,7 +54,7 @@
 // the one greeting for all steps. Her name is changed from Settings (window.veraRename).
 // No regex literals and no backslashes (STANDING-CLAUSES).
 
-import { startPoint } from './point.js?v=2026-11-14-vera-one-door';
+import { startPoint } from './point.js?v=2026-11-18-vera-acts';
 import { draftCard } from './act.js?v=2026-11-17-send-open';
 import { plainWords } from './plain.js?v=2026-10-27-mail-views';   // raw error words never reach her (seat day-one-fixes, morning-audit-2 fix 6)
 
@@ -177,7 +177,7 @@ function drawLook() {
   // What she was pointed at is the person's own material: shown as written, with one press to stop looking at it.
   const what = el('span', 'vera-look-what', pointed.label); what.translate = false;
   const x = el('button', 'vera-look-x', String.fromCharCode(215)); x.type = 'button'; x.setAttribute('aria-label', 'Stop looking at this'); x.title = 'Stop looking at this';
-  x.addEventListener('click', () => { pointed = null; drawLook(); drawSug(); });
+  x.addEventListener('click', () => { pointed = null; staleOffers(); drawLook(); drawSug(); });
   p.replaceChildren(el('b', null, NAME()), document.createTextNode(' ' + DOT + ' looking at: '), what, x);
 }
 
@@ -969,6 +969,39 @@ window.veraPoint = (c) => {
   else if (pointed.anchor) flow(['I am looking at the email ', { own: pointed.label }, '. Ask me about it, or tell me what to answer and I will write the reply for you to check.']);
   else flow(['I am looking at ', { own: pointed.label }, '. What would you like to know about it?']);
   drawSug();
+};
+// THE OPEN EMAIL, WITHOUT A PRESS (seat vera-acts, 2026-11-18; decision 1189 (a)). fill/point.js says which email is open on
+// the screen, or that none is any more (c null, with the one that was). She looks at it quietly: no greeting, her column is
+// not opened or brought back for it; her "looking at" line names it and the next question goes with it as lens-ask's anchor.
+// The same email already pointed at (its words selected, a draft on its card, the turns about it) is kept as it is. Closing
+// the email, or leaving its tab, drops it. Buttons she offered under an answer about another email go with it (staleOffers).
+const emailKey = (p) => (p && p.anchor ? p.anchor.source_key + '|' + p.anchor.thread_id : '');
+function staleOffers() { for (const r of document.querySelectorAll('.vera-offers')) r.remove(); }
+window.veraLook = (c, was) => {
+  const a = c && c.anchor ? c.anchor : null;
+  if (!a) {
+    if (pointed && (pointed.auto || (was && emailKey(pointed) === was))) { pointed = null; staleOffers(); drawLook(); drawSug(); }
+    return;
+  }
+  if (emailKey(pointed) === a.source_key + '|' + a.thread_id) return;
+  pointed = { kind: 'email', label: String(c.label || 'this'), text: String(c.text || ''), anchor: a, turns: [], card: null, tab: document.body.dataset.tab || '', where: String(c.where || ''), selected: false, auto: true,
+    about: { source_key: a.source_key, thread_id: a.thread_id, to: a.from_email, to_name: a.from_name, label: String(c.label || '') } };
+  staleOffers(); drawLook(); drawSug();
+};
+// WHAT FITS NEXT, AS BUTTONS (seat vera-acts; decisions 1188 (3) and 1189 (b)). An answer may carry offers: a few next moves,
+// each a short label and the words it stands for. A press asks her exactly those words, as if typed, about what she is looking
+// at now; nothing is changed by the press itself (a reply still comes back as her card with Send). The labels are written by
+// the answer in the person's own language, so they are never put into another.
+window.veraOffers = (slot, offers) => {
+  const list = (Array.isArray(offers) ? offers : []).map((o) => ({ label: String((o && o.label) || '').trim().slice(0, 60), say: String((o && o.say) || '').trim().slice(0, 400) })).filter((o) => o.label && o.say).slice(0, 4);
+  if (!slot || !list.length) return;
+  const row = el('div', 'vera-follow vera-offers');
+  for (const o of list) {
+    const c = el('button', 'vera-chip', o.label); c.type = 'button'; c.translate = false; c.title = o.say;
+    c.addEventListener('click', () => askIt(o.say));
+    row.appendChild(c);
+  }
+  slot.appendChild(row);
 };
 // lens.js ask() reads this for every question asked outside an order. An email: the anchor, the turns about it, and the draft
 // on screen when one is open (so "make it shorter" changes that draft). Anything else: one line in front of the question.
