@@ -405,8 +405,8 @@ async function loadAttention(quiet) {
   if (attn.data && !attnSeen) { attnSeen = true; C.sb.rpc('seen_mark_set', { p_place: 'attention' }).then(() => {}, () => {}); }
 }
 function attnUnseenCount() { return attnItems().filter(attnUnseen).length; }
-function attnItems() { return attn && attn.data ? (attn.data.items || []).filter((x) => !attn.gone.has(x.key)) : []; }
-function attnMore() { return attn && attn.data ? (attn.data.more || []).filter((x) => !attn.gone.has(x.key)) : []; }
+function attnItems() { return attn && attn.data ? (attn.data.items || []).filter((x) => !attn.gone.has(x.key) && !isGone(x.open_source, x.open_id)) : []; }
+function attnMore() { return attn && attn.data ? (attn.data.more || []).filter((x) => !attn.gone.has(x.key) && !isGone(x.open_source, x.open_id)) : []; }
 function attnTeach(rows) { return C.sb.rpc('find_signal_add', { p_signals: rows }).then(({ data }) => data, () => null); }
 function whoOf(it) { return String(it.what || '').split(': ')[0].split(' (')[0]; }
 
@@ -630,7 +630,7 @@ async function sellerUndo() {
 
 // FOLLOWING (decision 1031 item 3): the matters she asked to be kept posted on. Each comes back to For you only when something new
 // and unresolved arrives in it; here it is listed with where it stands, and Stop following.
-function followItems() { return attn && attn.data ? (attn.data.following || []).map((f) => Object.assign({}, f, { following: true, kind: 'email', subject: f.title })) : []; }
+function followItems() { return attn && attn.data ? (attn.data.following || []).filter((f) => !isGone(f.open_source, f.open_id)).map((f) => Object.assign({}, f, { following: true, kind: 'email', subject: f.title })) : []; }
 function drawFollowList(list) {
   const head = mk('div', 'mailx-head');
   head.appendChild(navButton('All Views', 'side'));
@@ -1350,7 +1350,7 @@ function drawMarkedList(list) {
   if (!marked || marked.key !== markedKey(v) || marked.loading) { list.appendChild(mk('p', 'quiet working', 'Reading what you ' + (v.kind === 'starred' ? 'starred' : 'filed under this label') + '. Nothing in Gmail is changed.')); return; }
   if (marked.error) { list.appendChild(mk('p', 'state stalled', (v.kind === 'starred' ? 'Your starred emails' : 'This label') + ' could not be read just now. ' + marked.error + ' This is not a claim that there are none.')); return; }
   const d = marked.data;
-  const items = marked.items || [];
+  const items = (marked.items || []).filter((r) => !isGone(r.source, r.id, r.thread_id));   // the one move rule
   if (!items.length) list.appendChild(mk('p', 'quiet', v.kind === 'starred' ? 'Nothing is starred in Gmail.' : 'Gmail files no email under this label.'));
   const by = new Map();
   for (const it of items) { const k = String(it.mailbox || ''); if (!by.has(k)) by.set(k, []); by.get(k).push(it); }
@@ -1912,12 +1912,11 @@ async function loadInbox(more) {
 // same as Delete on an open email: moveRow / pressMove), with Undo (move_undo puts back exactly the labels each had). Never a
 // permanent delete: Gmail empties its Trash after 30 days. At most 50 in one press (mail-send's own limit).
 const PICK_MAX = 50;
-let pickMany = { key: null, on: false, ids: new Set(), said: null, busy: false };
+let pickMany = { key: null, on: false, ids: new Set(), busy: false };
 function togglePick(id) {
   const k = String(id);
   if (pickMany.ids.has(k)) pickMany.ids.delete(k);
   else if (pickMany.ids.size < PICK_MAX) pickMany.ids.add(k);
-  pickMany.said = null;
   const top = parts.list.scrollTop; drawList(); parts.list.scrollTop = top;
 }
 function pickBox(x) {
@@ -1941,7 +1940,6 @@ function pickBar() {
     d.addEventListener('click', () => deletePicked(d, out));
     bar.appendChild(d);
   }
-  if (pickMany.said) showPickSaid(out);
   bar.appendChild(out);
   return bar;
 }
