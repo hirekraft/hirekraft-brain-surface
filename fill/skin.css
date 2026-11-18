@@ -1648,6 +1648,7 @@ html body[data-tab="work"] #s-work:not([hidden]) { flex: 1; min-height: 0; margi
 a.find-title { text-decoration: none; }
 a.find-title:hover { text-decoration: underline; }
 .find-meta { margin: calc(var(--u)) 0 0; font-size: var(--t-small); color: var(--ink-3); }
+.find-who { overflow-wrap: anywhere; }
 .find-snip { margin: calc(var(--u)) 0 0; font-size: var(--t-small); color: var(--ink-2); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .find-labels { flex: 0 0 100%; display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1.5); padding-left: 48px; }
 .find-labels .quiet { flex: 0 0 100%; margin: 0; }
