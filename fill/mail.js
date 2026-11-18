@@ -2018,9 +2018,10 @@ function drawList() {
     list.appendChild(mk('p', 'state stalled', 'This inbox could not be opened. ' + inbox.error));
     return;
   }
-  const n = inbox.pages.length;
+  const pages = inbox.pages.filter((x) => !isGone(chosen, x.id, x.thread_id));   // the one move rule: what she moved is not drawn
+  const n = pages.length;
   head.appendChild(mk('p', 'mailx-list-sub', 'Newest first, read live from Gmail.'));
-  if (pickMany.key !== chosen) pickMany = { key: chosen, on: false, ids: new Set(), said: null, busy: false };
+  if (pickMany.key !== chosen) pickMany = { key: chosen, on: false, ids: new Set(), busy: false };
   if (n) {
     const sel = mk('button', 'mailx-textlink', pickMany.on ? 'Done Choosing' : 'Choose Emails'); sel.type = 'button';
     sel.title = 'Choose a few emails to delete together.';
@@ -2028,13 +2029,13 @@ function drawList() {
     sel.addEventListener('click', () => { pickMany.on = !pickMany.on; pickMany.ids.clear(); drawList(); });
     head.appendChild(sel);
   }
-  if (pickMany.on || pickMany.said) list.appendChild(pickBar());
+  if (pickMany.on) list.appendChild(pickBar());
   if (!n) { list.appendChild(mk('p', 'quiet', 'Nothing in this inbox right now.')); return; }
 
-  askWarnings(inbox.pages.map((x) => [chosen, x.id]));
+  askWarnings(pages.map((x) => [chosen, x.id]));
   if (warnsError) list.appendChild(mk('p', 'state stalled', warnsError));
   const ul = mk('ul', 'mailx-msgs' + (pickMany.on ? ' mailx-picking' : ''));
-  for (const x of inbox.pages) {
+  for (const x of pages) {
     const li = mk('li');
     if (pickMany.on) li.appendChild(pickBox(x));
     // Bold means not yet seen by her in the Tool (mail_seen_state), not Gmail's unread (seat mail-inbox).
@@ -2594,7 +2595,6 @@ function fitFrame(frame) {
 // a mailbox Google refuses gets the one-time consent box, as before. Nothing moves unless she presses.
 const CHANGE_OFFERED = true;
 const changeReady = new Map();   // source key -> true | 'consent' | false
-const moveSaid = new Map();      // thread id -> { line, ids }
 let changeSaid = null;           // { source, step: 'done' | 'asked' | 'refused', line }
 function readChangeReturn() {
   try {
@@ -3156,6 +3156,7 @@ function drawFound(list) {
     }
   }
   rows.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  for (let i = rows.length - 1; i >= 0; i--) if (isGone(rows[i].source_key, rows[i].id, rows[i].thread_id)) rows.splice(i, 1);   // the one move rule
 
   const done = [...f.per.values()].filter((p) => p.state === 'done');
   const waiting = [...f.per.values()].filter((p) => p.state === 'loading').length;
