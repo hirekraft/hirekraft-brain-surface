@@ -126,6 +126,26 @@ function frames(root) {
   }
 }
 
+// THE OPEN EMAIL IS WHAT SHE IS LOOKING AT, WITHOUT A PRESS (seat vera-acts, 2026-11-18; decisions 1189 (a) and 1188 (3)).
+// An open email already carries the pinned mark above (Mail sets it; nothing in Mail changes for this). When one is on screen,
+// she is told quietly (window.veraLook, fill/vera.js): her "looking at" line names it and the next question goes with it, with
+// no press and no greeting. When it closes, or its tab is left, she is told that too and drops it. The press (Ask Vera) stays
+// for a row in a list, for selected words, and on a phone. Checked when the page changes, when the tab changes and after a click.
+let openKey = '';
+const onScreen = (n) => !!n && n.isConnected && n.getClientRects().length > 0;
+function openEmail() {
+  if (typeof window.veraLook !== 'function') return;
+  let box = null;
+  for (const b of document.querySelectorAll('[data-ask-pin][data-ask="email"]')) {
+    if (onScreen(b) && b.dataset.askSource && (b.dataset.askThread || b.dataset.askMsg)) { box = b; break; }
+  }
+  const key = box ? box.dataset.askSource + '|' + (box.dataset.askThread || box.dataset.askMsg) : '';
+  if (key === openKey) return;
+  const was = openKey;
+  openKey = key;
+  window.veraLook(box ? contextOf(box, '') : null, was);
+}
+
 export function startPoint() {
   if (document.body.dataset.pointAsk) return;
   document.body.dataset.pointAsk = 'on';
@@ -139,4 +159,11 @@ export function startPoint() {
   new MutationObserver(() => { if (!due) due = requestAnimationFrame(() => { due = 0; pins(document); frames(document); if (at && !at.isConnected) hide(); }); })
     .observe(document.body, { childList: true, subtree: true });
   pins(document); frames(document);
+  // The open email, without a press (see openEmail above).
+  let seen = 0;
+  const look = () => { if (!seen) seen = requestAnimationFrame(() => { seen = 0; openEmail(); }); };
+  new MutationObserver(look).observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(look).observe(document.body, { attributes: true, attributeFilter: ['data-tab', 'class'] });
+  document.addEventListener('click', () => setTimeout(look, 250), true);
+  look();
 }
