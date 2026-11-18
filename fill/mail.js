@@ -2611,53 +2611,128 @@ function moveRow(t) {
   const wrap = mk('div', 'mailx-move');
   const row = mk('div', 'mailx-acts');
   const out = mk('div', 'mailx-move-out'); out.setAttribute('aria-live', 'polite');
-  const said = moveSaid.get(t.thread_id);
   const key = chosen;
   const ids = (t.messages || []).map((m) => m.id).filter(Boolean).slice(0, 50);
   for (const [to, label] of [['spam', 'Move to Spam'], ['trash', 'Delete'], ['archive', 'Archive']]) {
     const b = mk('button', 'go ghost' + (to === 'spam' ? ' mailx-danger' : ''), label); b.type = 'button';
-    b.addEventListener('click', () => pressMove(key, ids, to, t, b, out));
+    b.addEventListener('click', () => pressMove(key, ids, to, t, row, out));
     row.appendChild(b);
   }
   wrap.append(row, out);
-  if (said) showMoveSaid(out, said, t);
   return wrap;
 }
-async function pressMove(key, ids, to, t, b, out) {
-  b.disabled = true;
-  out.className = 'mailx-move-out working'; out.textContent = 'Checking that the Tool may change this mailbox.';
+// A move from the open email moves its whole conversation (every message id), so the lists drop every row of it: by each message
+// id and by the conversation's own id (a find and Worth Your Attention know an email by either). Once Gmail has moved it, the
+// email closes and the list is in front (on a phone too), as in Gmail; while it moves, or if it cannot, the email stays open.
+async function pressMove(key, ids, to, t, row, out) {
+  const btns = [...row.querySelectorAll('button')];
+  btns.forEach((x) => { x.disabled = true; });
+  out.innerHTML = ''; out.className = 'mailx-move-out';
+  const thread = t.thread_id;
+  const r = await moveOut(key, ids, to, [thread, open && open.id, open && open.msg].filter(Boolean), () => {
+    if (open && open.thread && open.thread.thread_id === thread) {
+      open = null;
+      if (pick && isGone(pick.open_source, pick.open_id)) pick = null;
+      drawRead(); setView('list');
+    }
+  });
+  btns.forEach((x) => { x.disabled = false; });
+  if (r === 'consent' && out.isConnected) consentBox(out, key);
+}
+
+// THE ONE MOVE RULE (seat move-rule, 2026-11-18, decision 1187; gmail-plus slice S1). Any move she presses, from the open email
+// (Move to Spam, Delete, Archive) or on the chosen few (Delete), takes the email out of EVERY list on screen at once: the inbox
+// pages, a search's results, Starred and a label, Worth Your Attention and Following (and so the AI view's lists, which read
+// them). It is ONE set, gone, read by each list as it draws (isGone), so a list never keeps its own copy of what moved and Undo is
+// one deletion from the same set. ONE bar at the bottom of the screen says what happened, with Undo (mail-send move_undo puts back
+// exactly the labels each email had). If Gmail does not move it, the email comes back in every list and the bar says why; if only
+// some moved, the inbox is read again from Gmail so the list never claims a move that did not happen.
+// SUPERSEDES (Alex hit it 2026-11-17 16:04 PT; found by seat gmail-plus): pressMove recorded the move and showed its own Undo line
+// under the buttons but never took the email out of the list; deletePicked took it out of the inbox pages only and showed a
+// second Undo line in the choose bar (showMoveSaid, showPickSaid, moveSaid, pickMany.said). All four are removed; the line's words
+// are kept. The permission check (change_ready, then the one-time consent box) is unchanged and runs BEFORE anything leaves the
+// list, so a mailbox that needs permission first shows the box and nothing moves.
+const gone = new Set();          // 'source key|id' of every email she moved out on this page
+const goneKey = (s, id) => s + '|' + id;
+function isGone(s, ...ids) { return !!s && ids.some((id) => id && gone.has(goneKey(s, String(id)))); }
+function listsAgain() { if (!parts) return; const top = parts.list.scrollTop; drawSide(); drawList(); parts.list.scrollTop = top; }
+function takeOut(keys) { for (const k of keys) gone.add(k); listsAgain(); }
+function putBack(keys) { for (const k of keys) gone.delete(k); listsAgain(); }
+const MOVING = { trash: 'to Trash in Gmail', spam: 'to Spam in Gmail', archive: '' };
+function movingLine(to, many) {
+  if (to === 'archive') return many ? 'Archiving ' + many + ' emails in Gmail.' : 'Archiving it in Gmail.';
+  return many ? 'Moving ' + many + ' emails ' + MOVING[to] + '.' : 'Moving it ' + MOVING[to] + '.';
+}
+function movedLine(to, moved, many) {
+  const head = !many ? (to === 'trash' ? 'Moved to Trash in Gmail.' : to === 'archive' ? 'Archived: out of the Inbox, still in All Mail.' : 'Moved to Spam in Gmail.')
+    : to === 'archive' ? (moved === 1 ? 'Archived 1 email.' : 'Archived ' + moved + ' emails.') + ' Out of the Inbox, still in All Mail.'
+    : (moved === 1 ? 'Moved 1 email ' : 'Moved ' + moved + ' emails ') + MOVING[to] + '.';
+  return head + (to === 'trash' ? ' Gmail empties Trash after 30 days.' : '');
+}
+async function moveOut(key, ids, to, also, done) {
+  const many = also.length ? 0 : ids.length;   // the chosen few count; the open email is "it"
+  const keys = [...new Set(ids.concat(also).map((id) => goneKey(key, String(id))))];
+  showBar({ line: 'Checking that the Tool may change this mailbox.', busy: true });
   const ready = await askChange(key);
-  b.disabled = false;
-  if (ready === 'consent') { consentBox(out, key); return; }
-  if (ready !== true) { out.className = 'mailx-move-out state stalled'; out.textContent = 'Whether the Tool may change this mailbox could not be checked just now. Nothing was moved.'; changeReady.delete(key); return; }
-  b.disabled = true;
-  out.textContent = to === 'trash' ? 'Moving it to Trash in Gmail.' : to === 'archive' ? 'Archiving it in Gmail.' : 'Moving it to Spam in Gmail.';
+  if (ready === 'consent') { showBar(null); return 'consent'; }
+  if (ready !== true) { changeReady.delete(key); showBar({ line: 'Whether the Tool may change this mailbox could not be checked just now. Nothing was moved.', bad: true }); return false; }
+  takeOut(keys);
+  showBar({ line: movingLine(to, many), busy: true });
   let j = null;
   try { j = await mailSend({ action: 'move', source_key: key, message_ids: ids, to }); } catch (e) { j = { ok: false, reason: String((e && e.message) || e) }; }
-  b.disabled = false;
-  if (j && j.needs_consent) { changeReady.set(key, 'consent'); consentBox(out, key); return; }
-  const n = Number((j && j.moved) || 0);
-  const said = { line: n ? (to === 'trash' ? 'Moved to Trash in Gmail. Gmail empties Trash after 30 days.' : to === 'archive' ? 'Archived: out of the Inbox, still in All Mail.' : 'Moved to Spam in Gmail.') + (j.failed ? ' ' + j.failed + ' could not be moved.' : '')
-    : 'Nothing was moved. ' + plainWords(String((j && j.reason) || '')), ids: (j && j.action_ids) || [] };
-  moveSaid.set(t.thread_id, said);
-  showMoveSaid(out, said, t);
+  if (j && j.needs_consent) { changeReady.set(key, 'consent'); putBack(keys); showBar(null); return 'consent'; }
+  const moved = Number((j && j.moved) || 0), failed = Number((j && j.failed) || 0);
+  if (!moved) { putBack(keys); showBar({ line: 'Nothing was moved. ' + plainWords(String((j && j.reason) || '')), bad: true }); return false; }
+  if (failed) { putBack(keys); if (key === chosen && inbox) loadInbox(false); }
+  const line = movedLine(to, moved, many) + (failed ? ' ' + failed + (failed === 1 ? ' could not be moved and is' : ' could not be moved and are') + ' still where ' + (failed === 1 ? 'it was.' : 'they were.') : '');
+  showBar({ line, ids: (j && j.action_ids) || [], keys: failed ? [] : keys, source: key, bad: !!failed });
+  if (done) done();
+  return true;
 }
-function showMoveSaid(out, said, t) {
-  out.innerHTML = ''; out.className = 'mailx-move-out find-lesson';
-  out.appendChild(mk('span', null, said.line));
-  if (said.ids && said.ids.length) {
-    const u = mk('button', 'go ghost', 'Undo'); u.type = 'button';
-    u.addEventListener('click', async () => {
-      u.disabled = true;
-      let j = null;
-      try { j = await mailSend({ action: 'move_undo', action_ids: said.ids }); } catch (_) { j = null; }
-      const ok = j && Number(j.restored || 0) === said.ids.length;
-      const back = { line: ok ? 'Put back where it was in Gmail.' : 'Not all of it was put back. ' + plainWords(String((j && j.reason) || '')), ids: ok ? [] : said.ids };
-      moveSaid.set(t.thread_id, back);
-      showMoveSaid(out, back, t);
-    });
-    out.appendChild(u);
+let bar = null;                  // { line, ids, keys, source, busy, bad }: the one Undo bar at the bottom of the screen
+let barEl = null;
+let barTimer = null;
+const BAR_STAYS = 12000;         // a done line, with its Undo, stays 12 s (Gmail's is shorter); a refusal stays until she closes it
+function showBar(b) {
+  bar = b;
+  clearTimeout(barTimer);
+  if (!parts) return;
+  // On the page's body, not inside Mail's columns: #main is a size container, which would hold a fixed bar to itself and not to
+  // the screen. skin.css hides it whenever Mail is not on screen.
+  if (!barEl || !barEl.isConnected) {
+    barEl = mk('div', 'mailx-undobar');
+    barEl.setAttribute('role', 'status'); barEl.setAttribute('aria-live', 'polite');
+    document.body.appendChild(barEl);
   }
+  barEl.innerHTML = '';
+  barEl.hidden = !b;
+  if (!b) return;
+  barEl.classList.toggle('mailx-undobar-bad', !!b.bad);
+  barEl.appendChild(mk('span', 'mailx-undobar-line' + (b.busy ? ' working no-late' : ''), b.line));
+  if (b.ids && b.ids.length && !b.busy) {
+    const u = mk('button', 'mailx-undobar-undo', 'Undo'); u.type = 'button';
+    u.addEventListener('click', () => undoBar());
+    barEl.appendChild(u);
+  }
+  if (!b.busy) {
+    const x = mk('button', 'mailx-undobar-close', '×'); x.type = 'button';
+    x.setAttribute('aria-label', 'Close'); x.title = 'Close';
+    x.addEventListener('click', () => showBar(null));
+    barEl.appendChild(x);
+    if (!b.bad) barTimer = setTimeout(() => { if (bar === b) showBar(null); }, BAR_STAYS);
+  }
+}
+async function undoBar() {
+  const b = bar;
+  if (!b || !b.ids || !b.ids.length || b.busy) return;
+  showBar({ line: 'Putting it back in Gmail.', busy: true });
+  let j = null;
+  try { j = await mailSend({ action: 'move_undo', action_ids: b.ids }); } catch (_) { j = null; }
+  const back = Number((j && j.restored) || 0);
+  putBack(b.keys || []);
+  if (back === b.ids.length) { showBar({ line: back === 1 ? 'Put back where it was in Gmail.' : 'All ' + back + ' put back where they were in Gmail.' }); return; }
+  if (b.source === chosen && inbox) loadInbox(false);   // the inbox is read again from Gmail, so it shows what is really there
+  showBar({ line: 'Not all of it was put back. ' + plainWords(String((j && j.reason) || '')), ids: b.ids, keys: [], source: b.source, bad: true });
 }
 function consentBox(out, key) {
   out.innerHTML = ''; out.className = 'mailx-move-out';
