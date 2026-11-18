@@ -4163,7 +4163,7 @@ function drawLens() {
     return;
   }
   if (lensKey === 'contacts') {
-    import('./contacts.js?v=2026-11-14-day-one-fixes-3').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, askBody, renderAsk, isOwner: () => !!shape?.viewer?.all_access }))
+    import('./contacts.js?v=2026-11-18-connect-joins-3').then((C) => C.drawContacts(body, { sb, el, $, countOf, ask, askBody, renderAsk, isOwner: () => !!shape?.viewer?.all_access }))
       .catch((e) => { const p = el('p', 'notice flagged'); p.textContent = 'The Contacts tab could not be loaded: ' + plainWords(String(e?.message ?? e)); body.appendChild(p); });
     return;
   }
