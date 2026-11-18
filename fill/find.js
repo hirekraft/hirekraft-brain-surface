@@ -24,6 +24,15 @@ const LABELS = ["Client mail", "Supplier", "Invoice or payment", "Contract", "Ca
 const SAID_KEY = "tool.find.learn-said";
 let saidHere = false;
 
+function whoText(p) {
+  if (!p || typeof p !== "object") return "";
+  const part = (label, a) => {
+    if (!Array.isArray(a) || !a.length) return "";
+    const list = a.map(String).filter(Boolean);
+    return label + " " + list.slice(0, 4).join(", ") + (list.length > 4 ? " and " + (list.length - 4) + " more" : "");
+  };
+  return [part("From", p.from), part("To", p.to), part("Cc", p.cc)].filter(Boolean).join(" · ");
+}
 function cap(s) { s = String(s || ""); return s ? s[0].toUpperCase() + s.slice(1) : s; }
 function chipText(it) {
   // EARLIER AI WORK (seat attention, 2026-10-27, decision 1024 item 8): a saved chat or a document saved from an assistant is
@@ -126,7 +135,12 @@ export function foundCard(slot, body, ctx) {
     meta.textContent = [it.where, fmtDate(it.date, "day"), it.kind === "email" && it.parts > 1 ? it.parts + " messages" : "",
       it.places > 1 ? "in " + it.places + " mailboxes" : "", it.linked ? "linked to them" : ""].filter(Boolean).join(" · ");
     const snip = el("p", "find-snip"); snip.textContent = String(it.snippet || "");
-    main.append(top, meta, snip);
+    main.append(top, meta);
+    // WHO IS ON IT (seat search-better-3, 2026-11-18, decision 1194): From, To and Cc as the brain kept them for this email or
+    // conversation, at most four a role and then a count. Nothing is shown when the item is not mail or its people are not kept yet.
+    const who = whoText(it.people);
+    if (who) { const w = el("p", "find-meta find-who"); w.textContent = who; main.appendChild(w); }
+    main.appendChild(snip);
     familyLine(ctx, main, it);
     li.append(lab, main);
     const toggle = () => { keep.set(it.key, box.checked); li.classList.toggle("off", !box.checked); if (!box.checked) lesson(ctx, li); };
