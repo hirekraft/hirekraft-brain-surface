@@ -2724,6 +2724,8 @@ function renderAsk(slot, body, opts) {
   wideButtons(slot);
   markNote(slot);
   costLine(slot, body);
+  // What fits next, as her buttons (seat vera-acts, 2026-11-18): only under an answer given just now, outside an order (fill/vera.js veraOffers).
+  if (opts && !workOrder && body && Array.isArray(body.offers) && body.offers.length && typeof window.veraOffers === "function") window.veraOffers(slot, body.offers);
   reusedLine(slot, body, opts);
   answerActions(slot, body, opts);
 }
