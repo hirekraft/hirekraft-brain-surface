@@ -13,13 +13,22 @@
 //   AI assistants              connector_status(): the chatbots the signed-in person approved (only her own)
 //   Connect an assistant       the Chats tab's own Connect your Claude part (#chats/connect), opened as a door
 //   Add a source               the connect stage that was Brain's Add a source part (#connect-stage), moved onto the page
-// LEFT OUT, OWED (nothing behind them yet, decision 1075: no dead buttons): Top up and automatic top-up (Stripe), Statements,
+// LEFT OUT, OWED (nothing behind them yet, decision 1075: no dead buttons): Statements,
 // Download everything, Open my database, Disconnect an assistant, attachments understood only when opened, and the Scans and
 // photos square until seat scans-photos ships fill/scans.js (the square appears by itself when that file exists).
 // No regex literals and no backslashes (STANDING-CLAUSES).
+// TOP UP IS HERE NOW (seat foundation-hygiene-2, 2026-11-19, HQ brief item 5a from Alex's screen 11-18 16:49 PT): card
+// payments have run through Stripe since 11-12, so the AI balance page offers Top Up by Card, the one sheet ready.js opens
+// everywhere (topUpFor). SUPERSEDED: the line "Adding to the balance from a card is not built yet; the studio adds to it for
+// you", and Top up / automatic top-up on the owed list above.
+// A PART THAT FAILED IS ASKED AGAIN ON ITS OWN (same seat; Alex saw "Getting Started: Could not be read just now: The Tool
+// did not answer in time" at 16:49 PT, from one brain_road call that timed out at 00:42:34 UTC while a migration was landing;
+// it answers in under a second otherwise). The room re-read itself only while something was being read, so one failed
+// call stayed on screen until she moved away, under a line saying it tries again on its own. Now any failed part makes the
+// room read again after 20 seconds, up to 5 times in a row.
 
 import { filesBlock, understandProgress, busy } from './brainpress.js?v=2026-11-14-day-one-fixes-3';   // the files press and the reading's progress (seat brain-status-2; understandBlock retired here by seat audit-fix-screen)
-const READY_FOR_STEP = './ready.js?v=2026-11-17-vera-flicker';   // the same module instance lens.js loads (step 4 opens there)
+const READY_FOR_STEP = './ready.js?v=2026-11-19-foundation-hygiene-2';   // the same module instance lens.js loads (step 4 opens there)
 import { drawToday } from './today.js?v=2026-11-14-day-one-fixes-3';   // Today: what came in and whether the Tool is keeping up (seat keeping-up, decision 1176)
 
 let C = null;   // { sb, el, $, askBody, isOwner, viewDeps, readSources, drawGroup, aiBlocks, door, goto, openAdd, closeAdd, connectSystem, me }
@@ -141,9 +150,13 @@ export async function drawRoom(fresh) {
   // WHILE SOMETHING IS BEING READ the room reads itself again every minute, so the road moves while she watches (seat
   // brain-status-2). Stops when nothing is in line; a page open in the side panel is left as it is.
   clearTimeout(poll);
+  const failed = ['src', 'health', 'conn', 'road', 'ai'].some((k) => R[k + 'Err'] !== undefined);
+  retries = failed ? retries + 1 : 0;
   if (busy(R)) poll = setTimeout(() => { if (!pageOpen()) drawRoom(true); }, 60000);
+  else if (failed && retries <= 5) poll = setTimeout(() => { if (!pageOpen()) drawRoom(true); }, 20000);
 }
 let poll = null;
+let retries = 0;   // failed readings in a row; the room stops asking again after 5 (it says why on each part that failed)
 
 // THE PAGE AS THE APPROVED PICTURE (seat brain-status-build, 2026-11-06; picture VFFCoxg6cAHGmBVyMo4EPs, decisions 1106-1115).
 // Two tabs: Your brain (the road, Needs you, your sources, assistants, Health) and AI and costs (owner only: every cent,
@@ -748,7 +761,21 @@ const PAGES = {
     if (!C.aiBlocks?.balance) { body.appendChild(txt('p', 'br-lede', 'Still loading. Press Brain and open it again in a moment.')); return; }
     const p = ai.plain || {};
     body.appendChild(C.aiBlocks.balance(p.balance || {}, p, C.el));
-    note(body, 'Adding to the balance from a card is not built yet; the studio adds to it for you.');
+    // Top up by card: the one Top up sheet (ready.js topUp, through topUpFor), with the marks it reads to know payments are on
+    const go = C.el('button', 'go'); go.type = 'button'; go.textContent = 'Top Up by Card';
+    const said = txt('p', 'br-small', '');
+    go.addEventListener('click', async () => {
+      go.disabled = true; said.className = 'working no-late br-small'; said.textContent = 'Opening Top up';
+      try {
+        const M = await import(READY_FOR_STEP);
+        const { data, error } = await C.sb.rpc('getting_ready_marks');
+        if (error || !data || data.ok !== true) { said.className = 'br-small'; said.textContent = 'Top up could not be opened just now: ' + String(error?.message ?? data?.error ?? 'no reason was given') + '. Try again in a moment.'; go.disabled = false; return; }
+        said.className = 'br-small'; said.textContent = '';
+        M.topUpFor(C, { ai, marks: data });
+      } catch (e) { said.className = 'br-small'; said.textContent = 'Top up could not be opened just now: ' + String(e?.message ?? e) + '. Try again in a moment.'; }
+      go.disabled = false;
+    });
+    body.append(go, said);
   },
   // MAIL (picture; seat brain-status-2): its level, the files attached to older mail with Read them and their progress, then
   // each mailbox with Details (Read further, with the understanding prices), Open in Mail and Remove.
